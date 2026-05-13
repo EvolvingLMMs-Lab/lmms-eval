@@ -49,37 +49,43 @@ XMODBENCH_ROOT = _resolve_xmodbench_root()
 
 LETTERS = ["A", "B", "C", "D"]
 
-# Map path prefix → group name (category looks like "01_perception/instruments")
-_PATH_PREFIX_TO_GROUP = {
+# Canonical task-family names (matches the paper).
+# Source data uses 03_speech and 05_Exteral; map them to the paper's terminology.
+_PATH_PREFIX_TO_FAMILY = {
     "01_perception": "perception",
-    "02_spatial":    "spatial",
-    "03_speech":     "speech",
-    "04_temporal":   "temporal",
-    "05_exteral":    "external",   # typo in original data
-    "05_external":   "external",
+    "02_spatial": "spatial",
+    "03_speech": "linguistic",
+    "04_temporal": "temporal",
+    "05_exteral": "knowledge",  # typo in source data
+    "05_external": "knowledge",
 }
 
-# VGGSound finegrained plain-English category names → perception/finegrained
+# VGGSound finegrained plain-English category names → perception/finegrained.
 _VGGSOUND_CATEGORIES = {
-    "animal sounds", "human activities", "human speech",
-    "musical instruments", "natural sounds",
-    "tools & machinery", "transportation", "urban sounds",
+    "animal sounds",
+    "human activities",
+    "human speech",
+    "musical instruments",
+    "natural sounds",
+    "tools & machinery",
+    "transportation",
+    "urban sounds",
 }
 
-_GROUP_ORDER = ["perception", "spatial", "speech", "temporal", "external"]
+FAMILY_ORDER = ["perception", "spatial", "temporal", "linguistic", "knowledge"]
+CONFIG_ORDER = ["a2t", "a2v", "t2a", "t2v", "v2a", "v2t"]
 
 
-def _get_group_and_subtask(category: str) -> tuple[str, str]:
-    """Return (group, subtask) for a given category string.
+def _family_and_subtask(category: str) -> tuple[str, str]:
+    """Return (family, subtask) for a given category string.
 
     Handles two formats:
-    - Path-style  : "01_perception/instruments"  → ("perception", "instruments")
+    - Path-style   : "01_perception/instruments"  → ("perception", "instruments")
     - Plain English: "Animal Sounds"              → ("perception", "finegrained")
     """
     if "/" in category:
         prefix, subtask = category.split("/", 1)
-        group = _PATH_PREFIX_TO_GROUP.get(prefix.lower(), "other")
-        return group, subtask
+        return _PATH_PREFIX_TO_FAMILY.get(prefix.lower(), "other"), subtask
 
     cat_lower = category.lower()
     if cat_lower in _VGGSOUND_CATEGORIES:
@@ -88,6 +94,22 @@ def _get_group_and_subtask(category: str) -> tuple[str, str]:
         return "perception", "general_activities"
 
     return "other", category
+
+
+def _config_key(cond_modality: str, opt_modality: str) -> str:
+    """Map raw (cond, opt) modalities to one of 6 canonical configs (vision = image ∪ video)."""
+
+    def collapse(m: str) -> str:
+        m = m.lower()
+        if m == "audio":
+            return "a"
+        if m == "text":
+            return "t"
+        if m in ("image", "video"):
+            return "v"
+        return m
+
+    return f"{collapse(cond_modality)}2{collapse(opt_modality)}"
 
 
 # ---------------------------------------------------------------------------
@@ -120,11 +142,11 @@ def _load_media(input_path: str, modality: str):
         return Image.open(abs_path).convert("RGB")
     elif mod == "audio":
         array, sr = sf.read(abs_path, dtype="float32")
-        if array.ndim > 1:          # stereo → mono
+        if array.ndim > 1:  # stereo → mono
             array = array.mean(axis=1)
         return {"array": array, "sampling_rate": sr}
     elif mod == "video":
-        return abs_path             # model handles video decoding
+        return abs_path  # model handles video decoding
     else:
         raise ValueError(f"Unknown modality: {modality}")
 
@@ -175,9 +197,7 @@ def xmod_bench_doc_to_messages(doc: dict, lmms_eval_specific_kwargs: dict | None
     """
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
-    post_prompt = lmms_eval_specific_kwargs.get(
-        "post_prompt", "Answer with the option's letter (A, B, C, or D) directly."
-    )
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "Answer with the option's letter (A, B, C, or D) directly.")
 
     content: list[dict[str, Any]] = []
 
@@ -218,9 +238,7 @@ def xmod_bench_doc_to_text(doc: dict, lmms_eval_specific_kwargs: dict | None = N
     """Format the prompt as plain text (media items become <media_N> tokens)."""
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
-    post_prompt = lmms_eval_specific_kwargs.get(
-        "post_prompt", "Answer with the option's letter (A, B, C, or D) directly."
-    )
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "Answer with the option's letter (A, B, C, or D) directly.")
 
     media_idx = 0
     parts = []
@@ -287,8 +305,15 @@ def parse_multi_choice_response(response: str, all_choices: list[str]) -> str | 
 def xmod_bench_process_results(doc: dict, results: list) -> dict:
     """Parse model prediction and compare to ground truth.
 
-    Returns a dict suitable for aggregation:
-        {"xmod_bench_score": {"category": str, "correct": 0|1}}
+    Each record emitted carries enough metadata for both Level-1 (per
+    (family, subtask, config) breakdown) and Level-2 (cross-task summary)
+    aggregation downstream:
+        {
+            "family":   "perception" | ... | "knowledge",
+            "subtask":  str,           # e.g. "instruments"
+            "config":   "a2t" | ... | "v2t",   # vision = image ∪ video
+            "correct":  0 | 1,
+        }
     """
     response = results[0].strip() if results else ""
     pred = parse_multi_choice_response(response, LETTERS)
@@ -296,24 +321,21 @@ def xmod_bench_process_results(doc: dict, results: list) -> dict:
     gold = doc["correct_answer"].strip().upper()
     correct = int(pred == gold) if pred is not None else 0
 
-    # Derive category: use explicit field, or fall back to modality combo
-    def _norm(mod: str) -> str:
-        m = mod.lower()
-        return "vision" if m in ("image", "video") else m
+    cond_mod = doc["conditions"]["modality"]
+    opt_mod = next(iter(doc["options"].values()))["modality"]
+    config = _config_key(cond_mod, opt_mod)
 
-    cond_mod = _norm(doc["conditions"]["modality"])
-    opt_mod  = _norm(list(doc["options"].values())[0]["modality"])
-    modality_combo = f"{cond_mod}->{opt_mod}"
-    category = doc.get("category") or modality_combo
-    group, subtask = _get_group_and_subtask(category)
+    category = doc.get("subtask") or doc.get("category") or ""
+    family, subtask = _family_and_subtask(category)
 
-    return {"xmod_bench_score": {
-        "category": category,
-        "group":    group,
-        "subtask":  subtask,
-        "modality": modality_combo,
-        "correct":  correct,
-    }}
+    return {
+        "xmod_bench_score": {
+            "family": family,
+            "subtask": subtask,
+            "config": config,
+            "correct": correct,
+        }
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -322,7 +344,12 @@ def xmod_bench_process_results(doc: dict, results: list) -> dict:
 
 
 def xmod_bench_aggregate_results(results: list) -> float:
-    """Compute overall and per-category accuracy, log a summary, return overall %."""
+    """Aggregate Level-1 stats for a single task run (one modality config).
+
+    Each task yaml covers one or more configs; this function logs per-family,
+    per-subtask, and per-config accuracy so that downstream Level-2 summary
+    can re-derive everything from `--log_samples`. Returns overall accuracy %.
+    """
     total = len(results)
     if total == 0:
         return 0.0
@@ -330,45 +357,47 @@ def xmod_bench_aggregate_results(results: list) -> float:
     total_correct = sum(r["correct"] for r in results)
     overall_acc = total_correct / total * 100.0
 
-    grp_correct:     dict[str, int] = defaultdict(int)
-    grp_total:       dict[str, int] = defaultdict(int)
-    subtask_correct: dict[str, int] = defaultdict(int)  # keyed "group/subtask"
-    subtask_total:   dict[str, int] = defaultdict(int)
-    mod_correct:     dict[str, int] = defaultdict(int)
-    mod_total:       dict[str, int] = defaultdict(int)
+    fam_c: dict[str, int] = defaultdict(int)
+    fam_t: dict[str, int] = defaultdict(int)
+    sub_c: dict[tuple[str, str, str], int] = defaultdict(int)  # (family, subtask, config)
+    sub_t: dict[tuple[str, str, str], int] = defaultdict(int)
+    cfg_c: dict[str, int] = defaultdict(int)
+    cfg_t: dict[str, int] = defaultdict(int)
 
     for r in results:
-        grp = r["group"]
+        fam = r["family"]
         sub = r["subtask"]
-        mod = r["modality"]
-        key = f"{grp}/{sub}"
-        grp_correct[grp]         += r["correct"]
-        grp_total[grp]           += 1
-        subtask_correct[key]     += r["correct"]
-        subtask_total[key]       += 1
-        mod_correct[mod]         += r["correct"]
-        mod_total[mod]           += 1
+        cfg = r["config"]
+        fam_c[fam] += r["correct"]
+        fam_t[fam] += 1
+        sub_c[(fam, sub, cfg)] += r["correct"]
+        sub_t[(fam, sub, cfg)] += 1
+        cfg_c[cfg] += r["correct"]
+        cfg_t[cfg] += 1
 
     eval_logger.info("=" * 60)
     eval_logger.info(f"XModBench Overall Accuracy: {overall_acc:.2f}%  ({total_correct}/{total})")
 
-    eval_logger.info("\nPer group accuracy:")
-    for grp in _GROUP_ORDER + sorted(g for g in grp_total if g not in _GROUP_ORDER):
-        if grp not in grp_total:
+    eval_logger.info("\nPer config accuracy:")
+    for cfg in CONFIG_ORDER + sorted(c for c in cfg_t if c not in CONFIG_ORDER):
+        if cfg not in cfg_t:
             continue
-        acc = grp_correct[grp] / grp_total[grp] * 100.0
-        eval_logger.info(f"  {grp:15s}: {acc:6.2f}%  ({grp_correct[grp]}/{grp_total[grp]})")
+        acc = cfg_c[cfg] / cfg_t[cfg] * 100.0
+        eval_logger.info(f"  {cfg:6s}: {acc:6.2f}%  ({cfg_c[cfg]}/{cfg_t[cfg]})")
 
-    eval_logger.info("\nPer subtask accuracy:")
-    for grp in _GROUP_ORDER + sorted(g for g in grp_total if g not in _GROUP_ORDER):
-        for key in sorted(k for k in subtask_total if k.startswith(grp + "/")):
-            acc = subtask_correct[key] / subtask_total[key] * 100.0
-            eval_logger.info(f"  {key:40s}: {acc:6.2f}%  ({subtask_correct[key]}/{subtask_total[key]})")
+    eval_logger.info("\nPer family accuracy:")
+    for fam in FAMILY_ORDER + sorted(f for f in fam_t if f not in FAMILY_ORDER):
+        if fam not in fam_t:
+            continue
+        acc = fam_c[fam] / fam_t[fam] * 100.0
+        eval_logger.info(f"  {fam:12s}: {acc:6.2f}%  ({fam_c[fam]}/{fam_t[fam]})")
 
-    eval_logger.info("\nPer modality-combo accuracy:")
-    for mod in sorted(mod_total):
-        acc = mod_correct[mod] / mod_total[mod] * 100.0
-        eval_logger.info(f"  {mod:30s}: {acc:6.2f}%  ({mod_correct[mod]}/{mod_total[mod]})")
+    eval_logger.info("\nPer (family, subtask, config) accuracy:")
+    for fam in FAMILY_ORDER + sorted(f for f in fam_t if f not in FAMILY_ORDER):
+        for key in sorted(k for k in sub_t if k[0] == fam):
+            f, s, c = key
+            acc = sub_c[key] / sub_t[key] * 100.0
+            eval_logger.info(f"  {f}/{s:32s} [{c}]: {acc:6.2f}%  ({sub_c[key]}/{sub_t[key]})")
 
     eval_logger.info("=" * 60)
     return round(overall_acc, 5)

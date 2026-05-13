@@ -11,23 +11,28 @@
 # #SBATCH --partition=gpu
 # #SBATCH --account=mylab
 
+# Full XModBench (61,320 samples). For the 6k Lite version use:
+#   --array=0-5   and   TASKS=( xmod_bench_lite_{a2t,a2v,t2a,t2v,v2a,v2t} )
 TASKS=(
-    xmod_bench_audio_text    # 14,719
-    xmod_bench_text_audio    # 14,725
-    xmod_bench_audio_image   # 11,689
-    xmod_bench_image_audio   # 11,689
-    xmod_bench_image_text    # 11,689
-    xmod_bench_text_image    # 11,689
+    xmod_bench_audio_text    # 10,220
+    xmod_bench_text_audio    # 10,220
+    xmod_bench_audio_image   #  7,189
+    xmod_bench_image_audio   #  7,189
+    xmod_bench_image_text    #  7,189
+    xmod_bench_text_image    #  7,189
     xmod_bench_audio_video   #  3,031
     xmod_bench_text_video    #  3,031
-    xmod_bench_video_audio   #  3,036
-    xmod_bench_video_text    #  3,036
+    xmod_bench_video_audio   #  3,031
+    xmod_bench_video_text    #  3,031
 )
 
 TASK=${TASKS[$SLURM_ARRAY_TASK_ID]}
 
 REPO=/home/xwang378/scratch/2025/lmms-eval
-export XMODBENCH=/home/xwang378/scratch/2025/AudioBench
+# Point XMODBENCH at the staging directory whose layout matches the HF repo
+# (Data/, tasks/ at root). Unset to fall back to snapshot_download of
+# RyanWW/XModBench under ~/.cache/huggingface/.
+export XMODBENCH=/home/xwang378/scratch/2025/AudioBench_data
 
 echo "=== Job $SLURM_JOB_ID  array=$SLURM_ARRAY_TASK_ID  task=$TASK ==="
 echo "=== Node: $(hostname)  GPU: $CUDA_VISIBLE_DEVICES ==="
