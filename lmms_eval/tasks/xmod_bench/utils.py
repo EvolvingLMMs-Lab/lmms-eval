@@ -25,10 +25,27 @@ from typing import Any
 
 import numpy as np
 import soundfile as sf
+from huggingface_hub import snapshot_download
 from loguru import logger as eval_logger
 from PIL import Image
 
-XMODBENCH = os.getenv("XMODBENCH", "/home/xwang378/scratch/2025/AudioBench")
+HF_REPO_ID = "RyanWW/XModBench"
+
+
+def _resolve_xmodbench_root() -> str:
+    """Return the directory that contains `Data/` and `tasks/`.
+
+    Priority:
+      1. $XMODBENCH (must point at a dir laid out like the HF repo: `Data/`, `tasks/` at root).
+      2. snapshot_download from RyanWW/XModBench (cached under ~/.cache/huggingface/).
+    """
+    env = os.getenv("XMODBENCH")
+    if env:
+        return env
+    return snapshot_download(repo_id=HF_REPO_ID, repo_type="dataset")
+
+
+XMODBENCH_ROOT = _resolve_xmodbench_root()
 
 LETTERS = ["A", "B", "C", "D"]
 
@@ -79,13 +96,10 @@ def _get_group_and_subtask(category: str) -> tuple[str, str]:
 
 
 def resolve_path(relative_path: str) -> str:
-    """Convert a dataset-relative path (./benchmark/...) to an absolute path."""
+    """Convert a dataset-relative path (e.g. `Data/...`) to an absolute path."""
     if os.path.isabs(relative_path):
         return relative_path
-    # Strip leading "./"
-    if relative_path.startswith("./"):
-        relative_path = relative_path[2:]
-    return os.path.join(XMODBENCH, relative_path)
+    return os.path.join(XMODBENCH_ROOT, relative_path.lstrip("./"))
 
 
 # ---------------------------------------------------------------------------

@@ -43,15 +43,18 @@ DEFAULT_SEED       = 42
 CAPPED_SUBTASKS: dict[str, int] = {
     "01_perception/finegrained":        1000,
     "01_perception/general_activities": 1000,
+    "01_perception/natures":             500,   # 500/file × 12 files = 6000 total, 1000/combo
+}
+
+# Subtasks where files with more than N rows are truncated at row N (last rows dropped).
+# Used when a few modality files have slightly more rows than others due to source
+# data differences, and we simply want to align them at the shorter count.
+TRUNCATE_AT: dict[str, int] = {
+    "02_spatial/panaroma": 390,   # text_audio/video_audio/video_text have 395; drop last 5
 }
 
 # Subtasks excluded from automatic mismatch detection.
-# These subtasks have unequal row counts across modality files by design
-# (different source data per modality), so intersection-based filtering
-# would be too aggressive.
-MISMATCH_SKIP_SUBTASKS: set[str] = {
-    "02_spatial/panaroma",
-}
+MISMATCH_SKIP_SUBTASKS: set[str] = set()
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +213,7 @@ def build(tasks_root: str, out_dir: str, seed: int) -> None:
     # present in ALL files are kept (N = intersection size).
     mismatch_info: dict[str, dict[str, dict]] = {}
     for subtask, file_list in subtask_files.items():
-        if subtask in CAPPED_SUBTASKS or subtask in MISMATCH_SKIP_SUBTASKS:
+        if subtask in CAPPED_SUBTASKS or subtask in MISMATCH_SKIP_SUBTASKS or subtask in TRUNCATE_AT:
             continue
         info = _compute_mismatch_info(subtask, file_list)
         if info is not None:
@@ -222,6 +225,7 @@ def build(tasks_root: str, out_dir: str, seed: int) -> None:
     for subtask, file_list in subtask_files.items():
         keep          = sampled_indices.get(subtask)    # None → keep all rows
         file_mismatch = mismatch_info.get(subtask)      # None → no mismatch
+        truncate      = TRUNCATE_AT.get(subtask)        # None → no truncation
 
         for path, data in file_list:
             d0 = data[0]
@@ -243,6 +247,10 @@ def build(tasks_root: str, out_dir: str, seed: int) -> None:
             for file_pos, item in enumerate(data):
                 if not isinstance(item, dict):
                     continue
+
+                # ── Truncation (drop tail rows beyond limit) ───────────────
+                if truncate is not None and file_pos >= truncate:
+                    break
 
                 # ── Mismatch filtering ─────────────────────────────────────
                 if file_info is not None:

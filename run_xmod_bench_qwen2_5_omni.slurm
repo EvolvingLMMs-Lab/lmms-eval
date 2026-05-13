@@ -36,7 +36,8 @@ date
 mkdir -p "$REPO/logs/xmod_bench" "$REPO/logs/xmod_bench/results"
 
 cd "$REPO"
-source .venv/bin/activate
+module load conda
+conda activate qwenomni3
 
 python -m lmms_eval \
     --model qwen2_5_omni \

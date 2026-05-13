@@ -1,4 +1,5 @@
 dataset_path: json
+test_split: train
 output_type: generate_until
 
 generation_kwargs:

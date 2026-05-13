@@ -1,10 +1,7 @@
 task: "xmod_bench_audio_text"
 
-dataset_path: json
 dataset_kwargs:
-  data_files:
-    train: /home/xwang378/scratch/2025/lmms-eval/lmms_eval/tasks/xmod_bench/data/audio_text.jsonl
-test_split: train
+  data_files: hf://datasets/RyanWW/XModBench/data/audio_text.jsonl
 
 doc_to_visual: !function utils.xmod_bench_doc_to_visual
 doc_to_text: !function utils.xmod_bench_doc_to_text
