@@ -12,6 +12,7 @@ MODEL=${MODEL:-qwen2_5_omni}
 PRETRAINED=${PRETRAINED:-Qwen/Qwen2.5-Omni-7B}
 ENV=${ENV:-qwenomni3}
 TASK=${TASK:-xmod_bench_lite_a2t}
+MODEL_ARGS_EXTRA=${MODEL_ARGS_EXTRA:-device_map=auto,attn_implementation=flash_attention_2}
 
 REPO=/home/xwang378/scratch/2025/lmms-eval
 export XMODBENCH=/home/xwang378/scratch/2025/AudioBench_data
@@ -36,7 +37,7 @@ conda activate "$ENV"
 
 python -m lmms_eval \
     --model "$MODEL" \
-    --model_args pretrained=$PRETRAINED,device_map=auto,attn_implementation=flash_attention_2 \
+    --model_args pretrained=$PRETRAINED,$MODEL_ARGS_EXTRA \
     --tasks "$TASK" \
     --limit 8 \
     --batch_size 1 \

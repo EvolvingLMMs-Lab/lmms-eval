@@ -63,5 +63,7 @@ class Qwen3_OmniInterleave(InterleaveChatMixin, Qwen3_Omni):
         )
         if isinstance(cont, tuple):
             cont = cont[0]
-        trimmed = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs.input_ids, cont)]
-        return self.processor.batch_decode(trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        # Decode full sequence + take text after the assistant turn (see
+        # qwen2_5_omni_interleave for why trimming by input_ids breaks video).
+        full = self.processor.batch_decode(cont, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        return full.split("assistant\n")[-1].strip()

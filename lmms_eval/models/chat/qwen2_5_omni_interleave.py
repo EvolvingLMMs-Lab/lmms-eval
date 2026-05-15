@@ -88,5 +88,13 @@ class Qwen2_5_OmniInterleave(InterleaveChatMixin, Qwen2_5_Omni):
             use_audio_in_video=use_audio_in_video,
             thinker_do_sample=False,
         )
-        trimmed = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs.input_ids, cont)]
-        return self.processor.batch_decode(trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        if isinstance(cont, tuple):
+            cont = cont[0]
+        # Decode the full sequence (NOT out_ids[len(in_ids):]) and take the
+        # text after the final assistant turn. For multimodal inputs the
+        # processor expands media placeholders, so input_ids length does NOT
+        # align with the generated sequence prefix — trimming by it yields
+        # empty strings on video inputs. This mirrors the upstream
+        # XModBench/AudioBench Qwen2.5-Omni runner.
+        full = self.processor.batch_decode(cont, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        return full.split("assistant\n")[-1].strip()
