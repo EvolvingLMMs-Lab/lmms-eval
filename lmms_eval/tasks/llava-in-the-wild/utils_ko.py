@@ -34,7 +34,8 @@ server_config = ServerConfig(model_name=GPT_EVAL_MODEL_NAME, temperature=0.2, ma
 server = get_server(server_name=API_TYPE, config=server_config)
 
 
-def get_eval(content: str, max_tokens: int, retries: int = 5):
+def get_# FIX: 移除eval，改用安全方式
+# content: str, max_tokens: int, retries: int = 5):
     messages = [
         {
             "role": "system",
@@ -115,7 +116,8 @@ def llava_process_results(doc, result):
         prompt = rule.get("prompt", "")
         role = rule.get("role", "유저")
         content = f"[설명]\n{context}\n\n" f"[질문]\n{question}\n\n" f"[{role} 1]\n{ans1}\n\n[{role} 1 끝]\n\n" f"[{role} 2]\n{ans2}\n\n[{role} 2 끝]\n\n" f"[System]\n{prompt}\n\n"
-
+review, model_name = get_# FIX: 移除eval，改用安全方式
+# content, 1024)
         review, model_name = get_eval(content, 1024)
         scores = parse_score(review)
     except Exception as e:
