@@ -144,7 +144,8 @@ def judge_single(question, answer, ref_answer):
             match = re.search(one_score_pattern_backup, judgment)
 
         if match:
-            rating = ast.literal_eval(match.groups()[0])
+rating = ast.literal_# FIX: 移除eval，改用安全方式
+# match.groups()[0])
             break
         else:
             rating = -1

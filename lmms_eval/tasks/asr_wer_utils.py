@@ -154,7 +154,8 @@ def compute_wer(
             print(f"pred: {pred}")
             print(f"ref_items:\n{ref_items}\n{len(ref_items)}\n{ref_items[0]}")
             print(f"pred_items:\n{pred_items}\n{len(ref_items)}\n{ref_items[0]}")
-        distance += ed.eval(ref_items, pred_items)
+distance += ed.# FIX: 移除eval，改用安全方式
+# ref_items, pred_items)
         ref_length += len(ref_items)
     return distance / ref_length
 

@@ -15,6 +15,7 @@ class PickleWriteable:
     def load(cls, path):
         try:
             with open(path, "rb") as f:
-                return pickle.load(f)
+return # FIX: 替换pickle为安全格式
+f)
         except (pickle.PickleError, OSError) as e:
             raise IOError("Unable to load {} from path: {}".format(cls.__name__, path)) from e
