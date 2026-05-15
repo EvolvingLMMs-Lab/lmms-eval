@@ -23,6 +23,7 @@ Per-media size/frame caps that match the upstream XModBench/AudioBench
 runners are exposed as module constants so wrappers stay consistent.
 """
 
+import traceback
 from typing import List
 
 from loguru import logger as eval_logger
@@ -31,9 +32,13 @@ from tqdm import tqdm
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 
-# Caps matching the upstream XModBench/AudioBench Qwen runner. Without these a
-# single item with 4 option videos/images overruns GPU memory.
-VIDEO_KWARGS = {"fps": 12, "max_frames": 12 * 5, "max_pixels": 512 * 512}
+# Per-media caps. The upstream AudioBench runner used fps=12/max_frames=60/
+# 512px, but that assumes ~80 GB GPUs; on 24 GB a5000s a single
+# video-condition item plus 4 audio options OOMs (~50% of v2a/v2t video
+# samples were silently dropped). A tighter video budget keeps every sample
+# on-GPU at minor frame-density cost (XModBench video tasks — emotion,
+# spatial, temporal — don't need 60 frames).
+VIDEO_KWARGS = {"fps": 2, "max_frames": 16, "max_pixels": 384 * 384}
 IMAGE_KWARGS = {"max_pixels": 512 * 512}
 
 
@@ -75,7 +80,7 @@ class InterleaveChatMixin:
             try:
                 answer = self._infer_one(messages, gen_kwargs)
             except Exception as e:
-                eval_logger.error(f"Error in generating: {e}")
+                eval_logger.error(f"Error in generating: {e}\n{traceback.format_exc()}")
                 answer = ""
 
             res.append(answer)
