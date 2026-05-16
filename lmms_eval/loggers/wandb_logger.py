@@ -170,7 +170,7 @@ class WandbLogger:
         """Log evaluation results to W&B."""
         # Log configs to wandb
         configs = self._get_config()
-        self.run.config.update(configs)
+        self.run.config.update(configs, allow_val_change=True)
 
         wandb_summary, self.wandb_results = self._sanitize_results_dict()
         # update wandb.run.summary with items that were removed

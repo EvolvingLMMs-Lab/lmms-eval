@@ -70,6 +70,17 @@ IMAGE_TOKEN_SQLITE_BUSY_TIMEOUT_MS="${VLLM_APERTUS_IMAGE_TOKEN_SQLITE_BUSY_TIMEO
 IMAGE_TOKEN_SQLITE_MMAP_SIZE="${VLLM_APERTUS_IMAGE_TOKEN_SQLITE_MMAP_SIZE:-1073741824}"
 IMAGE_TOKEN_CACHE_DEBUG="${VLLM_APERTUS_IMAGE_TOKEN_CACHE_DEBUG:-0}"
 PREFETCH_EMU35_VISION_TOKENIZER=true
+ENABLE_WANDB="${WANDB_ENABLE:-true}"
+WANDB_PROJECT="${WANDB_PROJECT:-lmms-eval}"
+WANDB_ENTITY="${WANDB_ENTITY:-rkreft-eth-z-rich}"
+WANDB_JOB_TYPE="${WANDB_JOB_TYPE:-eval}"
+WANDB_GROUP="${WANDB_GROUP:-}"
+WANDB_RUN_NAME="${WANDB_RUN_NAME:-}"
+WANDB_RUN_ID="${WANDB_RUN_ID:-}"
+WANDB_RESUME="${WANDB_RESUME:-allow}"
+WANDB_LOG_SAMPLES="${WANDB_LOG_SAMPLES:-true}"
+WANDB_ARGS="${WANDB_ARGS:-}"
+WANDB_API_KEY="${WANDB_API_KEY:-}"
 
 # SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # LOCAL_REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -126,6 +137,17 @@ Options:
                                          Enable cache debug logs.
   --prefetch-emu35-vision-tokenizer <true|false>
                                          Prefetch BAAI/Emu3.5-VisionTokenizer once before launch.
+  --enable-wandb <true|false>            Enable W&B metric logging. Default: true.
+  --wandb-project <name>                 W&B project. Default: lmms-eval.
+  --wandb-entity <name>                  W&B entity/team. Default: rkreft-eth-z-rich.
+  --wandb-job-type <name>                W&B job_type. Default: eval.
+  --wandb-group <name>                   W&B run group.
+  --wandb-run-name <name>                W&B run name. Default: model name.
+  --wandb-run-id <id>                    W&B run id. Default: deterministic id from model name.
+  --wandb-resume <mode>                  W&B resume mode (allow|must|never|auto). Default: allow.
+  --wandb-log-samples <true|false>       Also upload eval samples to W&B. Default: true.
+  --wandb-args <kv_csv>                  Extra lmms-eval --wandb_args (comma-separated key=value).
+  --wandb-api-key <key>                  W&B API key. If omitted, uses WANDB_API_KEY env.
   --debug-mode                           Enable debug mode (sets VLLM_APERTUS_IMAGE_TOKEN_CACHE_DEBUG=1).
   --help                                 Show this message.
 EOF
@@ -167,6 +189,17 @@ while [[ $# -gt 0 ]]; do
     --image-token-sqlite-mmap-size) IMAGE_TOKEN_SQLITE_MMAP_SIZE="$2"; shift 2 ;;
     --image-token-cache-debug) IMAGE_TOKEN_CACHE_DEBUG="$2"; shift 2 ;;
     --prefetch-emu35-vision-tokenizer) PREFETCH_EMU35_VISION_TOKENIZER="$2"; shift 2 ;;
+    --enable-wandb) ENABLE_WANDB="$2"; shift 2 ;;
+    --wandb-project) WANDB_PROJECT="$2"; shift 2 ;;
+    --wandb-entity) WANDB_ENTITY="$2"; shift 2 ;;
+    --wandb-job-type) WANDB_JOB_TYPE="$2"; shift 2 ;;
+    --wandb-group) WANDB_GROUP="$2"; shift 2 ;;
+    --wandb-run-name) WANDB_RUN_NAME="$2"; shift 2 ;;
+    --wandb-run-id) WANDB_RUN_ID="$2"; shift 2 ;;
+    --wandb-resume) WANDB_RESUME="$2"; shift 2 ;;
+    --wandb-log-samples) WANDB_LOG_SAMPLES="$2"; shift 2 ;;
+    --wandb-args) WANDB_ARGS="$2"; shift 2 ;;
+    --wandb-api-key) WANDB_API_KEY="$2"; shift 2 ;;
     --debug-mode) IMAGE_TOKEN_CACHE_DEBUG=1; shift ;;
     --help) usage; exit 0 ;;
     *)
@@ -176,6 +209,15 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+is_true() {
+  local value
+  value="$(echo "${1:-}" | tr '[:upper:]' '[:lower:]')"
+  case "${value}" in
+    1|true|t|yes|y|on) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 # Ensure OCR-safe default generation cap.
 # If max_new_tokens is absent, append/set it to 512.
@@ -201,6 +243,19 @@ export LMMS_EVAL_MODELS_CACHE="${LMMS_EVAL_MODELS_CACHE_PATH}"
 export VLLM_WORKER_MULTIPROC_METHOD=spawn
 export VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
 export TOKENIZERS_PARALLELISM=false
+if is_true "${ENABLE_WANDB}"; then
+  if [[ -z "${WANDB_API_KEY}" && -t 0 ]]; then
+    read -r -s -p "Enter WANDB_API_KEY: " WANDB_API_KEY
+    echo
+  fi
+  if [[ -z "${WANDB_API_KEY}" ]]; then
+    echo "ERROR: W&B enabled but API key is missing. Pass --wandb-api-key or set WANDB_API_KEY."
+    exit 1
+  fi
+  export WANDB_API_KEY
+  export WANDB_ENTITY="${WANDB_ENTITY}"
+  export WANDB_PROJECT="${WANDB_PROJECT}"
+fi
 # Keep Python hash() stable across processes/runs (affects some internal naming).
 HASH_SEED="${EVAL_SEED%%,*}"
 if ! [[ "${HASH_SEED}" =~ ^[0-9]+$ ]]; then
@@ -349,6 +404,59 @@ if [[ -n "${EXTRA_MODEL_ARGS}" ]]; then
   MODEL_ARGS="${MODEL_ARGS},${EXTRA_MODEL_ARGS}"
 fi
 
+MODEL_LABEL="$(basename "${MODEL_PATH}")"
+if [[ "${MODEL_LABEL}" == "HF" ]]; then
+  MODEL_LABEL="$(basename "$(dirname "${MODEL_PATH}")")"
+fi
+MODEL_LABEL="${MODEL_LABEL// /_}"
+if [[ -z "${WANDB_RUN_NAME}" ]]; then
+  WANDB_RUN_NAME="${MODEL_LABEL}"
+fi
+if [[ -z "${WANDB_RUN_ID}" ]]; then
+  WANDB_MODEL_HASH="$(printf "%s" "${MODEL_LABEL}" | sha1sum | awk '{print substr($1,1,12)}')"
+  WANDB_RUN_ID="model_${WANDB_MODEL_HASH}"
+fi
+
+append_wandb_arg() {
+  local key="$1"
+  local value="$2"
+  if [[ -z "${value}" ]]; then
+    return
+  fi
+  if [[ -n "${FINAL_WANDB_ARGS}" ]]; then
+    FINAL_WANDB_ARGS+=","
+  fi
+  FINAL_WANDB_ARGS+="${key}=${value}"
+}
+
+wandb_arg_exists() {
+  local key="$1"
+  [[ ",${FINAL_WANDB_ARGS}," == *",${key}="* ]]
+}
+
+FINAL_WANDB_ARGS="${WANDB_ARGS}"
+if ! wandb_arg_exists "project"; then
+  append_wandb_arg "project" "${WANDB_PROJECT}"
+fi
+if ! wandb_arg_exists "entity"; then
+  append_wandb_arg "entity" "${WANDB_ENTITY}"
+fi
+if ! wandb_arg_exists "job_type"; then
+  append_wandb_arg "job_type" "${WANDB_JOB_TYPE}"
+fi
+if ! wandb_arg_exists "group"; then
+  append_wandb_arg "group" "${WANDB_GROUP}"
+fi
+if ! wandb_arg_exists "name"; then
+  append_wandb_arg "name" "${WANDB_RUN_NAME}"
+fi
+if ! wandb_arg_exists "id"; then
+  append_wandb_arg "id" "${WANDB_RUN_ID}"
+fi
+if ! wandb_arg_exists "resume"; then
+  append_wandb_arg "resume" "${WANDB_RESUME}"
+fi
+
 CMD=(
   accelerate launch
   --num_processes "${NUM_PROCESSES}"
@@ -370,6 +478,12 @@ if [[ -n "${GEN_KWARGS}" ]]; then
 fi
 if [[ -n "${LIMIT}" ]]; then
   CMD+=(--limit "${LIMIT}")
+fi
+if is_true "${ENABLE_WANDB}" && [[ -n "${FINAL_WANDB_ARGS}" ]]; then
+  CMD+=(--wandb_args "${FINAL_WANDB_ARGS}")
+  if is_true "${WANDB_LOG_SAMPLES}"; then
+    CMD+=(--wandb_log_samples)
+  fi
 fi
 
 /opt/venv/bin/python -c "import nltk; nltk.download('wordnet')"
@@ -393,6 +507,11 @@ echo "OFFLINE_DATASETS=${OFFLINE_DATASETS}"
 echo "EVAL_SEED=${EVAL_SEED}"
 echo "PYTHONHASHSEED=${PYTHONHASHSEED}"
 echo "VLLM_SEED=${VLLM_SEED}"
+echo "ENABLE_WANDB=${ENABLE_WANDB}"
+if is_true "${ENABLE_WANDB}"; then
+  echo "WANDB_ARGS=${FINAL_WANDB_ARGS}"
+  echo "WANDB_LOG_SAMPLES=${WANDB_LOG_SAMPLES}"
+fi
 echo "ENABLE_IMAGE_TOKEN_CACHE=${ENABLE_IMAGE_TOKEN_CACHE}"
 if [[ "${ENABLE_IMAGE_TOKEN_CACHE}" == "true" ]]; then
   echo "VLLM_APERTUS_IMAGE_TOKEN_CACHE_DIR=${VLLM_APERTUS_IMAGE_TOKEN_CACHE_DIR}"

@@ -1,2 +1,1 @@
-/capstor/store/cscs/swissai/infra01/apertus_1p5/Megatron-LM/logs/Meg-Runs/main-runs-v2-apertus-1p5/ablations/ap1p5-8b-64k-lc-thinking-ablate-cot-adam-lr2e-5-linear-32n/HF
-/capstor/store/cscs/swissai/infra01/apertus_1p5/Megatron-LM/logs/Meg-Runs/main-runs-v2-apertus-1p5/ablations/ap1p5-8b-64k-lc-thinking-ablate-no-cot-adam-lr2e-5-linear-32n/HF
+/capstor/store/cscs/swissai/infra01/apertus_1p5/Megatron-LM/logs/Meg-Runs/main-runs-v2-apertus-1p5/ablations/ap1p5-8b-256k-lc-textratio-ablate-txt2.500-innovator-adam-lr8e-5-linear-32n/HF

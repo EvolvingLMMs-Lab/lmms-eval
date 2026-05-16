@@ -26,6 +26,14 @@ SBATCH_ERROR="${SBATCH_ERROR:-${LOG_DIR}/lmms_fill_shared_sqlite_%j.err}"
 BATCH_SIZE="${BATCH_SIZE:-512}"
 NUM_PROCESSES="${NUM_PROCESSES:-1}"
 SUBMIT_SLEEP_SECONDS="${SUBMIT_SLEEP_SECONDS:-5}"
+ENABLE_WANDB="${ENABLE_WANDB:-true}"
+WANDB_PROJECT="${WANDB_PROJECT:-lmms-eval}"
+WANDB_ENTITY="${WANDB_ENTITY:-rkreft-eth-z-rich}"
+WANDB_JOB_TYPE="${WANDB_JOB_TYPE:-eval}"
+WANDB_LOG_SAMPLES="${WANDB_LOG_SAMPLES:-true}"
+WANDB_GROUP_PREFIX="${WANDB_GROUP_PREFIX:-}"
+WANDB_ARGS="${WANDB_ARGS:-}"
+WANDB_API_KEY="${WANDB_API_KEY:-}"
 
 mkdir -p "${LOG_DIR}" "${IMAGE_TOKEN_CACHE_DIR}"
 
@@ -57,6 +65,8 @@ while IFS= read -r MODEL_PATH || [[ -n "${MODEL_PATH}" ]]; do
     echo "  TASK=${TASK}"
     echo "  NUM_PROCESSES=${NUM_PROCESSES}"
 
+    WANDB_GROUP="${WANDB_GROUP_PREFIX}${MODEL_NAME}"
+
     sbatch \
       --output "${SBATCH_OUTPUT}" \
       --error "${SBATCH_ERROR}" \
@@ -67,6 +77,14 @@ while IFS= read -r MODEL_PATH || [[ -n "${MODEL_PATH}" ]]; do
       --num-processes "${NUM_PROCESSES}" \
       --image-token-cache-dir "${IMAGE_TOKEN_CACHE_DIR}" \
       --image-token-cache-collision-guard 0 \
+      --enable-wandb "${ENABLE_WANDB}" \
+      --wandb-project "${WANDB_PROJECT}" \
+      --wandb-entity "${WANDB_ENTITY}" \
+      --wandb-job-type "${WANDB_JOB_TYPE}" \
+      --wandb-group "${WANDB_GROUP}" \
+      --wandb-log-samples "${WANDB_LOG_SAMPLES}" \
+      --wandb-args "${WANDB_ARGS}" \
+      --wandb-api-key "${WANDB_API_KEY}" \
       --batch-size "${BATCH_SIZE}"
 
     # sleep "${SUBMIT_SLEEP_SECONDS}"

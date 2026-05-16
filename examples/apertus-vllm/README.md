@@ -31,9 +31,9 @@ Top-level locations you will use most often:
 - `scripts/eval_using_local_sqlite_copy.sh`
   - Submission helper for eval-only jobs using existing cache (model x task fan-out).
 - `scripts/run_lmms_eval_vllm_fill_shared_cache.slurm`
-  - Wrapper launcher that pins cache-fill mode (`--image-token-cache-preload 0`).
+  - Cache-fill launcher (full runner) with defaults pinned to this repo (`cache/`, `logs/`, `results/`).
 - `scripts/run_lmms_eval_vllm_eval_local_copy.slurm`
-  - Wrapper launcher that pins eval-from-cache mode (local-copy + readonly + no write-misses).
+  - Eval launcher (full runner) for local-copy + readonly cache mode, with defaults pinned to this repo.
 - `scripts/run_lmms_eval_vllm_prod.slurm`
   - Main launcher with full argument parsing, env setup, preflight checks, and `accelerate launch`.
 - `cache/`
@@ -115,6 +115,15 @@ Key inherited env variables used by this launcher:
 - `VLLM_APERTUS_IMAGE_TOKEN_SQLITE_BUSY_TIMEOUT_MS`
 - `VLLM_APERTUS_IMAGE_TOKEN_SQLITE_MMAP_SIZE`
 - `VLLM_APERTUS_IMAGE_TOKEN_CACHE_DEBUG`
+
+### Path behavior in the mode-specific `.slurm` scripts
+
+- `scripts/run_lmms_eval_vllm_eval_local_copy.slurm` and `scripts/run_lmms_eval_vllm_fill_shared_cache.slurm` now default to this repo only:
+  - `LOG_DIR=/capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/logs`
+  - `IMAGE_TOKEN_CACHE_DIR=/capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/cache`
+  - `HF_HOME`, `NLTK_DATA`, `XDG_CACHE_HOME`, `VLLM_CACHE_ROOT`, `LMMS_EVAL_MODELS_CACHE` under `.../lmms-eval/cache`
+  - `OUTPUT_PATH=/capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/results`
+- Their `#SBATCH --output` and `#SBATCH --error` are also pinned to `.../lmms-eval/logs`.
 
 ## Exact things to worry about before launching
 
