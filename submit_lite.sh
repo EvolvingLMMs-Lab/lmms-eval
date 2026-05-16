@@ -25,10 +25,13 @@ HEAVY_GRES=${HEAVY_GRES:-gpu:a5000:4}
 COMMON="--export=ALL,MODEL=${MODEL},PRETRAINED=${PRETRAINED},ENV=${ENV},MODEL_ARGS_EXTRA=${EXTRA} \
         --job-name=xl_${MODEL} run_xmod_lite_generic.slurm"
 
-echo "[$MODEL] light a2t,t2a -> $LIGHT_GRES"
-sbatch --array=0,2 --gres="$LIGHT_GRES" $COMMON
+# a2t (0) is the only truly light config: 1 audio condition + text options.
+# t2a (2) has 4 audio options (singer_identification = long songs) and OOMs
+# on a single 24GB GPU, so it joins the heavy profile.
+echo "[$MODEL] light a2t -> $LIGHT_GRES"
+sbatch --array=0 --gres="$LIGHT_GRES" $COMMON
 
-echo "[$MODEL] heavy a2v,t2v,v2a,v2t -> $HEAVY_GRES"
-sbatch --array=1,3,4,5 --gres="$HEAVY_GRES" $COMMON
+echo "[$MODEL] heavy t2a,a2v,t2v,v2a,v2t -> $HEAVY_GRES"
+sbatch --array=1,2,3,4,5 --gres="$HEAVY_GRES" $COMMON
 
 echo "Submitted. Watch: squeue -u $USER"
