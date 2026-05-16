@@ -22,6 +22,17 @@ from lmms_eval.models.simple.baichuan_omni import BaichuanOmni
 class BaichuanOmniInterleave(InterleaveChatMixin, BaichuanOmni):
     """Baichuan-Omni that consumes interleaved doc_to_messages prompts."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # XModBench items carry 4 vision options; at Baichuan's default
+        # ~1 MP/image the a2v/t2v configs OOM even on 4x48GB. Cap the
+        # processor's per-image pixel budget (read at processor_omni.py:164
+        # as self.config.max_pixels) so all 5 media fit. No upstream change.
+        proc = getattr(self.model, "processor", None)
+        cfg = getattr(proc, "config", None) if proc is not None else None
+        if cfg is not None:
+            cfg.max_pixels = 256 * 28 * 28  # ~0.2 MP/image (vs ~1 MP default)
+
     def _interleaved_content(self, messages: list) -> str:
         parts = []
         for msg in messages:
