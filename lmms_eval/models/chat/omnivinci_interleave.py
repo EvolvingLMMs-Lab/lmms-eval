@@ -27,9 +27,14 @@ class OmniVinciInterleave(InterleaveChatMixin, OmniVinci):
             cfg.audio_chunk_length = "max_3600"
             cfg.num_video_frames = getattr(self, "num_video_frames", 128)
             cfg.load_audio_in_video = getattr(self, "load_audio_in_video", True)
+            # XModBench puts 4 vision options in one prompt. dynamic_s2 tiling
+            # explodes that into many tiles/image and OOMs a2v/t2v even on
+            # 4x24GB. Force a single fixed tile per image (no upstream change).
+            cfg.image_aspect_ratio = "resize"
         mcfg = getattr(self._model, "config", None)
         if mcfg is not None:
             mcfg.audio_chunk_length = "max_3600"
+            mcfg.image_aspect_ratio = "resize"
 
     def _build_message(self, messages: list) -> list:
         """doc_to_messages blocks -> OmniVinci message.
