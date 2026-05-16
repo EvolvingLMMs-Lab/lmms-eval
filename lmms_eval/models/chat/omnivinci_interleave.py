@@ -13,8 +13,32 @@ from lmms_eval.models.simple.omnivinci import OmniVinci
 class OmniVinciInterleave(InterleaveChatMixin, OmniVinci):
     """OmniVinci that consumes interleaved doc_to_messages prompts."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The upstream omnivinci wrapper only sets processor.config
+        # .load_audio_in_video. The official AudioBench OmniVinci runner also
+        # sets audio_chunk_length and num_video_frames; without
+        # audio_chunk_length the processor builds an incomplete
+        # mm_info["audio_info"] and __embed_media_tokens raises IndexError on
+        # the "sound" branch. Mirror the official settings here (no change to
+        # the upstream model file).
+        cfg = getattr(self.processor, "config", None)
+        if cfg is not None:
+            cfg.audio_chunk_length = "max_3600"
+            cfg.num_video_frames = getattr(self, "num_video_frames", 128)
+            cfg.load_audio_in_video = getattr(self, "load_audio_in_video", True)
+        mcfg = getattr(self._model, "config", None)
+        if mcfg is not None:
+            mcfg.audio_chunk_length = "max_3600"
+
     def _build_message(self, messages: list) -> list:
-        """doc_to_messages blocks -> OmniVinci message (string system + user list)."""
+        """doc_to_messages blocks -> OmniVinci message.
+
+        OmniVinci/VILA's mm_info builder indexes media by *sample*; an extra
+        system turn shifts that indexing and triggers an IndexError in
+        __embed_media_tokens. The upstream AudioBench OmniVinci runner uses a
+        single user message with no system role — mirror it exactly.
+        """
         user_content = []
         for msg in messages:
             content = msg.get("content")
@@ -30,10 +54,7 @@ class OmniVinciInterleave(InterleaveChatMixin, OmniVinci):
                     user_content.append({"type": "audio", "audio": c["url"]})
                 elif t == "video":
                     user_content.append({"type": "video", "video": c["url"]})
-        return [
-            {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": user_content},
-        ]
+        return [{"role": "user", "content": user_content}]
 
     def _infer_one(self, messages: list, gen_kwargs: dict) -> str:
         message = self._build_message(messages)

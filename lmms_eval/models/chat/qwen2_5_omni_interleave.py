@@ -17,8 +17,10 @@ except ImportError:
     eval_logger.warning("Failed to import qwen_omni_utils; install via `pip install qwen-omni-utils[decord]`")
 
 
-def _to_qwen_messages(messages: list) -> list:
+def _to_qwen_messages(messages: list, image_kwargs=None, video_kwargs=None) -> list:
     """doc_to_messages blocks -> Qwen-Omni native format with size/frame caps."""
+    image_kwargs = IMAGE_KWARGS if image_kwargs is None else image_kwargs
+    video_kwargs = VIDEO_KWARGS if video_kwargs is None else video_kwargs
     out = []
     for msg in messages:
         content = msg.get("content")
@@ -31,9 +33,9 @@ def _to_qwen_messages(messages: list) -> list:
             if t == "text":
                 new_content.append({"type": "text", "text": c.get("text", "")})
             elif t == "image":
-                new_content.append({"type": "image", "image": c["url"], **IMAGE_KWARGS})
+                new_content.append({"type": "image", "image": c["url"], **image_kwargs})
             elif t == "video":
-                new_content.append({"type": "video", "video": c["url"], **VIDEO_KWARGS})
+                new_content.append({"type": "video", "video": c["url"], **video_kwargs})
             elif t == "audio":
                 new_content.append({"type": "audio", "audio": c["url"]})
             else:
@@ -48,7 +50,7 @@ class Qwen2_5_OmniInterleave(InterleaveChatMixin, Qwen2_5_Omni):
 
     def _infer_one(self, messages: list, gen_kwargs: dict) -> str:
         messages.insert(0, {"role": "system", "content": [{"type": "text", "text": self.system_prompt}]})
-        hf_messages = _to_qwen_messages(messages)
+        hf_messages = _to_qwen_messages(messages, self.image_kwargs, self.video_kwargs)
 
         # Audio/video are separate content blocks (silent MELD clips).
         use_audio_in_video = False

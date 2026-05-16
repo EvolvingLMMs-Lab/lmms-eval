@@ -23,7 +23,7 @@ class Qwen3_OmniInterleave(InterleaveChatMixin, Qwen3_Omni):
 
     def _infer_one(self, messages: list, gen_kwargs: dict) -> str:
         messages.insert(0, {"role": "system", "content": [{"type": "text", "text": self.system_prompt}]})
-        hf_messages = _to_qwen_messages(messages)
+        hf_messages = _to_qwen_messages(messages, self.image_kwargs, self.video_kwargs)
 
         use_audio_in_video = False
         text = self.processor.apply_chat_template(hf_messages, add_generation_prompt=True, tokenize=False)

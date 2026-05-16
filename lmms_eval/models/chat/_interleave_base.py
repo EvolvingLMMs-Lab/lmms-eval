@@ -45,10 +45,18 @@ IMAGE_KWARGS = {"max_pixels": 512 * 512}
 class InterleaveChatMixin:
     """Mixin providing a chat-style generate_until over doc_to_messages.
 
+    Subclasses may override `video_kwargs` / `image_kwargs` class attributes
+    to use a tighter media budget (e.g. Baichuan-Omni's video path needs far
+    more memory than Qwen-Omni's for the same clip).
+
     Subclasses must define `_infer_one(self, messages, gen_kwargs) -> str`.
     """
 
     is_simple = False
+
+    # Per-model media budget; override in a subclass if it OOMs.
+    video_kwargs = VIDEO_KWARGS
+    image_kwargs = IMAGE_KWARGS
 
     def _infer_one(self, messages: list, gen_kwargs: dict) -> str:  # pragma: no cover
         raise NotImplementedError
