@@ -12,14 +12,14 @@ No upstream lmms-eval model file was modified. All adaptations live in new
 
 ## By-config accuracy vs. paper (XModBench, ICLR 2026, Table 2)
 
-| Config | Qwen2.5-Omni ours | paper | Δ | Qwen3-Omni ours | Baichuan-Omni-1.5 ours | paper | Δ |
-|--------|------:|------:|----:|------:|------:|------:|----:|
-| A→T | 63.1 | 62.0 | +1.1 | 71.6 | 52.5 | 47.8 | +4.7 |
-| A→V | 49.8 | 48.0 | +1.8 | 52.0 | 32.0 | 35.8 | −3.8 |
-| T→A | 59.2 | 55.4 | +3.8 | 62.5 | 47.6 | 40.5 | +7.1 |
-| T→V | 62.5 | 59.6 | +2.9 | 67.0 | 56.6 | 56.2 | +0.4 |
-| V→A | 50.3 | 50.5 | −0.2 | 55.6 | 47.0 | 38.6 | +8.4 |
-| V→T | 76.4 | 76.3 | +0.1 | 83.1 | 77.7 | 73.0 | +4.7 |
+| Config | Qwen2.5-Omni | paper | Δ | Qwen3-Omni | Baichuan-Omni-1.5 | paper | Δ | OmniVinci |
+|--------|------:|------:|----:|------:|------:|------:|----:|------:|
+| A→T | 63.1 | 62.0 | +1.1 | 71.6 | 52.5 | 47.8 | +4.7 | 62.2 |
+| A→V | 49.8 | 48.0 | +1.8 | 52.0 | 32.0 | 35.8 | −3.8 | — |
+| T→A | 59.2 | 55.4 | +3.8 | 62.5 | 47.6 | 40.5 | +7.1 | — |
+| T→V | 62.5 | 59.6 | +2.9 | 67.0 | 56.6 | 56.2 | +0.4 | — |
+| V→A | 50.3 | 50.5 | −0.2 | 55.6 | 47.0 | 38.6 | +8.4 | — |
+| V→T | 76.4 | 76.3 | +0.1 | 83.1 | 77.7 | 73.0 | +4.7 | 78.8 |
 
 - **Qwen2.5-Omni: 6/6 configs within |Δ|<5** — paper reproduced on Lite.
 - **Qwen3-Omni**: not in the paper (newer model); numbers reported for the
@@ -27,6 +27,11 @@ No upstream lmms-eval model file was modified. All adaptations live in new
 - **Baichuan-Omni-1.5: 4/6 within |Δ|<5.** T→A (+7.1) and V→A (+8.4) are
   genuine positive deviations (clean runs, ~0 OOM): Baichuan scores higher on
   the balanced Lite subsample than on the full 61k set — not a pipeline bug.
+- **OmniVinci: 2/6 best-effort** (A→T 62.2, V→T 78.8, clean). The other 4
+  hit VILA-internal limits under interleaved prompts that are not resolvable
+  without upstream model edits: t2a/v2a (4 audio options) raise IndexError in
+  `__embed_media_tokens`; a2v/t2v (4 vision options) OOM with dynamic_s2
+  tiling and degenerate to empty output with fixed-tile resize.
 
 ## Key fixes (all in `*_interleave` wrappers / launcher, not upstream)
 
