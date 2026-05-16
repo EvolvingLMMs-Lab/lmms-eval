@@ -25,13 +25,16 @@ class BaichuanOmniInterleave(InterleaveChatMixin, BaichuanOmni):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # XModBench items carry 4 vision options; at Baichuan's default
-        # ~1 MP/image the a2v/t2v configs OOM even on 4x48GB. Cap the
-        # processor's per-image pixel budget (read at processor_omni.py:164
-        # as self.config.max_pixels) so all 5 media fit. No upstream change.
+        # ~1 MP/image (and 768*28*28 video) the a2v/t2v configs OOM even on
+        # 4x48GB. OmniImageProcessor caches max_pixels at __init__
+        # (processor_omni.py:164), so setting config.max_pixels afterwards is
+        # too late — set the cached attribute on the already-built
+        # visual/video sub-processors directly. No upstream change.
         proc = getattr(self.model, "processor", None)
-        cfg = getattr(proc, "config", None) if proc is not None else None
-        if cfg is not None:
-            cfg.max_pixels = 256 * 28 * 28  # ~0.2 MP/image (vs ~1 MP default)
+        for sub in ("visual_processor", "video_processor"):
+            ip = getattr(proc, sub, None)
+            if ip is not None and hasattr(ip, "max_pixels"):
+                ip.max_pixels = 256 * 28 * 28  # ~0.2 MP (vs ~1 MP / 0.6 MP)
 
     def _interleaved_content(self, messages: list) -> str:
         parts = []
