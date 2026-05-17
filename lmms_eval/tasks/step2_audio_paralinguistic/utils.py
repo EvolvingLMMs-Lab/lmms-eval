@@ -193,6 +193,8 @@ def judge_semantic_match(answer, asr_text, prompt_template):
 
         response = client.chat.completions.create(model="gpt-3.5-turbo", messages=[{"role": "system", "content": "你是一个专业的文本评估助手"}, {"role": "user", "content": formatted_prompt}], temperature=0)
 
+        if not response.choices or response.choices[0].message is None:
+            raise ValueError("LLM returned empty or filtered response")
         result = response.choices[0].message.content.strip().lower()
         return 1 if result == "yes" else 0
 

@@ -53,6 +53,8 @@ class PhyXEvaluator:
             try:
                 response = self.client.chat.completions.create(**payload)
                 if n == 1:
+                    if not response.choices or response.choices[0].message is None:
+                        raise ValueError("LLM returned empty or filtered response")
                     prediction = response.choices[0].message.content.strip()
                     if prediction and prediction != "":
                         return prediction

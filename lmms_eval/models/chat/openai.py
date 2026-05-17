@@ -132,6 +132,8 @@ class OpenAICompatible(OpenAICompatibleSimple):
                     request_options = {"timeout": self.timeout} if getattr(self, "strict_generation", False) else {}
                     response = self.client.chat.completions.create(**payload, **request_options)
                     elapsed = time.time() - started_at
+                    if not response.choices or response.choices[0].message is None:
+                        raise ValueError("LLM returned empty or filtered response")
                     response_text = response.choices[0].message.content
                     if self.return_response_json:
                         response_text = response_text or ""

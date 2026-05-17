@@ -50,6 +50,8 @@ class AzureJudgeClient:
 
     def chat_completion(self, *, messages, **kwargs) -> str:
         resp = self.client.chat.completions.create(model=self.deployment, messages=messages, **kwargs)
+        if not resp.choices or resp.choices[0].message is None:
+            raise ValueError("LLM returned empty or filtered response")
         return resp.choices[0].message.content
 
 
@@ -66,6 +68,8 @@ class OpenAIJudgeClient:
 
     def chat_completion(self, *, messages, **kwargs) -> str:
         resp = self.client.chat.completions.create(model=self.deployment, messages=messages, **kwargs)
+        if not resp.choices or resp.choices[0].message is None:
+            raise ValueError("LLM returned empty or filtered response")
         return resp.choices[0].message.content
 
 
@@ -78,6 +82,8 @@ class AzureEndpointJudgeClient:
     def chat_completion(self, *, messages, **kwargs) -> str:
         client, deployment = build_azure_compat_client(model=self.deployment)
         resp = client.chat.completions.create(model=deployment, messages=messages, **kwargs)
+        if not resp.choices or resp.choices[0].message is None:
+            raise ValueError("LLM returned empty or filtered response")
         return resp.choices[0].message.content
 
 
