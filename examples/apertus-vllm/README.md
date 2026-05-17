@@ -79,6 +79,9 @@ bash scripts/fill_shared_sqlite_cache.sh scripts/models.txt
 - `LOG_DIR` (default: `./logs`)
 - `SBATCH_OUTPUT`, `SBATCH_ERROR`
 - `BATCH_SIZE`, `NUM_PROCESSES`
+- `ENABLE_WANDB`, `WANDB_PROJECT`, `WANDB_ENTITY`, `WANDB_JOB_TYPE`
+- `WANDB_GROUP_PREFIX`, `WANDB_LOG_SAMPLES`, `WANDB_ARGS`
+- `WANDB_API_KEY` (preferred) or pass key via launcher arg `--wandb-api-key`
 
 ### In `scripts/fill_shared_sqlite_cache.sh`
 
@@ -89,6 +92,9 @@ bash scripts/fill_shared_sqlite_cache.sh scripts/models.txt
 - `LOG_DIR` (default: `./logs`)
 - `SBATCH_OUTPUT`, `SBATCH_ERROR`
 - `BATCH_SIZE`, `NUM_PROCESSES`
+- `ENABLE_WANDB`, `WANDB_PROJECT`, `WANDB_ENTITY`, `WANDB_JOB_TYPE`
+- `WANDB_GROUP_PREFIX`, `WANDB_LOG_SAMPLES`, `WANDB_ARGS`
+- `WANDB_API_KEY` (preferred) or pass key via launcher arg `--wandb-api-key`
 
 ### In `scripts/run_lmms_eval_vllm_prod.slurm` (core launcher)
 
@@ -105,6 +111,9 @@ CLI options to know:
 - `--image-token-sqlite-busy-timeout-ms`, `--image-token-sqlite-mmap-size`
 - `--image-token-cache-debug`
 - `--prefetch-emu35-vision-tokenizer`
+- `--enable-wandb`, `--wandb-project`, `--wandb-entity`, `--wandb-job-type`
+- `--wandb-group`, `--wandb-run-name`, `--wandb-run-id`, `--wandb-resume`
+- `--wandb-log-samples`, `--wandb-args`, `--wandb-api-key`
 
 Key inherited env variables used by this launcher:
 
@@ -143,6 +152,64 @@ Key inherited env variables used by this launcher:
    If your container layout differs, export `VLLM_REPO` and `LMMS_EVAL_REPO` explicitly.
 9. Emu3.5 preflight import is enforced; ensure `VLLM_APERTUS_EMU35_CODEBASE` is valid (default `/workspace/Emu3.5`).
 10. Eval-only script pins readonly/no-write cache flags. If cache is missing entries for your task/model, you may lose cache benefits.
+11. W&B API key is not hardcoded. Provide it via `WANDB_API_KEY` or launcher arg `--wandb-api-key` when W&B is enabled.
+
+## W&B behavior in these scripts
+
+- Default run naming is model-based (run name derived from model path, not task).
+- Default run ID is deterministic from model name and uses `resume=allow`, so separate task jobs append to the same W&B run for that model.
+- Per-task sample/result tables are enabled by default via `--wandb-log-samples` behavior.
+
+### Push existing `results/` JSONs into existing W&B runs
+
+Use `scripts/push_results_to_wandb.py` to backfill or re-push lmms-eval `*_results.json` files.
+
+Push-only Python environment (minimal for this script):
+- `wandb`
+- Python standard library modules only otherwise
+
+Example setup (using `uv`):
+
+```bash
+uv venv .venv
+source .venv/bin/activate
+uv pip install wandb
+export WANDB_API_KEY="your_wandb_api_key"
+```
+
+New behavior/features:
+- Uses lmms-eval-style `wandb_args` string handling (`project=...,entity=...,job_type=...,group=...,name=...,id=...,resume=...`).
+- Run `name` is forced to model name (results folder name without `__HF`).
+- Run `id` is deterministic from model name (`run_<sha1_12>`).
+- Default `resume` is `allow`.
+- Aggregates all `*_results.json` files per model into one W&B run and keeps the latest score per benchmark/task.
+- `--dry-run` prints resolved `wandb_args` without uploading.
+- `--smoke-test` runs local checks for deterministic ID/name behavior.
+
+Example commands:
+
+```bash
+# Push model-aggregated results (latest benchmark values per model)
+uv run python /iopsstor/scratch/cscs/anunay/swissai/apertus_integration/lmms-eval/examples/apertus-vllm/scripts/push_results_to_wandb.py \
+  --results-root /capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/results
+
+# Inspect resolved wandb_args without upload
+uv run python /iopsstor/scratch/cscs/anunay/swissai/apertus_integration/lmms-eval/examples/apertus-vllm/scripts/push_results_to_wandb.py \
+  --results-root /capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/results \
+  --dry-run
+
+# Run smoke tests
+uv run python /iopsstor/scratch/cscs/anunay/swissai/apertus_integration/lmms-eval/examples/apertus-vllm/scripts/push_results_to_wandb.py \
+  --smoke-test
+```
+
+If you hit W&B `HTTP 429` / `per_run limit on filestream requests`, use the minimal throttle:
+
+```bash
+uv run python /iopsstor/scratch/cscs/anunay/swissai/apertus_integration/lmms-eval/examples/apertus-vllm/scripts/push_results_to_wandb.py \
+  --results-root /capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/results \
+  --sleep-seconds 20
+```
 
 ## Typical workflow
 

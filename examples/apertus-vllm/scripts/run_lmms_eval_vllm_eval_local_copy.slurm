@@ -87,9 +87,9 @@ WANDB_GROUP="${WANDB_GROUP:-}"
 WANDB_RUN_NAME="${WANDB_RUN_NAME:-}"
 WANDB_RUN_ID="${WANDB_RUN_ID:-}"
 WANDB_RESUME="${WANDB_RESUME:-allow}"
-WANDB_LOG_SAMPLES="${WANDB_LOG_SAMPLES:-true}"
+WANDB_LOG_SAMPLES="${WANDB_LOG_SAMPLES:-false}"
 WANDB_ARGS="${WANDB_ARGS:-}"
-WANDB_API_KEY="${WANDB_API_KEY:-}"
+WANDB_API_KEY="${WANDB_API_KEY:-wandb_v1_J0zUo6eGaEJKpgoMUbVP1CgsgJ2_CfbfOvYTXIOayJOEpSGp51jtUCUdp162z^CUuA0fytUP}"
 
 # SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # LOCAL_REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -167,7 +167,7 @@ Options:
   --wandb-run-name <name>                W&B run name. Default: model name.
   --wandb-run-id <id>                    W&B run id. Default: deterministic id from model name.
   --wandb-resume <mode>                  W&B resume mode (allow|must|never|auto). Default: allow.
-  --wandb-log-samples <true|false>       Also upload eval samples to W&B. Default: true.
+  --wandb-log-samples <true|false>       Also upload eval samples to W&B. Default: false.
   --wandb-args <kv_csv>                  Extra lmms-eval --wandb_args (comma-separated key=value).
   --wandb-api-key <key>                  W&B API key. If omitted, uses WANDB_API_KEY env.
   --debug-mode                           Enable debug mode (sets VLLM_APERTUS_IMAGE_TOKEN_CACHE_DEBUG=1).
