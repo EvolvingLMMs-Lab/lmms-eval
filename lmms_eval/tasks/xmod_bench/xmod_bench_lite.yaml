@@ -1,0 +1,8 @@
+group: xmod_bench_lite
+task:
+  - xmod_bench_lite_a2t
+  - xmod_bench_lite_a2v
+  - xmod_bench_lite_t2a
+  - xmod_bench_lite_t2v
+  - xmod_bench_lite_v2a
+  - xmod_bench_lite_v2t

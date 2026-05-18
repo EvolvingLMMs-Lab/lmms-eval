@@ -1,0 +1,12 @@
+group: xmod_bench
+task:
+  - xmod_bench_audio_image
+  - xmod_bench_audio_text
+  - xmod_bench_audio_video
+  - xmod_bench_image_audio
+  - xmod_bench_image_text
+  - xmod_bench_text_audio
+  - xmod_bench_text_image
+  - xmod_bench_text_video
+  - xmod_bench_video_audio
+  - xmod_bench_video_text
