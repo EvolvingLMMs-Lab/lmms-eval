@@ -211,7 +211,6 @@ class Qwen2_5_Omni(lmms):
             message = [{"role": "system", "content": [{"type": "text", "text": self.system_prompt}]}]
             for i, context in enumerate(contexts):
                 if len(visuals) > 0:
-                    # import ipdb; ipdb.set_trace()
                     visual = visuals[i] if i < len(visuals) else None
                     if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
                         current_use_audio = self._check_if_video_has_audio(visual)
