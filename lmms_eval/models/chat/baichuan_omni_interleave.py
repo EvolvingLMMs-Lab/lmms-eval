@@ -101,5 +101,5 @@ class BaichuanOmniInterleave(InterleaveChatMixin, BaichuanOmni):
                 pad_token_id=self.tokenizer.pad_token_id,
             )
         output_ids = outputs[0] if isinstance(outputs, tuple) else outputs
-        generated_ids = output_ids[0, input_ids.shape[1]:]
+        generated_ids = output_ids[0, input_ids.shape[1] :]
         return self.tokenizer.decode(generated_ids, skip_special_tokens=True).strip()

@@ -43,9 +43,14 @@ TARGET_FILES = [
 ]
 
 FINEGRAINED_CATS = {
-    "Animal Sounds", "Human Activities", "Human Speech",
-    "Musical Instruments", "Natural Sounds",
-    "Tools & Machinery", "Transportation", "Urban Sounds",
+    "Animal Sounds",
+    "Human Activities",
+    "Human Speech",
+    "Musical Instruments",
+    "Natural Sounds",
+    "Tools & Machinery",
+    "Transportation",
+    "Urban Sounds",
 }
 GENERAL_CATS = {"general_activities"}
 ALL_TARGET_CATS = FINEGRAINED_CATS | GENERAL_CATS
@@ -56,6 +61,7 @@ N_INSTANCES = 1000
 # ---------------------------------------------------------------------------
 # Clip ID helpers
 # ---------------------------------------------------------------------------
+
 
 def _audio_stem(path: str) -> str:
     return os.path.basename(path).rsplit(".", 1)[0]
@@ -93,6 +99,7 @@ def subtask_of(cat: str) -> str | None:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=42)
@@ -105,7 +112,7 @@ def main():
     # ── Step 1: build clip → {subtask: {file: [doc, ...]}} index ────────────
     # clip_docs[subtask][clip_id][fname] = [doc, ...]
     clip_docs: dict[str, dict[str, dict[str, list]]] = {
-        "finegrained":        defaultdict(lambda: defaultdict(list)),
+        "finegrained": defaultdict(lambda: defaultdict(list)),
         "general_activities": defaultdict(lambda: defaultdict(list)),
     }
 
@@ -126,17 +133,10 @@ def main():
     selected: dict[str, set[str]] = {}
     for sub in ("finegrained", "general_activities"):
         # Only consider clips that appear in ALL 6 target files
-        eligible = [
-            cid for cid, files in clip_docs[sub].items()
-            if len(files) == len(TARGET_FILES)
-        ]
-        print(f"{sub}: {len(clip_docs[sub])} unique clips, "
-              f"{len(eligible)} in all {len(TARGET_FILES)} modality files")
+        eligible = [cid for cid, files in clip_docs[sub].items() if len(files) == len(TARGET_FILES)]
+        print(f"{sub}: {len(clip_docs[sub])} unique clips, " f"{len(eligible)} in all {len(TARGET_FILES)} modality files")
         if len(eligible) < N_INSTANCES:
-            raise ValueError(
-                f"Only {len(eligible)} eligible clips for {sub}; "
-                f"need {N_INSTANCES}"
-            )
+            raise ValueError(f"Only {len(eligible)} eligible clips for {sub}; " f"need {N_INSTANCES}")
         selected[sub] = set(rng.sample(eligible, N_INSTANCES))
         print(f"  → sampled {N_INSTANCES} clips (seed={args.seed})")
 
@@ -154,8 +154,8 @@ def main():
             print(f"  {fname:35s}  (unchanged, {len(all_lines):,} rows)")
             continue
 
-        kept_other  = []   # non-target-subtask rows → keep all
-        kept_target = []   # one row per (clip, subtask) from this file
+        kept_other = []  # non-target-subtask rows → keep all
+        kept_target = []  # one row per (clip, subtask) from this file
 
         for line in all_lines:
             doc = json.loads(line)
@@ -181,8 +181,7 @@ def main():
 
         out_lines = kept_other + deduped
         before, after = len(all_lines), len(out_lines)
-        print(f"  {fname:35s}  {before:,} → {after:,} rows  "
-              f"({len(deduped):,} target kept)")
+        print(f"  {fname:35s}  {before:,} → {after:,} rows  " f"({len(deduped):,} target kept)")
 
         if not args.dry_run:
             with open(path, "w") as f:

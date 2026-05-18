@@ -35,22 +35,22 @@ from collections import defaultdict
 # ---------------------------------------------------------------------------
 
 DEFAULT_TASKS_ROOT = "/home/xwang378/scratch/2025/AudioBench/benchmark/tasks"
-DEFAULT_OUT_DIR    = "/home/xwang378/scratch/2025/lmms-eval/lmms_eval/tasks/xmod_bench/data"
-DEFAULT_SEED       = 42
+DEFAULT_OUT_DIR = "/home/xwang378/scratch/2025/lmms-eval/lmms_eval/tasks/xmod_bench/data"
+DEFAULT_SEED = 42
 
 # Subtasks capped at N instances.  All modality files for the same subtask
 # share the same sampled index set to preserve cross-modal correspondence.
 CAPPED_SUBTASKS: dict[str, int] = {
-    "01_perception/finegrained":        1000,
+    "01_perception/finegrained": 1000,
     "01_perception/general_activities": 1000,
-    "01_perception/natures":             500,   # 500/file × 12 files = 6000 total, 1000/combo
+    "01_perception/natures": 500,  # 500/file × 12 files = 6000 total, 1000/combo
 }
 
 # Subtasks where files with more than N rows are truncated at row N (last rows dropped).
 # Used when a few modality files have slightly more rows than others due to source
 # data differences, and we simply want to align them at the shorter count.
 TRUNCATE_AT: dict[str, int] = {
-    "02_spatial/panaroma": 390,   # text_audio/video_audio/video_text have 395; drop last 5
+    "02_spatial/panaroma": 390,  # text_audio/video_audio/video_text have 395; drop last 5
 }
 
 # Subtasks excluded from automatic mismatch detection.
@@ -60,6 +60,7 @@ MISMATCH_SKIP_SUBTASKS: set[str] = set()
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def normalize_media(m: dict) -> dict:
     """Keep only 'modality' and 'input'; drop any extra metadata keys."""
@@ -91,7 +92,7 @@ def _compute_mismatch_info(
     """
     n_per_file = [len(d) for _, d in file_list]
     if len(set(n_per_file)) == 1:
-        return None   # all same → nothing to do
+        return None  # all same → nothing to do
 
     min_n = min(n_per_file)
 
@@ -111,8 +112,7 @@ def _compute_mismatch_info(
             continue  # uniform count within this group → skip
 
         # Intersect conditions.input across all files in the group
-        sets = [set(item["conditions"]["input"] for item in data)
-                for _, data in files]
+        sets = [set(item["conditions"]["input"] for item in data) for _, data in files]
         valid = sets[0]
         for s in sets[1:]:
             valid &= s
@@ -123,19 +123,17 @@ def _compute_mismatch_info(
                 for i, item in enumerate(data):
                     if item["conditions"]["input"] not in valid:
                         global_skip_positions.add(i)
-                break   # one full-length file per group is sufficient
+                break  # one full-length file per group is sufficient
 
     if not global_skip_positions:
         # Count mismatch exists but our intersection didn't find skip positions
         # (shouldn't happen with valid data; log and skip)
-        print(f"[MISMATCH] WARNING: {subtask} has unequal row counts "
-              f"{set(n_per_file)} but no skip positions found — skipping fix")
+        print(f"[MISMATCH] WARNING: {subtask} has unequal row counts " f"{set(n_per_file)} but no skip positions found — skipping fix")
         return None
 
     global_skip_sorted = sorted(global_skip_positions)
     n_valid = max(n_per_file) - len(global_skip_positions)
-    print(f"[MISMATCH] {subtask}: row counts {sorted(set(n_per_file))} "
-          f"→ keeping {n_valid} instances  (skip positions: {global_skip_sorted})")
+    print(f"[MISMATCH] {subtask}: row counts {sorted(set(n_per_file))} " f"→ keeping {n_valid} instances  (skip positions: {global_skip_sorted})")
 
     # Build per-file filtering info
     path_info: dict[str, dict] = {}
@@ -161,7 +159,7 @@ def _remap_orig_idx(file_pos: int, canonical_skips: list[int]) -> int:
     full sequence has a gap there, so we shift orig_idx up by 1.
     """
     orig_idx = file_pos
-    for skip in canonical_skips:   # must be sorted ascending
+    for skip in canonical_skips:  # must be sorted ascending
         if orig_idx >= skip:
             orig_idx += 1
         # No early break: after incrementing, orig_idx might reach the next skip
@@ -171,6 +169,7 @@ def _remap_orig_idx(file_pos: int, canonical_skips: list[int]) -> int:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def build(tasks_root: str, out_dir: str, seed: int) -> None:
     # ── Step 1: walk task directory, group files by subtask ────────────────
@@ -198,9 +197,7 @@ def build(tasks_root: str, out_dir: str, seed: int) -> None:
             print(f"WARNING: capped subtask {subtask!r} not found in {tasks_root}")
             continue
         n_per_file = [len(d) for _, d in subtask_files[subtask]]
-        assert len(set(n_per_file)) == 1, (
-            f"Row-count mismatch across modality files for {subtask}: {n_per_file}"
-        )
+        assert len(set(n_per_file)) == 1, f"Row-count mismatch across modality files for {subtask}: {n_per_file}"
         n = n_per_file[0]
         rng = random.Random(seed)
         chosen = set(rng.sample(range(n), cap))
@@ -223,14 +220,14 @@ def build(tasks_root: str, out_dir: str, seed: int) -> None:
     combos: dict[str, list[dict]] = defaultdict(list)
 
     for subtask, file_list in subtask_files.items():
-        keep          = sampled_indices.get(subtask)    # None → keep all rows
-        file_mismatch = mismatch_info.get(subtask)      # None → no mismatch
-        truncate      = TRUNCATE_AT.get(subtask)        # None → no truncation
+        keep = sampled_indices.get(subtask)  # None → keep all rows
+        file_mismatch = mismatch_info.get(subtask)  # None → no mismatch
+        truncate = TRUNCATE_AT.get(subtask)  # None → no truncation
 
         for path, data in file_list:
             d0 = data[0]
-            cond      = d0.get("conditions", {})
-            opts      = d0.get("options", {})
+            cond = d0.get("conditions", {})
+            opts = d0.get("options", {})
             if not isinstance(cond, dict) or not isinstance(opts, dict) or not opts:
                 continue
             first_opt = list(opts.values())[0]
@@ -238,8 +235,8 @@ def build(tasks_root: str, out_dir: str, seed: int) -> None:
                 continue
 
             cond_mod = cond.get("modality", "?").lower()
-            opt_mod  = first_opt.get("modality", "?").lower()
-            combo    = f"{cond_mod}_{opt_mod}"
+            opt_mod = first_opt.get("modality", "?").lower()
+            combo = f"{cond_mod}_{opt_mod}"
 
             # Per-file mismatch filtering info (None if no mismatch)
             file_info = file_mismatch.get(path) if file_mismatch else None
@@ -255,7 +252,7 @@ def build(tasks_root: str, out_dir: str, seed: int) -> None:
                 # ── Mismatch filtering ─────────────────────────────────────
                 if file_info is not None:
                     if file_pos in file_info["skip_set"]:
-                        continue                          # bad position → skip
+                        continue  # bad position → skip
                     if file_info["canonical_skips"]:
                         orig_idx = _remap_orig_idx(file_pos, file_info["canonical_skips"])
                     else:
@@ -270,10 +267,10 @@ def build(tasks_root: str, out_dir: str, seed: int) -> None:
                 raw_cond = item.get("conditions", {})
                 raw_opts = item.get("options", {})
                 row = {
-                    "index":          orig_idx,   # original row index in source JSON
-                    "subtask":        subtask,
-                    "question":       item.get("question", ""),
-                    "conditions":     normalize_media(raw_cond),
+                    "index": orig_idx,  # original row index in source JSON
+                    "subtask": subtask,
+                    "question": item.get("question", ""),
+                    "conditions": normalize_media(raw_cond),
                     "options": {
                         "A": normalize_media(raw_opts.get("A", {})),
                         "B": normalize_media(raw_opts.get("B", {})),
@@ -281,7 +278,7 @@ def build(tasks_root: str, out_dir: str, seed: int) -> None:
                         "D": normalize_media(raw_opts.get("D", {})),
                     },
                     "correct_answer": item.get("correct_answer", ""),
-                    "category":       item.get("category") or subtask,
+                    "category": item.get("category") or subtask,
                 }
                 combos[combo].append(row)
 
@@ -310,8 +307,8 @@ def build(tasks_root: str, out_dir: str, seed: int) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tasks-root", default=DEFAULT_TASKS_ROOT)
-    parser.add_argument("--out-dir",    default=DEFAULT_OUT_DIR)
-    parser.add_argument("--seed",       default=DEFAULT_SEED, type=int)
+    parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
+    parser.add_argument("--seed", default=DEFAULT_SEED, type=int)
     args = parser.parse_args()
 
     build(args.tasks_root, args.out_dir, args.seed)

@@ -8,7 +8,11 @@ messages -> output step.
 from loguru import logger as eval_logger
 
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.chat._interleave_base import IMAGE_KWARGS, VIDEO_KWARGS, InterleaveChatMixin
+from lmms_eval.models.chat._interleave_base import (
+    IMAGE_KWARGS,
+    VIDEO_KWARGS,
+    InterleaveChatMixin,
+)
 from lmms_eval.models.simple.qwen2_5_omni import Qwen2_5_Omni
 
 try:
