@@ -6,8 +6,6 @@ The script mirrors lmms-eval wandb argument handling:
   --wandb_args "project=...,entity=...,job_type=...,group=...,name=...,id=...,resume=..."
 """
 
-from __future__ import annotations
-
 import argparse
 import copy
 import hashlib
@@ -24,11 +22,12 @@ except ModuleNotFoundError:
     wandb = None
 
 
-DEFAULT_RESULTS_ROOT = "/capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/results"
+EXAMPLE_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_RESULTS_ROOT = str(EXAMPLE_ROOT / "results")
 DEFAULT_WANDB_PROJECT = "lmms-eval"
 DEFAULT_WANDB_ENTITY = "rkreft-eth-z-rich"
 DEFAULT_WANDB_JOB_TYPE = "eval"
-DEFAULT_WANDB_RESUME = "allow"
+DEFAULT_WANDB_RESUME = "must"
 
 
 def _handle_arg_string(arg: str):
@@ -72,7 +71,7 @@ def _model_label_from_dir(model_dir_name: str) -> str:
 
 def _deterministic_run_id(seed: str) -> str:
     digest = hashlib.sha1(seed.encode("utf-8")).hexdigest()[:12]
-    return f"run_{digest}"
+    return f"model_{digest}"
 
 
 def _result_sort_key(path: Path):
@@ -218,9 +217,14 @@ def _log_results_like_lmms_eval(run, payload: Dict[str, object]):
     run.log_artifact(artifact)
 
 
-def _aggregate_latest_payload_for_model(result_files: List[Path]) -> Dict[str, object]:
+def _aggregate_latest_payload_for_model(result_files: List[Path], latest_only: bool = False) -> Dict[str, object]:
     if not result_files:
         raise ValueError("result_files cannot be empty")
+
+    sorted_result_files = sorted(result_files, key=_result_sort_key)
+    if latest_only:
+        with sorted_result_files[-1].open("r", encoding="utf-8") as f:
+            return json.load(f)
 
     latest_payload = None
     merged_results: Dict[str, object] = {}
@@ -228,7 +232,7 @@ def _aggregate_latest_payload_for_model(result_files: List[Path]) -> Dict[str, o
     merged_nshot: Dict[str, object] = {}
     merged_groups: Dict[str, object] = {}
 
-    for result_path in sorted(result_files, key=_result_sort_key):
+    for result_path in sorted_result_files:
         with result_path.open("r", encoding="utf-8") as f:
             payload = json.load(f)
         latest_payload = payload
@@ -266,9 +270,10 @@ def _push_one_model_aggregate(
     job_type: str,
     resume: str,
     group_override: str,
+    latest_only: bool,
     dry_run: bool,
 ) -> None:
-    payload = _aggregate_latest_payload_for_model(result_files)
+    payload = _aggregate_latest_payload_for_model(result_files, latest_only=latest_only)
     model_label = _model_label_from_dir(model_dir.name)
     run_name = model_label
     run_id = _deterministic_run_id(model_label)
@@ -287,7 +292,9 @@ def _push_one_model_aggregate(
         group=group_override,
     )
 
-    print(f"[INFO] model={model_label} files={len(result_files)} latest_file={latest_result.name}")
+    source_file_count = 1 if latest_only else len(result_files)
+    mode = "latest-only" if latest_only else "aggregate"
+    print(f"[INFO] model={model_label} mode={mode} files={source_file_count} latest_file={latest_result.name}")
     print(f"[INFO] wandb_args={merged_wandb_args}")
     if dry_run:
         return
@@ -297,7 +304,7 @@ def _push_one_model_aggregate(
     run = wandb.init(**_simple_parse_args_string(merged_wandb_args))
     _log_results_like_lmms_eval(run=run, payload=payload)
     run.summary["lmms_eval/model_dir"] = str(model_dir)
-    run.summary["lmms_eval/source_file_count"] = len(result_files)
+    run.summary["lmms_eval/source_file_count"] = source_file_count
     run.summary["lmms_eval/latest_results_json_name"] = latest_result.name
     run.finish()
 
@@ -320,7 +327,7 @@ def _run_smoke_tests() -> int:
     parsed = _simple_parse_args_string(merged)
     assert parsed["name"] == model_label, "run name must equal model label"
     assert parsed["id"] == run_id, "run id must match provided deterministic id"
-    assert parsed["resume"] == "allow", "resume mode must be forced to CLI default/setting"
+    assert parsed["resume"] == "must", "resume mode must be forced to CLI default/setting"
     assert parsed["group"] == "mygroup", "existing group should be preserved"
 
     merged_a = _merge_wandb_args(
@@ -346,6 +353,7 @@ def _run_smoke_tests() -> int:
     parsed_a = _simple_parse_args_string(merged_a)
     parsed_b = _simple_parse_args_string(merged_b)
     assert parsed_a["id"] == parsed_b["id"], "same explicit run id must be stable"
+    assert str(parsed_a["id"]).startswith("model_"), "run id must match launcher prefix"
 
     print("[SMOKE] OK")
     return 0
@@ -359,7 +367,8 @@ def main() -> int:
     parser.add_argument("--wandb-job-type", default=DEFAULT_WANDB_JOB_TYPE, help=f"W&B job_type. Default: {DEFAULT_WANDB_JOB_TYPE}")
     parser.add_argument("--wandb-resume", default=DEFAULT_WANDB_RESUME, help=f"W&B resume mode. Default: {DEFAULT_WANDB_RESUME}")
     parser.add_argument("--wandb-group", default="", help="Optional default W&B group when missing from results.")
-    parser.add_argument("--sleep-seconds", type=float, default=3.0, help="Sleep between pushes to reduce W&B 429 rate limits. Default: 3.")
+    parser.add_argument("--latest-only", action="store_true", help="Push only the newest *_results.json per model directory.")
+    parser.add_argument("--sleep-seconds", type=float, default=5.0, help="Sleep between pushes to reduce W&B 429 rate limits. Default: 5.")
     parser.add_argument("--dry-run", action="store_true", help="Print resolved actions without uploading.")
     parser.add_argument("--smoke-test", action="store_true", help="Run local smoke tests and exit.")
     args = parser.parse_args()
@@ -390,6 +399,7 @@ def main() -> int:
             job_type=args.wandb_job_type,
             resume=args.wandb_resume,
             group_override=args.wandb_group,
+            latest_only=args.latest_only,
             dry_run=args.dry_run,
         )
         if args.sleep_seconds > 0 and idx < len(model_dirs) - 1:

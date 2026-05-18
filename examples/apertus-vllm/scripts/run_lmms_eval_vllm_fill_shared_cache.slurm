@@ -1,30 +1,30 @@
 #!/bin/bash
 #SBATCH --account=infra01
 #SBATCH --job-name=lmms-fill-shared-sqlite
-#SBATCH --environment=/capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/apertus-vllm-lmms-eval-prod.toml
+#SBATCH --environment=/capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm/apertus-vllm-lmms-eval-prod.toml
 #SBATCH --nodes=1
 #SBATCH --exclusive
 #SBATCH --reservation=SD-69241-apertus-1-5-0
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=285
 #SBATCH --time=12:00:00
-#SBATCH --output=/capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/logs/lmms_fill_shared_sqlite_%j.out
-#SBATCH --error=/capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/logs/lmms_fill_shared_sqlite_%j.err
+#SBATCH --output=/capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm/logs/lmms_fill_shared_sqlite_%j.out
+#SBATCH --error=/capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm/logs/lmms_fill_shared_sqlite_%j.err
 
 
 
 # How to run example
-# sbatch /capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/scripts/run_lmms_eval_vllm_fill_shared_cache.slurm \
+# sbatch /capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm/scripts/run_lmms_eval_vllm_fill_shared_cache.slurm \
 #     --model-path /capstor/store/.../HF \
 #     --tokenizer-path /capstor/store/.../tokenizer/apertus_emu3.5_instruct \
 #     --tasks pope,gqa,vqav2_val,mmmu_test_group_img,mme,ai2d,ocrbench_v2,chartqa,docvqa,infovqa \
-#     --hf-home /capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/cache/hf \
-#     --output-path /capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/results/run1 \
+#     --hf-home /capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm/cache/hf \
+#     --output-path /capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm/results/run1 \
 #     --num-processes 4 \
 #     --gpu-memory-utilization 0.6 \
 set -euo pipefail
 
-REPO_ROOT="/capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval"
+REPO_ROOT="/capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm"
 CACHE_ROOT="${REPO_ROOT}/cache"
 
 
@@ -74,7 +74,7 @@ IMAGE_TOKEN_SQLITE_BUSY_TIMEOUT_MS="${VLLM_APERTUS_IMAGE_TOKEN_SQLITE_BUSY_TIMEO
 IMAGE_TOKEN_SQLITE_MMAP_SIZE="${VLLM_APERTUS_IMAGE_TOKEN_SQLITE_MMAP_SIZE:-1073741824}"
 IMAGE_TOKEN_CACHE_DEBUG="${VLLM_APERTUS_IMAGE_TOKEN_CACHE_DEBUG:-0}"
 PREFETCH_EMU35_VISION_TOKENIZER=true
-ENABLE_WANDB="${WANDB_ENABLE:-true}"
+ENABLE_WANDB="${WANDB_ENABLE:-false}"
 WANDB_PROJECT="${WANDB_PROJECT:-lmms-eval}"
 WANDB_ENTITY="${WANDB_ENTITY:-rkreft-eth-z-rich}"
 WANDB_JOB_TYPE="${WANDB_JOB_TYPE:-eval}"
@@ -82,7 +82,7 @@ WANDB_GROUP="${WANDB_GROUP:-}"
 WANDB_RUN_NAME="${WANDB_RUN_NAME:-}"
 WANDB_RUN_ID="${WANDB_RUN_ID:-}"
 WANDB_RESUME="${WANDB_RESUME:-allow}"
-WANDB_LOG_SAMPLES="${WANDB_LOG_SAMPLES:-true}"
+WANDB_LOG_SAMPLES="${WANDB_LOG_SAMPLES:-false}"
 WANDB_ARGS="${WANDB_ARGS:-}"
 WANDB_API_KEY="${WANDB_API_KEY:-}"
 
@@ -143,7 +143,7 @@ Options:
                                          Enable cache debug logs.
   --prefetch-emu35-vision-tokenizer <true|false>
                                          Prefetch BAAI/Emu3.5-VisionTokenizer once before launch.
-  --enable-wandb <true|false>            Enable W&B metric logging. Default: true.
+  --enable-wandb <true|false>            Enable W&B metric logging. Default: false.
   --wandb-project <name>                 W&B project. Default: lmms-eval.
   --wandb-entity <name>                  W&B entity/team. Default: rkreft-eth-z-rich.
   --wandb-job-type <name>                W&B job_type. Default: eval.
@@ -151,7 +151,7 @@ Options:
   --wandb-run-name <name>                W&B run name. Default: model name.
   --wandb-run-id <id>                    W&B run id. Default: deterministic id from model name.
   --wandb-resume <mode>                  W&B resume mode (allow|must|never|auto). Default: allow.
-  --wandb-log-samples <true|false>       Also upload eval samples to W&B. Default: true.
+  --wandb-log-samples <true|false>       Also upload eval samples to W&B. Default: false.
   --wandb-args <kv_csv>                  Extra lmms-eval --wandb_args (comma-separated key=value).
   --wandb-api-key <key>                  W&B API key. If omitted, uses WANDB_API_KEY env.
   --debug-mode                           Enable debug mode (sets VLLM_APERTUS_IMAGE_TOKEN_CACHE_DEBUG=1).

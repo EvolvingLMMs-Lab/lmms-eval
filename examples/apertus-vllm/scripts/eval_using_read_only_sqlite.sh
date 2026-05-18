@@ -29,8 +29,8 @@ TASKS_CSV="${TASKS_CSV:-gqa,realworldqa,seedbench,mmstar,ocrbench_v2,textvqa_val
 IMAGE_TOKEN_CACHE_DIR="${IMAGE_TOKEN_CACHE_DIR:-${REPO_ROOT}/cache}"
 IMAGE_TOKEN_CACHE_LOCAL_BASE="${IMAGE_TOKEN_CACHE_LOCAL_BASE:-/tmp/${USER}/apertus_image_token_cache}"
 LOG_DIR="${LOG_DIR:-${SCRIPT_DIR}/logs}"
-SBATCH_OUTPUT="${SBATCH_OUTPUT:-${LOG_DIR}/lmms_eval_local_sqlite_copy_%j.out}"
-SBATCH_ERROR="${SBATCH_ERROR:-${LOG_DIR}/lmms_eval_local_sqlite_copy_%j.err}"
+SBATCH_OUTPUT="${SBATCH_OUTPUT:-${LOG_DIR}/lmms_eval_read_only_sqlite_%j.out}"
+SBATCH_ERROR="${SBATCH_ERROR:-${LOG_DIR}/lmms_eval_read_only_sqlite_%j.err}"
 BATCH_SIZE="${BATCH_SIZE:-512}"
 NUM_PROCESSES="${NUM_PROCESSES:-4}"
 SUBMIT_SLEEP_SECONDS="${SUBMIT_SLEEP_SECONDS:-5}"
@@ -86,7 +86,7 @@ while IFS= read -r MODEL_PATH || [[ -n "${MODEL_PATH}" ]]; do
       --enable-image-token-cache true \
       --image-token-cache-dir "${IMAGE_TOKEN_CACHE_DIR}" \
       --image-token-cache-collision-guard 0 \
-      --image-token-cache-local-copy 1 \
+      --image-token-cache-local-copy 0 \
       --image-token-cache-local-base "${IMAGE_TOKEN_CACHE_LOCAL_BASE}" \
       --image-token-cache-preload 1 \
       --image-token-cache-readonly 1 \

@@ -1,30 +1,30 @@
 #!/bin/bash
 #SBATCH --account=infra01
 #SBATCH --job-name=lmms-eval-local-sqlite-copy
-#SBATCH --environment=/capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/apertus-vllm-lmms-eval-prod.toml
+#SBATCH --environment=/capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm/apertus-vllm-lmms-eval-prod.toml
 #SBATCH --nodes=1
 #SBATCH --exclusive
 #SBATCH --reservation=SD-69241-apertus-1-5-0
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=285
 #SBATCH --time=12:00:00
-#SBATCH --output=/capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/logs/lmms_eval_local_sqlite_copy_%j.out
-#SBATCH --error=/capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/logs/lmms_eval_local_sqlite_copy_%j.err
+#SBATCH --output=/capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm/logs/lmms_eval_local_sqlite_copy_%j.out
+#SBATCH --error=/capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm/logs/lmms_eval_local_sqlite_copy_%j.err
 
 
 
 # How to run example
-# sbatch /capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/scripts/run_lmms_eval_vllm_eval_local_copy.slurm \
+# sbatch /capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm/scripts/run_lmms_eval_vllm_eval_local_copy.slurm \
 #     --model-path /capstor/store/.../HF \
 #     --tokenizer-path /capstor/store/.../tokenizer/apertus_emu3.5_instruct \
 #     --tasks pope,gqa,vqav2_val,mmmu_test_group_img,mme,ai2d,ocrbench_v2,chartqa,docvqa,infovqa \
-#     --hf-home /capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/cache/hf \
-#     --output-path /capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/results/run1 \
+#     --hf-home /capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm/cache/hf \
+#     --output-path /capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm/results/run1 \
 #     --num-processes 4 \
 #     --gpu-memory-utilization 0.6 \
 set -euo pipefail
 
-REPO_ROOT="/capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval"
+REPO_ROOT="/capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm"
 CACHE_ROOT="${REPO_ROOT}/cache"
 
 
@@ -79,7 +79,7 @@ IMAGE_TOKEN_SQLITE_BUSY_TIMEOUT_MS="${VLLM_APERTUS_IMAGE_TOKEN_SQLITE_BUSY_TIMEO
 IMAGE_TOKEN_SQLITE_MMAP_SIZE="${VLLM_APERTUS_IMAGE_TOKEN_SQLITE_MMAP_SIZE:-1073741824}"
 IMAGE_TOKEN_CACHE_DEBUG="${VLLM_APERTUS_IMAGE_TOKEN_CACHE_DEBUG:-0}"
 PREFETCH_EMU35_VISION_TOKENIZER=true
-ENABLE_WANDB="${WANDB_ENABLE:-true}"
+ENABLE_WANDB=false
 WANDB_PROJECT="${WANDB_PROJECT:-lmms-eval}"
 WANDB_ENTITY="${WANDB_ENTITY:-rkreft-eth-z-rich}"
 WANDB_JOB_TYPE="${WANDB_JOB_TYPE:-eval}"
@@ -89,7 +89,7 @@ WANDB_RUN_ID="${WANDB_RUN_ID:-}"
 WANDB_RESUME="${WANDB_RESUME:-allow}"
 WANDB_LOG_SAMPLES="${WANDB_LOG_SAMPLES:-false}"
 WANDB_ARGS="${WANDB_ARGS:-}"
-WANDB_API_KEY="${WANDB_API_KEY:-wandb_v1_J0zUo6eGaEJKpgoMUbVP1CgsgJ2_CfbfOvYTXIOayJOEpSGp51jtUCUdp162z^CUuA0fytUP}"
+WANDB_API_KEY="${WANDB_API_KEY:-}"
 
 # SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # LOCAL_REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -159,7 +159,7 @@ Options:
                                          Enable cache debug logs.
   --prefetch-emu35-vision-tokenizer <true|false>
                                          Prefetch BAAI/Emu3.5-VisionTokenizer once before launch.
-  --enable-wandb <true|false>            Enable W&B metric logging. Default: true.
+  --enable-wandb <true|false>            Enable W&B metric logging. Default: false (forced off in this script).
   --wandb-project <name>                 W&B project. Default: lmms-eval.
   --wandb-entity <name>                  W&B entity/team. Default: rkreft-eth-z-rich.
   --wandb-job-type <name>                W&B job_type. Default: eval.
@@ -216,7 +216,7 @@ while [[ $# -gt 0 ]]; do
     --image-token-sqlite-mmap-size) IMAGE_TOKEN_SQLITE_MMAP_SIZE="$2"; shift 2 ;;
     --image-token-cache-debug) IMAGE_TOKEN_CACHE_DEBUG="$2"; shift 2 ;;
     --prefetch-emu35-vision-tokenizer) PREFETCH_EMU35_VISION_TOKENIZER="$2"; shift 2 ;;
-    --enable-wandb) ENABLE_WANDB="$2"; shift 2 ;;
+    --enable-wandb) echo "Info: W&B is disabled in this script; ignoring --enable-wandb=$2"; shift 2 ;;
     --wandb-project) WANDB_PROJECT="$2"; shift 2 ;;
     --wandb-entity) WANDB_ENTITY="$2"; shift 2 ;;
     --wandb-job-type) WANDB_JOB_TYPE="$2"; shift 2 ;;

@@ -1,0 +1,12 @@
+squash/*
+results/*
+responses/*
+logs
+logs/*
+scripts/logs/*
+.wandb
+.wandb/*
+env
+env/*
+datasets_hf_cache/*
+cache/*

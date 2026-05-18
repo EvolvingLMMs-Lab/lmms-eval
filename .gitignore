@@ -53,6 +53,28 @@ ckpt
 submissions/
 remote_code/*
 
+# Apertus vLLM benchmark artifacts (large / generated)
+examples/apertus-vllm/responses/
+examples/apertus-vllm/responses/**
+examples/apertus-vllm/responses/20260509_155020/
+examples/apertus-vllm/responses/20260509_155020/**
+examples/apertus-vllm/results/
+examples/apertus-vllm/results/**
+examples/apertus-vllm/squash/
+examples/apertus-vllm/squash/**
+examples/apertus-vllm/cache/
+examples/apertus-vllm/cache/**
+examples/apertus-vllm/logs/
+examples/apertus-vllm/logs/**
+examples/apertus-vllm/scripts/logs/
+examples/apertus-vllm/scripts/logs/**
+examples/apertus-vllm/.wandb
+examples/apertus-vllm/.wandb/
+examples/apertus-vllm/.wandb/**
+examples/apertus-vllm/env
+examples/apertus-vllm/env/
+examples/apertus-vllm/env/**
+
 # External repos cloned locally
 LLaVA/
 InternVL/

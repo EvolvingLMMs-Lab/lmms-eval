@@ -1,4 +1,4 @@
-image = "/capstor/store/cscs/swissai/infra01/multimodal-eval/lmms-eval/squash/apertus-vllm-lmms-eval-13.0-prod.sqsh"
+image = "/capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm/squash/apertus-vllm-lmms-eval-13.0-prod.sqsh"
 
 mounts = [
   "/capstor/store/cscs/swissai/infra01/ocf-share:/ocfbin",
@@ -10,7 +10,7 @@ mounts = [
   "/usr/lib64/libnuma.so.1:/usr/lib/libnuma.so.1",
 ]
 
-workdir = "/iopsstor/scratch/cscs/anunay/swissai/apertus_integration/"
+workdir = "/capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm"
 
 [env]
 NCCL_NET = "AWS Libfabric"
