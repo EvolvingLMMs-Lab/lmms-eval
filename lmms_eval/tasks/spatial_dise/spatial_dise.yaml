@@ -1,0 +1,33 @@
+dataset_path: csv
+dataset_kwargs:
+  data_files:
+    test: https://huggingface.co/datasets/TACPS-liv/Spatial-DISE/resolve/main/DISE-bench/DISE-benchmark.csv
+  skipinitialspace: true
+task: spatial_dise
+test_split: test
+output_type: generate_until
+process_docs: !function utils.spatial_dise_process_docs
+doc_to_visual: !function utils.spatial_dise_doc_to_visual
+doc_to_text: !function utils.spatial_dise_doc_to_text
+doc_to_target: "answer"
+process_results: !function utils.spatial_dise_process_results
+
+metric_list:
+  - metric: spatial_dise_acc
+    aggregation: !function utils.spatial_dise_aggregate_results
+    higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  do_sample: false
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nPlease select the correct answer and respond with only one option letter."
+
+metadata:
+  - version: 0.0
+  - dataset: TACPS-liv/Spatial-DISE
+  - paper: https://openreview.net/pdf?id=bMINsPQpME
