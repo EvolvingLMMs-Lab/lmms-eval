@@ -149,7 +149,10 @@ def osworld_g_process_results(doc, result):
 def _aggregate(results: List[Dict[str, Any]], target_type: Optional[str] = None) -> float:
     filtered = [r for r in results if target_type is None or r.get("box_type") == target_type]
     if not filtered:
-        return 0.0
+        # The MMInstruction/OSWorld-G HF mirror currently ships 0 refusal samples,
+        # so refusal_acc has no support. Returning NaN surfaces this as N/A in the
+        # results table instead of a misleading 0.0000.
+        return float("nan")
     score = sum(1 for r in filtered if r.get("correct")) / len(filtered)
     eval_logger.info("OSWorld-G %s accuracy: %.4f", target_type or "overall", score)
     return score
