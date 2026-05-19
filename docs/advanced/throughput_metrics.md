@@ -57,12 +57,13 @@ All chat backends listed below log throughput-oriented metrics (`total_gen_token
 - `llava_hf` (`/lmms_eval/models/chat/llava_hf.py`)
 - `internvl_hf` (`/lmms_eval/models/chat/internvl_hf.py`)
 - `llava_onevision1_5` (`/lmms_eval/models/chat/llava_onevision1_5.py`)
+- `llava_onevision2` (`/lmms_eval/models/chat/llava_onevision2.py`)
 - `thyme` (`/lmms_eval/models/chat/thyme.py`)
 
 TTFT/TPOT coverage is narrower:
 
 - **Native TTFT/TPOT in run summary**: `vllm`, `vllm_generate`
-- **Throughput-only (no native TTFT/TPOT in summary)**: `sglang`, `openai`, `async_openai`, `huggingface`, `qwen2_5_vl`, `qwen3_vl`, `llava_hf`, `internvl_hf`, `llava_onevision1_5`, `thyme`
+- **Throughput-only (no native TTFT/TPOT in summary)**: `sglang`, `openai`, `async_openai`, `huggingface`, `qwen2_5_vl`, `qwen3_vl`, `llava_hf`, `internvl_hf`, `llava_onevision1_5`, `llava_onevision2`, `thyme`
 
 ## Usage
 
