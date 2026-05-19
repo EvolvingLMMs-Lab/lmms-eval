@@ -57,6 +57,10 @@ def mmmu_pro_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         question = construct_prompt(doc, post_prompt)
         if config["metadata"]["interleaved_format"]:
             question = replace_images_tokens(question)
+    else:
+        # vision-only split: question/options 텍스트가 이미지에 합성되어 있어 doc에는 없다.
+        # 모델이 letter format을 따르도록 post_prompt만 전달한다 (paper Sec 3.3 참고).
+        question = post_prompt
     return question
 
 
