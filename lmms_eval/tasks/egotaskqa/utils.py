@@ -30,10 +30,7 @@ def _video_dir() -> str:
 def egotaskqa_doc_to_visual(doc):
     video_path = os.path.join(_video_dir(), doc["video_path"])
     if not os.path.exists(video_path):
-        eval_logger.warning(
-            f"Video not found: {video_path}. Set EGOTASKQA_VIDEO_DIR or place "
-            f"qa_videos/ under ~/.cache/lmms_eval/egotaskqa/videos/."
-        )
+        eval_logger.warning(f"Video not found: {video_path}. Set EGOTASKQA_VIDEO_DIR or place " f"qa_videos/ under ~/.cache/lmms_eval/egotaskqa/videos/.")
     return [video_path]
 
 
@@ -43,10 +40,7 @@ def egotaskqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
 
-    question = (
-        "Select the best answer to the following multiple-choice question "
-        f"based on the video.\n{doc['q']}\nOptions:\n"
-    )
+    question = "Select the best answer to the following multiple-choice question " f"based on the video.\n{doc['q']}\nOptions:\n"
     options = doc["option"]
     for letter in sorted(options.keys()):
         question += f"({letter}) {options[letter]}\n"

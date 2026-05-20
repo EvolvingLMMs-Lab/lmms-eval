@@ -9,6 +9,7 @@ Bug B: TypeError from batch_decode when model.generate raises an exception.
   The except handler set cont = "" (an empty string); batch_decode expects a tensor or
   list-of-id-lists, so passing "" caused a Rust-binding TypeError.
 """
+
 from __future__ import annotations
 
 import sys
