@@ -305,6 +305,7 @@ class Llava_OneVision2(lmms):
                     content.append({"type": "text", "text": c.text})
                 elif c.type == "image":
                     content.append({"type": "image", "image": c.url})
+                    all_pil_images.append(c.url)
                 elif c.type == "video":
                     if "timestamp" in self.messages_format:
                         video_content, pil_images = self._process_video_with_timestamp(c.url)
