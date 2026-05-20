@@ -177,6 +177,8 @@ class ChatCompletionSampler:
                     temperature=self.temperature,
                     max_tokens=self.max_tokens,
                 )
+                if not response.choices or response.choices[0].message is None:
+                    raise ValueError("LLM returned empty or filtered response")
                 return response.choices[0].message.content
             # NOTE: BadRequestError is triggered once for MMMU, please uncomment if you are reruning MMMU
             except openai.BadRequestError as e:

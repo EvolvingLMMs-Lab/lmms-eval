@@ -37,6 +37,8 @@ class TestLiteLLMShim(unittest.TestCase):
             messages=[{"role": "user", "content": "ping"}],
         )
 
+        if not resp.choices or resp.choices[0].message is None:
+            raise ValueError("LLM returned empty or filtered response")
         self.assertEqual(resp.choices[0].message.content, "pong")
         completion.assert_called_once()
         kwargs = completion.call_args.kwargs
