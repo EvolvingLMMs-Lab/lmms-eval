@@ -84,10 +84,7 @@ def spatial_dise_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs=None
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
     option_text = ", ".join(doc.get("option_letters") or ["A", "B", "C", "D"])
     if doc.get("image_mode") == "separate":
-        image_context = (
-            "Images are provided as separate question/view/option images from the original sample. "
-            f"Use all images together. The answer choices are labeled {option_text}.\n"
-        )
+        image_context = "Images are provided as separate question/view/option images from the original sample. " f"Use all images together. The answer choices are labeled {option_text}.\n"
     else:
         image_context = f"The image contains answer choices labeled {option_text}.\n"
     return f"{pre_prompt}{image_context}{doc['question'].strip()}{post_prompt}".strip()

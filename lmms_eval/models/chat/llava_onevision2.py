@@ -1,8 +1,8 @@
 """LLaVA-OneVision2 inference wrapper (trust_remote_code).
 
 Registered as ``llava_onevision2_chat``. Targets the released checkpoint
-`lmms-lab-encoder/LLaVA-OneVision2-8B-Instruct
-<https://huggingface.co/lmms-lab-encoder/LLaVA-OneVision2-8B-Instruct>`_,
+`lmms-lab-encoder/LLaVA-OneVision-2-8B-Instruct
+<https://huggingface.co/lmms-lab-encoder/LLaVA-OneVision-2-8B-Instruct>`_,
 whose bundled remote code (``modeling_llava_onevision2.py``,
 ``processing_llava_onevision2.py``, ``video_processing_llava_onevision2.py``)
 implements ``patch_positions``, RoPE block layout, and the video
@@ -55,14 +55,14 @@ fetch_video, _ = optional_import("qwen_vl_utils", "fetch_video")
 class Llava_OneVision2(lmms):
     """Trust-remote-code wrapper for LLaVA-OneVision2.
 
-    See https://huggingface.co/lmms-lab-encoder/LLaVA-OneVision2-8B-Instruct.
+    See https://huggingface.co/lmms-lab-encoder/LLaVA-OneVision-2-8B-Instruct.
     """
 
     is_simple = False
 
     def __init__(
         self,
-        pretrained: str = "lmms-lab-encoder/LLaVA-OneVision2-8B-Instruct",
+        pretrained: str = "lmms-lab-encoder/LLaVA-OneVision-2-8B-Instruct",
         device: str = "cuda",
         device_map: str = "",
         batch_size: int = 1,

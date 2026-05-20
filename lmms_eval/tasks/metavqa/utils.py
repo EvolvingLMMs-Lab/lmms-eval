@@ -13,12 +13,11 @@ import os
 import re
 
 from huggingface_hub import snapshot_download
+
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 from lmms_eval.filters.transformation import MapFilter
 
-REPLACE_PROMPT = (
-    "Please answer directly with only the letter of the correct option and nothing else."
-)
+REPLACE_PROMPT = "Please answer directly with only the letter of the correct option and nothing else."
 
 _IMAGE_ROOT = None
 
@@ -61,8 +60,16 @@ class NumberWordsToDigitsFilter(MapFilter):
     def __init__(self) -> None:
         super().__init__(
             {
-                "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4",
-                "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9",
+                "zero": "0",
+                "one": "1",
+                "two": "2",
+                "three": "3",
+                "four": "4",
+                "five": "5",
+                "six": "6",
+                "seven": "7",
+                "eight": "8",
+                "nine": "9",
                 "ten": "10",
             },
             default_value=None,
