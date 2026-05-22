@@ -38,7 +38,7 @@ def cal_relevance(scores):
     """Quadratic scoring for relevance groups."""
     score_map = {0: 0.0, 1: 100.0 / 16, 2: 100.0 * 4 / 16, 3: 100.0 * 9 / 16, 4: 100.0}
     correct_count = sum(scores)
-    return score_map.get(correct_count, 0.0), correct_count * 25.0
+    return score_map.get(correct_count, 0.0)
 
 
 def cal_logic(scores, group_structure):
@@ -76,15 +76,10 @@ def cal_logic(scores, group_structure):
 def videomme_v2_doc_to_visual(doc):
     cache_dir = os.path.join(base_cache_dir, cache_name)
     video_id = doc["video_id"]
-    video_path = os.path.join(cache_dir, "data", f"{video_id}.mp4")
+    video_path = os.path.join(cache_dir, f"{video_id}.mp4")
     if os.path.exists(video_path):
         return [video_path]
-    elif os.path.exists(video_path.replace("mp4", "MP4")):
-        return [video_path.replace("mp4", "MP4")]
-    elif os.path.exists(video_path.replace("mp4", "mkv")):
-        return [video_path.replace("mp4", "mkv")]
-    else:
-        sys.exit(f"video path: {video_path} does not exist, please check")
+    sys.exit(f"video path: {video_path} does not exist, please check")
 
 
 # ──────────────────────────────────────────────
@@ -153,7 +148,7 @@ def videomme_v2_doc_to_text_subtitle(doc, lmms_eval_specific_kwargs=None):
     # Load subtitle
     cache_dir = os.path.join(base_cache_dir, cache_name)
     video_id = doc["video_id"]
-    subtitle_path = os.path.join(cache_dir, "subtitle", "subtitle", f"{video_id}.jsonl")
+    subtitle_path = os.path.join(cache_dir, "subtitle", f"{video_id}.jsonl")
     subtitle_text = load_subtitle_v2(subtitle_path)
 
     if subtitle_text:
@@ -175,7 +170,7 @@ def _doc_to_text_subtitle_qwen3vl(doc, lmms_eval_specific_kwargs=None):
     # Load subtitle
     cache_dir = os.path.join(base_cache_dir, cache_name)
     video_id = doc["video_id"]
-    subtitle_path = os.path.join(cache_dir, "subtitle", "subtitle", f"{video_id}.jsonl")
+    subtitle_path = os.path.join(cache_dir, "subtitle", f"{video_id}.jsonl")
     subtitle_text = load_subtitle_v2(subtitle_path)
 
     if subtitle_text:
@@ -245,12 +240,18 @@ def videomme_v2_process_results(doc, results):
 
     # Return same data_dict under all metric keys
     return {
-        "videomme_v2_score": data_dict,
+        "videomme_v2_overall_score": data_dict,
         "videomme_v2_relevance_score": data_dict,
         "videomme_v2_logic_score": data_dict,
-        "videomme_v2_level_1": data_dict,
-        "videomme_v2_level_2": data_dict,
-        "videomme_v2_level_3": data_dict,
+        "videomme_v2_level_1_score": data_dict,
+        "videomme_v2_level_2_score": data_dict,
+        "videomme_v2_level_3_score": data_dict,
+        "videomme_v2_overall_acc": data_dict,
+        "videomme_v2_relevance_acc": data_dict,
+        "videomme_v2_logic_acc": data_dict,
+        "videomme_v2_level_1_acc": data_dict,
+        "videomme_v2_level_2_acc": data_dict,
+        "videomme_v2_level_3_acc": data_dict,
     }
 
 
@@ -262,7 +263,7 @@ def videomme_v2_process_results(doc, results):
 def _compute_all_subscores(results):
     """Compute all sub-scores at once.
 
-    Returns dict with keys: overall, relevance, logic, level_1, level_2, level_3.
+    Returns dict with score and acc keys.
     """
     # Group results by video_id
     video_groups = defaultdict(list)
@@ -278,127 +279,163 @@ def _compute_all_subscores(results):
         group_type = items[0]["group_type"]
         group_structure = items[0]["group_structure"]
 
-        # level/second_head/third_head are only on the last question in each group
-        level = None
-        second_head = None
-        third_head = None
-        for item in items:
-            if item.get("level") is not None:
-                level = item["level"]
-            if item.get("second_head") is not None:
-                second_head = item["second_head"]
-            if item.get("third_head") is not None:
-                third_head = item["third_head"]
+        # Group score is assigned by the taxonomy of the group's final question.
+        level = items[-1].get("level")
+        second_head = items[-1].get("second_head")
+        third_head = items[-1].get("third_head")
 
         if group_type == "relevance":
-            group_score, naive_score = cal_relevance(scores)
+            group_score = cal_relevance(scores)
         elif group_type == "logic":
             group_score = cal_logic(scores, group_structure)
-            naive_score = sum(scores) * 25.0
         else:
-            eval_logger.warning(f"Unknown group_type '{group_type}' for video {video_id}, using naive scoring")
-            group_score = sum(scores) * 25.0
-            naive_score = group_score
+            raise ValueError(f"Unknown group_type: {group_type}")
 
         all_group_scores.append(
             {
                 "video_id": video_id,
-                "group_score": group_score,
-                "naive_score": naive_score,
                 "group_type": group_type,
                 "level": level,
                 "second_head": second_head,
                 "third_head": third_head,
+                "group_score": group_score,
             }
         )
+
+    def mean_question_acc(items):
+        return sum(1 for item in items if item["score"] == 1) * 100.0 / len(items) if items else 0.0
 
     # ── Overall ──
     total_groups = len(all_group_scores)
     overall_score = sum(g["group_score"] for g in all_group_scores) / total_groups if total_groups > 0 else 0.0
-    overall_naive = sum(g["naive_score"] for g in all_group_scores) / total_groups if total_groups > 0 else 0.0
-    eval_logger.info(f"Overall Group Score: {overall_score:.2f}% (naive: {overall_naive:.2f}%) [{total_groups} groups]")
+    overall_acc = mean_question_acc(results)
+    eval_logger.info(f"Overall Group Score: {overall_score:.2f}% (acc: {overall_acc:.2f}%) [{total_groups} groups / {len(results)} questions]")
 
     # ── Per group_type ──
-    type_scores = {}
+    type_score_avgs = {}
+    type_acc_avgs = {}
     for gt in ["relevance", "logic"]:
         subset = [g for g in all_group_scores if g["group_type"] == gt]
         if subset:
-            avg = sum(g["group_score"] for g in subset) / len(subset)
-            naive_avg = sum(g["naive_score"] for g in subset) / len(subset)
-            eval_logger.info(f"  {gt}: {avg:.2f}% (naive: {naive_avg:.2f}%) [{len(subset)} groups]")
-            type_scores[gt] = avg
+            score_avg = sum(g["group_score"] for g in subset) / len(subset)
+            question_subset = [r for r in results if r["group_type"] == gt]
+            acc_avg = mean_question_acc(question_subset)
+            eval_logger.info(f"  {gt}: (group_score: {score_avg:.2f}%) (question_acc: {acc_avg:.2f}%) [{len(subset)} groups / {len(question_subset)} questions]")
+            type_score_avgs[gt] = score_avg
+            type_acc_avgs[gt] = acc_avg
         else:
-            type_scores[gt] = 0.0
+            type_score_avgs[gt] = 0.0
+            type_acc_avgs[gt] = 0.0
 
     # ── Per level ──
     level_scores = defaultdict(list)
     for g in all_group_scores:
-        if g["level"] is not None:
-            level_scores[g["level"]].append(g["group_score"])
-    level_avgs = {}
+        level_scores[g["level"]].append(g["group_score"])
+    level_score_avgs = {}
+    level_questions = defaultdict(list)
+    for r in results:
+        level_questions[r["level"]].append(r)
+    level_acc_avgs = {level: mean_question_acc(items) for level, items in level_questions.items()}
     for level in sorted(level_scores.keys()):
         scores_list = level_scores[level]
-        avg = sum(scores_list) / len(scores_list)
-        eval_logger.info(f"  Level {level}: {avg:.2f}% [{len(scores_list)} groups]")
-        level_avgs[level] = avg
+        score_avg = sum(scores_list) / len(scores_list)
+        acc_avg = level_acc_avgs.get(level, 0.0)
+        eval_logger.info(f"  Level {level}: (group_score: {score_avg:.2f}%) (question_acc: {acc_avg:.2f}%) [{len(scores_list)} groups / {len(level_questions[level])} questions]")
+        level_score_avgs[level] = score_avg
 
     # ── Per second_head ──
     sh_scores = defaultdict(list)
     for g in all_group_scores:
-        if g["second_head"] is not None:
-            sh_scores[g["second_head"]].append(g["group_score"])
-    for sh in sorted(sh_scores.keys()):
-        scores_list = sh_scores[sh]
-        avg = sum(scores_list) / len(scores_list)
-        eval_logger.info(f"  Second Head [{sh}]: {avg:.2f}% [{len(scores_list)} groups]")
+        sh_scores[g["second_head"]].append(g["group_score"])
+    sh_questions = defaultdict(list)
+    for r in results:
+        sh_questions[r["second_head"]].append(r)
+    for sh in sorted(set(sh_scores) | set(sh_questions)):
+        scores_list = sh_scores.get(sh, [])
+        score_avg = sum(scores_list) / len(scores_list) if scores_list else 0.0
+        acc_avg = mean_question_acc(sh_questions.get(sh, []))
+        eval_logger.info(f"  Second Head [{sh}]: (group_score: {score_avg:.2f}%) (question_acc: {acc_avg:.2f}%) [{len(scores_list)} groups / {len(sh_questions.get(sh, []))} questions]")
 
     # ── Per third_head ──
     th_scores = defaultdict(list)
     for g in all_group_scores:
-        if g["third_head"] is not None:
-            th_scores[g["third_head"]].append(g["group_score"])
-    for th in sorted(th_scores.keys()):
-        scores_list = th_scores[th]
-        avg = sum(scores_list) / len(scores_list)
-        eval_logger.info(f"  Third Head [{th}]: {avg:.2f}% [{len(scores_list)} groups]")
+        th_scores[g["third_head"]].append(g["group_score"])
+    th_questions = defaultdict(list)
+    for r in results:
+        th_questions[r["third_head"]].append(r)
+    for th in sorted(set(th_scores) | set(th_questions)):
+        scores_list = th_scores.get(th, [])
+        score_avg = sum(scores_list) / len(scores_list) if scores_list else 0.0
+        acc_avg = mean_question_acc(th_questions.get(th, []))
+        eval_logger.info(f"  Third Head [{th}]: (group_score: {score_avg:.2f}%) (question_acc: {acc_avg:.2f}%) [{len(scores_list)} groups / {len(th_questions.get(th, []))} questions]")
 
     return {
-        "overall": overall_score,
-        "relevance": type_scores.get("relevance", 0.0),
-        "logic": type_scores.get("logic", 0.0),
-        "level_1": level_avgs.get(1, level_avgs.get("1", 0.0)),
-        "level_2": level_avgs.get(2, level_avgs.get("2", 0.0)),
-        "level_3": level_avgs.get(3, level_avgs.get("3", 0.0)),
+        "overall_score": overall_score,
+        "relevance_score": type_score_avgs.get("relevance", 0.0),
+        "logic_score": type_score_avgs.get("logic", 0.0),
+        "level_1_score": level_score_avgs.get(1, level_score_avgs.get("1", 0.0)),
+        "level_2_score": level_score_avgs.get(2, level_score_avgs.get("2", 0.0)),
+        "level_3_score": level_score_avgs.get(3, level_score_avgs.get("3", 0.0)),
+        "overall_acc": overall_acc,
+        "relevance_acc": type_acc_avgs.get("relevance", 0.0),
+        "logic_acc": type_acc_avgs.get("logic", 0.0),
+        "level_1_acc": level_acc_avgs.get(1, level_acc_avgs.get("1", 0.0)),
+        "level_2_acc": level_acc_avgs.get(2, level_acc_avgs.get("2", 0.0)),
+        "level_3_acc": level_acc_avgs.get(3, level_acc_avgs.get("3", 0.0)),
     }
 
 
 # ──────────────────────────────────────────────
-# aggregate_results (public API)
+# aggregate helpers (public API)
 # ──────────────────────────────────────────────
 
 
-def videomme_v2_aggregate_results(results):
-    return _compute_all_subscores(results)["overall"]
+def videomme_v2_aggregate_overall_score(results):
+    return _compute_all_subscores(results)["overall_score"]
 
 
-def videomme_v2_aggregate_relevance(results):
-    return _compute_all_subscores(results).get("relevance", 0.0)
+def videomme_v2_aggregate_relevance_score(results):
+    return _compute_all_subscores(results).get("relevance_score", 0.0)
 
 
-def videomme_v2_aggregate_logic(results):
-    return _compute_all_subscores(results).get("logic", 0.0)
+def videomme_v2_aggregate_logic_score(results):
+    return _compute_all_subscores(results).get("logic_score", 0.0)
 
 
-def videomme_v2_aggregate_level_1(results):
-    return _compute_all_subscores(results).get("level_1", 0.0)
+def videomme_v2_aggregate_level_1_score(results):
+    return _compute_all_subscores(results).get("level_1_score", 0.0)
 
 
-def videomme_v2_aggregate_level_2(results):
-    return _compute_all_subscores(results).get("level_2", 0.0)
+def videomme_v2_aggregate_level_2_score(results):
+    return _compute_all_subscores(results).get("level_2_score", 0.0)
 
 
-def videomme_v2_aggregate_level_3(results):
-    return _compute_all_subscores(results).get("level_3", 0.0)
+def videomme_v2_aggregate_level_3_score(results):
+    return _compute_all_subscores(results).get("level_3_score", 0.0)
+
+
+def videomme_v2_aggregate_overall_acc(results):
+    return _compute_all_subscores(results).get("overall_acc", 0.0)
+
+
+def videomme_v2_aggregate_relevance_acc(results):
+    return _compute_all_subscores(results).get("relevance_acc", 0.0)
+
+
+def videomme_v2_aggregate_logic_acc(results):
+    return _compute_all_subscores(results).get("logic_acc", 0.0)
+
+
+def videomme_v2_aggregate_level_1_acc(results):
+    return _compute_all_subscores(results).get("level_1_acc", 0.0)
+
+
+def videomme_v2_aggregate_level_2_acc(results):
+    return _compute_all_subscores(results).get("level_2_acc", 0.0)
+
+
+def videomme_v2_aggregate_level_3_acc(results):
+    return _compute_all_subscores(results).get("level_3_acc", 0.0)
 
 
 # ──────────────────────────────────────────────
