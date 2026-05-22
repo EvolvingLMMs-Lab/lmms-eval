@@ -16,7 +16,25 @@ generation_kwargs:
 process_results: !function utils.crosspoint_process_results
 metric_list:
   - metric: crosspoint_accuracy
-    aggregation: !function utils.crosspoint_aggregate_results
+    aggregation: !function utils.crosspoint_aggregate_overall
+    higher_is_better: true
+  - metric: fine_grained_grounding
+    aggregation: !function utils.crosspoint_aggregate_fine_grained_grounding
+    higher_is_better: true
+  - metric: visibility_reasoning
+    aggregation: !function utils.crosspoint_aggregate_visibility_reasoning
+    higher_is_better: true
+  - metric: correspondence_judgement
+    aggregation: !function utils.crosspoint_aggregate_correspondence_judgement
+    higher_is_better: true
+  - metric: correspondence_pointing
+    aggregation: !function utils.crosspoint_aggregate_correspondence_pointing
+    higher_is_better: true
+  - metric: level_object
+    aggregation: !function utils.crosspoint_aggregate_level_object
+    higher_is_better: true
+  - metric: level_part
+    aggregation: !function utils.crosspoint_aggregate_level_part
     higher_is_better: true
 
 lmms_eval_specific_kwargs:

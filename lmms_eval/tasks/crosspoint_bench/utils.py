@@ -190,83 +190,102 @@ def _image_size(path: str):
         return None
 
 
-def crosspoint_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, Any]:
-    pred = results[0] if results else ""
+def _score(pred: str, doc: Dict[str, Any]) -> int:
     task_type = str(doc.get("type", ""))
-    level = str(doc.get("level", ""))
     answer = str(doc.get("answer", ""))
-    hit = 0
 
     if task_type in COORDINATE_TASK_TYPES:
         coords = _extract_coordinates(pred)
-        if coords is not None:
-            x_raw, y_raw = coords
-            # Resolve coordinate format. Heuristic + env override (matches the
-            # vlmevalkit version): default to absolute pixel coordinates.
-            coord_format = os.environ.get("CROSSPOINT_COORD_FORMAT", "absolute")
-            img_paths = list(doc.get("images") or [])
-            dims = None
-            if img_paths:
-                root = _image_root()
-                dims = _image_size(osp.join(root, img_paths[0]))
-            if dims is not None:
-                w, h = dims
-                if coord_format == "relative_1":
-                    x_abs = int(x_raw * w)
-                    y_abs = int(y_raw * h)
-                elif coord_format == "relative_1000":
-                    x_abs = int((x_raw / 1000.0) * w)
-                    y_abs = int((y_raw / 1000.0) * h)
-                else:
-                    x_abs, y_abs = int(x_raw), int(y_raw)
+        if coords is None:
+            return 0
+        x_raw, y_raw = coords
+        coord_format = os.environ.get("CROSSPOINT_COORD_FORMAT", "absolute")
+        img_paths = list(doc.get("images") or [])
+        dims = None
+        if img_paths:
+            dims = _image_size(osp.join(_image_root(), img_paths[0]))
+        if dims is not None:
+            w, h = dims
+            if coord_format == "relative_1":
+                x_abs, y_abs = int(x_raw * w), int(y_raw * h)
+            elif coord_format == "relative_1000":
+                x_abs, y_abs = int((x_raw / 1000.0) * w), int((y_raw / 1000.0) * h)
             else:
                 x_abs, y_abs = int(x_raw), int(y_raw)
-            mask = _decode_base64_mask(answer)
-            if mask is not None:
-                hit = int(_point_in_mask(x_abs, y_abs, mask))
-    elif task_type in MCQ_TASK_TYPES:
+        else:
+            x_abs, y_abs = int(x_raw), int(y_raw)
+        mask = _decode_base64_mask(answer)
+        if mask is None:
+            return 0
+        return int(_point_in_mask(x_abs, y_abs, mask))
+
+    if task_type in MCQ_TASK_TYPES:
         letter = _extract_mcq_letter(pred)
-        if letter is not None:
-            hit = int(letter == answer.strip().upper())
+        if letter is None:
+            return 0
+        return int(letter == answer.strip().upper())
 
-    return {
-        "crosspoint_accuracy": {
-            "hit": hit,
-            "type": task_type,
-            "level": level,
-        }
+    return 0
+
+
+# All per-doc metric values share the same {hit, type, level} structure so any
+# aggregator can filter on type or level.
+_METRIC_KEYS = (
+    "crosspoint_accuracy",
+    "fine_grained_grounding",
+    "visibility_reasoning",
+    "correspondence_judgement",
+    "correspondence_pointing",
+    "level_object",
+    "level_part",
+)
+
+
+def crosspoint_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, Any]:
+    pred = results[0] if results else ""
+    item = {
+        "hit": _score(pred, doc),
+        "type": str(doc.get("type", "")),
+        "level": str(doc.get("level", "")),
     }
+    return {k: item for k in _METRIC_KEYS}
 
 
-def crosspoint_aggregate_results(results: List[Dict[str, Any]]) -> float:
-    if not results:
-        return 0.0
+def _mean(xs):
+    return sum(xs) / len(xs) if xs else 0.0
 
-    # Overall
-    overall = sum(r["hit"] for r in results) / len(results) * 100
 
-    # By type
-    from collections import defaultdict
-    by_type = defaultdict(list)
-    by_level = defaultdict(list)
-    by_type_level = defaultdict(list)
-    for r in results:
-        by_type[r["type"]].append(r["hit"])
-        by_level[r["level"]].append(r["hit"])
-        by_type_level[(r["type"], r["level"])].append(r["hit"])
+def crosspoint_aggregate_overall(results: List[Dict[str, Any]]) -> float:
+    return _mean([r["hit"] for r in results])
 
-    lines = ["", "=" * 70, "CrossPoint-Bench Evaluation Results", "=" * 70,
-             f"  {'Overall':<45} {overall:5.1f}%  ({sum(r['hit'] for r in results)}/{len(results)})"]
-    for k in sorted(by_type):
-        hits = by_type[k]
-        lines.append(f"  type/{k:<40} {sum(hits)/len(hits)*100:5.1f}%  ({sum(hits)}/{len(hits)})")
-    for k in sorted(by_level):
-        hits = by_level[k]
-        lines.append(f"  level/{k:<39} {sum(hits)/len(hits)*100:5.1f}%  ({sum(hits)}/{len(hits)})")
-    for (t, lv) in sorted(by_type_level):
-        hits = by_type_level[(t, lv)]
-        lines.append(f"  {t}/{lv:<45} {sum(hits)/len(hits)*100:5.1f}%  ({sum(hits)}/{len(hits)})")
-    lines.append("=" * 70)
-    print("\n".join(lines))
 
-    return overall / 100.0
+def _aggregate_by_type(results, target_type):
+    return _mean([r["hit"] for r in results if r["type"] == target_type])
+
+
+def _aggregate_by_level(results, target_level):
+    return _mean([r["hit"] for r in results if r["level"] == target_level])
+
+
+def crosspoint_aggregate_fine_grained_grounding(results):
+    return _aggregate_by_type(results, "Fine-grained Grounding")
+
+
+def crosspoint_aggregate_visibility_reasoning(results):
+    return _aggregate_by_type(results, "Visibility Reasoning")
+
+
+def crosspoint_aggregate_correspondence_judgement(results):
+    return _aggregate_by_type(results, "Correspondence-Judgement")
+
+
+def crosspoint_aggregate_correspondence_pointing(results):
+    return _aggregate_by_type(results, "Correspondence-Pointing")
+
+
+def crosspoint_aggregate_level_object(results):
+    return _aggregate_by_level(results, "object")
+
+
+def crosspoint_aggregate_level_part(results):
+    return _aggregate_by_level(results, "part")
