@@ -1,4 +1,5 @@
-import os
+import io
+import zipfile
 from typing import Any, Dict, List, Optional
 
 from huggingface_hub import hf_hub_download
@@ -6,30 +7,28 @@ from PIL import Image
 
 from lmms_eval.tasks.medevalkit.eval_utils import agg_mean  # noqa: F401
 from lmms_eval.tasks.medevalkit.eval_utils import no_image_doc_to_visual  # noqa: F401
-from lmms_eval.tasks.medevalkit.eval_utils import extract_zip_once, judge_multi_choice
+from lmms_eval.tasks.medevalkit.eval_utils import judge_multi_choice
 
 # ---------------------------------------------------------------------------
-# Dataset cache: download and extract images once
+# Dataset images: read directly from images_2.zip (no extraction, no inode
+# churn, no extract-race). One ZipFile handle per process.
 # ---------------------------------------------------------------------------
 
-_IMAGES_DIR: Optional[str] = None
+_ARCHIVE: Optional[zipfile.ZipFile] = None
 
 CHOICE_LETTERS = ["A", "B", "C", "D"]
 
 
-def _get_images_dir() -> str:
-    global _IMAGES_DIR
-    if _IMAGES_DIR is not None:
-        return _IMAGES_DIR
-    zip_path = hf_hub_download(
-        repo_id="RadGenome/PMC-VQA",
-        filename="images_2.zip",
-        repo_type="dataset",
-    )
-    cache_dir = os.path.dirname(zip_path)
-    extract_zip_once(zip_path, cache_dir, sentinel_name=".figures_extracted")
-    _IMAGES_DIR = os.path.join(cache_dir, "figures")
-    return _IMAGES_DIR
+def _get_archive() -> zipfile.ZipFile:
+    global _ARCHIVE
+    if _ARCHIVE is None:
+        zip_path = hf_hub_download(
+            repo_id="RadGenome/PMC-VQA",
+            filename="images_2.zip",
+            repo_type="dataset",
+        )
+        _ARCHIVE = zipfile.ZipFile(zip_path, "r")
+    return _ARCHIVE
 
 
 # ---------------------------------------------------------------------------
@@ -38,10 +37,9 @@ def _get_images_dir() -> str:
 
 
 def pmc_vqa_doc_to_visual(doc: Dict[str, Any]):
-    images_dir = _get_images_dir()
-    fig_path = doc["Figure_path"]
-    img_path = os.path.join(images_dir, fig_path)
-    return [Image.open(img_path).convert("RGB")]
+    archive = _get_archive()
+    with archive.open(f"figures/{doc['Figure_path']}") as fp:
+        return [Image.open(io.BytesIO(fp.read())).convert("RGB")]
 
 
 def pmc_vqa_doc_to_text(

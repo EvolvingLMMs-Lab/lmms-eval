@@ -1,4 +1,6 @@
+import io
 import os
+import zipfile
 from typing import Any, Dict, List, Optional
 
 from huggingface_hub import snapshot_download
@@ -7,7 +9,6 @@ from PIL import Image
 from lmms_eval.tasks.medevalkit.eval_utils import agg_mean  # noqa: F401
 from lmms_eval.tasks.medevalkit.eval_utils import no_image_doc_to_visual  # noqa: F401
 from lmms_eval.tasks.medevalkit.eval_utils import (
-    extract_zip_once,
     judge_close_end,
     judge_open,
     judge_yesno,
@@ -15,22 +16,19 @@ from lmms_eval.tasks.medevalkit.eval_utils import (
 )
 
 # ---------------------------------------------------------------------------
-# Dataset cache: download repo and extract images once
+# Dataset images: read directly from imgs.zip (no extraction, no inode churn,
+# no extract-race). One ZipFile handle per process.
 # ---------------------------------------------------------------------------
 
-_CACHE_DIR: Optional[str] = None
+_ARCHIVE: Optional[zipfile.ZipFile] = None
 
 
-def _get_cache_dir() -> str:
-    global _CACHE_DIR
-    if _CACHE_DIR is not None:
-        return _CACHE_DIR
-    cache_root = snapshot_download(repo_id="BoKelvin/SLAKE", repo_type="dataset")
-    imgs_zip = os.path.join(cache_root, "imgs.zip")
-    if os.path.isfile(imgs_zip):
-        extract_zip_once(imgs_zip, cache_root, sentinel_name=".imgs_extracted")
-    _CACHE_DIR = cache_root
-    return _CACHE_DIR
+def _get_archive() -> zipfile.ZipFile:
+    global _ARCHIVE
+    if _ARCHIVE is None:
+        cache_root = snapshot_download(repo_id="BoKelvin/SLAKE", repo_type="dataset")
+        _ARCHIVE = zipfile.ZipFile(os.path.join(cache_root, "imgs.zip"), "r")
+    return _ARCHIVE
 
 
 # ---------------------------------------------------------------------------
@@ -49,9 +47,9 @@ def slake_filter_english(dataset):
 
 
 def slake_doc_to_visual(doc: Dict[str, Any]):
-    cache_dir = _get_cache_dir()
-    img_path = os.path.join(cache_dir, "imgs", doc["img_name"])
-    return [Image.open(img_path).convert("RGB")]
+    archive = _get_archive()
+    with archive.open(f"imgs/{doc['img_name']}") as fp:
+        return [Image.open(io.BytesIO(fp.read())).convert("RGB")]
 
 
 def slake_doc_to_text(
