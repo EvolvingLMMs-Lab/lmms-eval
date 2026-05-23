@@ -1,0 +1,6 @@
+group: medevalkit_no_image
+task:
+  - pmc_vqa_no_image
+  - slake_no_image
+  - path_vqa_no_image
+  - vqa_rad_no_image

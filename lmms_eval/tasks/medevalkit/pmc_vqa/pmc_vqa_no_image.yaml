@@ -1,0 +1,3 @@
+include: pmc_vqa.yaml
+task: pmc_vqa_no_image
+doc_to_visual: !function utils.no_image_doc_to_visual

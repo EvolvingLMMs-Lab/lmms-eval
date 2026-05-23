@@ -1,39 +1,37 @@
-import random
 from typing import Any, Dict, List
 
-import numpy as np
+from lmms_eval.tasks.medevalkit.eval_utils import (
+    judge_multi_choice,
+    strip_thinking,
+)
 
-medqa_prompt = """Answer the following multiple choice question. There is only one correct answer. The last line of your response should be in the format 'Answer: $LETTER' (without quotes), where LETTER is one of A, B, C, D, or E."""
+MEDQA_PROMPT = (
+    "Answer the following multiple choice question. " "There is only one correct answer. " "The last line of your response should be in the format " "'Answer: $LETTER' (without quotes), " "where LETTER is one of A, B, C, D, or E."
+)
 
 
-def medqa_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs: Dict[str, Any]):
+def medqa_doc_to_text(
+    doc: Dict[str, Any],
+    lmms_eval_specific_kwargs: Dict[str, Any],
+) -> str:
     question = doc.get("question", "").strip()
 
     # Normalize options into A..E style lines
     options = doc.get("options")
     if isinstance(options, dict):
-        # Keep only A-E in sorted letter order if present
         ordered_keys = [k for k in ["A", "B", "C", "D", "E"] if k in options]
-        options_block = "\n".join([f"{k}. {str(options[k]).strip()}" for k in ordered_keys])
+        options_block = "\n".join(f"{k}. {str(options[k]).strip()}" for k in ordered_keys)
     elif isinstance(options, list):
         letters = ["A", "B", "C", "D", "E"]
-        options_block = "\n".join([f"{letters[i]}. {str(opt).strip()}" for i, opt in enumerate(options)])
+        options_block = "\n".join(f"{letters[i]}. {str(opt).strip()}" for i, opt in enumerate(options))
     else:
-        # Fallback: try to format if already string-like
         options_block = str(options) if options is not None else ""
 
-    prompt = f"{medqa_prompt}\nQuestion: {question}\n{options_block}\n"
-    return f"{prompt}"
+    return f"{MEDQA_PROMPT}\nQuestion: {question}\n{options_block}\n"
 
 
-def medqa_doc_to_target(doc: Dict[str, Any]):
-    """
-    Return the ground-truth answer letter.
-
-    MEDQA on HF commonly provides either:
-    - "answer_idx": a letter like "A"/"B"/... OR
-    - "answer": a full string like "C" or the option text. We prioritize letter if available.
-    """
+def medqa_doc_to_target(doc: Dict[str, Any]) -> str:
+    """Return the ground-truth answer letter."""
     # Prefer explicit answer letter field when present
     if "answer_idx" in doc and isinstance(doc["answer_idx"], str) and len(doc["answer_idx"]) == 1:
         return doc["answer_idx"].strip()
@@ -67,47 +65,20 @@ def medqa_doc_to_choice(doc: Dict[str, Any]) -> List[str]:
     return ["A", "B", "C", "D", "E"]
 
 
-def medqa_process_results(doc: Dict[str, Any], result: List[str]):
-    """
-    Parse model output and compute accuracy against the gold letter.
-    We robustly extract a single letter from the response.
-    """
-    response = result[0].strip()
-    all_choices = medqa_doc_to_choice(doc)
-    pred = _parse_multi_choice_response(response, all_choices)
+def _get_choice_texts(doc: Dict[str, Any]) -> List[str]:
+    """Return the option texts in A..E order."""
+    options = doc.get("options")
+    if isinstance(options, dict):
+        return [str(options.get(k, "")).strip() for k in ["A", "B", "C", "D", "E"] if k in options]
+    if isinstance(options, list):
+        return [str(opt).strip() for opt in options]
+    return []
+
+
+def medqa_process_results(doc: Dict[str, Any], result: List[str]) -> Dict[str, float]:
+    """Parse model output and compute accuracy against the gold letter."""
+    response = strip_thinking(result[0]).strip()
+    choice_texts = _get_choice_texts(doc)
     gt_ans = medqa_doc_to_target(doc)
-    score = 1.0 if pred == gt_ans else 0.0
+    score = float(judge_multi_choice(choice_texts, gt_ans, response))
     return {"accuracy": score}
-
-
-def _parse_multi_choice_response(response: str, all_choices: List[str]) -> str:
-    # Clean punctuation around the response
-    for ch in [",", ".", "!", "?", ";", ":", "'"]:
-        response = response.strip(ch)
-    response = " " + response + " "
-
-    candidates = []
-    # (A) style
-    for c in all_choices:
-        if f"({c})" in response:
-            candidates.append(c)
-
-    # plain letter surrounded by spaces
-    if len(candidates) == 0:
-        for c in all_choices:
-            if f" {c} " in response:
-                candidates.append(c)
-
-    # A., B., etc.
-    if len(candidates) == 0:
-        for c in all_choices:
-            if f"{c}." in response:
-                candidates.append(c)
-
-    if len(candidates) == 0:
-        return random.choice(all_choices)
-    if len(candidates) > 1:
-        # choose the last occurrence to mitigate explanations mentioning multiple letters
-        start_indexes = [response.rfind(f" {can} ") for can in candidates]
-        return candidates[int(np.argmax(start_indexes))]
-    return candidates[0]

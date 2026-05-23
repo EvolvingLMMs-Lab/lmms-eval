@@ -1,0 +1,3 @@
+include: _path_mmu_template.yaml
+task: path_mmu_test
+test_split: test

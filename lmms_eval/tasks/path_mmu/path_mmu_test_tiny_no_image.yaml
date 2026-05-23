@@ -1,0 +1,4 @@
+include: _path_mmu_template.yaml
+task: path_mmu_test_tiny_no_image
+test_split: test_tiny
+doc_to_visual: !function utils.no_image_doc_to_visual

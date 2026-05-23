@@ -1,0 +1,17 @@
+group: mmlu_medical
+group_alias: mmlu (medical)
+task:
+  - mmlu_flan_n_shot_generative_high_school_biology
+  - mmlu_flan_n_shot_generative_college_biology
+  - mmlu_flan_n_shot_generative_college_medicine
+  - mmlu_flan_n_shot_generative_professional_medicine
+  - mmlu_flan_n_shot_generative_medical_genetics
+  - mmlu_flan_n_shot_generative_virology
+  - mmlu_flan_n_shot_generative_clinical_knowledge
+  - mmlu_flan_n_shot_generative_nutrition
+  - mmlu_flan_n_shot_generative_anatomy
+aggregate_metric_list:
+  - metric: exact_match
+    weight_by_size: True
+metadata:
+  version: 1

@@ -1,0 +1,43 @@
+dataset_path: flaviagiammarino/vqa-rad
+task: vqa_rad
+test_split: test
+output_type: generate_until
+
+doc_to_visual: !function utils.vqa_rad_doc_to_visual
+doc_to_text: !function utils.vqa_rad_doc_to_text
+doc_to_target: !function utils.vqa_rad_doc_to_target
+
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+process_results: !function utils.vqa_rad_process_results
+
+metric_list:
+  - metric: close_accuracy
+    aggregation: !function utils.agg_mean
+    higher_is_better: true
+  - metric: open_em
+    aggregation: !function utils.agg_mean
+    higher_is_better: true
+  - metric: bleu1
+    aggregation: !function utils.agg_mean
+    higher_is_better: true
+  - metric: bleu4
+    aggregation: !function utils.agg_mean
+    higher_is_better: true
+  - metric: rouge1
+    aggregation: !function utils.agg_mean
+    higher_is_better: true
+  - metric: rougel
+    aggregation: !function utils.agg_mean
+    higher_is_better: true
+  - metric: f1
+    aggregation: !function utils.agg_mean
+    higher_is_better: true
+
+metadata:
+  version: 0.0

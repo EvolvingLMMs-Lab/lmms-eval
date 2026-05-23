@@ -1,0 +1,25 @@
+dataset_path: path_mmu_dataset_cache
+dataset_kwargs:
+  load_from_disk: true
+output_type: generate_until
+
+doc_to_visual: !function utils.path_mmu_doc_to_visual
+doc_to_text: !function utils.path_mmu_doc_to_text
+doc_to_target: !function utils.path_mmu_doc_to_target
+
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+process_results: !function utils.path_mmu_process_results
+
+metric_list:
+  - metric: accuracy
+    aggregation: !function utils.path_mmu_aggregate_results
+    higher_is_better: true
+
+metadata:
+  version: 0.0

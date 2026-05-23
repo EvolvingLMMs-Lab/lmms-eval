@@ -1,0 +1,5 @@
+group: path_mmu
+task:
+  - path_mmu_val
+  - path_mmu_test_tiny
+  - path_mmu_test
