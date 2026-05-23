@@ -4,12 +4,43 @@ Mirrors the answer-extraction and judgement logic from
 https://github.com/ECNU-CILAB/MedEvalKit so that scores are comparable.
 """
 
+import fcntl
+import os
 import re
+import zipfile
 from difflib import SequenceMatcher
 from typing import Dict, List, Optional
 
 from nltk.translate.bleu_score import SmoothingFunction, sentence_bleu
 from rouge import Rouge
+
+
+def extract_zip_once(zip_path: str, dest_dir: str, sentinel_name: str = ".extracted") -> None:
+    """Extract ``zip_path`` into ``dest_dir`` safely under concurrent DP workers.
+
+    Multiple DP processes call into the same `_get_*_dir()` initialiser and
+    previously raced on ``zipfile.extractall`` — one worker would start writing
+    while another read half-extracted files (FileNotFoundError) or both wrote
+    over each other (corruption / hangs on large archives like PMC-VQA).
+
+    Fix: an exclusive ``fcntl`` lock around extraction plus a sentinel file that
+    is only created after a clean extract, so subsequent callers (and reruns)
+    short-circuit.
+    """
+    sentinel = os.path.join(dest_dir, sentinel_name)
+    if os.path.exists(sentinel):
+        return
+    os.makedirs(dest_dir, exist_ok=True)
+    lock_path = os.path.join(dest_dir, ".extract.lock")
+    with open(lock_path, "w") as lock_fp:
+        fcntl.flock(lock_fp.fileno(), fcntl.LOCK_EX)
+        # Re-check under the lock — another worker may have finished while we waited.
+        if os.path.exists(sentinel):
+            return
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            zf.extractall(dest_dir)
+        # Atomic completion marker — only written after extractall returns cleanly.
+        open(sentinel, "w").close()
 
 # ---------------------------------------------------------------------------
 # Answer extraction — matches MedEvalKit parse_response logic

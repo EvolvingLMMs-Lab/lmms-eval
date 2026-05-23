@@ -1,5 +1,4 @@
 import os
-import zipfile
 from typing import Any, Dict, List, Optional
 
 from huggingface_hub import snapshot_download
@@ -8,6 +7,7 @@ from PIL import Image
 from lmms_eval.tasks.medevalkit.eval_utils import agg_mean  # noqa: F401
 from lmms_eval.tasks.medevalkit.eval_utils import no_image_doc_to_visual  # noqa: F401
 from lmms_eval.tasks.medevalkit.eval_utils import (
+    extract_zip_once,
     judge_close_end,
     judge_open,
     judge_yesno,
@@ -25,15 +25,11 @@ def _get_cache_dir() -> str:
     global _CACHE_DIR
     if _CACHE_DIR is not None:
         return _CACHE_DIR
-    _CACHE_DIR = snapshot_download(
-        repo_id="BoKelvin/SLAKE",
-        repo_type="dataset",
-    )
-    imgs_dir = os.path.join(_CACHE_DIR, "imgs")
-    imgs_zip = os.path.join(_CACHE_DIR, "imgs.zip")
-    if not os.path.isdir(imgs_dir) and os.path.isfile(imgs_zip):
-        with zipfile.ZipFile(imgs_zip, "r") as zf:
-            zf.extractall(_CACHE_DIR)
+    cache_root = snapshot_download(repo_id="BoKelvin/SLAKE", repo_type="dataset")
+    imgs_zip = os.path.join(cache_root, "imgs.zip")
+    if os.path.isfile(imgs_zip):
+        extract_zip_once(imgs_zip, cache_root, sentinel_name=".imgs_extracted")
+    _CACHE_DIR = cache_root
     return _CACHE_DIR
 
 

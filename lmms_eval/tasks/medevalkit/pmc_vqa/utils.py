@@ -1,5 +1,4 @@
 import os
-import zipfile
 from typing import Any, Dict, List, Optional
 
 from huggingface_hub import hf_hub_download
@@ -7,7 +6,7 @@ from PIL import Image
 
 from lmms_eval.tasks.medevalkit.eval_utils import agg_mean  # noqa: F401
 from lmms_eval.tasks.medevalkit.eval_utils import no_image_doc_to_visual  # noqa: F401
-from lmms_eval.tasks.medevalkit.eval_utils import judge_multi_choice
+from lmms_eval.tasks.medevalkit.eval_utils import extract_zip_once, judge_multi_choice
 
 # ---------------------------------------------------------------------------
 # Dataset cache: download and extract images once
@@ -28,11 +27,8 @@ def _get_images_dir() -> str:
         repo_type="dataset",
     )
     cache_dir = os.path.dirname(zip_path)
-    figures_dir = os.path.join(cache_dir, "figures")
-    if not os.path.isdir(figures_dir):
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(cache_dir)
-    _IMAGES_DIR = figures_dir
+    extract_zip_once(zip_path, cache_dir, sentinel_name=".figures_extracted")
+    _IMAGES_DIR = os.path.join(cache_dir, "figures")
     return _IMAGES_DIR
 
 
