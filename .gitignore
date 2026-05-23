@@ -89,10 +89,16 @@ lmms_eval/tasks/hallusion_bench/hallusion_output_vd_model.json
 # Fonts
 SimSun.ttf
 
-# Scripts and workspace (local-only)
-scripts/
+# Scripts and workspace (local-only) — anchored to repo root so apertus-vllm
+# tracked scripts under examples/apertus-vllm/scripts/ remain visible.
+/scripts/
 workspace/
 docs/plans/
+
+# apertus-vllm workflow scratch (ad-hoc model groups, transient task lists).
+# Curated suites live as constants inside eval.sh.
+examples/apertus-vllm/scripts/models_*.txt
+examples/apertus-vllm/scripts/tasks_*.txt
 
 # Agent / AI assistant memory files (user-local, not tracked), we encourage users to design their own agents, and can use our provided skills as reference.
 AGENTS.md

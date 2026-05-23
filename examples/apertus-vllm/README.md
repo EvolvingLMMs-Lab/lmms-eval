@@ -1,153 +1,132 @@
-# Apertus vLLM lmms-eval Production Launcher
+# Apertus VLM eval (vLLM + lmms-eval, CSCS)
 
-This folder is self-contained for the Apertus + vLLM `lmms-eval` workflow on CSCS.
+Self-contained launcher for evaluating Apertus 1.5 VLMs with vLLM on CSCS.
+One CLI, one SLURM template, per-task SQLite image-token cache.
 
-Production root:
+## Quickstart
 
 ```bash
+# Run the full eval suite (~46 tasks) on a checkpoint
+bash scripts/eval.sh /path/to/ckpt
+
+# Sanity check (3 tasks, ~5 min/model)
+bash scripts/eval.sh /path/to/ckpt --suite smoke
+
+# Specific tasks
+bash scripts/eval.sh /path/to/ckpt --tasks mmmu_val,chartqa
+
+# Multiple models
+bash scripts/eval.sh /a,/b,/c
+
+# Many models from a file (one path per line, # comments OK)
+bash scripts/eval.sh @models.txt
+
+# Cache fill (first run on a new task — populates per-task SQLite)
+bash scripts/eval.sh /path/to/ckpt --tasks newtask --mode fill
+```
+
+Results land under `results/<model_name>/`, logs under `logs/`.
+Use `python scripts/gather_results.py` to aggregate across models.
+
+## What this folder contains
+
+| File | Purpose |
+|---|---|
+| `scripts/eval.sh` | **User-facing CLI**. The thing you invoke. |
+| `scripts/eval_job.slurm` | One SLURM template. Called by `eval.sh` per (model, task). Supports direct invocation for advanced use. |
+| `scripts/gather_results.py` | Aggregate per-model `results/.../*_results.json` into a comparison table. |
+| `scripts/push_results_to_wandb.py` | Push existing results JSONs to W&B (post-hoc). |
+| `apertus-vllm-lmms-eval-prod.toml` | Pyxis container env file (squash image, mounts). |
+| `squash/` | Production squash image. |
+| `cache/`, `results/`, `responses/`, `logs/` | Outputs (gitignored). |
+
+## CLI reference
+
+```
+bash scripts/eval.sh <model> [--tasks T | --suite full|smoke] [--mode fill|readonly]
+```
+
+| Arg | Form | Notes |
+|---|---|---|
+| `<model>` | `/path/to/ckpt` | single checkpoint |
+| | `/a,/b,/c` | comma-separated paths |
+| | `@models.txt` | one path per line (`#` comments OK) |
+| `--tasks` | `mmmu_val,chartqa` | comma-separated task names |
+| | `@tasks.txt` | one task per line |
+| | _(omitted)_ | uses `--suite` |
+| `--suite` | `full` (default) | the curated 46-task working set |
+| | `smoke` | `gqa,mmstar,pope` — sanity canary |
+| `--mode` | `readonly` (default) | eval against per-task cache (no writes) |
+| | `fill` | populate per-task cache (first run on a task) |
+
+### Common env overrides
+
+| Var | Default | Purpose |
+|---|---|---|
+| `ENABLE_WANDB` | `true` | Push metrics to W&B (`alvor/apertus-1p5-eval` by default) |
+| `WANDB_API_KEY` | (auto from `~/.netrc`) | If unset and `~/.netrc` lookup fails, jobs fail fast. |
+| `HF_TOKEN` | (auto from `~/.cache/huggingface/token`) | Re-exported into the job for gated datasets. |
+| `GEN_KWARGS` | `max_new_tokens=8192,temperature=0` | Lower budgets truncate reasoning tasks. |
+| `NUM_PROCESSES` | `4` | vLLM workers per node (1 per GH200 GPU). |
+| `CACHE_BASE` | `/capstor/.../benchmark/image_token_cache` | Per-task SQLite root. |
+| `LOG_DIR` | `/capstor/.../examples/apertus-vllm/logs` | sbatch stdout/err destination. |
+
+## Per-task SQLite image-token cache
+
+Each task gets its own SQLite under `$CACHE_BASE/<task>/image_tokens/apertus_image_token_cache.sqlite3`.
+Bounded growth per file, trivially parallel writes during fill (different files
+→ no lock contention), blast-radius per task on corruption.
+
+Cache lifecycle:
+
+```
+# First time you eval on a task (populates the per-task cache)
+bash scripts/eval.sh /path/to/ckpt --tasks newtask --mode fill
+
+# All subsequent runs read the populated cache, no writes
+bash scripts/eval.sh /path/to/ckpt --tasks newtask              # (readonly is the default)
+```
+
+Per-task caches across recipe variants (e.g. `VisualPuzzles_direct` vs `VisualPuzzles_cot`)
+are stored separately. Image-tokens are small bytes so this duplication is fine
+and the per-task isolation is worth it.
+
+## Curating the suite
+
+The `--suite full` list lives as the `SUITE_FULL` constant inside `eval.sh`.
+Add/remove tasks by editing that constant — no external file to keep in sync.
+
+To run an ad-hoc subset without editing the suite, use `--tasks t1,t2,t3` or
+`--tasks @my_subset.txt` (the file form is `.gitignore`d, so workflow scratch
+stays local).
+
+## Advanced: direct `sbatch eval_job.slurm`
+
+The orchestrator is `eval.sh`. For one-off jobs where you want to override
+SLURM resources or eval-launcher args directly:
+
+```bash
+sbatch scripts/eval_job.slurm \
+  --model-path /path/to/ckpt \
+  --tokenizer-path /capstor/.../tokenizer/apertus_emu3.5_instruct \
+  --tasks mmmu_val \
+  --image-token-cache-dir $CACHE_BASE/mmmu_val \
+  --image-token-cache-local-copy 0 \
+  --image-token-cache-readonly 1 \
+  --image-token-cache-write-misses 0
+```
+
+`bash scripts/eval_job.slurm --help` lists all flags.
+
+## Production root
+
+`#SBATCH` paths inside `eval_job.slurm` are hardcoded to:
+
+```
 /capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm
 ```
 
-The Slurm `#SBATCH` paths are intentionally hardcoded to this folder, because Slurm reads those directives before the script body runs. From a user point of view, the intended workflow is: enter this folder, run the README command, and outputs land back in this folder.
-
-## What Is Included
-
-- `apertus-vllm-lmms-eval-prod.toml`: Slurm environment file pointing at the local `squash/` image.
-- `squash/apertus-vllm-lmms-eval-13.0-prod.sqsh`: production squash image used by Slurm.
-- `scripts/run_lmms_eval_vllm_eval_local_copy.slurm`: eval launcher using node-local readonly SQLite cache copy.
-- `scripts/run_lmms_eval_vllm_fill_shared_cache.slurm`: cache-fill launcher.
-- `scripts/run_lmms_eval_vllm_prod.slurm`: generic launcher.
-- `scripts/eval_using_local_sqlite_copy.sh`: submits model x task eval jobs from `scripts/models.txt`.
-- `scripts/eval_using_read_only_sqlite.sh`: submits model x task eval jobs using shared SQLite directly (no node-local copy, no writes).
-- `scripts/fill_shared_sqlite_cache.sh`: submits model x task cache-fill jobs from `scripts/models.txt`.
-- `scripts/models.txt`: model paths, one per line.
-- `cache/image_tokens/`: copied SQLite image-token cache DB.
-- `results/`, `responses/`, `logs/`, `scripts/logs/`: copied benchmark artifacts and logs.
-
-## Quick Start
-
-Go into this folder:
-
-```bash
-cd /capstor/store/cscs/swissai/infra01/multimodal-eval/apertus-lmms-eval/lmms-eval/examples/apertus-vllm
-```
-
-Submit one eval job using the first model in `scripts/models.txt`:
-
-```bash
-MODEL_PATH="$(awk 'NF && $1 !~ /^#/ {print; exit}' scripts/models.txt)"
-sbatch scripts/run_lmms_eval_vllm_eval_local_copy.slurm \
-  --model-path "${MODEL_PATH}" \
-  --tasks realworldqa \
-  --enable-wandb false
-```
-
-That command uses these folder-local defaults:
-
-- `results/` for lmms-eval outputs
-- `logs/` for Slurm logs from direct `sbatch`
-- `cache/` for shared caches
-- `cache/image_tokens/` for the SQLite image-token cache
-- `squash/apertus-vllm-lmms-eval-13.0-prod.sqsh` through the TOML environment file
-
-## Fan-Out Helpers
-
-Run eval-only jobs for every model and task in the helper defaults:
-
-```bash
-bash scripts/eval_using_local_sqlite_copy.sh scripts/models.txt
-```
-
-Run eval-only jobs in read-only SQLite mode (no node-local copy):
-
-```bash
-bash scripts/eval_using_read_only_sqlite.sh scripts/models.txt
-```
-
-Fill or extend the shared SQLite cache first, if needed:
-
-```bash
-bash scripts/fill_shared_sqlite_cache.sh scripts/models.txt
-```
-
-Both helpers derive paths relative to this folder, while the Slurm directives inside the submitted `.slurm` files remain hardcoded to this production location.
-
-## Common Overrides
-
-Use environment variables with the helper scripts:
-
-```bash
-TASKS_CSV=realworldqa,seedbench \
-BATCH_SIZE=512 \
-NUM_PROCESSES=4 \
-bash scripts/eval_using_local_sqlite_copy.sh scripts/models.txt
-```
-
-Read-only mode example with helper overrides:
-
-```bash
-TASKS_CSV=realworldqa,seedbench \
-BATCH_SIZE=512 \
-NUM_PROCESSES=4 \
-bash scripts/eval_using_read_only_sqlite.sh scripts/models.txt
-```
-
-Use CLI flags with direct `sbatch`:
-
-```bash
-MODEL_PATH="$(awk 'NF && $1 !~ /^#/ {print; exit}' scripts/models.txt)"
-sbatch scripts/run_lmms_eval_vllm_eval_local_copy.slurm \
-  --model-path "${MODEL_PATH}" \
-  --tasks realworldqa,seedbench \
-  --batch-size 512 \
-  --num-processes 4 \
-  --enable-wandb false
-```
-
-Direct `sbatch` launch in read-only mode (no node-local SQLite copy):
-
-```bash
-MODEL_PATH="$(awk 'NF && $1 !~ /^#/ {print; exit}' scripts/models.txt)"
-sbatch scripts/run_lmms_eval_vllm_eval_local_copy.slurm \
-  --model-path "${MODEL_PATH}" \
-  --tasks realworldqa,seedbench \
-  --image-token-cache-local-copy 0 \
-  --image-token-cache-readonly 1 \
-  --image-token-cache-write-misses 0 \
-  --enable-wandb false
-```
-
-## W&B
-
-W&B is off by default in these production scripts so the basic commands work without a secret. To enable it, provide the key through the environment or `--wandb-api-key`:
-
-```bash
-export WANDB_API_KEY="..."
-MODEL_PATH="$(awk 'NF && $1 !~ /^#/ {print; exit}' scripts/models.txt)"
-sbatch scripts/run_lmms_eval_vllm_prod.slurm \
-  --model-path "${MODEL_PATH}" \
-  --tasks realworldqa \
-  --enable-wandb true \
-  --wandb-log-samples true
-```
-
-## Push Existing Results To W&B
-
-Install `wandb` in your local Python environment, then run from this folder:
-
-```bash
-uv run python scripts/push_results_to_wandb.py \
-  --results-root results \
-  --latest-only \
-  --dry-run
-```
-
-Remove `--dry-run` when the resolved `wandb_args` look correct. The push script uses launcher-compatible deterministic run IDs: `model_<sha1_12>`.
-
-## Notes Before Launching
-
-- `scripts/models.txt` paths must exist on compute nodes.
-- `TOKENIZER_PATH` defaults to `/capstor/store/cscs/swissai/infra01/MLLM/tokenizer/apertus_emu3.5_instruct`.
-- `IMAGE_TOKEN_CACHE_LOCAL_BASE` defaults to `/tmp/$USER/apertus_image_token_cache`; this is only used when local-copy mode is enabled.
-- Slurm account and reservation are hardcoded as `infra01` and `SD-69241-apertus-1-5-0`.
-- The container expects `/workspace/vllm`, `/workspace/lmms-eval`, and `/workspace/Emu3.5` as built into the sqsh image.
+This is the canonical infra-mounted copy. From any user shell, run from your
+git working copy: `bash scripts/eval.sh ...`. The orchestrator submits via
+sbatch which then reads the hardcoded `#SBATCH` paths to land outputs under
+the shared infra root (not your scratch).
