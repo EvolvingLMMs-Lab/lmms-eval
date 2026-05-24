@@ -17,6 +17,7 @@ logger.add(sys.stdout, level="WARNING", format=log_format)
 
 AVAILABLE_SIMPLE_MODELS = {
     "aero": "Aero",
+    "apertus_1p5_vllm": "Apertus1p5VLLM",
     "apertus_emu3_simple": "ApertusEmu3Simple",
     "apertus_emu3p5_simple": "ApertusEmu3p5Simple",
     "aria": "Aria",
@@ -133,6 +134,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "litellm": "LiteLLMCompatible",
     "async_openai": "AsyncOpenAIChat",
     "async_hf_model": "AsyncHFModel",
+    "apertus_1p5_vllm": "Apertus1p5VLLM",
     "longvila": "LongVila",
     "llava_onevision1_5": "Llava_OneVision1_5",
     "emu3": "EMU3",

@@ -42,7 +42,7 @@ SUITE_SMOKE="gqa,mmstar,pope"
 #     dynamath_reasoning, mme_realworld, mmlongbench_doc, refspatial,
 #     seedbench_2, vcr_wiki_en_easy, vcr_wiki_en_hard, viewspatial,
 #     where2place, zerobench
-SUITE_FULL="realworldqa,seedbench,ocrbench,ocrbench_v2,textvqa_val,docvqa_val,vqav2_val,infovqa_val,chartqa,mme,ai2d,mmmu_val,mathvision_test,mathvision_testmini,VisualPuzzles_direct,countbench,embspatial,screenspot,osworld_g,refcoco,refcoco+,refcocog,mmmu_pro,mathvision_reason_test,mathvision_reason_testmini,blink,cv_bench,mmsi_bench,3dsrbench,site_bench_image,mindcube_tiny,mmvp,cmmmu_val,vlmsareblind,vlms_are_biased,muirbench,erqa,scienceqa,iconqa_val,simplevqa,omnidocbench,visulogic,vstar_bench,screenspot_v2,screenspot_pro,seedbench_2_plus"
+SUITE_FULL="gqa,realworldqa,seedbench,ocrbench,ocrbench_v2,textvqa_val,docvqa_val,vqav2_val,infovqa_val,chartqa,mme,ai2d,mmmu_val,mathvision_test,mathvision_testmini,VisualPuzzles_direct,countbench,embspatial,screenspot,osworld_g,refcoco,refcoco+,refcocog,mmmu_pro,mathvision_reason_test,mathvision_reason_testmini,blink,cv_bench,mmsi_bench,3dsrbench,site_bench_image,mindcube_tiny,mmvp,cmmmu_val,vlmsareblind,vlms_are_biased,muirbench,erqa,scienceqa,iconqa_val,simplevqa,omnidocbench,visulogic,vstar_bench,screenspot_v2,screenspot_pro,seedbench_2_plus,mmbench_en_dev,mmstar,pope,ok_vqa,hallusion_bench,mathverse,charxiv,mathvista_testmini"
 
 # ------------------------------------------------------------------
 # CLI parsing
@@ -140,7 +140,12 @@ fi
 # ------------------------------------------------------------------
 # Eval defaults (override via env if needed)
 # ------------------------------------------------------------------
-TOKENIZER_PATH="${TOKENIZER_PATH:-/capstor/store/cscs/swissai/infra01/MLLM/tokenizer/apertus_emu3.5_instruct}"
+DEFAULT_TOKENIZER_PATH="/capstor/store/cscs/swissai/infra01/MLLM/tokenizer/apertus_emu3.5_wavtok_instruct_thinking_token_fixed"
+TOKENIZER_PATH="${TOKENIZER_PATH:-${DEFAULT_TOKENIZER_PATH}}"
+CHAT_TEMPLATE="${CHAT_TEMPLATE:-}"
+if [[ -z "${CHAT_TEMPLATE}" && "${TOKENIZER_PATH}" == "${DEFAULT_TOKENIZER_PATH}" ]]; then
+  CHAT_TEMPLATE="${TOKENIZER_PATH}/chat_template.jinja"
+fi
 # 8192 covers ~85% of reasoning-task generations without truncation. Math/reasoning
 # tasks at lower budgets show 30-50% mid-response truncation. MCQ hits EOS well
 # before this, so no cost for short-answer tasks.
@@ -198,6 +203,8 @@ echo "Apertus eval"
 echo "  mode:       $MODE"
 echo "  models:     $(echo "$MODELS" | tr '\n' ',' | sed 's/,$//')"
 echo "  tasks:      $(echo "$TASKS"  | tr '\n' ',' | sed 's/,$//')"
+echo "  tokenizer:  $TOKENIZER_PATH"
+echo "  template:   ${CHAT_TEMPLATE:-<tokenizer default>}"
 echo "  cache base: $CACHE_BASE"
 echo "  slurm:      $SLURM_TEMPLATE"
 echo "  wandb:      $ENABLE_WANDB ($WANDB_ENTITY/$WANDB_PROJECT)"
@@ -234,6 +241,7 @@ while IFS= read -r TASK; do
       "$SLURM_TEMPLATE" \
       --model-path "$MODEL_PATH" \
       --tokenizer-path "$TOKENIZER_PATH" \
+      --chat-template "$CHAT_TEMPLATE" \
       --tasks "$TASK" \
       --num-processes "$NUM_PROCESSES" \
       --batch-size "$BATCH_SIZE" \

@@ -107,6 +107,7 @@ class VLLM(VLLMSimple):
                     sampling_params=sampling_params,
                     messages=inputs,
                     chat_template=self.chat_template,
+                    **self._chat_tokenization_kwargs(),
                 )
                 return [o.outputs[0].text for o in response]
 

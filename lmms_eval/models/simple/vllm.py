@@ -1,3 +1,4 @@
+import inspect
 import json
 import os
 import socket
@@ -145,6 +146,8 @@ class VLLM(lmms):
 
     """
 
+    _chat_add_special_tokens: Optional[bool] = None
+
     def __init__(
         self,
         model: str = "Qwen/Qwen2.5-VL-3B-Instruct",
@@ -239,6 +242,7 @@ class VLLM(lmms):
             seed=1,
             **kwargs,
         )
+        self._supports_chat_tokenization_kwargs = self._client_chat_supports_tokenization_kwargs()
         self.disable_log_stats = disable_log_stats
 
         self.device = self.accelerator.device
@@ -254,6 +258,22 @@ class VLLM(lmms):
             os.makedirs(self._watchdog_dir, exist_ok=True)
             self._watchdog_path = os.path.join(self._watchdog_dir, f"rank_{self._watchdog_rank()}.json")
             self._write_watchdog_heartbeat("init", batch_idx=-1)
+
+    def _chat_tokenization_kwargs(self) -> dict[str, Any]:
+        if self._chat_add_special_tokens is None:
+            return {}
+        if getattr(self, "_supports_chat_tokenization_kwargs", None) is None:
+            self._supports_chat_tokenization_kwargs = self._client_chat_supports_tokenization_kwargs()
+        if not self._supports_chat_tokenization_kwargs:
+            return {}
+        return {"tokenization_kwargs": {"add_special_tokens": self._chat_add_special_tokens}}
+
+    def _client_chat_supports_tokenization_kwargs(self) -> bool:
+        try:
+            chat_params = inspect.signature(self.client.chat).parameters
+        except (TypeError, ValueError):
+            return False
+        return "tokenization_kwargs" in chat_params
 
     def _setup_tp_group_for_request_sync(self) -> None:
         if self.tensor_parallel_size <= 1 or get_tp_group is None:
@@ -532,9 +552,14 @@ class VLLM(lmms):
                             sampling_params=sampling_params,
                             messages=inputs,
                             chat_template=self.chat_template,
+                            **self._chat_tokenization_kwargs(),
                         )
                     else:
-                        response = self.client.chat(sampling_params=sampling_params, messages=inputs)
+                        response = self.client.chat(
+                            sampling_params=sampling_params,
+                            messages=inputs,
+                            **self._chat_tokenization_kwargs(),
+                        )
                     return [o.outputs[0].text for o in response]
 
                 response_text = self._run_tp_synced(batched_messages, _run_chat)

@@ -22,7 +22,8 @@
 # Direct example:
 #   sbatch eval_job.slurm \
 #     --model-path /path/to/ckpt \
-#     --tokenizer-path /capstor/.../tokenizer/apertus_emu3.5_instruct \
+#     --tokenizer-path /capstor/.../tokenizer/apertus_emu3.5_wavtok_instruct_thinking_token_fixed \
+#     --chat-template /capstor/.../tokenizer/apertus_emu3.5_wavtok_instruct_thinking_token_fixed/chat_template.jinja \
 #     --tasks mmmu_val \
 #     --image-token-cache-dir /capstor/.../benchmark/image_token_cache/mmmu_val \
 #     --image-token-cache-local-copy 0
@@ -36,8 +37,10 @@ CACHE_ROOT="${REPO_ROOT}/cache"
 ########################################
 # Required runtime configuration
 ########################################
+DEFAULT_TOKENIZER_PATH="/capstor/store/cscs/swissai/infra01/MLLM/tokenizer/apertus_emu3.5_wavtok_instruct_thinking_token_fixed"
 MODEL_PATH="/path/to/apertus/model-or-hf-id"
-TOKENIZER_PATH="/capstor/store/cscs/swissai/infra01/MLLM/tokenizer/apertus_emu3.5_instruct"
+TOKENIZER_PATH="${DEFAULT_TOKENIZER_PATH}"
+MODEL_BACKEND="${MODEL_BACKEND:-apertus_1p5_vllm}"
 OUTPUT_PATH="${REPO_ROOT}/results"
 LOG_DIR="${REPO_ROOT}/logs"
 HF_HOME_PATH="${HF_HOME:-${CACHE_ROOT}/hf}"
@@ -112,6 +115,7 @@ Usage:
 Options:
   --model-path <path_or_hf_id>           Required model path or HF id.
   --tokenizer-path <path>                Tokenizer path.
+  --model-backend <name>                 lmms-eval model backend.
   --tasks <csv>                          lmms-eval task list.
   --output-path <path>                   Output directory.
   --log-dir <path>                       Log directory.
@@ -183,6 +187,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --model-path) MODEL_PATH="$2"; shift 2 ;;
     --tokenizer-path) TOKENIZER_PATH="$2"; shift 2 ;;
+    --model-backend) MODEL_BACKEND="$2"; shift 2 ;;
     --tasks) TASKS="$2"; shift 2 ;;
     --output-path) OUTPUT_PATH="$2"; shift 2 ;;
     --log-dir) LOG_DIR="$2"; shift 2 ;;
@@ -264,7 +269,16 @@ fi
 ########################################
 export API_TYPE=dummy
 export PATH="/opt/venv/bin:${PATH}"
-export PYTHONPATH="${LMMS_EVAL_REPO}:${VLLM_REPO}${PYTHONPATH:+:${PYTHONPATH}}"
+# Optional dev-tree override: prepend a user-local lmms-eval checkout to PYTHONPATH
+# so changes in dev are picked up without writing to the shared prod tree.
+# Usage: LMMS_EVAL_DEV_PATH=/path/to/your/lmms-eval bash scripts/eval.sh ...
+LMMS_EVAL_DEV_PATH="${LMMS_EVAL_DEV_PATH:-}"
+if [[ -n "${LMMS_EVAL_DEV_PATH}" ]]; then
+  echo "PYTHONPATH dev-tree override: ${LMMS_EVAL_DEV_PATH}"
+  export PYTHONPATH="${LMMS_EVAL_DEV_PATH}:${LMMS_EVAL_REPO}:${VLLM_REPO}${PYTHONPATH:+:${PYTHONPATH}}"
+else
+  export PYTHONPATH="${LMMS_EVAL_REPO}:${VLLM_REPO}${PYTHONPATH:+:${PYTHONPATH}}"
+fi
 export LD_LIBRARY_PATH="/opt/venv/lib/python3.12/site-packages/torch/lib:${LD_LIBRARY_PATH:-}"
 export HF_HOME="${HF_HOME_PATH}"
 export NLTK_DATA="${NLTK_DATA_PATH}"
@@ -385,6 +399,10 @@ fi
 if [[ "${MAX_MODEL_LEN}" -le 8192 ]]; then
   echo "MAX_MODEL_LEN must be > 8192 (got ${MAX_MODEL_LEN})."
   exit 1
+fi
+
+if [[ -z "${CHAT_TEMPLATE}" && "${TOKENIZER_PATH}" == "${DEFAULT_TOKENIZER_PATH}" ]]; then
+  CHAT_TEMPLATE="${TOKENIZER_PATH}/chat_template.jinja"
 fi
 
 if [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]]; then
@@ -552,7 +570,7 @@ CMD=(
   --num_machines 1
   --main_process_port "${MAIN_PROCESS_PORT}"
   -m lmms_eval
-  --model vllm
+  --model "${MODEL_BACKEND}"
   --model_args "${MODEL_ARGS}"
   --tasks "${TASKS}"
   --batch_size "${BATCH_SIZE}"
@@ -582,6 +600,8 @@ echo "VLLM_REPO=${VLLM_REPO}"
 echo "LMMS_EVAL_REPO=${LMMS_EVAL_REPO}"
 echo "MODEL_PATH=${MODEL_PATH}"
 echo "TOKENIZER_PATH=${TOKENIZER_PATH}"
+echo "CHAT_TEMPLATE=${CHAT_TEMPLATE:-<tokenizer default>}"
+echo "MODEL_BACKEND=${MODEL_BACKEND}"
 echo "TASKS=${TASKS}"
 echo "NUM_PROCESSES=${NUM_PROCESSES}"
 echo "BATCH_SIZE=${BATCH_SIZE}"
