@@ -16,23 +16,41 @@ generation_kwargs:
   do_sample: false
 process_results: !function utils.videomme_v2_process_results
 metric_list:
-  - metric: videomme_v2_score
-    aggregation: !function utils.videomme_v2_aggregate_results
+  - metric: videomme_v2_overall_score
+    aggregation: !function utils.videomme_v2_aggregate_overall_score
     higher_is_better: true
   - metric: videomme_v2_relevance_score
-    aggregation: !function utils.videomme_v2_aggregate_relevance
+    aggregation: !function utils.videomme_v2_aggregate_relevance_score
     higher_is_better: true
   - metric: videomme_v2_logic_score
-    aggregation: !function utils.videomme_v2_aggregate_logic
+    aggregation: !function utils.videomme_v2_aggregate_logic_score
     higher_is_better: true
-  - metric: videomme_v2_level_1
-    aggregation: !function utils.videomme_v2_aggregate_level_1
+  - metric: videomme_v2_level_1_score
+    aggregation: !function utils.videomme_v2_aggregate_level_1_score
     higher_is_better: true
-  - metric: videomme_v2_level_2
-    aggregation: !function utils.videomme_v2_aggregate_level_2
+  - metric: videomme_v2_level_2_score
+    aggregation: !function utils.videomme_v2_aggregate_level_2_score
     higher_is_better: true
-  - metric: videomme_v2_level_3
-    aggregation: !function utils.videomme_v2_aggregate_level_3
+  - metric: videomme_v2_level_3_score
+    aggregation: !function utils.videomme_v2_aggregate_level_3_score
+    higher_is_better: true
+  - metric: videomme_v2_overall_acc
+    aggregation: !function utils.videomme_v2_aggregate_overall_acc
+    higher_is_better: true
+  - metric: videomme_v2_relevance_acc
+    aggregation: !function utils.videomme_v2_aggregate_relevance_acc
+    higher_is_better: true
+  - metric: videomme_v2_logic_acc
+    aggregation: !function utils.videomme_v2_aggregate_logic_acc
+    higher_is_better: true
+  - metric: videomme_v2_level_1_acc
+    aggregation: !function utils.videomme_v2_aggregate_level_1_acc
+    higher_is_better: true
+  - metric: videomme_v2_level_2_acc
+    aggregation: !function utils.videomme_v2_aggregate_level_2_acc
+    higher_is_better: true
+  - metric: videomme_v2_level_3_acc
+    aggregation: !function utils.videomme_v2_aggregate_level_3_acc
     higher_is_better: true
 lmms_eval_specific_kwargs:
   default:
