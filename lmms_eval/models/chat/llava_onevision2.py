@@ -22,8 +22,9 @@ The wrapper:
 
 from __future__ import annotations
 
-import json
+import os
 import time
+from pathlib import Path
 from typing import List
 
 import cv2
@@ -49,6 +50,12 @@ from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.protocol import ChatMessages
 
 fetch_video, _ = optional_import("qwen_vl_utils", "fetch_video")
+
+
+def _as_bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
 @register_model("llava_onevision2_chat")
@@ -83,6 +90,21 @@ class Llava_OneVision2(lmms):
         fps: float = 1.0,
         messages_format: str = "timestamp",
         timestamp_decimals: int = 1,
+        # Codec sub-mode (in-processor preprocessing via cv-preinfer).
+        # When ``use_codec=True``, video items are forwarded to the bundled
+        # ``processor(video_backend='codec', ...)`` entry shipped with the
+        # checkpoint; the wrapper itself contains no codec-specific logic.
+        # ``max_pixels`` doubles as the codec canvas pixel budget so users
+        # configure a single knob.
+        use_codec: bool | str = False,
+        codec_target_canvas: int | str | None = None,
+        codec_group_size: int | str | None = None,
+        codec_images_per_group: int | str | None = None,
+        codec_patch: int | str | None = None,
+        codec_min_group_frames: int | str | None = None,
+        codec_max_group_frames: int | str | None = None,
+        codec_spatial_mask_mode: str | None = None,
+        codec_cache_dir: str | None = None,
         **kwargs,
     ):
         super().__init__()
@@ -193,6 +215,39 @@ class Llava_OneVision2(lmms):
         self.messages_format = str(messages_format)
         self.timestamp_decimals = int(timestamp_decimals)
 
+        # --- Codec sub-mode (in-processor) -------------------------------
+        # The wrapper holds no codec logic. We only collect user overrides
+        # for ``codec_config`` and the optional cache dir, then forward both
+        # to the bundled ``processor(video_backend='codec', ...)`` at call
+        # time. Defaults come from preprocessor_config.json (model repo).
+        self.use_codec = _as_bool(use_codec)
+        codec_overrides: dict = {}
+        for k, v in (
+            ("target_canvas", codec_target_canvas),
+            ("group_size", codec_group_size),
+            ("images_per_group", codec_images_per_group),
+            ("patch", codec_patch),
+            ("min_group_frames", codec_min_group_frames),
+            ("max_group_frames", codec_max_group_frames),
+            ("spatial_mask_mode", codec_spatial_mask_mode),
+        ):
+            if v is not None and v != "":
+                codec_overrides[k] = (
+                    int(v) if k != "spatial_mask_mode" else str(v)
+                )
+        if codec_cache_dir or os.getenv("ONLINE_CODEC_CACHE_DIR"):
+            codec_overrides["cache_root"] = Path(
+                codec_cache_dir or os.getenv("ONLINE_CODEC_CACHE_DIR")
+            )
+        self.codec_overrides = codec_overrides
+        if self.use_codec:
+            eval_logger.info(
+                f"[codec] pixel budget unified: max_pixels={max_pixels}; "
+                f"codec_overrides={codec_overrides}"
+            )
+        # Per-build_messages scratch for codec video URLs.
+        self._current_codec_video_urls: list = []
+
         # --- Distributed bookkeeping --------------------------------------
         self.accelerator = accelerator
         if accelerator.num_processes > 1:
@@ -223,13 +278,24 @@ class Llava_OneVision2(lmms):
 
     # ---------------------------------------------------- message building
 
+    # ----------------------------- standard video timestamp path --------
+
     def _process_video_with_timestamp(self, video_url: str):
         """Decode a video and build a per-frame ``[timestamp, image, ...]`` content list.
 
         Frames are fetched via ``qwen_vl_utils.fetch_video`` and converted to
         PIL images; the caller passes the resulting list via ``images=...`` to
         the processor (the image-processor branch the model was trained on).
+
+        When ``use_codec=True``, this short-circuits and emits a single
+        ``{"type": "video", "video": url}`` content item; the bundled
+        ``processor(video_backend='codec', ...)`` entry does the codec
+        preprocessing + text rewrite downstream.
         """
+        if self.use_codec:
+            self._current_codec_video_urls.append(video_url)
+            return [{"type": "video", "video": video_url}], []
+
         assert fetch_video is not None, "qwen_vl_utils is required. Please install it via `pip install qwen-vl-utils`"
 
         video_request = {
@@ -282,13 +348,11 @@ class Llava_OneVision2(lmms):
     def _build_messages(self, chat_message: ChatMessages):
         """Convert lmms-eval ChatMessages -> HF chat-template list.
 
-        ``video`` items are expanded to per-frame timestamp text + image
-        pairs via ``qwen_vl_utils.fetch_video``. The caller feeds the
-        returned PIL list via ``images=...`` (not ``videos=``), matching
-        the image-processor branch the model was trained on.
-
-        Returns: ``(messages, pil_images)``.
+        Returns ``(messages, pil_images, codec_video_urls)``. ``codec_video_urls``
+        is populated only when ``use_codec=True`` and the message contained a
+        video item; otherwise empty.
         """
+        self._current_codec_video_urls = []
         out_msgs = []
         all_pil_images: list = []
         if self.system_prompt:
@@ -315,7 +379,7 @@ class Llava_OneVision2(lmms):
                         # Fall back to bundled video pipeline (non-timestamp)
                         content.append({"type": "video", "video": c.url})
             out_msgs.append({"role": message.role, "content": content})
-        return out_msgs, all_pil_images
+        return out_msgs, all_pil_images, list(self._current_codec_video_urls)
 
     # -------------------------------------------------------- main loop
 
@@ -346,12 +410,14 @@ class Llava_OneVision2(lmms):
             # Build chat messages for each doc in chunk.
             hf_messages_batch = []
             pil_images_batch: List[list] = []
+            codec_urls_batch: List[list] = []
             for did in doc_ids:
                 raw = doc_to_messages[0](self.task_dict[task][split][did])
                 cm = ChatMessages(**{"messages": raw})
-                msgs, pil_imgs = self._build_messages(cm)
+                msgs, pil_imgs, codec_urls = self._build_messages(cm)
                 hf_messages_batch.append(msgs)
                 pil_images_batch.append(pil_imgs)
+                codec_urls_batch.append(codec_urls)
 
             texts = [self.processor.apply_chat_template(m, tokenize=False, add_generation_prompt=True) for m in hf_messages_batch]
 
@@ -359,16 +425,37 @@ class Llava_OneVision2(lmms):
             # image-processor branch used during training.
             images_arg = None
             first_pil = pil_images_batch[0] if pil_images_batch else []
+            first_codec_urls = codec_urls_batch[0] if codec_urls_batch else []
             if first_pil:
                 images_arg = first_pil
 
-            inputs = self.processor(
-                text=texts,
-                images=images_arg,
-                videos=None,
-                return_tensors="pt",
-                padding=True,
-            )
+            if self.use_codec and first_codec_urls:
+                if len(texts) != 1:
+                    raise ValueError(
+                        "codec path currently expects batch_size=1"
+                    )
+                # Single entry point: defer all codec preprocessing to the
+                # bundled ``processor(video_backend='codec')`` shipped with
+                # the checkpoint (trust_remote_code).
+                proc_kwargs = dict(
+                    text=[texts[0]],
+                    videos=[first_codec_urls[0]],
+                    video_backend="codec",
+                    max_pixels=self.max_pixels,
+                    return_tensors="pt",
+                    padding=True,
+                )
+                if self.codec_overrides:
+                    proc_kwargs["codec_config"] = self.codec_overrides
+                inputs = self.processor(**proc_kwargs)
+            else:
+                inputs = self.processor(
+                    text=texts,
+                    images=images_arg,
+                    videos=None,
+                    return_tensors="pt",
+                    padding=True,
+                )
 
             # Move to device. Under multi-GPU sharding, send inputs to the
             # device where the embedding layer lives.
