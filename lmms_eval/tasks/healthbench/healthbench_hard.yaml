@@ -1,0 +1,3 @@
+include: healthbench.yaml
+task: healthbench_hard
+test_split: hard

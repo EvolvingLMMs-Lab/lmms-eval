@@ -1,0 +1,26 @@
+dataset_path: TsinghuaC3I/MedXpertQA
+dataset_name: Text
+task: medxpertqa_text
+test_split: test
+output_type: generate_until
+
+doc_to_visual: !function utils.no_image_doc_to_visual
+doc_to_text: !function utils.medxpertqa_doc_to_text
+doc_to_target: !function utils.medxpertqa_doc_to_target
+
+generation_kwargs:
+  max_new_tokens: 2048
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+process_results: !function utils.medxpertqa_process_results
+
+metric_list:
+  - metric: accuracy
+    aggregation: !function utils.agg_mean
+    higher_is_better: true
+
+metadata:
+  version: 0.0

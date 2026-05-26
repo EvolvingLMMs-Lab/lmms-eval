@@ -1,0 +1,3 @@
+include: healthbench.yaml
+task: healthbench_consensus
+test_split: consensus

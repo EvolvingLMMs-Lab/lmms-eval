@@ -1,0 +1,3 @@
+include: medxpertqa_mm.yaml
+task: medxpertqa_mm_no_image
+doc_to_visual: !function utils.no_image_doc_to_visual

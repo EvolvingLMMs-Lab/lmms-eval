@@ -1,0 +1,25 @@
+dataset_path: Tonic/Health-Bench-Eval-OSS-2025-07
+task: healthbench
+test_split: oss_eval
+output_type: generate_until
+
+doc_to_messages: !function utils.healthbench_doc_to_messages
+doc_to_visual: !function utils.healthbench_doc_to_visual
+doc_to_text: !function utils.healthbench_doc_to_text
+doc_to_target: !function utils.healthbench_doc_to_target
+
+generation_kwargs:
+  max_new_tokens: 2048
+  temperature: 0.7
+  top_p: 1.0
+  do_sample: true
+
+process_results: !function utils.healthbench_process_results
+
+metric_list:
+  - metric: healthbench_score
+    aggregation: !function utils.agg_clipped_mean
+    higher_is_better: true
+
+metadata:
+  version: 0.0
