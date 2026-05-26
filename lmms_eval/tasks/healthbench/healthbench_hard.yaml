@@ -1,3 +1,5 @@
 include: healthbench.yaml
 task: healthbench_hard
-test_split: hard
+dataset_kwargs:
+  data_files:
+    test: "https://openaipublic.blob.core.windows.net/simple-evals/healthbench/hard_2025-05-08-21-00-10.jsonl"
