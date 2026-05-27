@@ -1,0 +1,13 @@
+group: mvp_mini
+task:
+  - mvp_mini_human_object_interactions
+  - mvp_mini_robot_object_interactions
+  - mvp_mini_intuitive_physics
+  - mvp_mini_temporal_reasoning
+aggregate_metric_list:
+  - aggregation: mean
+    metric: pair_accuracy
+    weight_by_size: false
+  - aggregation: mean
+    metric: single_accuracy
+    weight_by_size: false
