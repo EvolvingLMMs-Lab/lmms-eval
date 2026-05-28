@@ -38,30 +38,37 @@ from typing import Any, Dict, List, Union
 
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
+
 
 IDX_MAP = ["a", "b"]
 
+config = load_default_template_yaml(__file__)
+
+_SETUP_HINT = (
+    "MVP video files are not redistributed by facebook/minimal_video_pairs for "
+    "licensing reasons. Follow the setup at "
+    "https://github.com/facebookresearch/minimal_video_pairs to download the 9 "
+    "source datasets, then set `metadata.video_cache_dir` in the task YAML (or the "
+    "MVP_VIDEO_DIR env var) to the resulting `videos/` directory — one subdirectory "
+    "per source: pt, ssv2, language_table, intphys, inflevel, grasp, clevrer, star, "
+    "vinoground."
+)
+
 
 def _video_root() -> str:
-    root = os.environ.get("MVP_VIDEO_DIR")
+    # YAML metadata is the primary source; MVP_VIDEO_DIR env var overrides it.
+    root = os.environ.get("MVP_VIDEO_DIR") or config.get("metadata", {}).get("video_cache_dir", "")
     if not root:
-        raise RuntimeError(
-            "MVP_VIDEO_DIR is not set. MVP video files are not redistributed by "
-            "facebook/minimal_video_pairs — please follow the setup instructions at "
-            "https://github.com/facebookresearch/minimal_video_pairs to download the "
-            "9 source datasets, then point MVP_VIDEO_DIR at the resulting `videos/` "
-            "directory (one subdirectory per source: pt, ssv2, language_table, "
-            "intphys, inflevel, grasp, clevrer, star, vinoground)."
-        )
+        eval_logger.warning(f"MVP video_cache_dir is not configured. {_SETUP_HINT}")
     return root
 
 
 def mvp_doc_to_visual(doc: Dict[str, Any]) -> List[str]:
     path = os.path.join(_video_root(), doc["video_path"].lstrip("/"))
     if not os.path.exists(path):
-        raise FileNotFoundError(
-            f"MVP video not found: {path}. Check MVP_VIDEO_DIR and that the source "
-            f"dataset ({doc.get('source')}) is set up."
+        eval_logger.warning(
+            f"MVP video not found: {path} (source={doc.get('source')}). {_SETUP_HINT}"
         )
     return [path]
 

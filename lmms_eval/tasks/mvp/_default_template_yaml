@@ -18,3 +18,10 @@ metric_list:
     higher_is_better: true
 metadata:
   version: 0.1
+  # Local directory holding the MVP source videos (one subdirectory per
+  # source: pt, ssv2, language_table, intphys, inflevel, grasp, clevrer,
+  # star, vinoground). Videos are NOT redistributed by
+  # facebook/minimal_video_pairs for licensing reasons — set this up per
+  # https://github.com/facebookresearch/minimal_video_pairs. The
+  # MVP_VIDEO_DIR env var, if set, overrides this value.
+  video_cache_dir: ""
