@@ -15,9 +15,7 @@ def strip_answer(answer):
 
 
 def remove_special_characters(text):
-    pattern = (
-        r"[-`\\【】\*\$、,，。.；;:：？\?！!\s\n\u4e00-\u9fff0-9①②③④⑤⑥⑦\[\]\<>a-z=\'\"\(\)\{\}]+"
-    )
+    pattern = r"[-`\\【】\*\$、,，。.；;:：？\?！!\s\n\u4e00-\u9fff0-9①②③④⑤⑥⑦\[\]\<>a-z=\'\"\(\)\{\}]+"
     cleaned_text = re.sub(pattern, "", text)
 
     return cleaned_text
