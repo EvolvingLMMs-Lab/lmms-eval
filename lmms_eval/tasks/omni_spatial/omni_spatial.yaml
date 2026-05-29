@@ -1,0 +1,41 @@
+task: omni_spatial
+dataset_path: nv-njb/OmniSpatial-Test
+test_split: test
+output_type: generate_until
+
+doc_to_visual: !function utils.omni_spatial_doc_to_visual
+doc_to_text: !function utils.omni_spatial_doc_to_text
+doc_to_target: !function utils.omni_spatial_doc_to_answer
+process_results: !function utils.omni_spatial_process_results
+
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+metric_list:
+  - metric: omni_spatial_score
+    aggregation: !function utils.omni_spatial_aggregate_overall
+    higher_is_better: true
+  - metric: complex_logic
+    aggregation: !function utils.omni_spatial_aggregate_complex_logic
+    higher_is_better: true
+  - metric: dynamic_reasoning
+    aggregation: !function utils.omni_spatial_aggregate_dynamic_reasoning
+    higher_is_better: true
+  - metric: perspective_taking
+    aggregation: !function utils.omni_spatial_aggregate_perspective_taking
+    higher_is_better: true
+  - metric: spatial_interaction
+    aggregation: !function utils.omni_spatial_aggregate_spatial_interaction
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    eval_type: "direct"
+    prompt_type: "none"
+
+metadata:
+  version: 0.1
