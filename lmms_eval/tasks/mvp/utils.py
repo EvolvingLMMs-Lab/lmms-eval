@@ -49,19 +49,23 @@ _SETUP_HINT = (
     "MVP video files are not redistributed by facebook/minimal_video_pairs for "
     "licensing reasons. Follow the setup at "
     "https://github.com/facebookresearch/minimal_video_pairs to download the 9 "
-    "source datasets, then set `metadata.video_cache_dir` in the task YAML (or the "
-    "MVP_VIDEO_DIR env var) to the resulting `videos/` directory — one subdirectory "
+    "source datasets, then place them under <HF_HOME>/<metadata.video_cache_dir> "
+    "(or point the MVP_VIDEO_DIR env var at their directory) — one sub-directory "
     "per source: pt, ssv2, language_table, intphys, inflevel, grasp, clevrer, star, "
     "vinoground."
 )
 
 
 def _video_root() -> str:
-    # YAML metadata is the primary source; MVP_VIDEO_DIR env var overrides it.
-    root = os.environ.get("MVP_VIDEO_DIR") or config.get("metadata", {}).get("video_cache_dir", "")
-    if not root:
-        eval_logger.warning(f"MVP video_cache_dir is not configured. {_SETUP_HINT}")
-    return root
+    # The MVP_VIDEO_DIR env var, if set, is an absolute override. Otherwise the
+    # video root is metadata.video_cache_dir resolved relative to HF_HOME, matching
+    # the cache convention used by other video tasks in the repo.
+    override = os.environ.get("MVP_VIDEO_DIR")
+    if override:
+        return override
+    video_cache_dir = config.get("metadata", {}).get("video_cache_dir", "mvp_mini")
+    base_cache_dir = os.path.expanduser(os.getenv("HF_HOME", "~/.cache/huggingface/"))
+    return os.path.join(base_cache_dir, video_cache_dir)
 
 
 def mvp_doc_to_visual(doc: Dict[str, Any]) -> List[str]:
