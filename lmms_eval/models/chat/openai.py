@@ -86,6 +86,8 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 try:
                     response = self.client.chat.completions.create(**payload)
                     elapsed = time.time() - started_at
+                    if not response.choices or response.choices[0].message is None:
+                        raise ValueError("LLM returned empty or filtered response")
                     response_text = response.choices[0].message.content
                     input_tokens = 0
                     output_tokens = 0

@@ -344,6 +344,8 @@ class OpenAICompatible(lmms):
             for attempt in range(self.max_retries):
                 try:
                     response = self.client.chat.completions.create(**payload)
+                    if not response.choices or response.choices[0].message is None:
+                        raise ValueError("LLM returned empty or filtered response")
                     response_text = _normalize_openai_message_content(response.choices[0].message.content)
                     token_counts = None
                     if hasattr(response, "usage") and response.usage:
