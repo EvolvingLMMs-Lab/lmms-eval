@@ -40,6 +40,7 @@ COORDINATE_PROMPT_SUFFIX = " Output the point coordinates in JSON format."
 # Image resolution
 # ---------------------------------------------------------------------------
 
+
 @lru_cache(maxsize=1)
 def _image_root() -> str:
     """Download (once) and return the local path to the ``image/`` tree."""
@@ -65,6 +66,7 @@ def crosspoint_doc_to_visual(doc: Dict[str, Any]) -> List[Image.Image]:
 # Prompting
 # ---------------------------------------------------------------------------
 
+
 def crosspoint_doc_to_text(
     doc: Dict[str, Any],
     lmms_eval_specific_kwargs: Dict[str, Any] | None = None,
@@ -86,6 +88,7 @@ def crosspoint_doc_to_target(doc: Dict[str, Any]) -> str:
 # Answer extraction
 # ---------------------------------------------------------------------------
 
+
 def _extract_coordinates_from_json(text: str):
     patterns = [
         r'\{[^{}]*"(?:point_2d|point|coordinates?)"\s*:\s*\[([0-9.]+)\s*,\s*([0-9.]+)\]',
@@ -104,13 +107,13 @@ def _extract_coordinates_from_json(text: str):
 def _extract_coordinates_from_text(text: str):
     patterns = [
         (r'<point\s+x="([0-9.]+)"\s+y="([0-9.]+)"[^>]*>', False),
-        (r'(?:coordinates?|position|location).*?(?:are|is)\s+([0-9.]+),\s*([0-9.]+)', False),
-        (r'[xX]\s*:\s*([0-9.]+).*?[yY]\s*:\s*([0-9.]+)', False),
-        (r'[yY]\s*:\s*([0-9.]+).*?[xX]\s*:\s*([0-9.]+)', True),
+        (r"(?:coordinates?|position|location).*?(?:are|is)\s+([0-9.]+),\s*([0-9.]+)", False),
+        (r"[xX]\s*:\s*([0-9.]+).*?[yY]\s*:\s*([0-9.]+)", False),
+        (r"[yY]\s*:\s*([0-9.]+).*?[xX]\s*:\s*([0-9.]+)", True),
         (r'["\']?x["\']?\s*:\s*([0-9.]+).*?["\']?y["\']?\s*:\s*([0-9.]+)', False),
-        (r'\[([0-9.]+),\s*([0-9.]+)\]', False),
-        (r'\(([0-9.]+),\s*([0-9.]+)\)', False),
-        (r'([0-9.]+),\s*([0-9.]+)', False),
+        (r"\[([0-9.]+),\s*([0-9.]+)\]", False),
+        (r"\(([0-9.]+),\s*([0-9.]+)\)", False),
+        (r"([0-9.]+),\s*([0-9.]+)", False),
     ]
     for pat, swapped in patterns:
         m = re.search(pat, text, re.DOTALL)
@@ -132,14 +135,14 @@ def _extract_mcq_letter(text: str):
         s = s.split("</think>", 1)[1].strip()
 
     patterns = [
-        r'\\boxed\{(?:\\text\{)?([ABCD])(?:\..*?)?\}',
-        r'\((?:Choice\s+)?([ABCD])\)',
-        r'\*\*Answer:\s*([ABCD])\*\*',
-        r'\*\*([ABCD])\.\s*(?:Yes|No)',
-        r'(?:answer is|correct answer is|choose)\s*[:\s]*\*?\*?\(?([ABCD])\)?',
-        r'\*\*([ABCD])\*\*',
-        r'(?:^|\s|Answer:\s*)\(?([ABCD])\)?\s*[\.:,]',
-        r'^\s*\(?([ABCD])\)?\s*$',
+        r"\\boxed\{(?:\\text\{)?([ABCD])(?:\..*?)?\}",
+        r"\((?:Choice\s+)?([ABCD])\)",
+        r"\*\*Answer:\s*([ABCD])\*\*",
+        r"\*\*([ABCD])\.\s*(?:Yes|No)",
+        r"(?:answer is|correct answer is|choose)\s*[:\s]*\*?\*?\(?([ABCD])\)?",
+        r"\*\*([ABCD])\*\*",
+        r"(?:^|\s|Answer:\s*)\(?([ABCD])\)?\s*[\.:,]",
+        r"^\s*\(?([ABCD])\)?\s*$",
     ]
     for pat in patterns:
         m = re.search(pat, s, re.IGNORECASE | re.MULTILINE)
@@ -147,9 +150,8 @@ def _extract_mcq_letter(text: str):
             return m.group(1).upper()
 
     final_patterns = [
-        r'(?:Final Answer|Therefore|So|Hence|Thus|The correct answer is|The answer is)'
-        r'.*?(?:\\boxed\{([ABCD])\}|\*\*([ABCD])\*\*|\(?([ABCD])\)?)',
-        r'Answer:\s*\(?([ABCD])\)?',
+        r"(?:Final Answer|Therefore|So|Hence|Thus|The correct answer is|The answer is)" r".*?(?:\\boxed\{([ABCD])\}|\*\*([ABCD])\*\*|\(?([ABCD])\)?)",
+        r"Answer:\s*\(?([ABCD])\)?",
     ]
     for pat in final_patterns:
         m = re.search(pat, s, re.IGNORECASE)
@@ -158,7 +160,7 @@ def _extract_mcq_letter(text: str):
                 if g:
                     return g.upper()
 
-    letters = re.findall(r'\b([ABCD])\b', s)
+    letters = re.findall(r"\b([ABCD])\b", s)
     if len(letters) == 1:
         return letters[0].upper()
     return None
@@ -167,6 +169,7 @@ def _extract_mcq_letter(text: str):
 # ---------------------------------------------------------------------------
 # Scoring
 # ---------------------------------------------------------------------------
+
 
 def _decode_base64_mask(b64: str):
     try:

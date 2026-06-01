@@ -232,19 +232,12 @@ class Llava_OneVision2(lmms):
             ("spatial_mask_mode", codec_spatial_mask_mode),
         ):
             if v is not None and v != "":
-                codec_overrides[k] = (
-                    int(v) if k != "spatial_mask_mode" else str(v)
-                )
+                codec_overrides[k] = int(v) if k != "spatial_mask_mode" else str(v)
         if codec_cache_dir or os.getenv("ONLINE_CODEC_CACHE_DIR"):
-            codec_overrides["cache_root"] = Path(
-                codec_cache_dir or os.getenv("ONLINE_CODEC_CACHE_DIR")
-            )
+            codec_overrides["cache_root"] = Path(codec_cache_dir or os.getenv("ONLINE_CODEC_CACHE_DIR"))
         self.codec_overrides = codec_overrides
         if self.use_codec:
-            eval_logger.info(
-                f"[codec] pixel budget unified: max_pixels={max_pixels}; "
-                f"codec_overrides={codec_overrides}"
-            )
+            eval_logger.info(f"[codec] pixel budget unified: max_pixels={max_pixels}; " f"codec_overrides={codec_overrides}")
         # Per-build_messages scratch for codec video URLs.
         self._current_codec_video_urls: list = []
 
@@ -431,9 +424,7 @@ class Llava_OneVision2(lmms):
 
             if self.use_codec and first_codec_urls:
                 if len(texts) != 1:
-                    raise ValueError(
-                        "codec path currently expects batch_size=1"
-                    )
+                    raise ValueError("codec path currently expects batch_size=1")
                 # Single entry point: defer all codec preprocessing to the
                 # bundled ``processor(video_backend='codec')`` shipped with
                 # the checkpoint (trust_remote_code).

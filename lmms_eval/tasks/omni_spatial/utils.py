@@ -23,7 +23,6 @@ from typing import Any, Dict, List
 
 from PIL import Image
 
-
 # ---------------------------------------------------------------------------
 # Prompting (matches the default direct-MCQ mode of the upstream OmniSpatial
 # reference implementation)
@@ -76,6 +75,7 @@ def omni_spatial_doc_to_answer(doc: Dict[str, Any]) -> str:
 # Scoring
 # ---------------------------------------------------------------------------
 
+
 def omni_spatial_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, Any]:
     raw = results[0] if results else ""
     response = _strip_think(raw)
@@ -99,6 +99,7 @@ def omni_spatial_process_results(doc: Dict[str, Any], results: List[str]) -> Dic
 # ---------------------------------------------------------------------------
 # Aggregation
 # ---------------------------------------------------------------------------
+
 
 def _mean(xs):
     return sum(xs) / len(xs) if xs else 0.0
