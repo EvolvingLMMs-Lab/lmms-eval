@@ -1,5 +1,12 @@
+import glob
 import json
 import os
+import shutil
+import tarfile
+from functools import lru_cache
+
+from filelock import FileLock
+from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from lmms_eval.tasks.ovobench.constant import (
@@ -12,6 +19,84 @@ from lmms_eval.tasks.ovobench.score_utils.score import (
     calculate_score_backward_realtime,
     calculate_score_forward,
 )
+
+DATASET_REPO_ID = "JoeLeelyf/OVO-Bench"
+HF_HOME = os.path.expanduser(os.getenv("HF_HOME", "~/.cache/huggingface"))
+OVO_ROOT = os.path.join(HF_HOME, "ovobench")
+CHUNKS_DIR = os.path.join(OVO_ROOT, "chunked_videos")
+_LOCK_PATH = os.path.join(OVO_ROOT, ".ovobench.lock")
+
+
+def _chunks_ready(d=CHUNKS_DIR):
+    return os.path.isdir(d) and any(fn.endswith(".mp4") for fn in os.listdir(d))
+
+
+def _concat_parts(parts, out_path):
+    with open(out_path, "wb") as out:
+        for p in parts:
+            with open(p, "rb") as f:
+                shutil.copyfileobj(f, out, length=1 << 22)
+
+
+def _normalize_extracted_dir():
+    """Tar may extract to a different top-level dir; rename it to CHUNKS_DIR."""
+    if os.path.isdir(CHUNKS_DIR):
+        return
+    for name in os.listdir(OVO_ROOT):
+        cand = os.path.join(OVO_ROOT, name)
+        if os.path.isdir(cand) and _chunks_ready(cand):
+            os.rename(cand, CHUNKS_DIR)
+            return
+
+
+@lru_cache(maxsize=1)
+def get_chunked_videos_dir():
+    """Return ``$HF_HOME/ovobench/chunked_videos``, downloading on first use.
+
+    Skips the download if the directory already contains extracted mp4 files
+    (e.g. user pre-staged them). Multi-process safe via a file lock.
+    """
+    from huggingface_hub import snapshot_download
+
+    if _chunks_ready():
+        return CHUNKS_DIR
+
+    os.makedirs(OVO_ROOT, exist_ok=True)
+    with FileLock(_LOCK_PATH):
+        if _chunks_ready():
+            return CHUNKS_DIR
+
+        eval_logger.info(f"[ovobench] Fetching chunked video parts from {DATASET_REPO_ID} -> {HF_HOME}")
+        snap = snapshot_download(
+            DATASET_REPO_ID,
+            repo_type="dataset",
+            allow_patterns=["chunked_videos.tar.parta*"],
+            cache_dir=HF_HOME,
+        )
+        parts = sorted(glob.glob(os.path.join(snap, "chunked_videos.tar.parta*")))
+        if not parts:
+            raise RuntimeError(f"[ovobench] No chunked_videos.tar.parta* found under {snap}")
+
+        tar_path = os.path.join(OVO_ROOT, "chunked_videos.tar")
+        eval_logger.info(f"[ovobench] Concatenating {len(parts)} parts -> {tar_path}")
+        _concat_parts(parts, tar_path)
+
+        eval_logger.info(f"[ovobench] Extracting -> {OVO_ROOT}")
+        with tarfile.open(tar_path) as t:
+            t.extractall(OVO_ROOT)
+        os.remove(tar_path)
+        _normalize_extracted_dir()
+
+        assert _chunks_ready(), f"[ovobench] Extraction failed: {CHUNKS_DIR} empty"
+        eval_logger.info(f"[ovobench] Ready at {CHUNKS_DIR}")
+        return CHUNKS_DIR
+
+
+def _resolve_data_dir(lmms_eval_specific_kwargs):
+    """Honor user-provided ``data_dir`` if set, else auto-download."""
+    if lmms_eval_specific_kwargs and lmms_eval_specific_kwargs.get("data_dir"):
+        return lmms_eval_specific_kwargs["data_dir"]
+    return get_chunked_videos_dir()
 
 
 def is_forward_task(doc):
@@ -87,15 +172,15 @@ def ovo_forward_doc_to_text(doc, lmms_eval_specific_kwargs=None, previous_output
 
 def ovo_doc_to_visual(doc, lmms_eval_specific_kwargs):
     """Return the relevant video chunk path for the document/round."""
-    assert lmms_eval_specific_kwargs["data_dir"] is not None
-    if "round_idx" in lmms_eval_specific_kwargs:
+    data_dir = _resolve_data_dir(lmms_eval_specific_kwargs)
+    if lmms_eval_specific_kwargs and "round_idx" in lmms_eval_specific_kwargs:
         i = lmms_eval_specific_kwargs["round_idx"]
-        chunk_video_path = os.path.join(lmms_eval_specific_kwargs["data_dir"], f'{doc["id"]}_{i}.mp4')
+        chunk_video_path = os.path.join(data_dir, f'{doc["id"]}_{i}.mp4')
     elif is_forward_task(doc):
         # cause of logic of sending lmms_eval_specific_kwargs to doc_to_visual at initial round in multi round generation
-        chunk_video_path = os.path.join(lmms_eval_specific_kwargs["data_dir"], f'{doc["id"]}_{0}.mp4')
+        chunk_video_path = os.path.join(data_dir, f'{doc["id"]}_{0}.mp4')
     else:
-        chunk_video_path = os.path.join(lmms_eval_specific_kwargs["data_dir"], f'{doc["id"]}.mp4')
+        chunk_video_path = os.path.join(data_dir, f'{doc["id"]}.mp4')
     assert os.path.exists(chunk_video_path), f"Video chunk path does not exists:{chunk_video_path} !"
 
     return [chunk_video_path]
