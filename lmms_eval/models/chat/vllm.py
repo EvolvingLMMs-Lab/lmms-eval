@@ -146,8 +146,81 @@ class VLLM(VLLMSimple):
         # TODO
         assert False, "GPT4V not support"
 
-    def generate_until_multi_round(self, requests) -> List[str]:
-        raise NotImplementedError("TODO: Implement multi-round generation")
+    def _resolve_sampling_params(self, gen_kwargs: Optional[dict]) -> dict:
+        gen = dict(gen_kwargs or {})
+        gen.pop("until", None)
+        gen["max_new_tokens"] = self._select_max_new_tokens(gen.get("max_new_tokens"))
+        gen.setdefault("temperature", 0)
+        gen.setdefault("top_p", 0.95)
+        return self._build_sampling_params_dict(gen)
+
+    def _to_openai_messages(self, raw_messages: list[dict]) -> list[dict]:
+        chat_messages = ChatMessages(messages=raw_messages)
+        video_kwargs = {
+            "max_pixels": self.max_pixels,
+            "min_pixels": self.min_image_pixels,
+            "max_frames": self.max_frame_num,
+        }
+        if self.fps is not None:
+            video_kwargs["fps"] = self.fps
+        else:
+            video_kwargs["nframes"] = self.nframes
+        return chat_messages.to_openai_messages(video_kwargs=video_kwargs)
+
+    def _chat_once(self, messages: list[dict], params: dict) -> str:
+        response = self.client.chat(
+            sampling_params=[SamplingParams(**params)],
+            messages=[messages],
+            chat_template=self.chat_template,
+        )
+        return response[0].outputs[0].text
+
+    def generate_until_multi_round(self, requests) -> List[List[str]]:
+        """Model-driven multi-round loop.
+
+        Each round we ask the task's ``doc_to_messages`` (with ``round_idx`` /
+        ``previous_output``) for the messages of that round. The auto
+        implementation in ``ConfigurableMessagesTask`` already handles the
+        ``doc_to_text`` -> messages translation, so tasks designed against the
+        ``generate_until_multi_round`` protocol work without any chat-specific
+        plumbing here. Returns ``List[List[str]]`` (per-sample, per-round).
+        """
+        results: List[List[str]] = []
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Multi-round Responding")
+
+        for request in requests:
+            ctx, doc_to_messages, gen_kwargs, doc_id, task, split = request.arguments
+            doc = self.task_dict[task][split][doc_id]
+            params = self._resolve_sampling_params(gen_kwargs)
+
+            round_outputs: List[str] = []
+            previous_round_info = None
+            round_idx = 0
+            while True:
+                if round_idx == 0:
+                    raw_messages = doc_to_messages(doc)
+                else:
+                    payload = doc_to_messages(
+                        doc,
+                        round_idx=round_idx,
+                        previous_output=list(round_outputs),
+                        previous_round_info=previous_round_info,
+                    )
+                    if not (isinstance(payload, tuple) and len(payload) == 4):
+                        break
+                    raw_messages, terminal, _prev_out, previous_round_info = payload
+                    if terminal:
+                        break
+
+                messages = self._to_openai_messages(raw_messages)
+                round_outputs.append(self._chat_once(messages, params))
+                round_idx += 1
+
+            results.append(round_outputs)
+            pbar.update(1)
+
+        pbar.close()
+        return results
 
     def get_format_metrics(self):
         metrics = self.client.get_metrics()
