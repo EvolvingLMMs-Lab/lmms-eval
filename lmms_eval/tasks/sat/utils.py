@@ -3,9 +3,7 @@ import re
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 from lmms_eval.filters.transformation import MapFilter
 
-REPLACE_PROMPT = (
-    "Please answer directly with only the letter of the correct option and nothing else."
-)
+REPLACE_PROMPT = "Please answer directly with only the letter of the correct option and nothing else."
 
 
 def sat_doc_to_visual(doc):
@@ -29,13 +27,7 @@ def sat_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         option_letter = chr(ord("A") + i)
         candidates_str += f"{option_letter}. {candidate}\n"
 
-    return (
-        question
-        + "\n"
-        + candidates_str
-        + "\n"
-        + "Only output the letter of the correct option and nothing else."
-    )
+    return question + "\n" + candidates_str + "\n" + "Only output the letter of the correct option and nothing else."
 
 
 def sat_doc_to_target(doc):

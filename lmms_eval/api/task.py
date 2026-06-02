@@ -1748,65 +1748,93 @@ class ConfigurableTask(Task):
 
 
 class ConfigurableMessagesTask(ConfigurableTask):
+    _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".webp"}
+    _AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".webm"}
+
     def __init__(self, data_dir=None, cache_dir=None, download_mode=None, config=None, model_name=None):
         super().__init__(data_dir, cache_dir, download_mode, config, model_name)
 
-    def doc_to_messages(self, doc: dict) -> Union[int, str, list]:
-        if callable(self.config.doc_to_messages):
-            return (
-                self.config.doc_to_messages(doc, self.lmms_eval_specific_kwargs)
-                if self.lmms_eval_specific_kwargs is not None and len(inspect.signature(self.config.doc_to_messages).parameters) == 2
-                else self.config.doc_to_messages(
-                    doc,
-                )
-            )
-        elif self.config.doc_to_messages is None and (self.config.doc_to_visual is not None or self.config.doc_to_text is not None):
-            # An auto doc to messages function
-            def auto_doc_to_messages(doc):
-                visuals = self.doc_to_visual(doc)
-                if visuals is None:
-                    visuals = []
-                text = self.doc_to_text(doc)
-                messages = [{"role": "user", "content": []}]
-                content = []
-                _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".webp"}
-                _AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".webm"}
-                for visual in visuals:
-                    if isinstance(visual, PIL_Image.Image):
-                        content.append({"type": "image", "url": visual})
-                    elif isinstance(visual, dict):
-                        # Dict visuals carry explicit type (default: video).
-                        # Metadata keys (video_start, video_end, etc.) are
-                        # preserved in the url field so they flow through
-                        # ChatVideoContent → extract_media → fetch_video.
-                        media_type = visual.get("type", "video")
-                        has_metadata = any(k in visual for k in ("video_start", "video_end"))
-                        if has_metadata:
-                            media_url = visual  # pass full dict as url
-                        else:
-                            media_url = visual.get("url") or visual.get("path") or visual
-                        content.append({"type": media_type, "url": media_url})
-                    elif isinstance(visual, str):
-                        ext = os.path.splitext(visual)[1].lower()
-                        if ext in _IMAGE_EXTS:
-                            content.append({"type": "image", "url": visual})
-                        elif ext in _AUDIO_EXTS:
-                            content.append({"type": "audio", "url": visual})
-                        else:
-                            content.append({"type": "video", "url": visual})
-                content.append({"type": "text", "text": text})
-                messages[0]["content"] = content
-                return messages
+    @classmethod
+    def _visual_to_content(cls, visual) -> dict:
+        if isinstance(visual, PIL_Image.Image):
+            return {"type": "image", "url": visual}
+        if isinstance(visual, dict):
+            media_type = visual.get("type", "video")
+            has_metadata = any(k in visual for k in ("video_start", "video_end"))
+            media_url = visual if has_metadata else (visual.get("url") or visual.get("path") or visual)
+            return {"type": media_type, "url": media_url}
+        if isinstance(visual, str):
+            ext = os.path.splitext(visual)[1].lower()
+            if ext in cls._IMAGE_EXTS:
+                return {"type": "image", "url": visual}
+            if ext in cls._AUDIO_EXTS:
+                return {"type": "audio", "url": visual}
+            return {"type": "video", "url": visual}
+        raise TypeError(f"Unsupported visual type: {type(visual)}")
 
-            return auto_doc_to_messages(doc)
-        else:
-            # eval_logger.warning("Note that doc_to_visual was called but not set in config. Please check if this is a text-only task.")
-            return self.config.doc_to_messages
+    @classmethod
+    def _build_user_turn(cls, visuals, text: str) -> list:
+        content = [cls._visual_to_content(v) for v in (visuals or [])]
+        content.append({"type": "text", "text": text})
+        return [{"role": "user", "content": content}]
+
+    @staticmethod
+    def _forward_round_kwargs(fn, round_idx, previous_output, previous_round_info) -> dict:
+        """Return only the round-related kwargs that ``fn`` actually accepts."""
+        if round_idx is None:
+            return {}
+        params = inspect.signature(fn).parameters
+        accepts_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
+        candidates = {
+            "round_idx": round_idx,
+            "previous_output": previous_output,
+            "previous_round_info": previous_round_info,
+        }
+        if accepts_var_kw:
+            return candidates
+        return {k: v for k, v in candidates.items() if k in params}
+
+    def _auto_doc_to_messages(self, doc, *, round_idx=None, previous_output=None, previous_round_info=None):
+        if round_idx is None:
+            visuals = self.doc_to_visual(doc) or []
+            text = self.doc_to_text(doc)
+            return self._build_user_turn(visuals, text)
+
+        # Multi-round: delegate to doc_to_text using the framework's per-round protocol.
+        round_kwargs = self._forward_round_kwargs(self.config.doc_to_text, round_idx, previous_output, previous_round_info)
+        payload = self.config.doc_to_text(doc, lmms_eval_specific_kwargs=self.lmms_eval_specific_kwargs, **round_kwargs)
+
+        if isinstance(payload, tuple) and len(payload) == 5:
+            visuals, text, terminal, prev_out, prev_info = payload
+            if terminal:
+                return (None, True, prev_out, prev_info)
+            return (self._build_user_turn(visuals or [], text), False, prev_out, prev_info)
+
+        # Fallback for tasks that only return a string per round.
+        return (self._build_user_turn([], payload), False, previous_output, previous_round_info)
+
+    def doc_to_messages(self, doc: dict, *, round_idx=None, previous_output=None, previous_round_info=None):
+        if callable(self.config.doc_to_messages):
+            fn = self.config.doc_to_messages
+            params = inspect.signature(fn).parameters
+            call_kwargs = {}
+            if self.lmms_eval_specific_kwargs is not None and ("lmms_eval_specific_kwargs" in params or any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()) or len(params) == 2):
+                call_kwargs["lmms_eval_specific_kwargs"] = self.lmms_eval_specific_kwargs
+            call_kwargs.update(self._forward_round_kwargs(fn, round_idx, previous_output, previous_round_info))
+            return fn(doc, **call_kwargs)
+
+        if self.config.doc_to_messages is None and (self.config.doc_to_visual is not None or self.config.doc_to_text is not None):
+            return self._auto_doc_to_messages(doc, round_idx=round_idx, previous_output=previous_output, previous_round_info=previous_round_info)
+
+        return self.config.doc_to_messages
 
     def construct_requests(self, doc_id: int, ctx: str, **kwargs) -> Union[List[Instance], Instance]:
         split = kwargs.get("metadata").get("split")
-        # kwargs.pop("split")
-        assert self.OUTPUT_TYPE in ["generate_until", "generate_until_agentic"], "Currently messages is used for generation only"
+        assert self.OUTPUT_TYPE in [
+            "generate_until",
+            "generate_until_agentic",
+            "generate_until_multi_round",
+        ], "Currently messages is used for generation only"
 
         if self.OUTPUT_TYPE == "generate_until_agentic":
             arguments = (
@@ -1819,6 +1847,8 @@ class ConfigurableMessagesTask(ConfigurableTask):
                 split,
             )
         else:
+            # generate_until and generate_until_multi_round share the same shape;
+            # the model side decides whether to invoke doc_to_messages with round_idx.
             arguments = (ctx, self.doc_to_messages, copy.deepcopy(self.config.generation_kwargs), doc_id, self.config.task, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, task_name=self.config.task, doc_id=doc_id, **kwargs)
 

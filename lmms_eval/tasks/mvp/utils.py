@@ -40,7 +40,6 @@ from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
 
-
 IDX_MAP = ["a", "b"]
 
 config = load_default_template_yaml(__file__)
@@ -71,9 +70,7 @@ def _video_root() -> str:
 def mvp_doc_to_visual(doc: Dict[str, Any]) -> List[str]:
     path = os.path.join(_video_root(), doc["video_path"].lstrip("/"))
     if not os.path.exists(path):
-        eval_logger.warning(
-            f"MVP video not found: {path} (source={doc.get('source')}). {_SETUP_HINT}"
-        )
+        eval_logger.warning(f"MVP video not found: {path} (source={doc.get('source')}). {_SETUP_HINT}")
     return [path]
 
 
@@ -99,6 +96,7 @@ def mvp_doc_to_answer(doc: Dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 # Scoring
 # ---------------------------------------------------------------------------
+
 
 def _extract_pred(text: str) -> Union[str, bool]:
     lowered = text.lower()
@@ -131,6 +129,7 @@ def mvp_process_results(doc: Dict[str, Any], result: List[str]) -> Dict[str, Any
 # ---------------------------------------------------------------------------
 # Aggregation
 # ---------------------------------------------------------------------------
+
 
 def _compute_pair_and_single(results: List[Dict[str, Any]]):
     """Pair items by video_id stem (drop trailing _<idx>) and compute both

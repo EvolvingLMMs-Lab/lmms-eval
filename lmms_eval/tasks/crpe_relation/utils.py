@@ -19,10 +19,7 @@ from PIL import Image
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 from lmms_eval.filters.transformation import MapFilter
 
-
-REPLACE_PROMPT = (
-    "Please answer directly with only the letter of the correct option and nothing else."
-)
+REPLACE_PROMPT = "Please answer directly with only the letter of the correct option and nothing else."
 
 
 def crpe_relation_doc_to_visual(doc: Dict[str, Any]) -> List[Image.Image]:
@@ -45,8 +42,16 @@ def crpe_relation_doc_to_text(
 class NumberWordsToDigitsFilter(MapFilter):
     def __init__(self) -> None:
         mapping_dict = {
-            "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4",
-            "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9",
+            "zero": "0",
+            "one": "1",
+            "two": "2",
+            "three": "3",
+            "four": "4",
+            "five": "5",
+            "six": "6",
+            "seven": "7",
+            "eight": "8",
+            "nine": "9",
             "ten": "10",
         }
         super().__init__(mapping_dict, default_value=None)
@@ -54,6 +59,7 @@ class NumberWordsToDigitsFilter(MapFilter):
     def apply(self, resps, docs):
         def filter_set(inst):
             return [self.mapping_dict.get(resp.lower(), resp) for resp in inst]
+
         return [filter_set(resp) for resp in resps]
 
 
