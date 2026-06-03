@@ -3,13 +3,14 @@ import unicodedata
 import zipfile
 from functools import lru_cache
 from io import BytesIO
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 import datasets
 import numpy as np
 from PIL import Image
 
 from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
+from lmms_eval.tasks._task_utils.point_format import parse_point2d
 from lmms_eval.utils import eval_logger
 
 POINTARENA_REPO = "PointArena/pointarena-data"
@@ -34,6 +35,23 @@ def pointbench_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs: Dict[
     post_prompt = kwargs.get("post_prompt", "")
     user_input = str(doc.get("user_input", "")).strip()
     return f"{pre_prompt}{user_input} {suffix} {FORMAT}{post_prompt}".strip()
+
+
+def pointbench_doc_to_text_json(doc: Dict[str, Any], lmms_eval_specific_kwargs: Dict[str, Any] | None = None) -> str:
+    """Qwen-native variant: 'pointing:' framing + JSON point_2d on a 0-1000 grid.
+
+    A bare coordinate suffix makes the model decline with "There are none"; the
+    "pointing:" framing elicits its native point_2d JSON.
+    """
+    kwargs = lmms_eval_specific_kwargs or {}
+    pre_prompt = kwargs.get("pre_prompt", "")
+    post_prompt = kwargs.get("post_prompt", "")
+    user_input = str(doc.get("user_input", "")).strip()
+    if doc.get("category", "") == "counting":
+        question = f"pointing: {user_input}, You should point to all the objects in the image that are mentioned in the question."
+    else:
+        question = f"pointing: {user_input}"
+    return f"{pre_prompt}{question}\nReturn points in JSON format and normalized to the range [0, 1000].{post_prompt}".strip()
 
 
 def _zip_basename_key(name: str) -> str:
@@ -175,7 +193,9 @@ def _binary_score(points: np.ndarray, mask: np.ndarray, category: str, expected_
     return 1
 
 
-def pointbench_process_results(doc: Dict[str, Any], result: List[str]) -> Dict[str, Dict[str, Any]]:
+def _pointbench_eval(doc: Dict[str, Any], result: List[str], parser: Callable[[str, int, int], np.ndarray]) -> Dict[str, Dict[str, Any]]:
+    """Score one example with ``parser`` (tuples for the default task, JSON for
+    the ``_json`` variant). Emits both the fraction and the binary metric."""
     mask_filename = str(doc.get("mask_filename", ""))
     mask = _load_mask(mask_filename)
     response = result[0] if result else ""
@@ -188,7 +208,7 @@ def pointbench_process_results(doc: Dict[str, Any], result: List[str]) -> Dict[s
         binary = {"id": sample_id, "score": 0, "category": category}
         return {"pointbench_acc": frac, "pointbench_binary_acc": binary}
 
-    points = _text_to_points(response, mask.shape[1], mask.shape[0])
+    points = parser(response, mask.shape[1], mask.shape[0])
 
     # Fraction metric (OSS native): mean mask value over all predicted points.
     acc = 0.0
@@ -209,6 +229,15 @@ def pointbench_process_results(doc: Dict[str, Any], result: List[str]) -> Dict[s
     }
     binary_submission = {"id": sample_id, "score": int(binary), "category": category}
     return {"pointbench_acc": frac_submission, "pointbench_binary_acc": binary_submission}
+
+
+def pointbench_process_results(doc: Dict[str, Any], result: List[str]) -> Dict[str, Dict[str, Any]]:
+    return _pointbench_eval(doc, result, _text_to_points)
+
+
+def pointbench_process_results_json(doc: Dict[str, Any], result: List[str]) -> Dict[str, Dict[str, Any]]:
+    """Qwen-native variant: parse JSON point_2d; identical fraction + binary scoring."""
+    return _pointbench_eval(doc, result, parse_point2d)
 
 
 def pointbench_aggregate_results(results: List[Dict[str, Any]]) -> float:
