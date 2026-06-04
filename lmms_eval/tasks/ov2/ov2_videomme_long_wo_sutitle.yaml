@@ -1,0 +1,33 @@
+task: ov2_videomme_long_wo_sutitle
+dataset_path: lmms-lab/Video-MME
+dataset_kwargs:
+  token: True
+  cache_dir: videomme
+  video: True
+test_split: test
+output_type: generate_until
+process_docs: !function utils.videomme_process_docs_long
+doc_to_visual: !function utils.videomme_doc_to_visual
+doc_to_text: !function utils.videomme_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.videomme_process_results
+metric_list:
+  - metric: videomme_perception_score
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    frame_num: 512
+    pre_prompt: ""
+    post_prompt: "\nAnswer the question using a single word or phrase."
+metadata:
+  - version: 0.0
+  # Recommended runtime args (best on llava_onevision2_8b_s4, VideoMME-Long = 62.56):
+  #   --fps 1 --max-frames 512 --max-pixels 84100 --min-pixels 84100
+  # (290x290 resolution, 512 frames, no subtitle)

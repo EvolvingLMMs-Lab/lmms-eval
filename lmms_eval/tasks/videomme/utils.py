@@ -1,8 +1,10 @@
+import json
 import os
 import re
 import sys
 from functools import partial
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import cv2
 import datasets
@@ -11,7 +13,14 @@ import yaml
 from loguru import logger as eval_logger
 
 VIDEO_TYPE = ["short", "medium", "long"]
-CATEGORIES = ["Knowledge", "Film & Television", "Sports Competition", "Artistic Performance", "Life Record", "Multilingual"]
+CATEGORIES = [
+    "Knowledge",
+    "Film & Television",
+    "Sports Competition",
+    "Artistic Performance",
+    "Life Record",
+    "Multilingual",
+]
 
 SUB_CATEGORIES = [
     "Humanity & History",
@@ -133,6 +142,8 @@ def videmme_process_docs_base(dataset: datasets.Dataset, type: str) -> datasets.
 
 
 videomme_process_docs_long = partial(videmme_process_docs_base, type="long")
+videomme_process_docs_medium = partial(videmme_process_docs_base, type="medium")
+videomme_process_docs_short = partial(videmme_process_docs_base, type="short")
 
 
 def videomme_doc_to_visual(doc):
@@ -152,14 +163,21 @@ def videomme_doc_to_visual(doc):
 
 def videomme_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
-    if "format" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["format"] == "qwen3_vl":
+    if (
+        "format" in lmms_eval_specific_kwargs
+        and lmms_eval_specific_kwargs["format"] == "qwen3_vl"
+    ):
         return videomme_doc_to_text_qwen3vl(doc, lmms_eval_specific_kwargs)
 
     option_prompt = "Select the best answer to the following multiple-choice question based on the video and the subtitles. Respond with only the letter (A, B, C, or D) of the correct option."
     question = doc["question"]
     option = "\n".join([f"{opt}" for i, opt in enumerate(doc["options"])])
     question = question + "\n" + option
-    post_prompt = lmms_eval_specific_kwargs["post_prompt"] if "post_prompt" in lmms_eval_specific_kwargs else "The best answer is:"
+    post_prompt = (
+        lmms_eval_specific_kwargs["post_prompt"]
+        if "post_prompt" in lmms_eval_specific_kwargs
+        else "The best answer is:"
+    )
     full_prompt = option_prompt + "\n" + question + "\n" + post_prompt
     return full_prompt
 
@@ -217,10 +235,14 @@ def videomme_doc_to_text_subtitle(doc, lmms_eval_specific_kwargs=None):
         else:
             if "frame_num" in lmms_eval_specific_kwargs:
                 frame_num = lmms_eval_specific_kwargs["frame_num"]
-                subtitle_by_frame, total_frame = extract_subtitles(video_path, subtitle_path)
+                subtitle_by_frame, total_frame = extract_subtitles(
+                    video_path, subtitle_path
+                )
                 if frame_num == -1:
                     frame_num = total_frame
-                uniform_sampled_frames = np.linspace(0, total_frame - 1, frame_num, dtype=int).tolist()
+                uniform_sampled_frames = np.linspace(
+                    0, total_frame - 1, frame_num, dtype=int
+                ).tolist()
 
                 subtitle_by_frame_idx = []
                 for frame_idx in uniform_sampled_frames:
@@ -240,7 +262,10 @@ def videomme_doc_to_text_subtitle(doc, lmms_eval_specific_kwargs=None):
                 subtitle_text = "\n".join(textlist)
         subtitle = subtitle_text
 
-    if "format" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["format"] == "qwen3_vl":
+    if (
+        "format" in lmms_eval_specific_kwargs
+        and lmms_eval_specific_kwargs["format"] == "qwen3_vl"
+    ):
         prompt = videomme_doc_to_text_qwen3vl(doc, lmms_eval_specific_kwargs)
         full_prompt = subtitles_prompt + subtitle + "\n" + prompt
         return full_prompt
@@ -249,8 +274,68 @@ def videomme_doc_to_text_subtitle(doc, lmms_eval_specific_kwargs=None):
     question = doc["question"]
     option = "\n".join([f"{opt}" for i, opt in enumerate(doc["options"])])
     question = question + "\n" + option
-    full_prompt = subtitles_prompt + subtitle + "\n" + option_prompt + "\n" + question + "\n" + "The best answer is:"
+    full_prompt = (
+        subtitles_prompt
+        + subtitle
+        + "\n"
+        + option_prompt
+        + "\n"
+        + question
+        + "\n"
+        + "The best answer is:"
+    )
     return full_prompt
+
+
+# ── Interleaved subtitle via doc_to_messages ─────────────────────────
+
+# Sentinel prefix: task layer embeds subtitle JSON in a hidden text
+# content item; model layer's build_ov_messages strips it and passes
+# parsed subtitles to _process_video_content_with_timestamp.
+SUBTITLE_DATA_PREFIX = "__SUBTITLE_DATA__:"
+
+
+def videomme_doc_to_messages_interleaved_subtitle(
+    doc: Dict[str, Any],
+    lmms_eval_specific_kwargs: Optional[dict] = None,
+) -> List[Dict[str, Any]]:
+    lmms_eval_specific_kwargs = lmms_eval_specific_kwargs or {}
+
+    videos = videomme_doc_to_visual(doc)
+    video_path = videos[0]
+
+    cache_dir = os.path.join(base_cache_dir, cache_name)
+    subtitle_path = os.path.join(cache_dir, "subtitle", doc["videoID"] + ".srt")
+    subtitle_dict: Dict[str, str] = {}
+    if os.path.exists(subtitle_path):
+        raw_subs = load_subtitles(subtitle_path)
+        for (start, end), text in raw_subs.items():
+            clean = re.sub(r"<[^>]+>", "", text).strip()
+            if clean:
+                subtitle_dict[f"{start:.3f}:{end:.3f}"] = clean
+
+    option_prompt = (
+        "Select the best answer to the following multiple-choice "
+        "question based on the video and the subtitles. Respond with "
+        "only the letter (A, B, C, or D) of the correct option."
+    )
+    question = doc["question"]
+    option = "\n".join([f"{opt}" for i, opt in enumerate(doc["options"])])
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "The best answer is:")
+    question_text = option_prompt + "\n" + question + "\n" + option + "\n" + post_prompt
+
+    user_content: List[Dict[str, Any]] = []
+    if subtitle_dict:
+        user_content.append(
+            {
+                "type": "text",
+                "text": SUBTITLE_DATA_PREFIX + json.dumps(subtitle_dict),
+            }
+        )
+    user_content.append({"type": "video", "url": video_path})
+    user_content.append({"type": "text", "text": question_text})
+
+    return [{"role": "user", "content": user_content}]
 
 
 def extract_characters_regex(s):
@@ -260,8 +345,8 @@ def extract_characters_regex(s):
         "The correct answer is",
         "The answer is",
         "The answer",
-        "The best option is" "The correct option is",
-        "Best answer:" "Best option:",
+        "The best option isThe correct option is",
+        "Best answer:Best option:",
     ]
     for answer_prefix in answer_prefixes:
         s = s.replace(answer_prefix, "")
@@ -349,7 +434,9 @@ def videomme_aggregate_results(results):
             if video_type in k:
                 total_correct += v["correct"]
                 total_answered += v["answered"]
-        eval_logger.info(f"Evaluation on video Type: {video_type}: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+        eval_logger.info(
+            f"Evaluation on video Type: {video_type}: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%"
+        )
 
     for category in CATEGORIES:
         total_correct = 0
@@ -358,7 +445,9 @@ def videomme_aggregate_results(results):
             if category in k:
                 total_correct += v["correct"]
                 total_answered += v["answered"]
-        eval_logger.info(f"Evaluation on Categories: {category}: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+        eval_logger.info(
+            f"Evaluation on Categories: {category}: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%"
+        )
 
     for sub_cate in SUB_CATEGORIES:
         total_correct = 0
@@ -367,7 +456,9 @@ def videomme_aggregate_results(results):
             if sub_cate in k:
                 total_correct += v["correct"]
                 total_answered += v["answered"]
-        eval_logger.info(f"Evaluation on Video Sub Categories: {sub_cate}: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+        eval_logger.info(
+            f"Evaluation on Video Sub Categories: {sub_cate}: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%"
+        )
 
     for task_cate in TASK_CATEGORIES:
         total_correct = 0
@@ -376,12 +467,16 @@ def videomme_aggregate_results(results):
             if task_cate in k:
                 total_correct += v["correct"]
                 total_answered += v["answered"]
-        eval_logger.info(f"Evaluation on Task Categories: {task_cate}: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+        eval_logger.info(
+            f"Evaluation on Task Categories: {task_cate}: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%"
+        )
 
     total_correct = 0
     total_answered = 0
     for k, v in category2score.items():
         total_correct += v["correct"]
         total_answered += v["answered"]
-    eval_logger.info(f"Overall Performance: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+    eval_logger.info(
+        f"Overall Performance: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%"
+    )
     return 100 * total_correct / total_answered if total_answered > 0 else 0

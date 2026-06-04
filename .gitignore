@@ -57,3 +57,4 @@ remote_code/*
 docs/plans/
 .opencode
 .worktrees/
+.hf_cache/

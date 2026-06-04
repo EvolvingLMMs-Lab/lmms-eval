@@ -1,0 +1,39 @@
+dataset_path: lmms-lab-encoder/JumpScore
+dataset_kwargs:
+  cache_dir: jumpscore
+  video: true
+  create_link: true
+task: "JumpScore"
+test_split: test
+
+output_type: generate_until
+doc_to_visual: !function utils.jumpscore_doc_to_visual
+doc_to_text: !function utils.jumpscore_doc_to_text
+doc_to_target: !function utils.jumpscore_doc_to_target
+doc_to_messages: !function utils.jumpscore_doc_to_messages
+
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+process_results: !function utils.jumpscore_process_results
+
+metric_list:
+  - metric: jumpscore_map
+    aggregation: !function utils.jumpscore_aggregate_results
+    higher_is_better: true
+  - metric: jumpscore_score
+    aggregation: !function utils.jumpscore_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+    video_cache_dir: jumpscore
+
+metadata:
+  - version: 0.0
