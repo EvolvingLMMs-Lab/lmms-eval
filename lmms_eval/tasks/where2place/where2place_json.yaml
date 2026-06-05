@@ -1,0 +1,5 @@
+task: where2place_json
+test_split: test
+include: _default_template_yaml
+doc_to_text: !function utils.where2place_doc_to_text_json
+process_results: !function utils.where2place_process_results_json
