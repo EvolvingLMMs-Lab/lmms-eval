@@ -4,9 +4,12 @@ from typing import Any, Dict, List
 import numpy as np
 
 from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
+from lmms_eval.tasks._task_utils.point_format import parse_point2d
 
 PROMPT_SUFFIX_0_999 = "Your answer should be formatted as a list of tuples, i.e. [(x1, y1), (x2, y2), ...], where each tuple contains the x and y coordinates of a point satisfying the conditions above. The coordinates should be integers between 0 and 999, representing the pixel locations scaled to a 1000×1000 grid."
 PROMPT_SUFFIX_ORIGINAL = "Your answer should be formatted as a list of tuples, i.e. [(x1, y1), (x2, y2), ...], where each tuple contains the x and y coordinates of a point satisfying the conditions above. The coordinates should be between 0 and 1, indicating the normalized pixel locations of the points in the image."
+# Qwen-native grounding prompt: a JSON list of point_2d entries on a 0-1000 grid.
+PROMPT_SUFFIX_JSON = "Your answer should be JSON format. The coordinates should be between 0 and 1000, indicating the normalized pixel locations of the points in the image."
 FORMAT = "Return only list of tuples, don't add anything else."
 
 
@@ -17,6 +20,11 @@ def where2place_doc_to_text(doc: dict[str, Any]) -> str:
     if config.get("metadata", {}).get("prompt_suffix_type", {}) == "0_999":
         return f"{doc['question']} {PROMPT_SUFFIX_0_999} {FORMAT}"
     return f"{doc['question']} {PROMPT_SUFFIX_ORIGINAL} {FORMAT}"
+
+
+def where2place_doc_to_text_json(doc: dict[str, Any]) -> str:
+    """Qwen-native variant: ask for a JSON list of point_2d on a 0-1000 grid."""
+    return f"{doc['question']} {PROMPT_SUFFIX_JSON}"
 
 
 def where2place_doc_to_visual(doc: dict) -> list:
@@ -41,6 +49,14 @@ def _text2pts(text: str, width: int = 640, height: int = 480, normalization_cons
     return np.array(points)
 
 
+def _where2place_acc(mask: np.ndarray, points: np.ndarray) -> float:
+    acc = 0.0
+    if len(points) > 0:
+        in_range = (points[:, 0] >= 0) & (points[:, 0] < mask.shape[1]) & (points[:, 1] >= 0) & (points[:, 1] < mask.shape[0])
+        acc = np.concatenate([mask[points[in_range, 1], points[in_range, 0]], np.zeros(points.shape[0] - in_range.sum())]).mean()
+    return acc
+
+
 # inspired by original work: https://github.com/wentaoyuan/RoboPoint/blob/master/robopoint/eval/summarize_vqa.py
 def where2place_process_results(doc: Dict, result: List[str]) -> Dict[str, Dict]:
     key_name = "where2place_acc"
@@ -61,13 +77,23 @@ def where2place_process_results(doc: Dict, result: List[str]) -> Dict[str, Dict]
     normalization_constant = 1000 if prompt_suffix_type == "0_999" else 1
     points = _text2pts(response, mask.shape[1], mask.shape[0], normalization_constant)
 
-    # process the answer
-    acc = 0.0
-    if len(points) > 0:
-        in_range = (points[:, 0] >= 0) & (points[:, 0] < mask.shape[1]) & (points[:, 1] >= 0) & (points[:, 1] < mask.shape[0])
-        acc = np.concatenate([mask[points[in_range, 1], points[in_range, 0]], np.zeros(points.shape[0] - in_range.sum())]).mean()
+    acc = _where2place_acc(mask, points)
     where2place_submission = {"id": doc["question_id"], "pred": response, "parsed_points": list(map(tuple, points)), "accuracy": acc}
     return {key_name: where2place_submission}
+
+
+def where2place_process_results_json(doc: Dict, result: List[str]) -> Dict[str, Dict]:
+    """Qwen-native variant: parse JSON point_2d; identical mask scoring."""
+    mask = np.array(doc["mask"]) / 255.0
+    mask = np.round(mask, 0).astype(int)
+    if mask.ndim == 3:
+        mask = mask[:, :, 0]
+
+    response = result[0]
+    points = parse_point2d(response, mask.shape[1], mask.shape[0])
+    acc = _where2place_acc(mask, points)
+    where2place_submission = {"id": doc["question_id"], "pred": response, "parsed_points": list(map(tuple, points)), "accuracy": acc}
+    return {"where2place_acc": where2place_submission}
 
 
 def where2place_aggregate_results(results: List[Dict]) -> float:

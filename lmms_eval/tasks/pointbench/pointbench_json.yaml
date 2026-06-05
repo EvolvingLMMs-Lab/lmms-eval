@@ -1,0 +1,5 @@
+task: pointbench_json
+test_split: train
+include: _default_template_yaml
+doc_to_text: !function utils.pointbench_doc_to_text_json
+process_results: !function utils.pointbench_process_results_json
