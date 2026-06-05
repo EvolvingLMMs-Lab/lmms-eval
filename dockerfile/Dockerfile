@@ -5,7 +5,7 @@ FROM nvcr.io/nvidia/pytorch:25.04-py3
 # Override at build time:
 #   docker build --build-arg USE_CN_MIRROR=0 ...
 # ============================================================
-ARG USE_CN_MIRROR=1
+ARG USE_CN_MIRROR=0
 ARG APT_MIRROR=http://mirrors.aliyun.com/ubuntu/
 ARG PIP_INDEX=https://mirrors.aliyun.com/pypi/simple
 
@@ -66,10 +66,11 @@ ENV PYTHONPATH=/workspace/lmms-eval
 # Pin transformers and qwen-vl-utils for result reproducibility.
 # transformers >= 5.0 is required: LLaVA-OneVision-2-8B-Instruct's
 # configuration_llava_onevision2.py uses PreTrainedConfig (5.x API).
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir --no-deps \
+RUN env -u PIP_CONSTRAINT pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    env -u PIP_CONSTRAINT pip install --no-cache-dir --no-deps \
         peft accelerate datasets evaluate sentence_transformers && \
-    pip install --no-cache-dir \
+    env -u PIP_CONSTRAINT pip install --no-cache-dir \
+        "numpy<2" \
         "transformers==5.7.0" "qwen-vl-utils==0.0.14" \
         multiprocess dill xxhash pyarrow fsspec huggingface_hub \
         httpx jsonlines aiohttp numexpr \
@@ -83,7 +84,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
         spacy anls rouge Levenshtein google-generativeai \
         duckduckgo_search langchain langchain-community beautifulsoup4 python-multipart \
         trimesh scipy shapely && \
-    pip install --no-cache-dir flash-attn --no-build-isolation && \
+    env -u PIP_CONSTRAINT pip install --no-cache-dir flash-attn --no-build-isolation && \
     rm -rf ~/.cache/pip /tmp/* /root/.cache
 
 # Set default command

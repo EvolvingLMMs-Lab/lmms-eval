@@ -15,7 +15,7 @@ Minimal commands to reproduce every benchmark we report for
 ```bash
 docker build -t lmms-eval-ov2:latest -f dockerfile/Dockerfile .
 
-docker run --gpus all --ipc=host --shm-size=16g --network=host \
+docker run --privileged --gpus all --ipc=host --shm-size=16g --network=host \
   -v $(pwd):/workspace/lmms-eval \
   -v /path/to/hf_cache:/hf_cache \
   -e HF_HOME=/hf_cache \
@@ -25,7 +25,7 @@ docker run --gpus all --ipc=host --shm-size=16g --network=host \
 cd /workspace/lmms-eval
 pip install -e . --no-deps
 
-# Required for `video_backend=codec` (provides the `cv-preinfer` CLI).
+# Required for `video_backend=codec` (installs the `codec-video-prep-legacy-exact` CLI).
 # Use this exact pinned legacy-exact build — do NOT install the regular
 # `codec-video-prep` package on PyPI.
 python3 -m pip install \
