@@ -88,7 +88,7 @@ class TestMiniMaxProviderInit:
         # Patch the import inside __init__
         with patch.dict("sys.modules", {"openai": MagicMock()}):
             provider = MiniMaxProvider.__new__(MiniMaxProvider)
-            provider.config = ServerConfig(model_name="MiniMax-M2.7")
+            provider.config = ServerConfig(model_name="MiniMax-M3")
             provider.api_key = "test-key"
             provider.api_url = f"{MiniMaxProvider.MINIMAX_BASE_URL}/chat/completions"
             provider.use_client = True
@@ -97,7 +97,7 @@ class TestMiniMaxProviderInit:
     @patch.dict(os.environ, {}, clear=False)
     def test_is_not_available_without_key(self):
         provider = MiniMaxProvider.__new__(MiniMaxProvider)
-        provider.config = ServerConfig(model_name="MiniMax-M2.7")
+        provider.config = ServerConfig(model_name="MiniMax-M3")
         provider.api_key = ""
         assert provider.is_available() is False
 
@@ -107,7 +107,7 @@ class TestMiniMaxProviderInit:
 # ============================================================================
 
 
-def _make_mock_response(content="test response", model="MiniMax-M2.7"):
+def _make_mock_response(content="test response", model="MiniMax-M3"):
     """Build a mock OpenAI-style chat completion response."""
     usage = SimpleNamespace(
         prompt_tokens=10,
@@ -121,7 +121,7 @@ def _make_mock_response(content="test response", model="MiniMax-M2.7"):
 class TestMiniMaxProviderEvaluate:
     def _build_provider(self):
         provider = MiniMaxProvider.__new__(MiniMaxProvider)
-        provider.config = ServerConfig(model_name="MiniMax-M2.7")
+        provider.config = ServerConfig(model_name="MiniMax-M3")
         provider.api_key = "test-key"
         provider.api_url = f"{MiniMaxProvider.MINIMAX_BASE_URL}/chat/completions"
         provider.use_client = True
@@ -135,13 +135,13 @@ class TestMiniMaxProviderEvaluate:
 
         request = Request(
             messages=[{"role": "user", "content": "What is 6*7?"}],
-            config=ServerConfig(model_name="MiniMax-M2.7", num_retries=1),
+            config=ServerConfig(model_name="MiniMax-M3", num_retries=1),
         )
         result = provider.evaluate(request)
 
         assert isinstance(result, Response)
         assert result.content == "The answer is 42."
-        assert result.model_used == "MiniMax-M2.7"
+        assert result.model_used == "MiniMax-M3"
 
     def test_evaluate_strips_think_tags(self):
         provider = self._build_provider()
@@ -150,7 +150,7 @@ class TestMiniMaxProviderEvaluate:
 
         request = Request(
             messages=[{"role": "user", "content": "Think hard."}],
-            config=ServerConfig(model_name="MiniMax-M2.7", num_retries=1),
+            config=ServerConfig(model_name="MiniMax-M3", num_retries=1),
         )
         result = provider.evaluate(request)
         assert result.content == "Final answer."
@@ -163,7 +163,7 @@ class TestMiniMaxProviderEvaluate:
         request = Request(
             messages=[{"role": "user", "content": "hi"}],
             config=ServerConfig(
-                model_name="MiniMax-M2.7", temperature=2.0, num_retries=1
+                model_name="MiniMax-M3", temperature=2.0, num_retries=1
             ),
         )
         provider.evaluate(request)
@@ -177,7 +177,7 @@ class TestMiniMaxProviderEvaluate:
 
         request = Request(
             messages=[{"role": "user", "content": "hi"}],
-            config=ServerConfig(model_name="MiniMax-M2.7", num_retries=1),
+            config=ServerConfig(model_name="MiniMax-M3", num_retries=1),
         )
         with pytest.raises(ValueError, match="MiniMax API key not configured"):
             provider.evaluate(request)
@@ -192,7 +192,7 @@ class TestMiniMaxProviderEvaluate:
         request = Request(
             messages=[{"role": "user", "content": "retry?"}],
             config=ServerConfig(
-                model_name="MiniMax-M2.7", num_retries=2, retry_delay=0
+                model_name="MiniMax-M3", num_retries=2, retry_delay=0
             ),
         )
         result = provider.evaluate(request)
@@ -206,7 +206,7 @@ class TestMiniMaxProviderEvaluate:
         request = Request(
             messages=[{"role": "user", "content": "score this"}],
             config=ServerConfig(
-                model_name="MiniMax-M2.7",
+                model_name="MiniMax-M3",
                 response_format="json",
                 num_retries=1,
             ),
@@ -224,7 +224,7 @@ class TestMiniMaxProviderEvaluate:
         request = Request(
             messages=[{"role": "user", "content": "hi"}],
             config=ServerConfig(
-                model_name="MiniMax-M2.7", top_p=0.9, num_retries=1
+                model_name="MiniMax-M3", top_p=0.9, num_retries=1
             ),
         )
         provider.evaluate(request)
@@ -238,7 +238,7 @@ class TestMiniMaxProviderEvaluate:
 
         mock_json = {
             "choices": [{"message": {"content": "fallback answer"}}],
-            "model": "MiniMax-M2.7",
+            "model": "MiniMax-M3",
             "usage": {"prompt_tokens": 5, "completion_tokens": 10},
         }
 
@@ -251,7 +251,7 @@ class TestMiniMaxProviderEvaluate:
 
             request = Request(
                 messages=[{"role": "user", "content": "hi"}],
-                config=ServerConfig(model_name="MiniMax-M2.7", num_retries=1),
+                config=ServerConfig(model_name="MiniMax-M3", num_retries=1),
             )
             result = provider.evaluate(request)
             assert result.content == "fallback answer"
@@ -267,7 +267,7 @@ class TestAsyncMiniMaxProvider:
         from lmms_eval.llm_judge.providers.async_minimax import AsyncMiniMaxProvider
 
         provider = AsyncMiniMaxProvider.__new__(AsyncMiniMaxProvider)
-        provider.config = ServerConfig(model_name="MiniMax-M2.7")
+        provider.config = ServerConfig(model_name="MiniMax-M3")
         provider.api_key = "test-key"
         provider.api_url = f"{AsyncMiniMaxProvider.MINIMAX_BASE_URL}/chat/completions"
         provider.use_async_client = True
@@ -293,7 +293,7 @@ class TestAsyncMiniMaxProvider:
 
         request = Request(
             messages=[{"role": "user", "content": "async test"}],
-            config=ServerConfig(model_name="MiniMax-M2.7", num_retries=1),
+            config=ServerConfig(model_name="MiniMax-M3", num_retries=1),
         )
         result = asyncio.get_event_loop().run_until_complete(
             provider.evaluate_async(request)
@@ -310,7 +310,7 @@ class TestAsyncMiniMaxProvider:
 
         request = Request(
             messages=[{"role": "user", "content": "think"}],
-            config=ServerConfig(model_name="MiniMax-M2.7", num_retries=1),
+            config=ServerConfig(model_name="MiniMax-M3", num_retries=1),
         )
         result = asyncio.get_event_loop().run_until_complete(
             provider.evaluate_async(request)
@@ -334,7 +334,7 @@ class TestProviderFactoryMiniMax:
         with patch.dict(os.environ, {"MINIMAX_API_KEY": "k"}, clear=False):
             provider = ProviderFactory.create_provider(
                 api_type="minimax",
-                config=ServerConfig(model_name="MiniMax-M2.7"),
+                config=ServerConfig(model_name="MiniMax-M3"),
             )
         assert isinstance(provider, MiniMaxProvider)
 
@@ -344,7 +344,7 @@ class TestProviderFactoryMiniMax:
         with patch.dict(os.environ, {"MINIMAX_API_KEY": "k"}, clear=False):
             provider = ProviderFactory.create_provider(
                 api_type="async_minimax",
-                config=ServerConfig(model_name="MiniMax-M2.7"),
+                config=ServerConfig(model_name="MiniMax-M3"),
             )
         assert isinstance(provider, AsyncMiniMaxProvider)
 
@@ -355,7 +355,7 @@ class TestProviderFactoryMiniMax:
             clear=False,
         ):
             provider = ProviderFactory.create_provider(
-                config=ServerConfig(model_name="MiniMax-M2.7")
+                config=ServerConfig(model_name="MiniMax-M3")
             )
         assert isinstance(provider, MiniMaxProvider)
 
@@ -374,7 +374,7 @@ class TestMiniMaxIntegration:
 
     def test_live_evaluate(self):
         config = ServerConfig(
-            model_name="MiniMax-M2.7",
+            model_name="MiniMax-M3",
             temperature=0.0,
             max_tokens=256,
             num_retries=2,
@@ -391,7 +391,7 @@ class TestMiniMaxIntegration:
 
     def test_live_json_response(self):
         config = ServerConfig(
-            model_name="MiniMax-M2.7",
+            model_name="MiniMax-M3",
             temperature=0.0,
             max_tokens=256,
             response_format="json",
@@ -414,7 +414,7 @@ class TestMiniMaxIntegration:
         from lmms_eval.llm_judge.providers.async_minimax import AsyncMiniMaxProvider
 
         config = ServerConfig(
-            model_name="MiniMax-M2.7",
+            model_name="MiniMax-M3",
             temperature=0.0,
             max_tokens=256,
             num_retries=2,

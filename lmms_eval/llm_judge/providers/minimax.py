@@ -35,8 +35,9 @@ class MiniMaxProvider(ServerInterface):
     Python SDK (if available) with a custom *base_url*, falling back to
     raw ``requests`` calls otherwise.
 
-    Supported models include ``MiniMax-M2.7``, ``MiniMax-M2.5``, and
-    ``MiniMax-M2.5-highspeed`` (204K context).
+    Supported models include ``MiniMax-M3`` (default; 512K context, 128K
+    max output, image input supported), ``MiniMax-M2.7``, and
+    ``MiniMax-M2.7-highspeed``.
 
     Environment variables
     ---------------------
