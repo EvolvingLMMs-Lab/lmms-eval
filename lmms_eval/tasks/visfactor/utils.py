@@ -37,8 +37,7 @@ _JSON_ANSWER_RE = re.compile(r'\{\s*"answer"\s*:\s*(.+?)\s*\}')
 # Mirrors the conditional in the official ``evaluate``.
 # ---------------------------------------------------------------------------
 # Boolean answer in {"T", "F"}.
-_BOOL_CIDS = frozenset({"CF1", "CF2", "MV1", "MV2", "MV3", "P3",
-                        "RL2", "S1", "S2", "SS2", "VZ1", "VZ2"})
+_BOOL_CIDS = frozenset({"CF1", "CF2", "MV1", "MV2", "MV3", "P3", "RL2", "S1", "S2", "SS2", "VZ1", "VZ2"})
 # Answer is a comma-separated list; prediction matches if it's in the list.
 _STR_LIST_CIDS = frozenset({"CS1", "CS2", "CS3"})
 # Number / coordinate / letter answers.
@@ -77,8 +76,7 @@ def _resolve_additional(text: str, additional: str) -> str:
     return _ADDITIONAL_RE.sub(repl, text)
 
 
-def visfactor_doc_to_text(doc: Dict[str, Any],
-                          lmms_eval_specific_kwargs: Dict[str, str] | None = None) -> str:
+def visfactor_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs: Dict[str, str] | None = None) -> str:
     text = doc["question"].replace("<br>", "\n")
 
     # ``additional`` may be NaN (pandas) or "" (already cleaned).
@@ -91,9 +89,7 @@ def visfactor_doc_to_text(doc: Dict[str, Any],
     text = _IMAGE_RE.sub("", text)
 
     if lmms_eval_specific_kwargs:
-        text = (lmms_eval_specific_kwargs.get("pre_prompt", "")
-                + text
-                + lmms_eval_specific_kwargs.get("post_prompt", ""))
+        text = lmms_eval_specific_kwargs.get("pre_prompt", "") + text + lmms_eval_specific_kwargs.get("post_prompt", "")
     return text
 
 
@@ -164,8 +160,7 @@ def _score_row(cid: str, raw_pred: str, gold: str, additional: str) -> int:
 # ---------------------------------------------------------------------------
 # lmms-eval integration
 # ---------------------------------------------------------------------------
-def visfactor_process_results(doc: Dict[str, Any],
-                              results: List[str]) -> Dict[str, Any]:
+def visfactor_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, Any]:
     pred = results[0] if results else ""
     additional = doc.get("additional", "") or ""
     correct = _score_row(
