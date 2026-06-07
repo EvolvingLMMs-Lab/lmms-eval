@@ -1,0 +1,6 @@
+task: vbench_temporal_flickering
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vbench/data/temporal_flickering.jsonl
+test_split: test
+include: _default_template_yaml
