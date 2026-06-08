@@ -148,7 +148,9 @@ def _filter_and_group_subtitles(subtitle_data: dict) -> dict:
     return subtitle_data
 
 
-def _build_sub_after_frame(subtitle_data: dict | None, all_frame_times: list[float]) -> dict[int, list[str]]:
+def _build_sub_after_frame(
+    subtitle_data: dict | None, all_frame_times: list[float]
+) -> dict[int, list[str]]:
     """Match each subtitle segment to a frame index.
 
     Modes:
@@ -252,7 +254,9 @@ def _rewrite_codec_vision_with_subtitles(
     return text[:first_vs] + "".join(parts) + text[tail_start:]
 
 
-def _frame_times_from_patch_positions(patch_positions: torch.Tensor, fps: float) -> list[float]:
+def _frame_times_from_patch_positions(
+    patch_positions: torch.Tensor, fps: float
+) -> list[float]:
     """Distinct frame timestamps (seconds) from a codec patch_positions table."""
     t_values = patch_positions[:, 0]
     unique_t, _ = torch.unique_consecutive(t_values, return_counts=True)
@@ -312,7 +316,9 @@ def _find_offline_asset_dir(video_url: str, root: str) -> Optional[str]:
     if idx is None:
         idx = _build_offline_index(root)
         _OFFLINE_INDEX_CACHE[root] = idx
-        eval_logger.info(f"[codec][offline] Built index from {root}: {len(idx)} entries")
+        eval_logger.info(
+            f"[codec][offline] Built index from {root}: {len(idx)} entries"
+        )
     return idx.get(stem)
 
 
@@ -342,7 +348,9 @@ def _try_load_offline_codec_assets(video_url: str, offline_root: str) -> Optiona
 
     pos_path = os.path.join(asset_dir, "src_patch_position.npy")
     if not os.path.exists(pos_path):
-        eval_logger.warning(f"[codec][offline] missing src_patch_position.npy in {asset_dir}")
+        eval_logger.warning(
+            f"[codec][offline] missing src_patch_position.npy in {asset_dir}"
+        )
         return None
     src_positions = np.load(pos_path)
 
@@ -360,7 +368,9 @@ def _try_load_offline_codec_assets(video_url: str, offline_root: str) -> Optiona
                 v = 30.0
             fps = float(v) if v and float(v) > 0 else 30.0
         except Exception as e:
-            eval_logger.warning(f"[codec][offline] meta.json read failed {meta_path}: {e}")
+            eval_logger.warning(
+                f"[codec][offline] meta.json read failed {meta_path}: {e}"
+            )
 
     eval_logger.info(
         f"[codec][offline] HIT {video_url} -> {asset_dir} "
@@ -424,13 +434,17 @@ def _process_codec_video_tuned(video_url: str, cfg) -> dict:
         if not canvas_files:
             import glob as _glob
 
-            canvas_files = sorted(Path(p).name for p in _glob.glob(str(_d / "canvas_*.jpg")))
+            canvas_files = sorted(
+                Path(p).name for p in _glob.glob(str(_d / "canvas_*.jpg"))
+            )
         images = [Image.open(_d / n).convert("RGB") for n in canvas_files]
         src_positions = np.load(_d / "src_patch_position.npy")
         fps = float(meta.get("fps") or 30.0)
         return {"images": images, "src_positions": src_positions, "fps": fps}
 
-    if (out_dir / "meta.json").exists() and (out_dir / "src_patch_position.npy").exists():
+    if (out_dir / "meta.json").exists() and (
+        out_dir / "src_patch_position.npy"
+    ).exists():
         return _load_from(out_dir)
 
     lock_path = cfg.cache_root / f".{out_dir.name}.lock"
@@ -439,19 +453,33 @@ def _process_codec_video_tuned(video_url: str, cfg) -> dict:
         if fcntl is not None:
             fcntl.flock(lock_fd, fcntl.LOCK_EX)
         # Re-check after acquiring lock.
-        if (out_dir / "meta.json").exists() and (out_dir / "src_patch_position.npy").exists():
+        if (out_dir / "meta.json").exists() and (
+            out_dir / "src_patch_position.npy"
+        ).exists():
             return _load_from(out_dir)
 
-        # Resolve total frames to clamp num_sampled.
-        import cv2 as _cv2
-
-        cap = _cv2.VideoCapture(video_url)
+        # Resolve total frames only when the probe is trustworthy. Some
+        # containers cannot open valid videos via OpenCV here, which returns
+        # frame_count=0 and incorrectly collapses num_sampled_frames to 1.
+        num_sampled = cfg.num_sampled_frames()
         try:
-            total = int(cap.get(_cv2.CAP_PROP_FRAME_COUNT) or 0)
-        finally:
-            cap.release()
-        total = max(1, total)
-        num_sampled = min(cfg.num_sampled_frames(), total)
+            import cv2 as _cv2
+
+            cap = _cv2.VideoCapture(video_url)
+            try:
+                total = int(cap.get(_cv2.CAP_PROP_FRAME_COUNT) or 0)
+            finally:
+                cap.release()
+            if total > 0:
+                num_sampled = min(num_sampled, total)
+            else:
+                eval_logger.warning(
+                    f"[codec][online_tuned] cv2 frame probe failed for {video_url}; using configured num_sampled_frames={num_sampled}"
+                )
+        except Exception as e:
+            eval_logger.warning(
+                f"[codec][online_tuned] cv2 frame probe error for {video_url}: {e}; using configured num_sampled_frames={num_sampled}"
+            )
 
         tmp_dir = Path(
             tempfile.mkdtemp(
@@ -499,7 +527,9 @@ def _process_codec_video_tuned(video_url: str, cfg) -> dict:
             )
             if result.returncode != 0:
                 detail = (result.stderr or result.stdout)[-2000:]
-                raise RuntimeError(f"online cv-preinfer (tuned params) failed rc={result.returncode}: {detail}")
+                raise RuntimeError(
+                    f"online cv-preinfer (tuned params) failed rc={result.returncode}: {detail}"
+                )
             if out_dir.exists():
                 shutil.rmtree(out_dir)
             tmp_dir.rename(out_dir)
@@ -584,7 +614,9 @@ class Llava_OneVision2(lmms):
         )
         self.model.to(self._device).eval()
 
-        self.processor = AutoProcessor.from_pretrained(pretrained, trust_remote_code=True)
+        self.processor = AutoProcessor.from_pretrained(
+            pretrained, trust_remote_code=True
+        )
         # Override pixel budget on the bundled VideoProcessor + ImageProcessor so
         # CLI args min_pixels/max_pixels actually take effect. The processor's
         # __call__ does NOT accept these per-call, so we mutate the underlying
@@ -625,7 +657,9 @@ class Llava_OneVision2(lmms):
         try:
             self.tokenizer = self.processor.tokenizer
         except AttributeError:
-            self.tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=True)
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                pretrained, trust_remote_code=True
+            )
 
         # --- Save sampling / generation knobs -----------------------------
         self.batch_size = int(batch_size)
@@ -648,7 +682,9 @@ class Llava_OneVision2(lmms):
         # and ffmpeg to be installed (see model README).
         self.video_backend = str(video_backend).lower()
         if self.video_backend not in ("frames", "codec"):
-            raise ValueError(f"video_backend must be 'frames' or 'codec', got {video_backend!r}")
+            raise ValueError(
+                f"video_backend must be 'frames' or 'codec', got {video_backend!r}"
+            )
         self.codec_config: dict = {}
         if codec_target_canvas is not None:
             self.codec_config["target_canvas"] = int(codec_target_canvas)
@@ -656,9 +692,15 @@ class Llava_OneVision2(lmms):
             self.codec_config["group_size"] = int(codec_group_size)
         if codec_images_per_group is not None:
             self.codec_config["images_per_group"] = int(codec_images_per_group)
+        self.use_online_tuned_codec = (
+            os.environ.get("LLAVA_CODEC_ONLINE_TUNED", "0") == "1"
+        )
         if self.video_backend == "codec" and getattr(self, "_rank", 0) == 0:
             eval_logger.info(
                 f"[llava_onevision2] video_backend=codec, codec_config={self.codec_config or '(processor defaults)'}"
+            )
+            eval_logger.info(
+                f"[llava_onevision2] codec_path={'online_tuned' if self.use_online_tuned_codec else 'checkpoint_default'}"
             )
         if getattr(self, "_rank", 0) == 0:
             eval_logger.info(
@@ -669,7 +711,9 @@ class Llava_OneVision2(lmms):
         # Cache key includes video_url + decode params so V2/V3 sweeps with
         # the same (path, fps, max_frames, max_pixels) hit the same files.
         self.cache_video_frames = os.getenv("CACHE_VIDEO_FRAMES", "0") == "1"
-        self.video_frame_cache_dir = os.getenv("VIDEO_FRAME_CACHE_DIR", "/tmp/video_frame_cache")
+        self.video_frame_cache_dir = os.getenv(
+            "VIDEO_FRAME_CACHE_DIR", "/tmp/video_frame_cache"
+        )
         self._cache_format = os.getenv("CACHE_FORMAT", "jpg").lower()
         if self.cache_video_frames and getattr(self, "_rank", 0) == 0:
             eval_logger.info(
@@ -734,9 +778,14 @@ class Llava_OneVision2(lmms):
 
     def _cache_dir_for(self, video_url: str) -> Path:
         video_name = Path(video_url).stem
-        return Path(self.video_frame_cache_dir) / f"{video_name}_{self._frame_cache_key(video_url)}"
+        return (
+            Path(self.video_frame_cache_dir)
+            / f"{video_name}_{self._frame_cache_key(video_url)}"
+        )
 
-    def _load_frames_from_cache(self, cache_dir: Path) -> Optional[Tuple[List[Image.Image], float, List[int]]]:
+    def _load_frames_from_cache(
+        self, cache_dir: Path
+    ) -> Optional[Tuple[List[Image.Image], float, List[int]]]:
         meta_path = cache_dir / "meta.json"
         if not meta_path.exists():
             return None
@@ -781,7 +830,9 @@ class Llava_OneVision2(lmms):
                 np.save(tmp_dir / "frames.npy", arr)
             else:
                 for i, frame in enumerate(frames):
-                    img = Image.fromarray(frame.permute(1, 2, 0).numpy().astype(np.uint8))
+                    img = Image.fromarray(
+                        frame.permute(1, 2, 0).numpy().astype(np.uint8)
+                    )
                     img.save(tmp_dir / f"{i:04d}.jpg", quality=95)
             try:
                 tmp_dir.rename(cache_dir)
@@ -845,7 +896,10 @@ class Llava_OneVision2(lmms):
                     self._save_frames_to_cache(cache_dir, frames, fps, indices)
                 except Exception as e:
                     eval_logger.warning(f"[v3] frame cache save failed: {e}")
-            pil_frames = [Image.fromarray(f.permute(1, 2, 0).numpy().astype(np.uint8)) for f in frames]
+            pil_frames = [
+                Image.fromarray(f.permute(1, 2, 0).numpy().astype(np.uint8))
+                for f in frames
+            ]
         else:
             pil_frames = cache_hit_images
             indices = list(cache_indices)
@@ -985,7 +1039,9 @@ class Llava_OneVision2(lmms):
             from transformers.dynamic_module_utils import get_class_from_dynamic_module
 
             module_path = f"{self.pretrained}--codec_video_processing_llava_onevision2.process_codec_video"
-            process_codec_video = get_class_from_dynamic_module(module_path, self.pretrained)
+            process_codec_video = get_class_from_dynamic_module(
+                module_path, self.pretrained
+            )
             CodecConfig = get_class_from_dynamic_module(
                 module_path.replace("process_codec_video", "CodecConfig"),
                 self.pretrained,
@@ -995,11 +1051,15 @@ class Llava_OneVision2(lmms):
                 self.pretrained,
             )
             codec_positions_for_processor = get_class_from_dynamic_module(
-                module_path.replace("process_codec_video", "codec_positions_for_processor"),
+                module_path.replace(
+                    "process_codec_video", "codec_positions_for_processor"
+                ),
                 self.pretrained,
             )
             codec_image_processor_outputs = get_class_from_dynamic_module(
-                module_path.replace("process_codec_video", "codec_image_processor_outputs"),
+                module_path.replace(
+                    "process_codec_video", "codec_image_processor_outputs"
+                ),
                 self.pretrained,
             )
         except Exception:
@@ -1024,10 +1084,14 @@ class Llava_OneVision2(lmms):
             if len(texts) == 1 and len(flat_videos) >= 1:
                 texts = texts * len(flat_videos)
             else:
-                raise ValueError(f"codec backend: got {len(texts)} texts but {len(flat_videos)} videos")
+                raise ValueError(
+                    f"codec backend: got {len(texts)} texts but {len(flat_videos)} videos"
+                )
         if len(subtitle_dicts) != len(flat_videos):
             # Pad with None so the index lookup never fails.
-            subtitle_dicts = list(subtitle_dicts) + [None] * (len(flat_videos) - len(subtitle_dicts))
+            subtitle_dicts = list(subtitle_dicts) + [None] * (
+                len(flat_videos) - len(subtitle_dicts)
+            )
 
         all_pixel_values: list[torch.Tensor] = []
         all_grid_thw: list[torch.Tensor] = []
@@ -1037,17 +1101,21 @@ class Llava_OneVision2(lmms):
         sms = int(getattr(self.processor, "spatial_merge_size", 2))
 
         offline_root = os.environ.get("LLAVA_CODEC_OFFLINE_ROOT", "").strip()
-        use_online_tuned = os.environ.get("LLAVA_CODEC_ONLINE_TUNED", "0") == "1"
-
         for idx, (video_url, in_text) in enumerate(zip(flat_videos, texts)):
-            offline_payload = _try_load_offline_codec_assets(video_url, offline_root) if offline_root else None
+            offline_payload = (
+                _try_load_offline_codec_assets(video_url, offline_root)
+                if offline_root
+                else None
+            )
             if offline_payload is not None:
                 payload = offline_payload
-            elif use_online_tuned:
+            elif self.use_online_tuned_codec:
                 payload = _process_codec_video_tuned(video_url, cfg)
             else:
                 payload = process_codec_video(video_url, cfg)
-            imgs, src_positions, _ = drop_padding_canvases(payload["images"], payload["src_positions"])
+            imgs, src_positions, _ = drop_padding_canvases(
+                payload["images"], payload["src_positions"]
+            )
             if not imgs:
                 raise RuntimeError(f"codec produced no usable canvases for {video_url}")
             image_data = codec_image_processor_outputs(
@@ -1077,7 +1145,10 @@ class Llava_OneVision2(lmms):
                 spatial_merge_size=sms,
                 sub_after_frame=sub_after_frame,
             )
-            if not getattr(self, "_logged_first_rewritten", False) and getattr(self, "_rank", 0) == 0:
+            if (
+                not getattr(self, "_logged_first_rewritten", False)
+                and getattr(self, "_rank", 0) == 0
+            ):
                 import re as _re
 
                 ts_samples = _re.findall(r"<\d+\.\d+ seconds>", rewritten)[:5]
@@ -1126,7 +1197,9 @@ class Llava_OneVision2(lmms):
 
         out = {
             "input_ids": encoding["input_ids"],
-            "attention_mask": encoding.get("attention_mask", torch.ones_like(encoding["input_ids"])),
+            "attention_mask": encoding.get(
+                "attention_mask", torch.ones_like(encoding["input_ids"])
+            ),
             "pixel_values": torch.cat(all_pixel_values, dim=0),
             "image_grid_thw": torch.cat(merged_grid_thw_rows, dim=0),
             "patch_positions": torch.cat(all_patch_positions, dim=0),
@@ -1193,14 +1266,18 @@ class Llava_OneVision2(lmms):
                 for did in doc_ids:
                     raw = doc_to_messages[0](self.task_dict[task][split][did])
                     cm = ChatMessages(**{"messages": raw})
-                    msgs, pil_imgs, vid_urls, sub_dicts = self._build_messages(cm, task=task)
+                    msgs, pil_imgs, vid_urls, sub_dicts = self._build_messages(
+                        cm, task=task
+                    )
                     hf_messages_batch.append(msgs)
                     pil_images_batch.append(pil_imgs)
                     video_urls_batch.append(vid_urls)
                     subtitle_dicts_batch.append(sub_dicts)
 
                 texts = [
-                    self.processor.apply_chat_template(m, tokenize=False, add_generation_prompt=True)
+                    self.processor.apply_chat_template(
+                        m, tokenize=False, add_generation_prompt=True
+                    )
                     for m in hf_messages_batch
                 ]
 
@@ -1246,12 +1323,17 @@ class Llava_OneVision2(lmms):
                 continue
 
             # Move to device.
-            inputs = {k: (v.to(self._device) if isinstance(v, torch.Tensor) else v) for k, v in inputs.items()}
+            inputs = {
+                k: (v.to(self._device) if isinstance(v, torch.Tensor) else v)
+                for k, v in inputs.items()
+            }
 
             # Build generation kwargs.
             user_gk = dict(gen_kwargs_raw[0] or {})
             max_new = int(user_gk.get("max_new_tokens", self.max_new_tokens))
-            do_sample = bool(user_gk.get("temperature", 0) and user_gk["temperature"] > 0)
+            do_sample = bool(
+                user_gk.get("temperature", 0) and user_gk["temperature"] > 0
+            )
             pad_id = self.tokenizer.pad_token_id or self.tokenizer.eos_token_id
 
             gen_args = dict(inputs)
@@ -1282,7 +1364,9 @@ class Llava_OneVision2(lmms):
                 cont = self.model.generate(**gen_args)
             e2e_latency += time.time() - start
             cont = cont[:, inputs["input_ids"].shape[-1] :]
-            total_tokens += int(cont.shape[-1]) if cont.ndim > 1 else int(cont.shape[-1])
+            total_tokens += (
+                int(cont.shape[-1]) if cont.ndim > 1 else int(cont.shape[-1])
+            )
 
             text_outs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)
             for i, txt in enumerate(text_outs):
