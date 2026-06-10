@@ -1,0 +1,4 @@
+include: _default_template_yaml
+task: mvp_mini_human_object_interactions
+dataset_name: human_object_interactions
+test_split: mini

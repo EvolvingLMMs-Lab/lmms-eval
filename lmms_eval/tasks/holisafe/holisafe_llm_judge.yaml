@@ -1,0 +1,11 @@
+task: "holisafe_llm_judge"
+tag:
+  - safety
+include: _default_template_yaml
+# Override the default (string-matching) scorer with the multimodal LLM-as-judge.
+# Judge provider/model/endpoint are read from env (API_TYPE, MODEL_VERSION,
+# OPENAI_API_KEY, OPENAI_API_URL) so any OpenAI-compatible endpoint works.
+process_results: !function utils.holisafe_process_results_judge
+metadata:
+  version: 0.0
+  gpt_eval_model_name: gpt-4o-2024-11-20
