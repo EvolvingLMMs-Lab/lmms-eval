@@ -199,8 +199,6 @@ def ovo_back_real_process_results(doc, results):
 def ovo_forward_process_results(doc, results):
     """Map forward task responses back onto the original document structure."""
     if isinstance(results, list) and isinstance(results[0], list):
-        results = results[0][0]
-    else:
         results = results[0]
     for i in range(len(doc["test_info"])):
         doc["test_info"][i]["response"] = results[i]
