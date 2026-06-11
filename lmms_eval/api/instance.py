@@ -41,11 +41,13 @@ class GenerationResult:
 GenerationOutput = Union[str, GenerationResult]
 
 
-def unwrap_generation_output(output: Any) -> Tuple[str, Optional[TokenCounts]]:
-    """Normalize a model output into ``(text, token_counts | None)``.
+def unwrap_generation_output(output: Any) -> Tuple[Any, Optional[TokenCounts]]:
+    """Normalize a model output into ``(text_or_rounds, token_counts | None)``.
 
-    Accepts ``str``, ``GenerationResult``, or ``(str, dict)`` tuples for
-    maximum backward compatibility.
+    Accepts ``str``, ``GenerationResult``, ``(str, dict)`` tuples, or a
+    ``list[str]`` produced by ``generate_until_multi_round`` adapters
+    (one entry per round). The multi-round list is passed through as-is so
+    downstream task ``process_results`` can index each round's response.
     """
     if isinstance(output, GenerationResult):
         return output.text, output.token_counts
@@ -62,6 +64,9 @@ def unwrap_generation_output(output: Any) -> Tuple[str, Optional[TokenCounts]]:
                 output_tokens=meta.get("output_tokens"),
                 reasoning_tokens=meta.get("reasoning_tokens"),
             )
+
+    if isinstance(output, list) and all(isinstance(x, str) for x in output):
+        return output, None
 
     return str(output), None
 
