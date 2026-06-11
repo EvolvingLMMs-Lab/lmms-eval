@@ -449,29 +449,87 @@ class AeroRealtimeVLLM(lmms):
         )
         return all_chunks[: text_idx + 1], all_chunks[text_idx + 1 :]
 
-    @staticmethod
-    def _fuse_prompts(prompts):
-        """Concat per-chunk prompts into one OmniTokensPrompt (audio/video
-        items kept as lists in order). Returns None if empty."""
+    def _fuse_prompts(self, prompts):
+        """Concat per-chunk prompts into one OmniTokensPrompt.
+
+        Runs of consecutive pure-audio chunks (no video/text in the delta,
+        no video item in mm_data) are merged: their audio arrays are
+        concatenated into one item and the contiguous ``<|audio_pad|>``
+        tokens in the prompt collapse to a single placeholder. vllm's
+        chunked audio path then expands that placeholder to N audio tokens
+        (one per 80ms sub-chunk) via ``audio_output_lengths``. This
+        reduces the multi-modal item count from ~33k to ~65 for a 1h
+        video, making vllm's O(items × prompt_len) placeholder matching
+        tractable.
+
+        Returns None if empty.
+        """
         prompts = list(prompts)
         if not prompts:
             return None
+
+        audio_pad_id = self.audio_pad_id
+
         pids: list[int] = []
         ts_ids: list[int] = []
         audios: list = []
         videos: list = []
         mm_kwargs: dict[str, object] = {}
+
+        # Running buffer of pure-audio chunks waiting to be flushed.
+        pending_audio: list = []
+        pending_ts_ids: list[int] = []
+
+        def flush_audio_buffer():
+            if not pending_audio:
+                return
+            merged = (
+                pending_audio[0]
+                if len(pending_audio) == 1
+                else np.concatenate(pending_audio).astype(np.float32, copy=False)
+            )
+            audios.append(merged)
+            pids.append(audio_pad_id)
+            ts_ids.extend(pending_ts_ids)
+            pending_audio.clear()
+            pending_ts_ids.clear()
+
         for p in prompts:
-            pids.extend(p["prompt_token_ids"])
-            extra = p.get("additional_information") or {}
-            ts_ids.extend((extra.get("ids") or {}).get("text_stream_ids") or [])
+            prompt_ids = p["prompt_token_ids"]
             mm = p.get("multi_modal_data") or {}
-            if mm.get("audio") is not None:
-                audios.append(mm["audio"])
-            if mm.get("video") is not None:
-                videos.append(mm["video"])
+            extra = p.get("additional_information") or {}
+            chunk_ts = (extra.get("ids") or {}).get("text_stream_ids") or []
+            audio_item = mm.get("audio")
+            video_item = mm.get("video")
+
             for k, v in (p.get("mm_processor_kwargs") or {}).items():
                 mm_kwargs.setdefault(k, v)
+
+            # A "pure audio" chunk: only audio_pad token(s) in the delta,
+            # no video item, no extra prompt scaffolding.
+            non_audio_pad_ids = [tid for tid in prompt_ids if tid != audio_pad_id]
+            is_pure_audio = (
+                audio_item is not None
+                and video_item is None
+                and not non_audio_pad_ids
+            )
+
+            if is_pure_audio:
+                pending_audio.append(np.asarray(audio_item))
+                pending_ts_ids.extend(chunk_ts)
+                continue
+
+            # Boundary: flush, then emit this chunk verbatim.
+            flush_audio_buffer()
+            pids.extend(prompt_ids)
+            ts_ids.extend(chunk_ts)
+            if audio_item is not None:
+                audios.append(audio_item)
+            if video_item is not None:
+                videos.append(video_item)
+
+        flush_audio_buffer()
+
         mm_data: dict[str, object] = {}
         if audios:
             mm_data["audio"] = audios
