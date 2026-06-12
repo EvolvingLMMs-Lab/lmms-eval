@@ -95,12 +95,17 @@ class RealtimeSample:
     sample_fps: float
 
 
-def _load_audio_or_silence(video_path: str, num_frames: int, sample_fps: float) -> np.ndarray:
-    """Load the full audio track as mono float32 @ ``SAMPLE_RATE``.
-
-    Uses PyAV which does container-level seek and decodes only what we ask
-    for. ~1.7x faster than librosa.load on long mp4s, and degrades to
-    silence (not an exception) when the file has no audio stream.
+def _load_audio_or_silence(
+    video_path: str,
+    num_frames: int,
+    sample_fps: float,
+    *,
+    start_time: Optional[float] = None,
+    end_time: Optional[float] = None,
+) -> np.ndarray:
+    """Load the audio track between optional ``start_time`` and ``end_time``
+    seconds as mono float32 @ ``SAMPLE_RATE``. Uses PyAV container seek to skip
+    irrelevant audio. Degrades to silence (not exception) when no audio stream.
     """
     try:
         import av
@@ -112,9 +117,16 @@ def _load_audio_or_silence(video_path: str, num_frames: int, sample_fps: float) 
                 raise RuntimeError("no audio stream")
             stream = container.streams.audio[0]
             src_sr = int(stream.rate)
+            if start_time is not None:
+                seek_ts = int(max(0.0, start_time) / float(stream.time_base))
+                container.seek(seek_ts, stream=stream)
             for frame in container.decode(stream):
+                if start_time is not None and frame.time is not None and frame.time < start_time:
+                    continue
+                if end_time is not None and frame.time is not None and frame.time >= end_time:
+                    break
                 arr = frame.to_ndarray()
-                if arr.ndim == 2:  # planar (channels, samples) -> mono
+                if arr.ndim == 2:
                     arr = arr.mean(axis=0)
                 chunks.append(arr)
         if not chunks:
@@ -133,24 +145,41 @@ def _load_audio_or_silence(video_path: str, num_frames: int, sample_fps: float) 
         return np.zeros(int(duration_s * SAMPLE_RATE), dtype=np.float32)
 
 
-def _load_video_sample(video_path: str, *, max_frames: int) -> RealtimeSample:
+def _load_video_sample(
+    video_path: str,
+    *,
+    max_frames: int,
+    start_time: Optional[float] = None,
+    end_time: Optional[float] = None,
+) -> RealtimeSample:
+    video_arg = {
+        "type": "video",
+        "video": f"file://{video_path}" if not video_path.startswith(("file://", "http")) else video_path,
+        "fps": 1,
+        "min_frames": 1,
+        "max_frames": max_frames,
+        "min_pixels": 28800,
+        "max_pixels": 300 * 300,
+    }
+    if start_time is not None:
+        video_arg["video_start"] = start_time
+    if end_time is not None:
+        video_arg["video_end"] = end_time
     video_inputs, sample_fps = fetch_video(
-        {
-            "type": "video",
-            "video": f"file://{video_path}" if not video_path.startswith(("file://", "http")) else video_path,
-            "fps": 1,
-            "min_frames": 1,
-            "max_frames": max_frames,
-            "min_pixels": 28800,
-            "max_pixels": 300 * 300,
-        },
+        video_arg,
         return_video_sample_fps=True,
         return_video_metadata=True,
     )
     video, metadata = video_inputs
     if hasattr(video, "numpy"):
         video = video.numpy()
-    audio = _load_audio_or_silence(video_path, video.shape[0], sample_fps)
+    audio = _load_audio_or_silence(
+        video_path,
+        video.shape[0],
+        sample_fps,
+        start_time=start_time,
+        end_time=end_time,
+    )
     return RealtimeSample(audio=audio, video=video, video_metadata=metadata, sample_fps=sample_fps)
 
 
@@ -409,14 +438,20 @@ class AeroRealtimeVLLM(lmms):
 
     # --------------------------- request -> sample ------------------------------
 
-    def _extract_video_and_text(self, chat: ChatMessages) -> Tuple[str, str]:
-        """Pull (first_video_path, concatenated_user_text) out of ChatMessages."""
+    def _extract_video_and_text(
+        self, chat: ChatMessages
+    ) -> Tuple[str, str, Optional[float], Optional[float]]:
+        """Pull (first_video_path, concatenated_user_text, start_time, end_time) out of ChatMessages."""
         video_path: Optional[str] = None
+        start_time: Optional[float] = None
+        end_time: Optional[float] = None
         text_parts: list[str] = []
         for message in chat.messages:
             for content in message.content:
                 if content.type == "video" and video_path is None:
                     video_path = content.url
+                    start_time = content.start_time
+                    end_time = content.end_time
                 elif content.type == "text" and message.role == "user":
                     text_parts.append(content.text)
         if video_path is None:
@@ -424,7 +459,7 @@ class AeroRealtimeVLLM(lmms):
         ask_text = " ".join(t for t in text_parts if t).strip()
         if ask_text and not ask_text.endswith(" "):
             ask_text = ask_text + " "
-        return video_path, ask_text
+        return video_path, ask_text, start_time, end_time
 
     # --------------------------- streaming pipeline -----------------------------
 
@@ -562,9 +597,13 @@ class AeroRealtimeVLLM(lmms):
           window). The question chunk and silence tail are then streamed
           chunk-by-chunk with token feedback.
         """
-        video_path, ask_text = self._extract_video_and_text(chat)
+        video_path, ask_text, start_time, end_time = self._extract_video_and_text(chat)
         sample = await asyncio.to_thread(
-            _load_video_sample, video_path, max_frames=self.video_max_frames
+            _load_video_sample,
+            video_path,
+            max_frames=self.video_max_frames,
+            start_time=start_time,
+            end_time=end_time,
         )
 
         merged = {**self.DEFAULT_GEN_KWARGS, **(gen_kwargs or {})}
