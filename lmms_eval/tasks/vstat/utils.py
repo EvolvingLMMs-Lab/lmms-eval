@@ -14,17 +14,30 @@ import re
 from pathlib import Path
 from typing import Any
 
+from accelerate import Accelerator
 from datasets import Dataset, DatasetDict
-from huggingface_hub import hf_hub_download
+from huggingface_hub import snapshot_download
 from loguru import logger as eval_logger
 
+from lmms_eval import utils as lmms_utils
 from lmms_eval.api.task import ConfigurableTask
 from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
 
 _DEFAULT_REPO_ID = "nyu-visionx/vstat"
 _DEFAULT_QA_FILENAME = "vstat_qa_clean.json"
+_DEFAULT_CACHE_DIR = "vstat"
 _INTEGER_PATTERN = re.compile(r"-?\d+")
 _CHOICE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+_SNAPSHOT_DOWNLOAD_KWARGS = {
+    "allow_patterns",
+    "etag_timeout",
+    "force_download",
+    "ignore_patterns",
+    "local_files_only",
+    "max_workers",
+    "revision",
+    "token",
+}
 
 _downloaded_data_root: Path | None = None
 
@@ -41,19 +54,58 @@ _NUMERICAL_INSTRUCTIONS = {
 }
 
 _SETUP_HINT = (
-    "Prepare VSTAT by downloading the Hugging Face dataset and then running the "
-    "bundled YouTube download/redaction scripts:\n"
-    "  huggingface-cli download nyu-visionx/vstat --repo-type=dataset --local-dir /path/to/vstat\n"
-    "  cd /path/to/vstat && python scripts/download_youtube.py --resolution-map youtube_resolutions.json\n"
+    "VSTAT downloads the Hugging Face dataset into $HF_HOME/vstat by default. "
+    "If this missing file is a YouTube clip, install yt-dlp and ffmpeg, then run:\n"
+    "  cd ${HF_HOME:-$HOME/.cache/huggingface}/vstat\n"
+    "  python scripts/download_youtube.py --resolution-map youtube_resolutions.json\n"
     "  bash scripts/redact.sh\n"
-    "Then set VSTAT_VIDEO_ROOT=/path/to/vstat. If the QA JSON is elsewhere, set "
-    "VSTAT_QA_PATH=/path/to/vstat_qa_clean.json."
+    "Set VSTAT_VIDEO_ROOT=/path/to/prepared/vstat to use a different prepared dataset root. "
+    "If the QA JSON is elsewhere, set VSTAT_QA_PATH=/path/to/vstat_qa_clean.json."
 )
 
 
 def _resolve_path(path: str | os.PathLike[str]) -> Path:
     expanded = Path(path).expanduser()
     return expanded if expanded.is_absolute() else Path.cwd() / expanded
+
+
+def _hf_home() -> Path:
+    return Path(os.path.expanduser(os.path.expandvars(os.getenv("HF_HOME", "~/.cache/huggingface/"))))
+
+
+def _cache_root_from_config(dataset_kwargs: dict[str, Any] | None) -> Path:
+    kwargs = dataset_kwargs or {}
+    cache_dir = str(kwargs.get("cache_dir") or _DEFAULT_CACHE_DIR)
+    return Path(lmms_utils.resolve_cache_dir(cache_dir, base_dir=str(_hf_home())))
+
+
+def _snapshot_kwargs(dataset_kwargs: dict[str, Any]) -> dict[str, Any]:
+    return {key: dataset_kwargs[key] for key in _SNAPSHOT_DOWNLOAD_KWARGS if key in dataset_kwargs}
+
+
+def _download_dataset_to_cache(dataset_path: str | None, dataset_kwargs: dict[str, Any]) -> Path:
+    repo_id = dataset_kwargs.get("repo_id") or dataset_path or _DEFAULT_REPO_ID
+    qa_filename = dataset_kwargs.get("qa_filename", _DEFAULT_QA_FILENAME)
+    cache_root = _cache_root_from_config(dataset_kwargs)
+    qa_path = cache_root / qa_filename
+    force_download = bool(dataset_kwargs.get("force_download", False))
+
+    accelerator = Accelerator()
+    if accelerator.is_main_process:
+        if force_download or not qa_path.exists() or not (cache_root / "videos").exists():
+            cache_root.mkdir(parents=True, exist_ok=True)
+            eval_logger.info(f"Downloading VSTAT dataset from {repo_id} to {cache_root}.")
+            snapshot_download(
+                repo_id=repo_id,
+                repo_type="dataset",
+                local_dir=str(cache_root),
+                **_snapshot_kwargs(dataset_kwargs),
+            )
+    accelerator.wait_for_everyone()
+
+    if not qa_path.exists():
+        raise FileNotFoundError(f"Missing VSTAT QA file after dataset download: {qa_path}")
+    return cache_root
 
 
 def _qa_path_from_config(dataset_path: str | None, dataset_kwargs: dict[str, Any] | None) -> Path:
@@ -70,9 +122,8 @@ def _qa_path_from_config(dataset_path: str | None, dataset_kwargs: dict[str, Any
             data_file = data_files
         return _resolve_path(data_file)
 
-    repo_id = kwargs.get("repo_id") or dataset_path or _DEFAULT_REPO_ID
     filename = kwargs.get("qa_filename", _DEFAULT_QA_FILENAME)
-    return Path(hf_hub_download(repo_id=repo_id, filename=filename, repo_type="dataset"))
+    return _download_dataset_to_cache(dataset_path, kwargs) / filename
 
 
 def _candidate_video_roots() -> list[Path]:
@@ -85,7 +136,7 @@ def _candidate_video_roots() -> list[Path]:
     if _downloaded_data_root is not None:
         roots.append(_downloaded_data_root)
 
-    for root in (Path.cwd() / "data" / "vstat", Path(__file__).resolve().parents[3] / "data" / "vstat"):
+    for root in (_cache_root_from_config(None), Path.cwd() / "data" / "vstat", Path(__file__).resolve().parents[3] / "data" / "vstat"):
         roots.append(root)
 
     deduped: list[Path] = []
@@ -133,7 +184,7 @@ class VSTATTask(ConfigurableTask):
     def download(self, dataset_kwargs: dict[str, Any] | None = None) -> None:
         global _downloaded_data_root
 
-        qa_path = _qa_path_from_config(self.config.dataset_path, dataset_kwargs)
+        qa_path = _qa_path_from_config(self.config.dataset_path, dict(dataset_kwargs or {}))
         _downloaded_data_root = qa_path.parent
 
         with qa_path.open("r", encoding="utf-8") as f:

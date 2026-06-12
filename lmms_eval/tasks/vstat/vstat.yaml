@@ -28,9 +28,12 @@ lmms_eval_specific_kwargs:
     mcq_post_prompt: "Answer with only the option letter."
     numeric_post_prompt: "Answer with only a single number."
 dataset_kwargs:
+  cache_dir: vstat
+  video: true
   qa_filename: vstat_qa_clean.json
 metadata:
   version: 0.0
   hf_dataset: nyu-visionx/vstat
+  cache_dir: vstat
   video_root_env: VSTAT_VIDEO_ROOT
   qa_path_env: VSTAT_QA_PATH
