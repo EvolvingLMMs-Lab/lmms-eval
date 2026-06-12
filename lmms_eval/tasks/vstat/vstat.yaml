@@ -31,14 +31,9 @@ dataset_kwargs:
   cache_dir: vstat
   video: true
   qa_filename: vstat_qa_clean.json
-  youtube_workers: 2
-  # Set VSTAT_DOWNLOAD_YOUTUBE=1, or change this to true in a local config, to
-  # prepare non-redistributed YouTube clips during task setup.
-  download_youtube: false
 metadata:
   version: 0.0
   hf_dataset: nyu-visionx/vstat
   cache_dir: vstat
-  youtube_download_env: VSTAT_DOWNLOAD_YOUTUBE
   video_root_env: VSTAT_VIDEO_ROOT
   qa_path_env: VSTAT_QA_PATH

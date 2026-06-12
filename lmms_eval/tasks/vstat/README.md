@@ -13,25 +13,17 @@ Synthetic and self-recorded videos are included in the Hugging Face dataset.
 YouTube videos are not redistributed and must be downloaded with the scripts
 bundled in the dataset repository.
 
-On first use, the task downloads the Hugging Face dataset into
-`$HF_HOME/vstat`, matching the cache directory pattern used by other video
-tasks. Set `HF_HOME` if you want the cache somewhere other than
-`~/.cache/huggingface`.
-
-The official benchmark numbers also use the non-redistributed YouTube clips
-after the redaction step. To let the task prepare those clips in the default
-cache, install the video tools and enable the integrated YouTube setup:
+On first use, the task downloads the Hugging Face dataset into `$HF_HOME/vstat`,
+matching the cache directory pattern used by other video tasks. If YouTube clips
+are missing, the task also runs the bundled YouTube downloader and redaction
+script from that cache directory. Existing files are skipped on later runs.
 
 ```bash
 pip install -U yt-dlp
 # Install ffmpeg with your system package manager if it is not already available.
-
-export VSTAT_DOWNLOAD_YOUTUBE=1
 ```
 
-With `VSTAT_DOWNLOAD_YOUTUBE=1`, `VSTATTask.download()` runs the dataset's
-bundled YouTube downloader and redaction script from `$HF_HOME/vstat`. Existing
-clips are skipped on later runs.
+Set `HF_HOME` if you want the cache somewhere other than `~/.cache/huggingface`.
 
 For offline runs, or to use a separately prepared dataset root, set:
 

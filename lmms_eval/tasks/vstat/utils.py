@@ -41,8 +41,6 @@ _SNAPSHOT_DOWNLOAD_KWARGS = {
     "revision",
     "token",
 }
-_TRUE_VALUES = {"1", "true", "yes", "y", "on"}
-_FALSE_VALUES = {"0", "false", "no", "n", "off"}
 
 _downloaded_data_root: Path | None = None
 
@@ -60,9 +58,8 @@ _NUMERICAL_INSTRUCTIONS = {
 
 _SETUP_HINT = (
     "VSTAT downloads the Hugging Face dataset into $HF_HOME/vstat by default. "
-    "If this missing file is a YouTube clip, install yt-dlp and ffmpeg, then set "
-    "VSTAT_DOWNLOAD_YOUTUBE=1 to let the task download and redact YouTube clips "
-    "during setup. "
+    "If this missing file is a YouTube clip, install yt-dlp and ffmpeg so the "
+    "task can download and redact YouTube clips during setup. "
     "Set VSTAT_VIDEO_ROOT=/path/to/prepared/vstat to use a different prepared dataset root. "
     "If the QA JSON is elsewhere, set VSTAT_QA_PATH=/path/to/vstat_qa_clean.json."
 )
@@ -85,33 +82,6 @@ def _cache_root_from_config(dataset_kwargs: dict[str, Any] | None) -> Path:
 
 def _snapshot_kwargs(dataset_kwargs: dict[str, Any]) -> dict[str, Any]:
     return {key: dataset_kwargs[key] for key in _SNAPSHOT_DOWNLOAD_KWARGS if key in dataset_kwargs}
-
-
-def _coerce_bool(value: Any, default: bool = False) -> bool:
-    if value is None:
-        return default
-    if isinstance(value, bool):
-        return value
-    normalized = str(value).strip().lower()
-    if normalized in _TRUE_VALUES:
-        return True
-    if normalized in _FALSE_VALUES:
-        return False
-    return default
-
-
-def _youtube_download_enabled(dataset_kwargs: dict[str, Any]) -> bool:
-    env_override = os.getenv("VSTAT_DOWNLOAD_YOUTUBE")
-    if env_override is not None:
-        return _coerce_bool(env_override)
-    return _coerce_bool(dataset_kwargs.get("download_youtube"), default=False)
-
-
-def _youtube_workers(dataset_kwargs: dict[str, Any]) -> int:
-    try:
-        return max(1, int(dataset_kwargs.get("youtube_workers", 2)))
-    except (TypeError, ValueError):
-        return 2
 
 
 def _load_vstat_payload(qa_path: Path) -> Any:
@@ -151,10 +121,7 @@ def _run_vstat_command(command: list[str], cwd: Path, step_name: str) -> None:
         raise RuntimeError(f"VSTAT {step_name} failed with exit code {exc.returncode}.") from exc
 
 
-def _ensure_youtube_clips(cache_root: Path, qa_path: Path, dataset_kwargs: dict[str, Any], accelerator: Accelerator) -> None:
-    if not _youtube_download_enabled(dataset_kwargs):
-        return
-
+def _ensure_youtube_clips(cache_root: Path, qa_path: Path, accelerator: Accelerator) -> None:
     if not accelerator.is_main_process:
         accelerator.wait_for_everyone()
         return
@@ -166,9 +133,9 @@ def _ensure_youtube_clips(cache_root: Path, qa_path: Path, dataset_kwargs: dict[
         return
 
     if shutil.which("yt-dlp") is None:
-        raise RuntimeError("VSTAT YouTube download requested, but yt-dlp is not installed. Run `pip install -U yt-dlp`.")
+        raise RuntimeError("VSTAT needs yt-dlp to prepare YouTube clips. Run `pip install -U yt-dlp`.")
     if shutil.which("ffmpeg") is None:
-        raise RuntimeError("VSTAT YouTube download requested, but ffmpeg is not installed.")
+        raise RuntimeError("VSTAT needs ffmpeg to prepare YouTube clips.")
 
     downloader = cache_root / "scripts" / "download_youtube.py"
     redactor = cache_root / "scripts" / "redact.sh"
@@ -177,7 +144,6 @@ def _ensure_youtube_clips(cache_root: Path, qa_path: Path, dataset_kwargs: dict[
         if not required_path.exists():
             raise FileNotFoundError(f"Missing VSTAT YouTube helper file: {required_path}")
 
-    workers = _youtube_workers(dataset_kwargs)
     eval_logger.info(f"VSTAT: preparing {len(missing)} missing YouTube clips in {cache_root}.")
     _run_vstat_command(
         [
@@ -185,8 +151,6 @@ def _ensure_youtube_clips(cache_root: Path, qa_path: Path, dataset_kwargs: dict[
             str(downloader.relative_to(cache_root)),
             "--resolution-map",
             str(resolution_map.relative_to(cache_root)),
-            "--workers",
-            str(workers),
         ],
         cache_root,
         "YouTube clip download",
@@ -217,7 +181,7 @@ def _download_dataset_to_cache(dataset_path: str | None, dataset_kwargs: dict[st
 
     if not qa_path.exists():
         raise FileNotFoundError(f"Missing VSTAT QA file after dataset download: {qa_path}")
-    _ensure_youtube_clips(cache_root, qa_path, dataset_kwargs, accelerator)
+    _ensure_youtube_clips(cache_root, qa_path, accelerator)
     return cache_root
 
 
