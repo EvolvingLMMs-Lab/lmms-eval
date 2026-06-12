@@ -19,16 +19,19 @@ tasks. Set `HF_HOME` if you want the cache somewhere other than
 `~/.cache/huggingface`.
 
 The official benchmark numbers also use the non-redistributed YouTube clips
-after the redaction step. To prepare those clips in the default cache:
+after the redaction step. To let the task prepare those clips in the default
+cache, install the video tools and enable the integrated YouTube setup:
 
 ```bash
 pip install -U yt-dlp
 # Install ffmpeg with your system package manager if it is not already available.
 
-cd ${HF_HOME:-$HOME/.cache/huggingface}/vstat
-python scripts/download_youtube.py --resolution-map youtube_resolutions.json
-bash scripts/redact.sh
+export VSTAT_DOWNLOAD_YOUTUBE=1
 ```
+
+With `VSTAT_DOWNLOAD_YOUTUBE=1`, `VSTATTask.download()` runs the dataset's
+bundled YouTube downloader and redaction script from `$HF_HOME/vstat`. Existing
+clips are skipped on later runs.
 
 For offline runs, or to use a separately prepared dataset root, set:
 

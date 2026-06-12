@@ -11,6 +11,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +41,8 @@ _SNAPSHOT_DOWNLOAD_KWARGS = {
     "revision",
     "token",
 }
+_TRUE_VALUES = {"1", "true", "yes", "y", "on"}
+_FALSE_VALUES = {"0", "false", "no", "n", "off"}
 
 _downloaded_data_root: Path | None = None
 
@@ -55,10 +60,9 @@ _NUMERICAL_INSTRUCTIONS = {
 
 _SETUP_HINT = (
     "VSTAT downloads the Hugging Face dataset into $HF_HOME/vstat by default. "
-    "If this missing file is a YouTube clip, install yt-dlp and ffmpeg, then run:\n"
-    "  cd ${HF_HOME:-$HOME/.cache/huggingface}/vstat\n"
-    "  python scripts/download_youtube.py --resolution-map youtube_resolutions.json\n"
-    "  bash scripts/redact.sh\n"
+    "If this missing file is a YouTube clip, install yt-dlp and ffmpeg, then set "
+    "VSTAT_DOWNLOAD_YOUTUBE=1 to let the task download and redact YouTube clips "
+    "during setup. "
     "Set VSTAT_VIDEO_ROOT=/path/to/prepared/vstat to use a different prepared dataset root. "
     "If the QA JSON is elsewhere, set VSTAT_QA_PATH=/path/to/vstat_qa_clean.json."
 )
@@ -83,6 +87,114 @@ def _snapshot_kwargs(dataset_kwargs: dict[str, Any]) -> dict[str, Any]:
     return {key: dataset_kwargs[key] for key in _SNAPSHOT_DOWNLOAD_KWARGS if key in dataset_kwargs}
 
 
+def _coerce_bool(value: Any, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    normalized = str(value).strip().lower()
+    if normalized in _TRUE_VALUES:
+        return True
+    if normalized in _FALSE_VALUES:
+        return False
+    return default
+
+
+def _youtube_download_enabled(dataset_kwargs: dict[str, Any]) -> bool:
+    env_override = os.getenv("VSTAT_DOWNLOAD_YOUTUBE")
+    if env_override is not None:
+        return _coerce_bool(env_override)
+    return _coerce_bool(dataset_kwargs.get("download_youtube"), default=False)
+
+
+def _youtube_workers(dataset_kwargs: dict[str, Any]) -> int:
+    try:
+        return max(1, int(dataset_kwargs.get("youtube_workers", 2)))
+    except (TypeError, ValueError):
+        return 2
+
+
+def _load_vstat_payload(qa_path: Path) -> Any:
+    with qa_path.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _extract_vstat_data(payload: Any) -> dict[str, Any]:
+    data = payload["data"] if isinstance(payload, dict) and "data" in payload else payload
+    if not isinstance(data, dict):
+        raise ValueError("VSTAT QA JSON should contain a `data` object mapping categories to examples.")
+    return data
+
+
+def _missing_youtube_paths(cache_root: Path, qa_path: Path) -> list[Path]:
+    data = _extract_vstat_data(_load_vstat_payload(qa_path))
+    missing: list[Path] = []
+    seen: set[str] = set()
+    for docs in data.values():
+        for doc in docs:
+            video_path = str(doc.get("video_path", ""))
+            if not video_path.startswith("videos/youtube/"):
+                continue
+            candidate = cache_root / video_path
+            key = str(candidate)
+            if key not in seen and not candidate.exists():
+                missing.append(candidate)
+                seen.add(key)
+    return missing
+
+
+def _run_vstat_command(command: list[str], cwd: Path, step_name: str) -> None:
+    eval_logger.info(f"VSTAT: running {step_name}: {' '.join(command)}")
+    try:
+        subprocess.run(command, cwd=str(cwd), check=True)
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(f"VSTAT {step_name} failed with exit code {exc.returncode}.") from exc
+
+
+def _ensure_youtube_clips(cache_root: Path, qa_path: Path, dataset_kwargs: dict[str, Any], accelerator: Accelerator) -> None:
+    if not _youtube_download_enabled(dataset_kwargs):
+        return
+
+    if not accelerator.is_main_process:
+        accelerator.wait_for_everyone()
+        return
+
+    missing = _missing_youtube_paths(cache_root, qa_path)
+    if not missing:
+        eval_logger.info("VSTAT YouTube clips are already present.")
+        accelerator.wait_for_everyone()
+        return
+
+    if shutil.which("yt-dlp") is None:
+        raise RuntimeError("VSTAT YouTube download requested, but yt-dlp is not installed. Run `pip install -U yt-dlp`.")
+    if shutil.which("ffmpeg") is None:
+        raise RuntimeError("VSTAT YouTube download requested, but ffmpeg is not installed.")
+
+    downloader = cache_root / "scripts" / "download_youtube.py"
+    redactor = cache_root / "scripts" / "redact.sh"
+    resolution_map = cache_root / "youtube_resolutions.json"
+    for required_path in (downloader, redactor, resolution_map, cache_root / "youtube_metadata.json"):
+        if not required_path.exists():
+            raise FileNotFoundError(f"Missing VSTAT YouTube helper file: {required_path}")
+
+    workers = _youtube_workers(dataset_kwargs)
+    eval_logger.info(f"VSTAT: preparing {len(missing)} missing YouTube clips in {cache_root}.")
+    _run_vstat_command(
+        [
+            sys.executable,
+            str(downloader.relative_to(cache_root)),
+            "--resolution-map",
+            str(resolution_map.relative_to(cache_root)),
+            "--workers",
+            str(workers),
+        ],
+        cache_root,
+        "YouTube clip download",
+    )
+    _run_vstat_command(["bash", str(redactor.relative_to(cache_root))], cache_root, "YouTube redaction")
+    accelerator.wait_for_everyone()
+
+
 def _download_dataset_to_cache(dataset_path: str | None, dataset_kwargs: dict[str, Any]) -> Path:
     repo_id = dataset_kwargs.get("repo_id") or dataset_path or _DEFAULT_REPO_ID
     qa_filename = dataset_kwargs.get("qa_filename", _DEFAULT_QA_FILENAME)
@@ -105,6 +217,7 @@ def _download_dataset_to_cache(dataset_path: str | None, dataset_kwargs: dict[st
 
     if not qa_path.exists():
         raise FileNotFoundError(f"Missing VSTAT QA file after dataset download: {qa_path}")
+    _ensure_youtube_clips(cache_root, qa_path, dataset_kwargs, accelerator)
     return cache_root
 
 
@@ -187,12 +300,7 @@ class VSTATTask(ConfigurableTask):
         qa_path = _qa_path_from_config(self.config.dataset_path, dict(dataset_kwargs or {}))
         _downloaded_data_root = qa_path.parent
 
-        with qa_path.open("r", encoding="utf-8") as f:
-            payload = json.load(f)
-
-        data = payload["data"] if isinstance(payload, dict) and "data" in payload else payload
-        if not isinstance(data, dict):
-            raise ValueError("VSTAT QA JSON should contain a `data` object mapping categories to examples.")
+        data = _extract_vstat_data(_load_vstat_payload(qa_path))
 
         rows = [_normalize_doc_for_arrow(doc) for docs in data.values() for doc in docs]
         split = self.config.test_split
