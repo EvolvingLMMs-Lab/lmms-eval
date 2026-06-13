@@ -306,6 +306,7 @@ class AeroRealtimeVLLM(lmms):
         limit_mm_per_prompt: Optional[str] = None,
         enforce_eager: Optional[bool] = None,
         stage_overrides: Optional[str] = None,
+        stage_init_timeout: Optional[int] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -340,6 +341,8 @@ class AeroRealtimeVLLM(lmms):
         }
         if max_model_len is not None:
             omni_kwargs["max_model_len"] = max_model_len
+        if stage_init_timeout is not None:
+            omni_kwargs["stage_init_timeout"] = int(stage_init_timeout)
         if tensor_parallel_size is not None:
             omni_kwargs["tensor_parallel_size"] = tensor_parallel_size
             omni_kwargs["stage_0_devices"] = stage_0_devices or ",".join(
