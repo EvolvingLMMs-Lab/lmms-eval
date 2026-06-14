@@ -1,0 +1,12 @@
+task: "xmod_bench_image_text"
+
+dataset_kwargs:
+  data_files: hf://datasets/RyanWW/XModBench/data/image_text.jsonl
+
+doc_to_visual: !function utils.xmod_bench_doc_to_visual
+doc_to_text: !function utils.xmod_bench_doc_to_text
+doc_to_messages: !function utils.xmod_bench_doc_to_messages
+doc_to_target: "correct_answer"
+process_results: !function utils.xmod_bench_process_results
+
+include: _default_template_yaml
