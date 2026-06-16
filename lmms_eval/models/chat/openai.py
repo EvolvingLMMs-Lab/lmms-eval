@@ -35,6 +35,11 @@ load_dotenv(verbose=True)
 class OpenAICompatible(OpenAICompatibleSimple):
     is_simple = False
 
+    def __init__(self, *args, pass_video_url: bool = False, enable_thinking_kwarg: object = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pass_video_url = bool(pass_video_url)
+        self.enable_thinking_kwarg = enable_thinking_kwarg
+
     def generate_until(self, requests) -> List[GenerationResult]:
         if not requests:
             return []
@@ -186,12 +191,44 @@ class OpenAICompatible(OpenAICompatibleSimple):
             else:
                 video_kwargs = {"nframes": self.max_frames_num}
 
-            payload = {
-                "messages": chat_messages.to_openai_messages(video_kwargs=video_kwargs),
-                "model": self.model_version,
-                "max_tokens": max_new_tokens,
-                "temperature": temperature,
-            }
+            if self.pass_video_url:
+                # Build messages manually — pass video file path as video_url so vLLM does server-side decode
+                manual_messages = []
+                for msg in chat_messages.messages:
+                    content_items = []
+                    for c in msg.content:
+                        if c.type == "text":
+                            content_items.append({"type": "text", "text": c.text})
+                        elif c.type == "image":
+                            content_items.append({"type": "image_url", "image_url": {"url": c.url}})
+                        elif c.type == "video":
+                            url = c.url
+                            if not url.startswith(("file://", "http://", "https://")):
+                                url = "file://" + url
+                            content_items.append({"type": "video_url", "video_url": {"url": url}})
+                    manual_messages.append({"role": msg.role, "content": content_items})
+                payload = {
+                    "messages": manual_messages,
+                    "model": self.model_version,
+                    "max_tokens": max_new_tokens,
+                    "temperature": temperature,
+                }
+            else:
+                payload = {
+                    "messages": chat_messages.to_openai_messages(video_kwargs=video_kwargs),
+                    "model": self.model_version,
+                    "max_tokens": max_new_tokens,
+                    "temperature": temperature,
+                }
+            extra_body = {}
+            if self.pass_video_url:
+                extra_body["media_io_kwargs"] = {"video": {"num_frames": int(self.max_frames_num)}}
+            if self.enable_thinking_kwarg is not None:
+                ek = self.enable_thinking_kwarg
+                ek_bool = ek.lower() == "true" if isinstance(ek, str) else bool(ek)
+                extra_body["chat_template_kwargs"] = {"enable_thinking": ek_bool}
+            if extra_body:
+                payload["extra_body"] = extra_body
 
             if "o1" in self.model_version or "o3" in self.model_version or "o4" in self.model_version or "gpt-5" in self.model_version:
                 payload.pop("temperature")
