@@ -1,0 +1,2 @@
+class TwoPlayerCompactAgentLoop(AgentLoop):
+  pass

@@ -1,0 +1,3 @@
+@register_action_parser
+class LLaVAOneVision2_ViZDoom_ActionParser(ActionParser):
+  ...

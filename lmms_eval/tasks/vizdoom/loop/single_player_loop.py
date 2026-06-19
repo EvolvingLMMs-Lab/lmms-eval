@@ -1,0 +1,2 @@
+class SinglePlayerAgentLoop(AgentLoop):
+  pass

@@ -1,0 +1,1 @@
+class LLaVAOnevision2AgentModel(AgentModel)
