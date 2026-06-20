@@ -1,0 +1,41 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vizdoom/data/vizdoom_agent.jsonl
+task: "vizdoom_agent"
+test_split: test
+output_type: generate_until_agentic
+doc_to_visual: !function utils.vizdoom_doc_to_visual
+doc_to_text: !function utils.vizdoom_doc_to_text
+doc_to_target: !function utils.vizdoom_doc_to_target
+generation_kwargs:
+  max_new_tokens: 96
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+  max_agentic_steps: 12
+process_results: !function utils.vizdoom_process_results
+metric_list:
+  - metric: vizdoom_success
+    aggregation: !function utils.vizdoom_aggregate_mean
+    higher_is_better: true
+  - metric: vizdoom_total_reward
+    aggregation: !function utils.vizdoom_aggregate_mean
+    higher_is_better: true
+  - metric: vizdoom_episode_steps
+    aggregation: !function utils.vizdoom_aggregate_mean
+    higher_is_better: false
+  - metric: vizdoom_valid_action_rate
+    aggregation: !function utils.vizdoom_aggregate_mean
+    higher_is_better: true
+  - metric: vizdoom_invalid_actions
+    aggregation: !function utils.vizdoom_aggregate_mean
+    higher_is_better: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 0.1
+    description: "ViZDoom agentic task using generate_until_agentic and per-episode video artifacts"
