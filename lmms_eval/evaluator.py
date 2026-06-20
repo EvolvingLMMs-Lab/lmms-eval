@@ -30,6 +30,7 @@ from lmms_eval.api.instance import Instance, unwrap_generation_output
 from lmms_eval.api.model import lmms
 from lmms_eval.api.reasoning import parse_reasoning_tags_config, strip_reasoning_tags
 from lmms_eval.api.task import Task
+from lmms_eval.agentic import run_generate_until_game
 from lmms_eval.baselines import (
     BASELINE_REGISTRY,
     get_baseline_display_name,
@@ -1016,6 +1017,8 @@ def evaluate(
                 agentic_trace_mode=trace_mode,
                 response_cache=response_cache,
             )
+        elif reqtype == "generate_until_game":
+            resps = run_generate_until_game(lm, cloned_reqs, response_cache=response_cache)
         elif response_cache is not None:
             resps = response_cache.execute(lm, reqtype, cloned_reqs)
         else:

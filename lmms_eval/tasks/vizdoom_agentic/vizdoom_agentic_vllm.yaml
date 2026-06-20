@@ -1,0 +1,11 @@
+include: vizdoom_agentic.yaml
+task: "vizdoom_agentic_vllm"
+model_server:
+  name: vllm
+  model: llava-hf/llava-onevision-qwen2-0.5b-ov-hf
+  trust_remote_code: true
+  use_flashinfer_sampler: false
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.9
+  max_model_len: 8192
+  default_max_tokens: 64
