@@ -1,9 +1,20 @@
 """Minimal agentic/game evaluation interfaces."""
 
 from lmms_eval.agentic.env import EnvManager, GameEnv
-from lmms_eval.agentic.loop import LoopManager, LoopWorker, SimpleLoopWorker, SingleAgentLoopWorker, run_generate_until_game
-from lmms_eval.agentic.model_server import AgentModel, LmmsModelServer, ModelServer, VllmModelServer
-from lmms_eval.agentic.parsers import ActionNameParser, ActionParser, IdentityModelOutputParser, ModelOutputParser, ObservationParser, QwenModelOutputParser
+from lmms_eval.agentic.loop import LoopManager, LoopSession, LoopWorker, SimpleLoopSession, SimpleLoopWorker, SingleAgentLoopWorker, run_generate_until_game
+from lmms_eval.agentic.model_server import AgentModel, LmmsModelServer, ModelServer, OpenAIModelServer, RolloutJob, VllmModelServer
+from lmms_eval.agentic.parsers import (
+    ActionNameParser,
+    ActionParser,
+    IdentityModelOutputParser,
+    ModelOutputParser,
+    ObservationParser,
+    QwenModelOutputParser,
+    VizDoomActionParser,
+    VizDoomObservationParser,
+    VizDoomVllmActionParser,
+    VizDoomVllmObservationParser,
+)
 from lmms_eval.agentic.registry import (
     ACTION_PARSER_REGISTRY,
     GAME_ENV_REGISTRY,
@@ -45,19 +56,27 @@ __all__ = [
     "LmmsModelServer",
     "LOOP_WORKER_REGISTRY",
     "LoopManager",
+    "LoopSession",
     "LoopWorker",
     "MODEL_SERVER_REGISTRY",
     "MODEL_OUTPUT_PARSER_REGISTRY",
     "ModelOutputParser",
     "ModelServer",
     "OBSERVATION_PARSER_REGISTRY",
+    "OpenAIModelServer",
     "ObservationParser",
     "ParsedAction",
     "QwenModelOutputParser",
+    "RolloutJob",
+    "SimpleLoopSession",
     "SimpleLoopWorker",
     "SingleAgentLoopWorker",
     "StepResult",
     "VllmModelServer",
+    "VizDoomActionParser",
+    "VizDoomObservationParser",
+    "VizDoomVllmActionParser",
+    "VizDoomVllmObservationParser",
     "build_action_parser",
     "build_game_env",
     "build_loop_worker",

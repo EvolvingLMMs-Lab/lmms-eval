@@ -369,6 +369,42 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         help="Controls agentic trace logging level. 'basic' logs compact final trace payload, 'full' logs per-round input/output/state snapshots.",
     )
     parser.add_argument(
+        "--agentic_model_server",
+        type=str,
+        default=None,
+        help="Runtime model server for generate_until_game. Defaults to 'lmms', which reuses --model/--model_args.",
+    )
+    parser.add_argument(
+        "--agentic_model_server_args",
+        type=str,
+        default="",
+        help="Comma-separated runtime args for --agentic_model_server, e.g. model=Qwen/Qwen3.5-9B,trust_remote_code=True,max_parallel_rollouts=8.",
+    )
+    parser.add_argument(
+        "--agentic_model_output_parser",
+        type=str,
+        default=None,
+        help="Runtime model-output parser for generate_until_game. Defaults to 'identity'. Example: qwen.",
+    )
+    parser.add_argument(
+        "--agentic_model_output_parser_args",
+        type=str,
+        default="",
+        help="Comma-separated runtime args for --agentic_model_output_parser.",
+    )
+    parser.add_argument(
+        "--agentic_loop_worker",
+        type=str,
+        default=None,
+        help="Runtime loop worker for generate_until_game. Defaults to 'simple'.",
+    )
+    parser.add_argument(
+        "--agentic_loop_worker_args",
+        type=str,
+        default="",
+        help="Comma-separated runtime args for --agentic_loop_worker.",
+    )
+    parser.add_argument(
         "--force_simple",
         action="store_true",
         help="Force the evaluation to use the simple mode of the models",

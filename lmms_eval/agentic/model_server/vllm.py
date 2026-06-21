@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import base64
 import inspect
+import mimetypes
 import os
 from typing import Any
 
@@ -40,6 +42,7 @@ class VllmModelServer(ModelServer):
         seed: int = 1,
         max_model_len: int | None = None,
         max_num_seqs: int | None = None,
+        max_parallel_rollouts: int | str | None = None,
         default_max_tokens: int = 64,
         lm: Any = None,
         doc_id: int | None = None,
@@ -63,6 +66,7 @@ class VllmModelServer(ModelServer):
         self.mm_processor_kwargs = mm_processor_kwargs
         self.use_tqdm = use_tqdm
         self.default_max_tokens = int(default_max_tokens)
+        self._max_parallel_rollouts = _resolve_max_parallel_rollouts(max_parallel_rollouts, max_num_seqs, llm_kwargs)
         if use_flashinfer_sampler is not None:
             os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "1" if _as_bool(use_flashinfer_sampler) else "0")
         self.sampling_params_cls = sampling_params_cls or _require_sampling_params()
@@ -139,20 +143,50 @@ class VllmModelServer(ModelServer):
         if isinstance(request.metadata.get("messages"), list):
             return request.metadata["messages"]
 
+        messages = []
+        history = request.metadata.get("conversation_history")
+        if isinstance(history, list):
+            messages.extend(message for message in (self._history_turn_to_openai_message(turn) for turn in history) if message is not None)
+        messages.append(self._request_to_openai_message(request))
+        return messages
+
+    def _request_to_openai_message(self, request: AgentInput) -> dict[str, Any]:
+        return {"role": request.metadata.get("role", "user"), "content": self._content_blocks_to_openai_content(request.content)}
+
+    def _content_blocks_to_openai_content(self, blocks: list[ContentBlock]) -> list[dict[str, Any]]:
         content = []
-        for block in request.content:
+        for block in blocks:
             if block.type == "text" and block.data is not None:
                 content.append({"type": "text", "text": str(block.data)})
             elif block.type in {"image", "image_url"}:
                 content.append({"type": "image_url", "image_url": {"url": self._image_to_url(block.data)}})
             elif block.type in {"video", "video_url"}:
-                content.append({"type": "video_url", "video_url": {"url": self._media_url(block.data, "video_url")}})
+                content.append({"type": "video_url", "video_url": {"url": self._video_to_url(block.data)}})
             elif block.type in {"audio", "audio_url"}:
                 content.append({"type": "audio_url", "audio_url": {"url": self._media_url(block.data, "audio_url")}})
 
         if not content:
             content.append({"type": "text", "text": ""})
-        return [{"role": request.metadata.get("role", "user"), "content": content}]
+        return content
+
+    def _history_turn_to_openai_message(self, turn: Any) -> dict[str, Any] | None:
+        if not isinstance(turn, dict):
+            return None
+
+        role = str(turn.get("role", "user"))
+        content = turn.get("content", "")
+        if role == "assistant":
+            return {"role": role, "content": _history_text(content)}
+
+        if isinstance(content, AgentInput):
+            return {"role": role, "content": self._content_blocks_to_openai_content(content.content)}
+        if _is_content_block_list(content):
+            return {"role": role, "content": self._content_blocks_to_openai_content(content)}
+        if isinstance(content, str):
+            return {"role": role, "content": [{"type": "text", "text": content}]}
+        if isinstance(content, list):
+            return {"role": role, "content": content}
+        return {"role": role, "content": [{"type": "text", "text": str(content)}]}
 
     def _image_to_url(self, data: Any) -> str:
         image = self._media_url(data, "image_url")
@@ -171,6 +205,30 @@ class VllmModelServer(ModelServer):
             use_path_cache=True,
         )
         return f"data:{mime_type};base64,{encoded}"
+
+    def _video_to_url(self, data: Any) -> str:
+        video = self._media_url(data, "video_url")
+        if isinstance(video, str):
+            if _is_url_like(video):
+                return video
+            if os.path.exists(video):
+                return _file_to_data_url(video, default_mime_type="video/mp4")
+            return video
+
+        frames = _as_frames(video)
+        quality = int(os.getenv("LMMS_VIDEO_JPEG_QUALITY", "85"))
+        encoded_frames = [
+            encode_image_to_base64(
+                _frame_to_image(frame),
+                image_format="JPEG",
+                convert_rgb=True,
+                quality=quality,
+                copy_if_pil=False,
+                use_path_cache=False,
+            )
+            for frame in frames
+        ]
+        return f"data:video/jpeg;base64,{','.join(encoded_frames)}"
 
     @staticmethod
     def _media_url(data: Any, nested_key: str) -> Any:
@@ -196,6 +254,7 @@ class VllmModelServer(ModelServer):
             "temperature": generation_kwargs.pop("temperature", 0),
             "top_p": _normalize_top_p(generation_kwargs.pop("top_p", 1.0)),
         }
+        _apply_stop_sequences(params, generation_kwargs)
         for key in _AGENTIC_ONLY_KEYS | _GENERATION_KEYS_TO_DROP:
             generation_kwargs.pop(key, None)
         params.update(generation_kwargs)
@@ -229,6 +288,24 @@ def _normalize_top_p(top_p: Any) -> Any:
     return 1.0 if numeric_top_p == 0.0 else top_p
 
 
+def _apply_stop_sequences(params: dict[str, Any], generation_kwargs: dict[str, Any]) -> None:
+    until = generation_kwargs.pop("until", None)
+    if "stop" in generation_kwargs:
+        return
+
+    if until is None:
+        return
+
+    if isinstance(until, (list, tuple)):
+        stop = [item for item in until if item is not None]
+        if not stop:
+            return
+        params["stop"] = stop
+        return
+
+    params["stop"] = until
+
+
 def _as_bool(value: bool | str) -> bool:
     if isinstance(value, bool):
         return value
@@ -242,5 +319,66 @@ def _filter_for_sampling_params(sampling_params_cls: Any, params: dict[str, Any]
     return {key: value for key, value in params.items() if key in signature.parameters}
 
 
+def _resolve_max_parallel_rollouts(value: int | str | None, max_num_seqs: int | None, llm_kwargs: dict[str, Any]) -> int:
+    if value is not None:
+        return max(1, int(value))
+    if max_num_seqs is not None:
+        return max(1, int(max_num_seqs))
+    data_parallel_size = llm_kwargs.get("data_parallel_size")
+    if data_parallel_size is not None:
+        return max(1, int(data_parallel_size))
+    return 1
+
+
 def _is_url_like(value: str) -> bool:
-    return value.startswith(("http://", "https://", "file://", "data:image/"))
+    return value.startswith(("http://", "https://", "file://", "data:image/", "data:video/"))
+
+
+def _file_to_data_url(path: str, *, default_mime_type: str) -> str:
+    mime_type = mimetypes.guess_type(path)[0] or default_mime_type
+    with open(path, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode("utf-8")
+    return f"data:{mime_type};base64,{encoded}"
+
+
+def _as_frames(video: Any) -> list[Any]:
+    if video is None:
+        return []
+    if isinstance(video, (list, tuple)):
+        return list(video)
+    if hasattr(video, "ndim"):
+        if video.ndim == 4:
+            return list(video)
+        if video.ndim == 3:
+            return [video]
+    return [video]
+
+
+def _is_content_block_list(value: Any) -> bool:
+    return isinstance(value, list) and all(isinstance(item, ContentBlock) for item in value)
+
+
+def _history_text(content: Any) -> str:
+    if isinstance(content, AgentOutput):
+        return content.first_text() or ""
+    if isinstance(content, str):
+        return content
+    if _is_content_block_list(content):
+        return "\n".join(str(block.data) for block in content if block.type == "text" and block.data is not None)
+    return "" if content is None else str(content)
+
+
+def _frame_to_image(frame: Any) -> Any:
+    if getattr(frame.__class__, "__module__", "").startswith("PIL."):
+        return frame
+
+    Image, has_pil = optional_import("PIL.Image")
+    if not has_pil:
+        return frame
+
+    array = frame
+    if hasattr(array, "ndim") and array.ndim == 3 and array.shape[0] in {1, 3, 4} and array.shape[-1] not in {1, 3, 4}:
+        array = array.transpose(1, 2, 0)
+    if hasattr(array, "ndim") and array.ndim == 3 and array.shape[-1] == 4:
+        return Image.fromarray(array).convert("RGB")
+    return Image.fromarray(array)

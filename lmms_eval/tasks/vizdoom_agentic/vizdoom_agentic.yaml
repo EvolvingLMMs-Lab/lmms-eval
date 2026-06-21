@@ -8,11 +8,8 @@ output_type: generate_until_game
 doc_to_visual: !function utils.vizdoom_doc_to_visual
 doc_to_text: !function utils.vizdoom_doc_to_text
 doc_to_target: !function utils.vizdoom_doc_to_target
-model_server: lmms
-loop_worker: simple
 game_env: vizdoom_grid
 observation_parser: vizdoom_text
-model_output_parser: identity
 action_parser:
   name: action_name
   actions:

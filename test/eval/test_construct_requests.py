@@ -10,10 +10,10 @@ The documented contract (from AGENTS.md):
   ConfigurableTask loglikelihood:        (ctx, doc_to_target, doc_to_visual, doc_id, task, split) — 6 elements
   ConfigurableTask generate_until_multi_round: (ctx, gen_kwargs, doc_to_visual, doc_to_text, doc_id, task, split) — 7 elements
   ConfigurableTask generate_until_agentic:     (ctx, gen_kwargs, doc_to_visual, doc_to_text, doc_id, task, split) — 7 elements
-  ConfigurableTask generate_until_game:        (ctx, gen_kwargs, doc_to_visual, model_server, loop_worker, game_env, observation_parser, model_output_parser, action_parser, lmms_eval_specific_kwargs, doc_id, task, split) — 13 elements
+  ConfigurableTask generate_until_game:        (ctx, gen_kwargs, doc_to_visual, game_env, observation_parser, action_parser, lmms_eval_specific_kwargs, doc_id, task, split) — 10 elements
   ConfigurableMessagesTask generate_until:     (ctx, doc_to_messages, gen_kwargs, doc_id, task, split) — 6 elements
   ConfigurableMessagesTask generate_until_agentic: (ctx, gen_kwargs, doc_to_visual, doc_to_text, doc_id, task, split) — 7 elements
-  ConfigurableMessagesTask generate_until_game:    (ctx, gen_kwargs, doc_to_visual, model_server, loop_worker, game_env, observation_parser, model_output_parser, action_parser, lmms_eval_specific_kwargs, doc_id, task, split) — 13 elements
+  ConfigurableMessagesTask generate_until_game:    (ctx, gen_kwargs, doc_to_visual, game_env, observation_parser, action_parser, lmms_eval_specific_kwargs, doc_id, task, split) — 10 elements
 """
 
 import copy
@@ -44,24 +44,12 @@ def _dummy_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     return "prompt text"
 
 
-def _dummy_model_server(**kwargs):
-    return "model_server"
-
-
-def _dummy_loop_worker(**kwargs):
-    return "loop_worker"
-
-
 def _dummy_game_env(doc, lmms_eval_specific_kwargs=None):
     return "env"
 
 
 def _dummy_observation_parser(doc, lmms_eval_specific_kwargs=None):
     return "observation_parser"
-
-
-def _dummy_model_output_parser(doc, lmms_eval_specific_kwargs=None):
-    return "model_output_parser"
 
 
 def _dummy_action_parser(doc, lmms_eval_specific_kwargs=None):
@@ -310,8 +298,8 @@ def test_configurable_task_agentic_unpack_order():
 # ---------------------------------------------------------------------------
 
 
-def test_configurable_task_game_tuple_length_is_13():
-    """ConfigurableTask generate_until_game produces 13-element tuple."""
+def test_configurable_task_game_tuple_length_is_10():
+    """ConfigurableTask generate_until_game produces 10-element tuple."""
     # Arrange
     gk = copy.deepcopy(_GEN_KWARGS)
     gk["max_game_steps"] = 6
@@ -319,11 +307,8 @@ def test_configurable_task_game_tuple_length_is_13():
         "game_prompt",
         gk,
         _dummy_doc_to_visual,
-        _dummy_model_server,
-        _dummy_loop_worker,
         _dummy_game_env,
         _dummy_observation_parser,
-        _dummy_model_output_parser,
         _dummy_action_parser,
         _MODEL_SPECIFIC_KWARGS,
         0,
@@ -333,7 +318,7 @@ def test_configurable_task_game_tuple_length_is_13():
     inst = _make_instance("generate_until_game", args, doc_id=0, task="game", split="test")
 
     # Act & Assert
-    assert len(inst.args) == 13
+    assert len(inst.args) == 10
 
 
 def test_configurable_task_game_unpack_order():
@@ -345,11 +330,8 @@ def test_configurable_task_game_unpack_order():
         "game_prompt",
         gk,
         _dummy_doc_to_visual,
-        _dummy_model_server,
-        _dummy_loop_worker,
         _dummy_game_env,
         _dummy_observation_parser,
-        _dummy_model_output_parser,
         _dummy_action_parser,
         _MODEL_SPECIFIC_KWARGS,
         12,
@@ -359,17 +341,14 @@ def test_configurable_task_game_unpack_order():
     inst = _make_instance("generate_until_game", args, doc_id=12, task="vizdoom_agentic", split="test")
 
     # Act
-    ctx, gen_kwargs, doc_to_visual, model_server, loop_worker, game_env, observation_parser, model_output_parser, action_parser, lmms_eval_specific_kwargs, doc_id, task, split = inst.args
+    ctx, gen_kwargs, doc_to_visual, game_env, observation_parser, action_parser, lmms_eval_specific_kwargs, doc_id, task, split = inst.args
 
     # Assert
     assert ctx == "game_prompt"
     assert gen_kwargs["max_game_steps"] == 6
     assert callable(doc_to_visual)
-    assert callable(model_server)
-    assert callable(loop_worker)
     assert callable(game_env)
     assert callable(observation_parser)
-    assert callable(model_output_parser)
     assert callable(action_parser)
     assert lmms_eval_specific_kwargs == _MODEL_SPECIFIC_KWARGS
     assert doc_id == 12
@@ -456,8 +435,8 @@ def test_messages_task_agentic_tuple_length_is_7():
     assert len(inst.args) == 7
 
 
-def test_messages_task_game_tuple_length_is_13():
-    """ConfigurableMessagesTask generate_until_game produces 13-element tuple."""
+def test_messages_task_game_tuple_length_is_10():
+    """ConfigurableMessagesTask generate_until_game produces 10-element tuple."""
     # Arrange
     gk = copy.deepcopy(_GEN_KWARGS)
     gk["max_game_steps"] = 4
@@ -465,11 +444,8 @@ def test_messages_task_game_tuple_length_is_13():
         "msg_game",
         gk,
         _dummy_doc_to_visual,
-        _dummy_model_server,
-        _dummy_loop_worker,
         _dummy_game_env,
         _dummy_observation_parser,
-        _dummy_model_output_parser,
         _dummy_action_parser,
         _MODEL_SPECIFIC_KWARGS,
         0,
@@ -479,7 +455,7 @@ def test_messages_task_game_tuple_length_is_13():
     inst = _make_instance("generate_until_game", args, doc_id=0, task="game_msg", split="test")
 
     # Act & Assert
-    assert len(inst.args) == 13
+    assert len(inst.args) == 10
 
 
 # ---------------------------------------------------------------------------
@@ -494,7 +470,7 @@ def test_messages_task_game_tuple_length_is_13():
         ("loglikelihood", 6),
         ("generate_until_multi_round", 7),
         ("generate_until_agentic", 7),
-        ("generate_until_game", 13),
+        ("generate_until_game", 10),
     ],
     ids=["gen_until", "loglikelihood", "multi_round", "agentic", "game"],
 )
@@ -512,11 +488,8 @@ def test_configurable_task_tuple_lengths(request_type, expected_len):
             "ctx",
             _GEN_KWARGS,
             _dummy_doc_to_visual,
-            _dummy_model_server,
-            _dummy_loop_worker,
             _dummy_game_env,
             _dummy_observation_parser,
-            _dummy_model_output_parser,
             _dummy_action_parser,
             _MODEL_SPECIFIC_KWARGS,
             0,
@@ -558,11 +531,8 @@ def test_task_and_split_always_last_two():
             "ctx",
             _GEN_KWARGS,
             _dummy_doc_to_visual,
-            _dummy_model_server,
-            _dummy_loop_worker,
             _dummy_game_env,
             _dummy_observation_parser,
-            _dummy_model_output_parser,
             _dummy_action_parser,
             _MODEL_SPECIFIC_KWARGS,
             0,

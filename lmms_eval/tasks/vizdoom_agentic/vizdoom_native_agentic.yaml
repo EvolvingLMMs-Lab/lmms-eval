@@ -1,0 +1,79 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vizdoom_agentic/data/vizdoom_native_agentic.jsonl
+task: "vizdoom_native_agentic"
+test_split: test
+output_type: generate_until_game
+doc_to_visual: !function utils.vizdoom_doc_to_visual
+doc_to_text: !function utils.vizdoom_native_doc_to_text
+doc_to_target: !function utils.vizdoom_native_doc_to_target
+game_env:
+  name: vizdoom_native
+  config_path: basic.cfg
+  screen_resolution: RES_320X240
+  screen_format: RGB24
+  available_buttons:
+    - MOVE_LEFT
+    - MOVE_RIGHT
+    - ATTACK
+  available_game_variables:
+    - AMMO2
+    - HEALTH
+    - KILLCOUNT
+    - HITCOUNT
+    - DAMAGECOUNT
+    - DAMAGE_TAKEN
+  depth_buffer: true
+  labels_buffer: true
+  automap_buffer: true
+  objects_info: true
+  sectors_info: true
+  notifications_buffer: true
+  notifications_buffer_size: 4
+  audio_buffer: false
+  sound_enabled: false
+  window_visible: false
+  frame_history: 12
+  tics_per_action: 12
+  capture_action_frames: true
+  success_reward_min: 1.0
+observation_parser:
+  name: vizdoom_vllm_parser
+  video: true
+  video_buffer: screen_history
+  image_buffers:
+    - screen
+  include_structured_state: true
+  include_raw_buffers: true
+action_parser:
+  name: vizdoom_vllm_parser
+  submit_actions:
+    - SUBMIT
+  noop_actions:
+    - NOOP
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+  max_game_steps: 64
+process_results: !function utils.vizdoom_process_results
+metric_list:
+  - metric: vizdoom_success
+    aggregation: !function utils.vizdoom_aggregate_success
+    higher_is_better: true
+  - metric: vizdoom_steps
+    aggregation: !function utils.vizdoom_aggregate_steps
+    higher_is_better: false
+  - metric: vizdoom_invalid_actions
+    aggregation: !function utils.vizdoom_aggregate_invalid_actions
+    higher_is_better: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  version: 0.1
+  description: "Native ViZDoom game loop with video frame history and VizDoom state interfaces"

@@ -1018,7 +1018,7 @@ def evaluate(
                 response_cache=response_cache,
             )
         elif reqtype == "generate_until_game":
-            resps = run_generate_until_game(lm, cloned_reqs, response_cache=response_cache)
+            resps = run_generate_until_game(lm, cloned_reqs, response_cache=response_cache, cli_args=cli_args)
         elif response_cache is not None:
             resps = response_cache.execute(lm, reqtype, cloned_reqs)
         else:

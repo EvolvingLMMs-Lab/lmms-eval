@@ -2,6 +2,7 @@ import json
 from typing import Any
 
 from lmms_eval.api.agentic import AgentInput, ContentBlock, EnvState, GameAction, GameEnv, ObservationParser, StepResult, register_game_env, register_observation_parser
+from lmms_eval.tasks.vizdoom_agentic.env import VizDoomEnv
 
 ACTION_NAMES = {
     "MOVE_FORWARD",
@@ -31,8 +32,19 @@ def vizdoom_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     return f"{pre_prompt}{doc['instruction']}\nChoose actions from: {', '.join(sorted(ACTION_NAMES))}. Reach the goal tile.{post_prompt}"
 
 
+def vizdoom_native_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    kwargs = lmms_eval_specific_kwargs or {}
+    pre_prompt = kwargs.get("pre_prompt", "")
+    post_prompt = kwargs.get("post_prompt", "")
+    return f"{pre_prompt}{doc['instruction']}\nUse the VizDoom visual input and state to choose the next action.{post_prompt}"
+
+
 def vizdoom_doc_to_target(doc):
     return "reach_goal"
+
+
+def vizdoom_native_doc_to_target(doc):
+    return "maximize_reward"
 
 
 class VizDoomGridEnv(GameEnv):
@@ -155,6 +167,7 @@ class VizDoomObservationParser(ObservationParser):
 
 
 register_game_env("vizdoom_grid", VizDoomGridEnv, replace=True)
+register_game_env("vizdoom_native", VizDoomEnv, replace=True)
 register_observation_parser("vizdoom_text", VizDoomObservationParser, replace=True)
 
 
