@@ -5,8 +5,24 @@ from typing import Any
 
 from lmms_eval.agentic.env import GameEnv
 from lmms_eval.agentic.loop.worker import LoopWorker, SimpleLoopWorker
-from lmms_eval.agentic.model_server import LmmsModelServer, ModelServer, VllmModelServer
-from lmms_eval.agentic.parsers import ActionNameParser, ActionParser, IdentityModelOutputParser, ModelOutputParser, ObservationParser, QwenModelOutputParser
+from lmms_eval.agentic.model_server import (
+    LmmsModelServer,
+    ModelServer,
+    OpenAIModelServer,
+    VllmModelServer,
+)
+from lmms_eval.agentic.parsers import (
+    ActionNameParser,
+    ActionParser,
+    IdentityModelOutputParser,
+    ModelOutputParser,
+    ObservationParser,
+    QwenModelOutputParser,
+    VizDoomActionParser,
+    VizDoomObservationParser,
+    VizDoomVllmActionParser,
+    VizDoomVllmObservationParser,
+)
 
 
 class AgenticRegistry:
@@ -84,11 +100,16 @@ register_action_parser = ACTION_PARSER_REGISTRY.register
 register_model_output_parser = MODEL_OUTPUT_PARSER_REGISTRY.register
 
 register_model_server("lmms", LmmsModelServer, replace=True)
+register_model_server("openai", OpenAIModelServer, replace=True)
 register_model_server("vllm", VllmModelServer, replace=True)
 register_loop_worker("simple", SimpleLoopWorker, replace=True)
+register_observation_parser("vizdoom_vllm_parser", VizDoomVllmObservationParser, replace=True)
+register_observation_parser("vizdoom", VizDoomObservationParser, replace=True)
 register_model_output_parser("identity", IdentityModelOutputParser, replace=True)
 register_model_output_parser("qwen", QwenModelOutputParser, replace=True)
 register_action_parser("action_name", ActionNameParser, replace=True)
+register_action_parser("vizdoom_vllm_parser", VizDoomVllmActionParser, replace=True)
+register_action_parser("vizdoom_action", VizDoomActionParser, replace=True)
 
 
 def build_model_server(spec: Any, **kwargs) -> ModelServer:

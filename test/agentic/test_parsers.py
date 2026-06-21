@@ -18,6 +18,15 @@ def test_qwen_model_output_parser_strips_closed_thinking_block():
     assert output.metadata["normalized_text"] == "MOVE_FORWARD"
 
 
+def test_qwen_model_output_parser_keeps_thinking_when_no_final_answer():
+    parser = QwenModelOutputParser()
+
+    output = parser.parse(AgentOutput(content=[ContentBlock.text("The monster is visible, so attack now.\\n</think>")]), _state())
+
+    assert "attack now" in output.first_text()
+    assert output.metadata["normalized_text"] == output.first_text()
+
+
 def test_action_name_parser_reads_plain_action():
     parser = ActionNameParser(actions=["MOVE_FORWARD", "NOOP"])
 

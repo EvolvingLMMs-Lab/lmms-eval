@@ -128,11 +128,8 @@ class TaskConfig(dict):
     doc_to_target: Union[Callable, str] = None
     doc_to_choice: Union[Callable, str, dict, list] = None
     doc_to_messages: Callable = None
-    model_server: Union[Callable, str, dict] = None
-    loop_worker: Union[Callable, str, dict] = None
     game_env: Union[Callable, str, dict] = None
     observation_parser: Union[Callable, str, dict] = None
-    model_output_parser: Union[Callable, str, dict] = None
     action_parser: Union[Callable, str, dict] = None
     process_results: Union[Callable, str] = None
     use_prompt: str = None
@@ -1585,11 +1582,8 @@ class ConfigurableTask(Task):
                 ctx,
                 copy.deepcopy(self.config.generation_kwargs),
                 self.doc_to_visual,
-                self.config.model_server,
-                self.config.loop_worker,
                 self.config.game_env,
                 self.config.observation_parser,
-                self.config.model_output_parser,
                 self.config.action_parser,
                 self.lmms_eval_specific_kwargs,
                 doc_id,
@@ -1875,11 +1869,8 @@ class ConfigurableMessagesTask(ConfigurableTask):
                 ctx,
                 copy.deepcopy(self.config.generation_kwargs),
                 self.doc_to_visual,
-                self.config.model_server,
-                self.config.loop_worker,
                 self.config.game_env,
                 self.config.observation_parser,
-                self.config.model_output_parser,
                 self.config.action_parser,
                 self.lmms_eval_specific_kwargs,
                 doc_id,

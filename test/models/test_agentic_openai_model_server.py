@@ -1,0 +1,65 @@
+from __future__ import annotations
+
+from types import SimpleNamespace
+
+from PIL import Image
+
+from lmms_eval.agentic.model_server import OpenAIModelServer
+from lmms_eval.agentic.registry import build_model_server
+from lmms_eval.agentic.types import AgentInput, ContentBlock
+
+
+class _Completions:
+    def __init__(self):
+        self.calls = []
+
+    def create(self, **payload):
+        self.calls.append(payload)
+        text = payload["messages"][-1]["content"][0]["text"]
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=f"out:{text}", tool_calls=None))])
+
+
+class _Client:
+    def __init__(self):
+        self.completions = _Completions()
+        self.chat = SimpleNamespace(completions=self.completions)
+
+
+def test_openai_model_server_converts_agent_input_to_openai_request():
+    client = _Client()
+    server = OpenAIModelServer(
+        model="qwen35-vl",
+        client=client,
+        generation_kwargs={"max_new_tokens": 9, "temperature": 0, "top_p": 0, "do_sample": False, "until": ["\n\n"]},
+    )
+    frame = Image.new("RGB", (4, 4), color="red")
+
+    output = server.generate(AgentInput(content=[ContentBlock.text("step 0"), ContentBlock(type="video", data=[frame])]))
+
+    assert output.first_text() == "out:step 0"
+    call = client.completions.calls[0]
+    assert call["model"] == "qwen35-vl"
+    assert call["max_tokens"] == 9
+    assert call["top_p"] == 1.0
+    assert call["stop"] == ["\n\n"]
+    assert "do_sample" not in call
+    assert "until" not in call
+    assert call["messages"][0]["content"][0] == {"type": "text", "text": "step 0"}
+    assert call["messages"][0]["content"][1]["type"] == "video_url"
+
+
+def test_openai_model_server_batches_requests_concurrently_in_order():
+    client = _Client()
+    server = OpenAIModelServer(model="qwen35-vl", client=client, max_parallel_rollouts=4)
+
+    outputs = server.generate_batch([AgentInput(content=[ContentBlock.text(f"step {idx}")]) for idx in range(4)])
+
+    assert [output.first_text() for output in outputs] == ["out:step 0", "out:step 1", "out:step 2", "out:step 3"]
+    assert len(client.completions.calls) == 4
+
+
+def test_agentic_registry_builds_openai_model_server():
+    server = build_model_server({"name": "openai", "model": "qwen35-vl", "client": _Client(), "max_parallel_rollouts": 8})
+
+    assert isinstance(server, OpenAIModelServer)
+    assert server.max_parallel_rollouts(16) == 8

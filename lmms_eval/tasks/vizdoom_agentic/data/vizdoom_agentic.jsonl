@@ -1,1 +1,0 @@
-{"id":"corridor_reach_goal","instruction":"You are a Doom agent in a tiny corridor. Reach the goal tile.","map":["#####","#A.G#","#####"],"start":[1,1],"goal":[3,1],"facing":"E"}

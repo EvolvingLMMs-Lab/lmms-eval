@@ -7,14 +7,6 @@ from lmms_eval.agentic.parsers.base import ModelOutputParser
 from lmms_eval.agentic.types import AgentOutput, ContentBlock, EnvState
 
 
-class IdentityModelOutputParser(ModelOutputParser):
-    """Pass model output through unchanged."""
-
-    def parse(self, output: AgentOutput, state: EnvState, agent_id: str | None = None) -> AgentOutput:
-        del state, agent_id
-        return output
-
-
 class QwenModelOutputParser(ModelOutputParser):
     """Normalize common Qwen chat outputs before task action parsing."""
 
@@ -30,7 +22,7 @@ class QwenModelOutputParser(ModelOutputParser):
         metadata["raw_text"] = text
         metadata["normalized_text"] = normalized_text
         if self.extract_tool_calls:
-            metadata["tool_calls"] = _extract_qwen_tool_calls(text)
+            metadata["tool_calls"] = [*_metadata_tool_calls(metadata), *_extract_qwen_tool_calls(text)]
 
         content = []
         replaced_text = False
@@ -50,7 +42,13 @@ class QwenModelOutputParser(ModelOutputParser):
 def _strip_thinking(text: str) -> str:
     candidate = text.strip()
     if "</think>" in candidate:
-        candidate = candidate.rsplit("</think>", 1)[-1].strip()
+        after_thinking = candidate.rsplit("</think>", 1)[-1].strip()
+        if after_thinking:
+            return after_thinking
+        # Some Qwen thinking-mode responses stop immediately after the closing
+        # marker. Keep the reasoning text as a fallback so downstream action
+        # parsers can still recover plain action names such as "ATTACK".
+        return re.sub(r"</?think>", "", candidate, flags=re.IGNORECASE).strip()
     if candidate.startswith("<think>") and "</think>" in candidate:
         candidate = candidate.rsplit("</think>", 1)[-1].strip()
     return candidate
@@ -68,3 +66,8 @@ def _extract_qwen_tool_calls(text: str) -> list[dict[str, Any]]:
             params[param_match.group(1)] = param_match.group(2).strip()
         tool_calls.append({"name": function_match.group(1), "arguments": params})
     return tool_calls
+
+
+def _metadata_tool_calls(metadata: dict[str, Any]) -> list[dict[str, Any]]:
+    tool_calls = metadata.get("tool_calls")
+    return list(tool_calls) if isinstance(tool_calls, list) else []
