@@ -6,7 +6,11 @@ from importlib import import_module
 from typing import Any
 
 from lmms_eval.agentic.env import EnvManager
-from lmms_eval.agentic.model_server import FixedActionModelServer, ModelServer, OpenAIModelServer
+from lmms_eval.agentic.model_server import (
+    FixedActionModelServer,
+    ModelServer,
+    OpenAIModelServer,
+)
 from lmms_eval.agentic.parsers import (
     ActionNameParser,
     ActionParser,
