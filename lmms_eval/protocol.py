@@ -61,9 +61,15 @@ class ChatMessages(BaseModel):
 
         return images, videos, audios
 
-    def to_hf_messages(self, video_kwargs: Optional[Dict[str, str]] = None):
+    def to_hf_messages(
+        self,
+        video_kwargs: Optional[Dict[str, str]] = None,
+        image_kwargs: Optional[Dict[str, str]] = None,
+    ):
         if video_kwargs is None:
             video_kwargs = {}
+        if image_kwargs is None:
+            image_kwargs = {}
         _num_frames = video_kwargs.get("nframes", 32)  # noqa: F841
         hf_messages = []
         for message in self.messages:
@@ -72,7 +78,7 @@ class ChatMessages(BaseModel):
                 if content.type == "text":
                     hf_message["content"].append({"type": "text", "text": content.text})
                 elif content.type == "image":
-                    hf_message["content"].append({"type": "image", "image": content.url})
+                    hf_message["content"].append({"type": "image", "image": content.url, **image_kwargs})
                 elif content.type == "video":
                     hf_message["content"].append({"type": "video", "video": content.url, **video_kwargs})
                 elif content.type == "audio":
