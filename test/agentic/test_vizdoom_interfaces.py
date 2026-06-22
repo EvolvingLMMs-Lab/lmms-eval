@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import pytest
 
+from lmms_eval.agentic.parsers import ParserContext
 from lmms_eval.agentic.parsers.action.vizdoom_vllm_parser import VizDoomVllmActionParser
 from lmms_eval.agentic.parsers.observation.vizdoom_vllm_parser import (
     VizDoomVllmObservationParser,
 )
-from lmms_eval.agentic.parsers import ParserContext
 from lmms_eval.agentic.registry import build_action_parser, build_observation_parser
 from lmms_eval.agentic.types import AgentOutput, ContentBlock, EnvState
 from lmms_eval.tasks.vizdoom_agentic.env import VizDoomEnv

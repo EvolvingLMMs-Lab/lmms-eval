@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from lmms_eval.agentic.parsers import ActionNameParser, ParserContext, QwenModelOutputParser
+from lmms_eval.agentic.parsers import (
+    ActionNameParser,
+    ParserContext,
+    QwenModelOutputParser,
+)
 from lmms_eval.agentic.types import AgentOutput, ContentBlock, EnvState
 
 
