@@ -6,7 +6,7 @@ from importlib import import_module
 from typing import Any
 
 from lmms_eval.agentic.env import EnvManager
-from lmms_eval.agentic.model_server import ModelServer, OpenAIModelServer
+from lmms_eval.agentic.model_server import FixedActionModelServer, ModelServer, OpenAIModelServer
 from lmms_eval.agentic.parsers import (
     ActionNameParser,
     ActionParser,
@@ -28,7 +28,7 @@ class AgenticFactory:
     factory with ``with_components``.
     """
 
-    model_servers: dict[str, Any] = field(default_factory=lambda: {"openai": OpenAIModelServer})
+    model_servers: dict[str, Any] = field(default_factory=lambda: {"openai": OpenAIModelServer, "debug": FixedActionModelServer})
     loop_workers: dict[str, Any] = field(default_factory=lambda: {"simple": "lmms_eval.agentic.loop.worker.simple:SimpleLoopWorker"})
     model_output_parsers: dict[str, Any] = field(default_factory=lambda: {"identity": IdentityModelOutputParser, "qwen": QwenModelOutputParser})
     observation_parsers: dict[str, Any] = field(default_factory=lambda: {"vizdoom": VizDoomObservationParser})
