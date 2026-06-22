@@ -1,0 +1,45 @@
+# ExtremeWhenBench
+# Copyright (c) 2026-present NAVER Cloud Corp.
+# Apache-2.0
+
+task: extremewhenbench
+dataset_path: min1321/extreme-when-bench
+dataset_kwargs:
+  token: True
+  cache_dir: extreme_when_bench
+test_split: test
+output_type: generate_until
+
+process_docs:  !function utils.ewb_process_docs
+doc_to_visual: !function utils.ewb_doc_to_visual
+doc_to_text: !function utils.ewb_doc_to_text
+doc_to_target: !function utils.ewb_doc_to_target
+process_results: !function utils.ewb_process_results
+
+generation_kwargs:
+  max_new_tokens: 50
+  temperature: 0
+  do_sample: false
+
+metric_list:
+  - metric: ewb_mIoU
+    aggregation: !function utils.ewb_aggregate_miou
+    higher_is_better: true
+  - metric: ewb_R@0.3
+    aggregation: !function utils.ewb_aggregate_r03
+    higher_is_better: true
+  - metric: ewb_R@0.5
+    aggregation: !function utils.ewb_aggregate_r05
+    higher_is_better: true
+  - metric: ewb_R@0.7
+    aggregation: !function utils.ewb_aggregate_r07
+    higher_is_better: true
+  - metric: ewb_parse_fail
+    aggregation: !function utils.ewb_aggregate_parse_fail
+    higher_is_better: false
+
+lmms_eval_specific_kwargs:
+  default: {}
+
+metadata:
+  version: '0.1'
