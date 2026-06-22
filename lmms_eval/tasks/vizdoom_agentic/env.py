@@ -78,6 +78,7 @@ class VizDoomEnvManager(EnvManager):
         ticrate: int | None = None,
         tics_per_action: int = 1,
         capture_action_frames: bool | str = False,
+        emit_action_frames: bool | str = False,
         frame_history: int = 1,
         success_reward_min: float | None = None,
         success_variable: str | None = None,
@@ -138,6 +139,7 @@ class VizDoomEnvManager(EnvManager):
         self.tracked_game_variables = _as_list(tracked_game_variables)
         self.tics_per_action = max(1, int(tics_per_action))
         self.capture_action_frames = _as_bool(capture_action_frames)
+        self.emit_action_frames = _as_bool(emit_action_frames)
         self.frame_history = max(1, int(frame_history))
         self.success_reward_min = success_reward_min
         self.success_variable = success_variable
@@ -194,14 +196,14 @@ class VizDoomEnvManager(EnvManager):
         if not valid:
             self.invalid_actions += 1
 
+        action_frames: list[Any] = []
         if self.capture_action_frames and tics > 1:
-            self.last_reward, elapsed_tics, captured_frames = self._make_action_and_capture_frames(action_vector, tics)
+            self.last_reward, elapsed_tics, action_frames = self._make_action_and_capture_frames(action_vector, tics)
             self.step_idx += 1
             state = self._state(capture_screen_frame=False)
         else:
             self.last_reward = float(self.game.make_action(action_vector, tics))
             elapsed_tics = tics
-            captured_frames = 0
             self.step_idx += 1
             state = self._state()
         info = {
@@ -209,7 +211,7 @@ class VizDoomEnvManager(EnvManager):
             "action_vector": action_vector,
             "tics": tics,
             "elapsed_tics": elapsed_tics,
-            "captured_action_frames": captured_frames,
+            "captured_action_frames": len(action_frames),
             "last_action": _safe_sequence(self.game.get_last_action()),
             "total_reward": float(self.game.get_total_reward()),
             "invalid_actions": self.invalid_actions,
@@ -217,6 +219,8 @@ class VizDoomEnvManager(EnvManager):
             "timeout": _safe_call(self.game.is_episode_timeout_reached, default=False),
             "player_dead": _safe_call(self.game.is_player_dead, default=False),
         }
+        if self.emit_action_frames and action_frames:
+            info["action_frames"] = action_frames
         return StepResult(state=state, reward=self.last_reward, done=state.terminal, info=info)
 
     def close(self) -> None:
@@ -392,10 +396,10 @@ class VizDoomEnvManager(EnvManager):
             observation["server_state"] = _server_state_to_dict(server_state)
         return observation
 
-    def _make_action_and_capture_frames(self, action_vector: list[float], tics: int) -> tuple[float, int, int]:
+    def _make_action_and_capture_frames(self, action_vector: list[float], tics: int) -> tuple[float, int, list[Any]]:
         reward = 0.0
         elapsed_tics = 0
-        captured_frames = 0
+        captured_frames: list[Any] = []
         for _ in range(tics):
             if self.game.is_episode_finished():
                 break
@@ -406,16 +410,17 @@ class VizDoomEnvManager(EnvManager):
             state = self.game.get_state()
             frame = getattr(state, "screen_buffer", None) if state is not None else None
             if frame is not None:
-                self._append_screen_frame(frame)
-                captured_frames += 1
+                stored = self._append_screen_frame(frame)
+                captured_frames.append(stored)
         return reward, elapsed_tics, captured_frames
 
-    def _append_screen_frame(self, frame: Any) -> None:
+    def _append_screen_frame(self, frame: Any) -> Any:
         if hasattr(frame, "copy"):
             frame = frame.copy()
         self.screen_history.append(frame)
         if len(self.screen_history) > self.frame_history:
             self.screen_history = self.screen_history[-self.frame_history :]
+        return frame
 
     def _game_variables(self, state: Any) -> dict[str, float]:
         names = self._available_game_variable_names()

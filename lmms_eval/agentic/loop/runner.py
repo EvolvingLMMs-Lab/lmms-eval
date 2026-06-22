@@ -295,7 +295,7 @@ def _compact_step_to_dict(step: EpisodeStep) -> dict[str, Any]:
         "parse_error": step.parsed_action.error if step.parsed_action is not None else None,
         "reward": _safe_data(step.result.reward) if step.result is not None else None,
         "done": step.result.done if step.result is not None else None,
-        "info": _safe_data(step.result.info) if step.result is not None else {},
+        "info": _safe_data(_info_without_frames(step.result.info)) if step.result is not None else {},
     }
 
 
@@ -381,7 +381,7 @@ def _step_result_to_dict(result: StepResult | None) -> dict[str, Any] | None:
         "state_after": _state_to_dict(result.state),
         "reward": _safe_data(result.reward),
         "done": result.done,
-        "info": _safe_data(result.info),
+        "info": _safe_data(_info_without_frames(result.info)),
     }
 
 
@@ -424,7 +424,31 @@ def _write_episode_artifacts(result: EpisodeResult, *, output_path: str | None, 
             error_path.write_text(str(exc), encoding="utf-8")
             artifacts["video_error"] = str(error_path)
 
+    segment_count = _write_action_segments(artifact_dir, result)
+    if segment_count:
+        artifacts["segments"] = str(artifact_dir / "segments")
+
     return artifacts
+
+
+def _write_action_segments(artifact_dir: Path, result: EpisodeResult) -> int:
+    """Write one mp4 per action (the captured intra-action frames). Requires emit_action_frames."""
+    segments = [(idx, _step_action_frames(step)) for idx, step in enumerate(result.steps)]
+    segments = [(idx, segment) for idx, segment in segments if segment]
+    if not segments:
+        return 0
+
+    segments_dir = artifact_dir / "segments"
+    segments_dir.mkdir(parents=True, exist_ok=True)
+    written = 0
+    fps = _artifact_fps()
+    for idx, segment in segments:
+        try:
+            _write_mp4(segments_dir / f"step_{idx:03d}.mp4", segment, fps=fps)
+            written += 1
+        except Exception as exc:
+            (segments_dir / f"step_{idx:03d}_error.txt").write_text(str(exc), encoding="utf-8")
+    return written
 
 
 def _new_artifact_dir(output_path: Path, *, task_name: str, doc_id: int) -> Path:
@@ -461,7 +485,7 @@ def _episode_action_rows(result: EpisodeResult) -> list[dict[str, Any]]:
                 "reward": _safe_data(step.result.reward) if step.result is not None else None,
                 "total_reward": _safe_data(info.get("total_reward")),
                 "done": step.result.done if step.result is not None else None,
-                "info": _safe_data(info),
+                "info": _safe_data(_info_without_frames(info)),
             }
         )
     return rows
@@ -506,6 +530,10 @@ def _episode_summary_markdown(result: EpisodeResult, rows: list[dict[str, Any]])
 def _episode_video_frames(result: EpisodeResult) -> list[Any]:
     frames = []
     for step in result.steps:
+        segment = _step_action_frames(step)
+        if segment:
+            frames.extend(segment)
+            continue
         frame = _state_screen_frame(step.state)
         if frame is not None:
             frames.append(frame)
@@ -513,6 +541,19 @@ def _episode_video_frames(result: EpisodeResult) -> list[Any]:
     if final_frame is not None:
         frames.append(final_frame)
     return frames
+
+
+def _step_action_frames(step: Any) -> list[Any]:
+    info = getattr(getattr(step, "result", None), "info", None)
+    frames = info.get("action_frames") if isinstance(info, dict) else None
+    return list(frames) if isinstance(frames, list) else []
+
+
+def _info_without_frames(info: Any) -> Any:
+    """Drop the raw ``action_frames`` arrays before trace serialization (they go to mp4 artifacts)."""
+    if isinstance(info, dict) and "action_frames" in info:
+        return {key: value for key, value in info.items() if key != "action_frames"}
+    return info
 
 
 def _state_screen_frame(state: EnvState) -> Any:

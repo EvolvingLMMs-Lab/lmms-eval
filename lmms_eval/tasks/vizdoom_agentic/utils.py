@@ -1,4 +1,5 @@
 import json
+import os
 
 from lmms_eval.tasks.vizdoom_agentic.env import VizDoomEnvManager
 
@@ -39,6 +40,7 @@ def vizdoom_env_manager(doc=None, lmms_eval_specific_kwargs=None):
         frame_history=12,
         tics_per_action=12,
         capture_action_frames=True,
+        emit_action_frames=os.getenv("VIZDOOM_EMIT_ACTION_FRAMES", "0").lower() in {"1", "true", "yes", "on"},
         success_reward_min=1.0,
     )
 
