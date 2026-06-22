@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from lmms_eval.agentic.env import EnvManager
+from lmms_eval.agentic.factory import build_env_manager
 from lmms_eval.agentic.loop.worker.simple import SimpleLoopWorker
-from lmms_eval.agentic.registry import build_env_manager
 from lmms_eval.agentic.types import (
     AgentInput,
     AgentOutput,

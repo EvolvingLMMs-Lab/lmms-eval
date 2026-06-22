@@ -7,7 +7,7 @@ from lmms_eval.agentic.parsers.action.vizdoom import VizDoomActionParser
 from lmms_eval.agentic.parsers.observation.vizdoom import (
     VizDoomObservationParser,
 )
-from lmms_eval.agentic.registry import build_action_parser, build_env_manager, build_observation_parser
+from lmms_eval.agentic.factory import build_action_parser, build_env_manager, build_observation_parser
 from lmms_eval.agentic.types import AgentOutput, ContentBlock, EnvState
 from lmms_eval.tasks.vizdoom_agentic import utils as vizdoom_utils
 from lmms_eval.tasks.vizdoom_agentic.env import VizDoomEnv, VizDoomEnvManager
@@ -28,7 +28,7 @@ def test_vizdoom_action_parser_reads_plain_button_combo():
     assert parsed.action.data == {"buttons": ["MOVE_LEFT", "ATTACK"]}
 
 
-def test_vizdoom_registry_name_builds_both_parser_types():
+def test_vizdoom_factory_name_builds_both_parser_types():
     observation_parser = build_observation_parser({"name": "vizdoom", "video": True})
     action_parser = build_action_parser({"name": "vizdoom", "buttons": ["ATTACK"]})
 

@@ -4,7 +4,6 @@ import json
 from typing import Any
 
 from lmms_eval.agentic.parsers.base import ObservationParser, ParserContext
-from lmms_eval.agentic.registry_core import register_observation_parser
 from lmms_eval.agentic.types import AgentInput, ContentBlock, EnvState
 from lmms_eval.imports import optional_import
 
@@ -19,7 +18,6 @@ _VIZDOOM_BUFFER_KEYS = {
 }
 
 
-@register_observation_parser("vizdoom", replace=True)
 class VizDoomObservationParser(ObservationParser):
     """Convert VizDoom state into chat-friendly text, video, image, and state blocks."""
 

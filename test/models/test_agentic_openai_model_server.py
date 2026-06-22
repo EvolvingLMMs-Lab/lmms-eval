@@ -5,8 +5,8 @@ from types import SimpleNamespace
 import pytest
 from PIL import Image
 
+from lmms_eval.agentic.factory import DEFAULT_AGENTIC_FACTORY, build_model_server
 from lmms_eval.agentic.model_server import OpenAIModelServer
-from lmms_eval.agentic.registry import MODEL_SERVER_REGISTRY, build_model_server
 from lmms_eval.agentic.types import AgentInput, ContentBlock
 
 
@@ -59,17 +59,17 @@ def test_openai_model_server_batches_requests_concurrently_in_order():
     assert len(client.completions.calls) == 4
 
 
-def test_agentic_registry_builds_openai_model_server():
+def test_agentic_factory_builds_openai_model_server():
     server = build_model_server({"name": "openai", "model": "qwen35-vl", "client": _Client(), "max_concurrent_requests": 8})
 
     assert isinstance(server, OpenAIModelServer)
     assert server.max_concurrent_requests == 8
 
 
-def test_agentic_registry_defaults_to_openai_only():
+def test_agentic_factory_defaults_to_openai_only():
     server = build_model_server(None, model="qwen35-vl", client=_Client())
 
-    assert MODEL_SERVER_REGISTRY.names() == ["openai"]
+    assert sorted(DEFAULT_AGENTIC_FACTORY.model_servers) == ["openai"]
     assert isinstance(server, OpenAIModelServer)
 
 

@@ -5,11 +5,9 @@ import re
 from typing import Any
 
 from lmms_eval.agentic.parsers.base import ActionParser, ParserContext
-from lmms_eval.agentic.registry_core import register_action_parser
 from lmms_eval.agentic.types import AgentOutput, GameAction, ParsedAction
 
 
-@register_action_parser("action_name", replace=True)
 class ActionNameParser(ActionParser):
     """Parse one action from text, JSON, or tool-call-like model outputs."""
 

@@ -94,9 +94,9 @@ lmms_eval/agentic/parsers/
     vizdoom.py
 ```
 
-Each registry is separate, so the same parser name can be used for different
-roles. For example, `vizdoom` can be registered as both an
-`ObservationParser` and an `ActionParser`, then selected at runtime:
+Each parser role has its own factory map, so the same short name can be used
+for different roles. For example, `vizdoom` can mean a VizDoom
+`ObservationParser` and a VizDoom `ActionParser`, then be selected at runtime:
 
 ```bash
 python -m lmms_eval \
@@ -119,7 +119,7 @@ MinecraftActionParser(...)
 
 When the model/runtime input-output convention and the task action schema are
 tightly coupled, use the task/domain name such as `vizdoom`. The implementation
-can still reuse shared helper classes, but the registry name should make the
+can still reuse shared helper classes, but the factory name should make the
 actual contract obvious.
 
 The runtime command chooses all model-facing parser contracts:
@@ -368,7 +368,7 @@ Use `vizdoom` for VizDoom rollouts. The env wraps
 `vizdoom.DoomGame` and exposes the main VizDoom interfaces through
 `EnvState.observation`. The concrete env implementation lives with the task
 under `lmms_eval/tasks/vizdoom_agentic/`; `lmms_eval/agentic` only owns the
-generic `EnvManager` interface, loop, registry, and reusable parser layers.
+generic `EnvManager` interface, loop, factory, and reusable parser layers.
 
 - visual/audio buffers: `screen_buffer`, `depth_buffer`, `labels_buffer`,
   `automap_buffer`, `audio_buffer`, and `notifications_buffer`;
@@ -490,8 +490,12 @@ class TmlModelServer(ModelServer):
     def generate(self, request: TmlRequest) -> TmlPolicyOutput:
         # Run the native TML runtime directly.
         ...
+```
 
-register_model_server("tml", TmlModelServer)
+Then pass the backend by import path:
+
+```bash
+--agentic_model_server my_project.agentic:TmlModelServer
 ```
 
 Then choose parser layers based on the output:
@@ -609,8 +613,6 @@ class FusionModelServer(ModelServer):
 
     def generate(self, request):
         ...
-
-register_model_server("fusion", FusionModelServer)
 ```
 
 The task YAML can keep the standard loop:
@@ -619,7 +621,7 @@ The task YAML can keep the standard loop:
 python -m lmms_eval \
   --model dummy \
   --tasks vizdoom \
-  --agentic_model_server fusion \
+  --agentic_model_server my_project.agentic:FusionModelServer \
   --agentic_model_server_args planner=Qwen/Qwen3.5-9B,critic=another/model \
   --agentic_model_output_parser qwen \
   --agentic_observation_parser vizdoom \
@@ -636,14 +638,12 @@ pattern. Examples:
 - The pipeline needs memory, planning state, debate, voting, or retries across
   steps.
 
-Register the worker:
+Implement the worker:
 
 ```python
 class FusionLoopWorker(LoopWorker):
     def run(self, doc, seed=None, agent_id="agent") -> EpisodeResult:
         ...
-
-register_loop_worker("fusion", FusionLoopWorker)
 ```
 
 Then select it at runtime:
@@ -652,8 +652,8 @@ Then select it at runtime:
 python -m lmms_eval \
   --model dummy \
   --tasks vizdoom \
-  --agentic_loop_worker fusion \
-  --agentic_model_server fusion \
+  --agentic_loop_worker my_project.agentic:FusionLoopWorker \
+  --agentic_model_server my_project.agentic:FusionModelServer \
   --agentic_model_output_parser identity \
   --agentic_observation_parser vizdoom \
   --agentic_action_parser vizdoom
@@ -670,10 +670,26 @@ composite server or a custom worker.
 
 ### Adding a Model Backend
 
-Implement `ModelServer.generate()` or `generate_batch()` and register it:
+Implement `ModelServer.generate()` or `generate_batch()`:
 
 ```python
-register_model_server("my_backend", MyModelServer)
+class MyModelServer(ModelServer):
+    def generate(self, request):
+        ...
+```
+
+Select it with an import path:
+
+```bash
+--agentic_model_server my_project.agentic:MyModelServer
+```
+
+For code-driven use, create a modified factory instead of mutating global state:
+
+```python
+factory = DEFAULT_AGENTIC_FACTORY.with_components(
+    model_servers={"my_backend": MyModelServer},
+)
 ```
 
 The backend should convert `AgentInput` typed content into the backend's native
@@ -692,10 +708,15 @@ changes.
 Implement `ModelOutputParser` when a model family has reusable output wrappers:
 
 ```python
-@register_model_output_parser("my_model_family")
 class MyModelOutputParser(ModelOutputParser):
     def parse(self, output, ctx):
         ...
+```
+
+Select it with an import path or add it to a local factory:
+
+```bash
+--agentic_model_output_parser my_project.agentic:MyModelOutputParser
 ```
 
 Place it under `lmms_eval/agentic/parsers/model_output/`.

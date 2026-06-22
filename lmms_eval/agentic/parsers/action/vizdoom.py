@@ -5,7 +5,6 @@ import re
 from typing import Any
 
 from lmms_eval.agentic.parsers.base import ActionParser, ParserContext
-from lmms_eval.agentic.registry_core import register_action_parser
 from lmms_eval.agentic.types import AgentOutput, GameAction, ParsedAction
 from lmms_eval.imports import optional_import
 
@@ -14,7 +13,6 @@ _ACTION_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
 _FUNCTION_CALL_RE = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\((.*?)\)", re.DOTALL)
 
 
-@register_action_parser("vizdoom", replace=True)
 class VizDoomActionParser(ActionParser):
     """Parse skill/tool-call/text output into VizDoom button actions."""
 

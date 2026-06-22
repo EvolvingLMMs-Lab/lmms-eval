@@ -1,6 +1,16 @@
 """Public agentic protocol surface for lmms-eval tasks and adapters."""
 
 from lmms_eval.agentic.env import EnvManager
+from lmms_eval.agentic.factory import (
+    DEFAULT_AGENTIC_FACTORY,
+    AgenticFactory,
+    build_action_parser,
+    build_env_manager,
+    build_loop_worker,
+    build_model_output_parser,
+    build_model_server,
+    build_observation_parser,
+)
 from lmms_eval.agentic.loop import (
     LoopManager,
     LoopWorker,
@@ -23,24 +33,6 @@ from lmms_eval.agentic.parsers import (
     ParserContext,
     QwenModelOutputParser,
 )
-from lmms_eval.agentic.registry import (
-    ACTION_PARSER_REGISTRY,
-    LOOP_WORKER_REGISTRY,
-    MODEL_OUTPUT_PARSER_REGISTRY,
-    MODEL_SERVER_REGISTRY,
-    OBSERVATION_PARSER_REGISTRY,
-    build_action_parser,
-    build_env_manager,
-    build_loop_worker,
-    build_model_output_parser,
-    build_model_server,
-    build_observation_parser,
-    register_action_parser,
-    register_loop_worker,
-    register_model_output_parser,
-    register_model_server,
-    register_observation_parser,
-)
 from lmms_eval.agentic.types import (
     AgentInput,
     AgentOutput,
@@ -56,25 +48,22 @@ from lmms_eval.agentic.types import (
 __all__ = [
     "ActionParser",
     "ActionNameParser",
+    "AgenticFactory",
     "AgentInput",
     "AgentModel",
     "AgentOutput",
-    "ACTION_PARSER_REGISTRY",
     "ContentBlock",
+    "DEFAULT_AGENTIC_FACTORY",
     "EnvManager",
     "EnvState",
     "EpisodeResult",
     "EpisodeStep",
     "GameAction",
     "IdentityModelOutputParser",
-    "LOOP_WORKER_REGISTRY",
     "LoopManager",
     "LoopWorker",
-    "MODEL_SERVER_REGISTRY",
-    "MODEL_OUTPUT_PARSER_REGISTRY",
     "ModelOutputParser",
     "ModelServer",
-    "OBSERVATION_PARSER_REGISTRY",
     "ObservationParser",
     "Parser",
     "ParserContext",
@@ -90,10 +79,5 @@ __all__ = [
     "build_model_server",
     "build_model_output_parser",
     "build_observation_parser",
-    "register_action_parser",
-    "register_loop_worker",
-    "register_model_server",
-    "register_model_output_parser",
-    "register_observation_parser",
     "run_generate_until_game",
 ]

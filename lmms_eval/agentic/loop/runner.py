@@ -8,16 +8,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from lmms_eval.agentic.factory import DEFAULT_AGENTIC_FACTORY, AgenticFactory, import_from_path
 from lmms_eval.agentic.loop.manager import LoopManager, RolloutJob
 from lmms_eval.agentic.model_server import ModelServer
-from lmms_eval.agentic.registry import (
-    build_action_parser,
-    build_env_manager,
-    build_loop_worker,
-    build_model_output_parser,
-    build_model_server,
-    build_observation_parser,
-)
 from lmms_eval.agentic.types import (
     AgentInput,
     AgentOutput,
@@ -36,17 +29,18 @@ from lmms_eval.utils import simple_parse_args_string
 
 def run_generate_until_game(lm: Any, requests: list[Instance], response_cache: Any = None, cli_args: Any = None) -> list[str]:
     trace_mode = getattr(cli_args, "agentic_trace_mode", "basic") if cli_args is not None else "basic"
+    factory = _runtime_agentic_factory(cli_args)
     plans = [_rollout_plan_from_request(index, lm, req, cli_args) for index, req in enumerate(requests)]
     outputs: list[str | None] = [None] * len(plans)
     for group in _group_plans_by_model_server(plans):
         model_server_spec = group[0].model_server_spec
-        model_server = build_model_server(
+        model_server = factory.build_model_server(
             model_server_spec,
             lm=lm,
             generation_kwargs={},
             response_cache=response_cache,
         )
-        jobs = [_rollout_job_from_plan(local_index, plan) for local_index, plan in enumerate(group)]
+        jobs = [_rollout_job_from_plan(local_index, plan, factory) for local_index, plan in enumerate(group)]
         episodes = LoopManager(max_workers=group[0].max_parallel_rollouts).run_jobs(jobs, model_server)
         for plan, episode in zip(group, episodes, strict=True):
             artifacts = _write_episode_artifacts(episode, output_path=getattr(cli_args, "output_path", None), task_name=plan.task_name, doc_id=plan.doc_id)
@@ -181,26 +175,26 @@ def _runtime_max_parallel_rollouts(cli_args: Any, *, default: Any = None) -> int
     return max(1, int(value))
 
 
-def _rollout_job_from_plan(index: int, plan: _RolloutPlan) -> RolloutJob:
+def _rollout_job_from_plan(index: int, plan: _RolloutPlan, factory: AgenticFactory) -> RolloutJob:
     def make_session(model_server: ModelServer):
-        worker = _build_worker_for_plan(plan, model_server)
+        worker = _build_worker_for_plan(plan, model_server, factory)
         new_session = getattr(worker, "new_session", None)
         return new_session(plan.doc, seed=plan.seed) if callable(new_session) else None
 
     def run_serial(model_server: ModelServer):
-        return _build_worker_for_plan(plan, model_server).run(plan.doc, seed=plan.seed)
+        return _build_worker_for_plan(plan, model_server, factory).run(plan.doc, seed=plan.seed)
 
     return RolloutJob(index=index, make_session=make_session, run_serial=run_serial)
 
 
-def _build_worker_for_plan(plan: _RolloutPlan, model_server: ModelServer):
-    return build_loop_worker(
+def _build_worker_for_plan(plan: _RolloutPlan, model_server: ModelServer, factory: AgenticFactory):
+    return factory.build_loop_worker(
         plan.loop_worker_spec,
         model_server=model_server,
-        env_manager=build_env_manager(plan.game_env, doc=plan.doc, lmms_eval_specific_kwargs=plan.lmms_eval_specific_kwargs),
-        observation_parser=build_observation_parser(plan.observation_parser, doc=plan.doc, lmms_eval_specific_kwargs=plan.lmms_eval_specific_kwargs),
-        model_output_parser=build_model_output_parser(plan.model_output_parser_spec, doc=plan.doc, lmms_eval_specific_kwargs=plan.lmms_eval_specific_kwargs),
-        action_parser=build_action_parser(plan.action_parser, doc=plan.doc, lmms_eval_specific_kwargs=plan.lmms_eval_specific_kwargs),
+        env_manager=factory.build_env_manager(plan.game_env, doc=plan.doc, lmms_eval_specific_kwargs=plan.lmms_eval_specific_kwargs),
+        observation_parser=factory.build_observation_parser(plan.observation_parser, doc=plan.doc, lmms_eval_specific_kwargs=plan.lmms_eval_specific_kwargs),
+        model_output_parser=factory.build_model_output_parser(plan.model_output_parser_spec, doc=plan.doc, lmms_eval_specific_kwargs=plan.lmms_eval_specific_kwargs),
+        action_parser=factory.build_action_parser(plan.action_parser, doc=plan.doc, lmms_eval_specific_kwargs=plan.lmms_eval_specific_kwargs),
         max_steps=plan.max_steps,
         generation_kwargs=plan.generation_kwargs,
         request_metadata={
@@ -212,6 +206,21 @@ def _build_worker_for_plan(plan: _RolloutPlan, model_server: ModelServer):
             }
         },
     )
+
+
+def _runtime_agentic_factory(cli_args: Any) -> AgenticFactory:
+    factory = getattr(cli_args, "agentic_factory", None) if cli_args is not None else None
+    if factory is None:
+        return DEFAULT_AGENTIC_FACTORY
+    if isinstance(factory, AgenticFactory):
+        return factory
+    if isinstance(factory, str):
+        factory = import_from_path(factory)
+    if callable(factory):
+        factory = factory()
+    if not isinstance(factory, AgenticFactory):
+        raise TypeError(f"agentic_factory must be AgenticFactory or factory returning one, got {type(factory).__name__}")
+    return factory
 
 
 def _runtime_component_spec(cli_args: Any, name_attr: str, args_attr: str, default_spec: Any) -> Any:

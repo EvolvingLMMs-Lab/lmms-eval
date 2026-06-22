@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+from lmms_eval.agentic.factory import AgenticFactory
 from lmms_eval.agentic.loop.runner import (
+    _runtime_agentic_factory,
     _runtime_component_spec,
     _runtime_max_parallel_rollouts,
     _rollout_plan_from_request,
@@ -55,6 +57,13 @@ def test_agentic_max_parallel_rollouts_overrides_legacy_model_server_arg():
     cli_args = SimpleNamespace(agentic_max_parallel_rollouts=2)
 
     assert _runtime_max_parallel_rollouts(cli_args, default=4) == 2
+
+
+def test_runtime_agentic_factory_accepts_custom_factory():
+    factory = AgenticFactory().with_components(action_parsers={"custom": object})
+
+    assert _runtime_agentic_factory(SimpleNamespace(agentic_factory=factory)) is factory
+    assert factory.action_parsers["custom"] is object
 
 
 def test_rollout_plan_uses_cli_observation_and_action_parsers_when_yaml_omits_them():
