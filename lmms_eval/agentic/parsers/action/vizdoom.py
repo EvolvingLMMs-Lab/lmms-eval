@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from lmms_eval.agentic.parsers.base import ActionParser, ParserContext
+from lmms_eval.agentic.registry_core import register_action_parser
 from lmms_eval.agentic.types import AgentOutput, GameAction, ParsedAction
 from lmms_eval.imports import optional_import
 
@@ -13,7 +14,8 @@ _ACTION_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
 _FUNCTION_CALL_RE = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\((.*?)\)", re.DOTALL)
 
 
-class VizDoomVllmActionParser(ActionParser):
+@register_action_parser("vizdoom", replace=True)
+class VizDoomActionParser(ActionParser):
     """Parse skill/tool-call/text output into VizDoom button actions."""
 
     def __init__(
@@ -34,7 +36,7 @@ class VizDoomVllmActionParser(ActionParser):
 
     def parse(self, value: Any, ctx: ParserContext) -> ParsedAction:
         if not isinstance(value, AgentOutput):
-            return ParsedAction(error=f"VizDoomVllmActionParser requires AgentOutput, got {type(value).__name__}")
+            return ParsedAction(error=f"VizDoomActionParser requires AgentOutput, got {type(value).__name__}")
         output = value
         agent_id = ctx.agent_id
         text = output.first_text() or ""
@@ -184,10 +186,6 @@ class VizDoomVllmActionParser(ActionParser):
         if "MOVE_RIGHT" in self.buttons and re.search(r"\b(MOVE|STRAFE|GO|TURN)\s+RIGHT\b", normalized):
             buttons.append("MOVE_RIGHT")
         return buttons
-
-
-VizDoomActionParser = VizDoomVllmActionParser
-
 
 def _extract_json_payload(text: str) -> dict[str, Any] | None:
     match = _JSON_OBJECT_RE.search(text)

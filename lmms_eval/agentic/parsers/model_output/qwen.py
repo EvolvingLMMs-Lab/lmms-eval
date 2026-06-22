@@ -4,9 +4,11 @@ import re
 from typing import Any
 
 from lmms_eval.agentic.parsers.base import ModelOutputParser, ParserContext
+from lmms_eval.agentic.registry_core import register_model_output_parser
 from lmms_eval.agentic.types import AgentOutput, ContentBlock
 
 
+@register_model_output_parser("qwen", replace=True)
 class QwenModelOutputParser(ModelOutputParser):
     """Normalize common Qwen chat outputs before task action parsing."""
 

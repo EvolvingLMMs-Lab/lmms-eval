@@ -27,8 +27,6 @@ from lmms_eval.agentic.parsers import (
     QwenModelOutputParser,
     VizDoomActionParser,
     VizDoomObservationParser,
-    VizDoomVllmActionParser,
-    VizDoomVllmObservationParser,
 )
 from lmms_eval.agentic.registry import (
     ACTION_PARSER_REGISTRY,
@@ -96,8 +94,6 @@ __all__ = [
     "StepResult",
     "VizDoomActionParser",
     "VizDoomObservationParser",
-    "VizDoomVllmActionParser",
-    "VizDoomVllmObservationParser",
     "build_action_parser",
     "build_env_manager",
     "build_loop_worker",

@@ -83,9 +83,9 @@ def test_rollout_plan_uses_cli_observation_and_action_parsers_when_yaml_omits_th
         agentic_loop_worker_args="",
         agentic_model_output_parser=None,
         agentic_model_output_parser_args="",
-        agentic_observation_parser="vizdoom_vllm_parser",
+        agentic_observation_parser="vizdoom",
         agentic_observation_parser_args='video=true,image_buffers=["screen"]',
-        agentic_action_parser="vizdoom_vllm_parser",
+        agentic_action_parser="vizdoom",
         agentic_action_parser_args='submit_actions=["SUBMIT"],noop_actions=["NOOP"]',
         agentic_max_parallel_rollouts=None,
     )
@@ -93,12 +93,12 @@ def test_rollout_plan_uses_cli_observation_and_action_parsers_when_yaml_omits_th
     plan = _rollout_plan_from_request(0, lm, req, cli_args)
 
     assert plan.observation_parser == {
-        "name": "vizdoom_vllm_parser",
+        "name": "vizdoom",
         "video": True,
         "image_buffers": ["screen"],
     }
     assert plan.action_parser == {
-        "name": "vizdoom_vllm_parser",
+        "name": "vizdoom",
         "submit_actions": ["SUBMIT"],
         "noop_actions": ["NOOP"],
     }

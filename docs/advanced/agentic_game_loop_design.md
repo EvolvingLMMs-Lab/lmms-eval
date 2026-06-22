@@ -57,10 +57,10 @@ reached.
 | Component | Direction | Responsibility |
 |-----------|-----------|----------------|
 | `EnvManager` | task state | Owns environment lifecycle, reset/step logic, latest `EnvState`, terminal state, rewards, and task metrics. |
-| `ObservationParser` | `EnvState -> Any` | Turns environment state into the model-facing request object. Chat/VLM tasks commonly return `AgentInput`; policy or VLA tasks can return tensors, dataclasses, dicts, or runtime-native objects. |
+| `ObservationParser` | `EnvState -> Any` | Runtime-selected adapter that turns environment state into the model-facing request object. Chat/VLM tasks commonly return `AgentInput`; policy or VLA tasks can return tensors, dataclasses, dicts, or runtime-native objects. |
 | `ModelServer` | `Any -> Any` | Runs inference. It hides backend details such as HTTP APIs, request batching, generation parameters, async-friendly calls, and native tensor/runtime adapters. |
 | `ModelOutputParser` | raw `Any -> Any` | Normalizes model-family or runtime output without knowing the task action schema. Examples: strip `<think>...</think>` from an `AgentOutput`, extract Qwen XML tool calls into metadata, or unwrap a policy output dataclass. |
-| `ActionParser` | normalized `Any -> ParsedAction` | Parses one task action from normalized model output. It knows valid task actions but not the model backend. |
+| `ActionParser` | normalized `Any -> ParsedAction` | Runtime-selected adapter that maps normalized model output into an environment action. It may know the task action schema, but the concrete parser choice belongs with the model/runtime command. |
 | `LoopWorker` | orchestration | Wires components together and records per-step traces. |
 | `LoopManager` | scheduling | Owns rollout concurrency, thread management, and loop-level batching across rollout sessions. |
 
@@ -88,21 +88,21 @@ lmms_eval/agentic/parsers/
     identity.py
     qwen.py
   observation/
-    vizdoom_vllm_parser.py
+    vizdoom.py
   action/
     action_name.py
-    vizdoom_vllm_parser.py
+    vizdoom.py
 ```
 
 Each registry is separate, so the same parser name can be used for different
-roles. For example, `vizdoom_vllm_parser` can be registered as both an
+roles. For example, `vizdoom` can be registered as both an
 `ObservationParser` and an `ActionParser`, then selected at runtime:
 
 ```bash
 python -m lmms_eval \
-  --tasks vizdoom_native_agentic \
-  --agentic_observation_parser vizdoom_vllm_parser \
-  --agentic_action_parser vizdoom_vllm_parser
+  --tasks vizdoom \
+  --agentic_observation_parser vizdoom \
+  --agentic_action_parser vizdoom
 ```
 
 When a parser is truly reusable, keep it generic:
@@ -118,9 +118,9 @@ MinecraftActionParser(...)
 ```
 
 When the model/runtime input-output convention and the task action schema are
-tightly coupled, use an explicit combined name such as
-`vizdoom_vllm_parser`. The implementation can still reuse shared helper
-classes, but the registry name should make the actual contract obvious.
+tightly coupled, use the task/domain name such as `vizdoom`. The implementation
+can still reuse shared helper classes, but the registry name should make the
+actual contract obvious.
 
 The runtime command chooses all model-facing parser contracts:
 
@@ -128,15 +128,15 @@ The runtime command chooses all model-facing parser contracts:
 python -m lmms_eval \
   --model huggingface \
   --model_args pretrained=Qwen/Qwen4-VL-Example,trust_remote_code=True \
-  --tasks vizdoom_native_agentic \
+  --tasks vizdoom \
   --agentic_model_output_parser qwen \
-  --agentic_observation_parser vizdoom_vllm_parser \
-  --agentic_action_parser vizdoom_vllm_parser \
+  --agentic_observation_parser vizdoom \
+  --agentic_action_parser vizdoom \
   --agentic_action_parser_args 'submit_actions=["SUBMIT"],noop_actions=["NOOP"]'
 ```
 
 The Qwen parser is reusable across any task that needs Qwen-style output
-normalization. The `vizdoom_vllm_parser` observation/action parsers are
+normalization. The `vizdoom` observation/action parsers are
 runtime-facing adapters between a particular model convention and the native
 VizDoom state/action schema.
 
@@ -146,7 +146,7 @@ A `generate_until_game` task config provides these components:
 
 ```yaml
 output_type: generate_until_game
-game_env: !function utils.vizdoom_native_env_manager
+game_env: !function utils.vizdoom_env_manager
 generation_kwargs:
   max_game_steps: 64
   max_new_tokens: 64
@@ -161,14 +161,14 @@ Model-side runtime choices stay in the command line:
 ```bash
 python -m lmms_eval \
   --model dummy \
-  --tasks vizdoom_native_agentic \
+  --tasks vizdoom \
   --agentic_model_server openai \
   --agentic_model_server_args 'model=Qwen/Qwen4-VL-Example,base_url=http://127.0.0.1:8000/v1,max_concurrent_requests=4' \
   --agentic_max_parallel_rollouts 4 \
   --agentic_model_output_parser qwen \
-  --agentic_observation_parser vizdoom_vllm_parser \
+  --agentic_observation_parser vizdoom \
   --agentic_observation_parser_args 'video=true,video_buffer=screen_history,image_buffers=["screen"],include_structured_state=true,include_raw_buffers=true' \
-  --agentic_action_parser vizdoom_vllm_parser \
+  --agentic_action_parser vizdoom \
   --agentic_action_parser_args 'submit_actions=["SUBMIT"],noop_actions=["NOOP"]' \
   --agentic_loop_worker simple \
   --gen_kwargs max_new_tokens=512,temperature=0,max_game_steps=24
@@ -209,13 +209,13 @@ Enable that at runtime through the loop worker, not in task YAML:
 ```bash
 python -m lmms_eval \
   --model dummy \
-  --tasks vizdoom_native_agentic \
+  --tasks vizdoom \
   --agentic_model_server openai \
   --agentic_model_server_args 'model=Qwen/Qwen4-VL-Example,base_url=http://127.0.0.1:8000/v1' \
   --agentic_model_output_parser qwen \
-  --agentic_observation_parser vizdoom_vllm_parser \
+  --agentic_observation_parser vizdoom \
   --agentic_observation_parser_args 'video=true,video_buffer=screen_history,image_buffers=["screen"],include_structured_state=true,include_raw_buffers=true' \
-  --agentic_action_parser vizdoom_vllm_parser \
+  --agentic_action_parser vizdoom \
   --agentic_action_parser_args 'submit_actions=["SUBMIT"],noop_actions=["NOOP"]' \
   --agentic_loop_worker simple \
   --agentic_loop_worker_args 'multiturn=True,history_turns=6' \
@@ -232,7 +232,7 @@ Do not confuse this with environment frame history. VizDoom's `tics_per_action`
 controls how long a selected action is held before the model is called again.
 VizDoom's `frame_history` controls the frames inside the current
 `screen_history` video segment. Multi-turn history controls how many previous
-model turns are included around the current segment. The native VizDoom task
+model turns are included around the current segment. The default VizDoom task
 defaults to 12 simulator frames per model decision and returns those recent
 frames as the next video input.
 
@@ -313,11 +313,11 @@ For rollout-level debugging, run with `--agentic_trace_mode full`:
 python -m lmms_eval \
   --model huggingface \
   --model_args pretrained=Qwen/Qwen4-VL-Example,trust_remote_code=True \
-  --tasks vizdoom_native_agentic \
+  --tasks vizdoom \
   --agentic_model_output_parser qwen \
-  --agentic_observation_parser vizdoom_vllm_parser \
+  --agentic_observation_parser vizdoom \
   --agentic_observation_parser_args 'video=true,video_buffer=screen_history,image_buffers=["screen"],include_structured_state=true,include_raw_buffers=true' \
-  --agentic_action_parser vizdoom_vllm_parser \
+  --agentic_action_parser vizdoom \
   --agentic_action_parser_args 'submit_actions=["SUBMIT"],noop_actions=["NOOP"]' \
   --agentic_trace_mode full \
   --log_samples \
@@ -356,15 +356,15 @@ The artifact directory contains:
 - `actions.jsonl`: one normalized action/reward row per step.
 - `rollout.mp4`: a gameplay video when the environment exposes screen frames
   such as VizDoom `screen_buffer`. The default artifact video is written at 12
-  FPS, matching the native VizDoom task's default decision segment length. It is
+  FPS, matching the default VizDoom task's decision segment length. It is
   also upscaled 4x for easier viewing when the task uses low simulator
   resolutions. Set
   `LMMS_AGENTIC_ARTIFACT_FPS` or `LMMS_AGENTIC_ARTIFACT_SCALE` to override these
   defaults.
 
-## Native VizDoom Interfaces
+## VizDoom Interfaces
 
-Use `vizdoom_native_agentic` for VizDoom rollouts. The native env wraps
+Use `vizdoom` for VizDoom rollouts. The env wraps
 `vizdoom.DoomGame` and exposes the main VizDoom interfaces through
 `EnvState.observation`. The concrete env implementation lives with the task
 under `lmms_eval/tasks/vizdoom_agentic/`; `lmms_eval/agentic` only owns the
@@ -383,13 +383,13 @@ generic `EnvManager` interface, loop, registry, and reusable parser layers.
 - action metadata: `available_buttons`, `last_action`, reward, episode time,
   timeout, and player-death state.
 
-The `vizdoom_vllm_parser` observation parser can emit both a video block and a
+The `vizdoom` observation parser can emit both a video block and a
 current screen image when selected at runtime:
 
 ```bash
---agentic_observation_parser vizdoom_vllm_parser \
+--agentic_observation_parser vizdoom \
 --agentic_observation_parser_args 'video=true,video_buffer=screen_history,image_buffers=["screen"],include_structured_state=true,include_raw_buffers=true' \
---agentic_action_parser vizdoom_vllm_parser
+--agentic_action_parser vizdoom
 ```
 
 With `video: true`, each model request includes a
@@ -399,7 +399,7 @@ structured blocks for non-visual state. The OpenAI-compatible model server
 preserves media types when converting `AgentInput` into model messages, so video
 blocks are not silently downgraded to images.
 
-By default, `vizdoom_vllm_parser` asks the model to call a small set of
+By default, `vizdoom` asks the model to call a small set of
 VizDoom action skills instead of emitting raw JSON. The preferred Qwen-style
 call is:
 
@@ -417,7 +417,7 @@ The action parser also accepts `press_buttons(ATTACK)`, `noop()`, and
 payloads are still parsed as a compatibility fallback, but new VizDoom prompts
 should use skill calls.
 
-The built-in `vizdoom_native_agentic` task is a minimal native example around
+The built-in `vizdoom` task is a minimal example around
 VizDoom's `basic.cfg`. It should be treated as a starting point for real
 scenarios, not as the only supported scenario. Other bundled VizDoom configs
 such as `deadly_corridor.cfg`, `defend_the_center.cfg`, or
@@ -439,18 +439,18 @@ Prefer this path:
 
 1. Serve the checkpoint through an OpenAI-compatible Chat Completions endpoint.
 2. Keep the game task unchanged.
-3. Choose the endpoint, generation settings, and model-output parser at runtime.
+3. Choose the endpoint, generation settings, and parser contracts at runtime.
 
 ```bash
 python -m lmms_eval \
   --model dummy \
-  --tasks vizdoom_native_agentic \
+  --tasks vizdoom \
   --agentic_model_server openai \
   --agentic_model_server_args 'model=Qwen/Qwen4-VL-Example,base_url=http://127.0.0.1:8000/v1' \
   --agentic_model_output_parser qwen \
-  --agentic_observation_parser vizdoom_vllm_parser \
+  --agentic_observation_parser vizdoom \
   --agentic_observation_parser_args 'video=true,video_buffer=screen_history,image_buffers=["screen"],include_structured_state=true,include_raw_buffers=true' \
-  --agentic_action_parser vizdoom_vllm_parser \
+  --agentic_action_parser vizdoom \
   --agentic_action_parser_args 'submit_actions=["SUBMIT"],noop_actions=["NOOP"]' \
   --gen_kwargs max_new_tokens=512,temperature=0,max_game_steps=24 \
   --limit 1 \
@@ -461,7 +461,7 @@ python -m lmms_eval \
 Use this path when:
 
 - The model can be exposed through an OpenAI-compatible Chat Completions API.
-- The task observation and action schema are unchanged.
+- The environment state/action schema is unchanged.
 - The model output format is already handled by an existing
   `ModelOutputParser`, such as `qwen` or `identity`.
 
@@ -502,7 +502,7 @@ Then choose parser layers based on the output:
 - If the model emits non-text policy outputs, add an `ActionParser` that reads
   those native objects instead of relying on `first_text()`.
 
-The task observation parser may emit a native object directly:
+The runtime observation parser may emit a native object directly:
 
 ```python
 class VlaObservationParser(ObservationParser):
@@ -527,32 +527,27 @@ observations, actions, and metrics, but not a specific model family.
 Implement:
 
 1. An `EnvManager` wrapper around the simulator.
-2. An `ObservationParser` that converts simulator state into a model request
-   object, commonly `AgentInput` for chat/VLM tasks.
-3. An `ActionParser` or `ActionNameParser` config for the task action schema.
-4. `process_results` and metric aggregation functions.
-5. A YAML task that wires these components together.
+2. Optional observation/action parser implementations for common model
+   conventions.
+3. `process_results` and metric aggregation functions.
+4. A YAML task that wires the EnvManager and task data/metrics together.
 
-For a simple discrete action game, use `ActionNameParser`:
+The task YAML stays model-agnostic:
 
 ```yaml
 task: csgo_agentic
 output_type: generate_until_game
 game_env: !function utils.csgo_env_manager
-observation_parser: csgo_video_text
-action_parser:
-  name: action_name
-  actions:
-    - MOVE_FORWARD
-    - STRAFE_LEFT
-    - STRAFE_RIGHT
-    - TURN_LEFT
-    - TURN_RIGHT
-    - FIRE
-    - RELOAD
-    - NOOP
-  submit_actions:
-    - SUBMIT
+```
+
+For a simple discrete action game, select `ActionNameParser` at runtime:
+
+```bash
+python -m lmms_eval \
+  --tasks csgo_agentic \
+  --agentic_observation_parser csgo_video_text \
+  --agentic_action_parser action_name \
+  --agentic_action_parser_args 'actions=["MOVE_FORWARD","STRAFE_LEFT","STRAFE_RIGHT","TURN_LEFT","TURN_RIGHT","FIRE","RELOAD","NOOP"],submit_actions=["SUBMIT"]'
 ```
 
 For richer control, add a custom `ActionParser`. For example, a CSGO action may
@@ -568,9 +563,9 @@ GameAction(
 )
 ```
 
-In that case, the parser belongs to the task action layer because it knows CSGO
-control semantics. Qwen, LLaVA, or TML output cleanup should still stay in
-`ModelOutputParser`.
+In that case, the parser implementation can know CSGO control semantics, but
+the selected parser still belongs in CLI/runtime configuration. Qwen, LLaVA, or
+TML output cleanup should stay in `ModelOutputParser`.
 
 If a game needs task-side variants, those variants should include the base game
 YAML and override only task-side fields. Model-side choices stay in CLI/runtime
@@ -581,7 +576,9 @@ python -m lmms_eval \
   --model huggingface \
   --model_args pretrained=Qwen/Qwen3.5-9B,trust_remote_code=True \
   --tasks csgo_agentic \
-  --agentic_model_output_parser qwen
+  --agentic_model_output_parser qwen \
+  --agentic_observation_parser csgo_video_text \
+  --agentic_action_parser csgo_qwen_action
 ```
 
 ### 4. Adding a New Agentic Pipeline
@@ -621,10 +618,12 @@ The task YAML can keep the standard loop:
 ```bash
 python -m lmms_eval \
   --model dummy \
-  --tasks vizdoom_native_agentic \
+  --tasks vizdoom \
   --agentic_model_server fusion \
   --agentic_model_server_args planner=Qwen/Qwen3.5-9B,critic=another/model \
   --agentic_model_output_parser qwen \
+  --agentic_observation_parser vizdoom \
+  --agentic_action_parser vizdoom \
   --agentic_loop_worker simple
 ```
 
@@ -652,10 +651,12 @@ Then select it at runtime:
 ```bash
 python -m lmms_eval \
   --model dummy \
-  --tasks vizdoom_native_agentic \
+  --tasks vizdoom \
   --agentic_loop_worker fusion \
   --agentic_model_server fusion \
-  --agentic_model_output_parser identity
+  --agentic_model_output_parser identity \
+  --agentic_observation_parser vizdoom \
+  --agentic_action_parser vizdoom
 ```
 
 With the current request contract, the runner builds one top-level
@@ -691,11 +692,10 @@ changes.
 Implement `ModelOutputParser` when a model family has reusable output wrappers:
 
 ```python
+@register_model_output_parser("my_model_family")
 class MyModelOutputParser(ModelOutputParser):
     def parse(self, output, ctx):
         ...
-
-register_model_output_parser("my_model_family", MyModelOutputParser)
 ```
 
 Place it under `lmms_eval/agentic/parsers/model_output/`.
@@ -708,16 +708,18 @@ Use `ActionNameParser` for simple finite action sets. Add a custom
 `ActionParser` when the task action schema is structured, multi-agent, spatial,
 or otherwise richer than a single action name. Place action parsers under
 `lmms_eval/agentic/parsers/action/`. For model/runtime-specific task parsers,
-use explicit names such as `vizdoom_vllm_parser.py`.
+use explicit names such as `vizdoom.py`.
 
 ### Adding a Game Task
 
 Implement:
 
 - `EnvManager` for state transitions and metrics.
-- `ObservationParser` for task-specific observations.
+- Optional `ObservationParser` / `ActionParser` implementations for common
+  runtime conventions.
 - `process_results` and metric aggregation functions.
-- YAML wiring for `game_env`, `observation_parser`, and `action_parser`.
+- YAML wiring for `game_env`, task data, and metrics. Parser selection happens
+  through CLI/runtime args.
 
 ## Notes on Non-text Models
 

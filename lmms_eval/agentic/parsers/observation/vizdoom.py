@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 from lmms_eval.agentic.parsers.base import ObservationParser, ParserContext
+from lmms_eval.agentic.registry_core import register_observation_parser
 from lmms_eval.agentic.types import AgentInput, ContentBlock, EnvState
 from lmms_eval.imports import optional_import
 
@@ -18,7 +19,8 @@ _VIZDOOM_BUFFER_KEYS = {
 }
 
 
-class VizDoomVllmObservationParser(ObservationParser):
+@register_observation_parser("vizdoom", replace=True)
+class VizDoomObservationParser(ObservationParser):
     """Convert VizDoom state into chat-friendly text, video, image, and state blocks."""
 
     def __init__(
@@ -47,7 +49,7 @@ class VizDoomVllmObservationParser(ObservationParser):
 
     def parse(self, value: Any, ctx: ParserContext) -> AgentInput:
         if not isinstance(value, EnvState):
-            raise TypeError(f"VizDoomVllmObservationParser requires EnvState, got {type(value).__name__}")
+            raise TypeError(f"VizDoomObservationParser requires EnvState, got {type(value).__name__}")
         state = value
         agent_id = ctx.agent_id
         observation = state.observation if isinstance(state.observation, dict) else {"observation": state.observation}
@@ -108,10 +110,6 @@ class VizDoomVllmObservationParser(ObservationParser):
         else:
             lines.extend(_skill_prompt_lines(self.skill_name, action_text, require_thinking=self.require_thinking, default_tics=decision_tics))
         return "\n".join(lines)
-
-
-VizDoomObservationParser = VizDoomVllmObservationParser
-
 
 def _as_list(value: Any) -> list[str]:
     if value is None:

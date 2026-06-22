@@ -1,11 +1,7 @@
 from lmms_eval.agentic.parsers.action.action_name import ActionNameParser
-from lmms_eval.agentic.parsers.action.vizdoom_vllm_parser import (
-    VizDoomActionParser,
-    VizDoomVllmActionParser,
-)
+from lmms_eval.agentic.parsers.action.vizdoom import VizDoomActionParser
 
 __all__ = [
     "ActionNameParser",
     "VizDoomActionParser",
-    "VizDoomVllmActionParser",
 ]

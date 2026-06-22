@@ -3,9 +3,9 @@ from __future__ import annotations
 import pytest
 
 from lmms_eval.agentic.parsers import ParserContext
-from lmms_eval.agentic.parsers.action.vizdoom_vllm_parser import VizDoomVllmActionParser
-from lmms_eval.agentic.parsers.observation.vizdoom_vllm_parser import (
-    VizDoomVllmObservationParser,
+from lmms_eval.agentic.parsers.action.vizdoom import VizDoomActionParser
+from lmms_eval.agentic.parsers.observation.vizdoom import (
+    VizDoomObservationParser,
 )
 from lmms_eval.agentic.registry import build_action_parser, build_env_manager, build_observation_parser
 from lmms_eval.agentic.types import AgentOutput, ContentBlock, EnvState
@@ -18,7 +18,7 @@ def _ctx(state, agent_id=None):
 
 
 def test_vizdoom_action_parser_reads_plain_button_combo():
-    parser = VizDoomVllmActionParser(buttons=["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"])
+    parser = VizDoomActionParser(buttons=["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"])
     state = EnvState(env_id="vizdoom", step_idx=0, observation={})
 
     parsed = parser.parse(AgentOutput(content=[ContentBlock.text("MOVE_LEFT + ATTACK")]), _ctx(state, agent_id="agent"))
@@ -28,16 +28,16 @@ def test_vizdoom_action_parser_reads_plain_button_combo():
     assert parsed.action.data == {"buttons": ["MOVE_LEFT", "ATTACK"]}
 
 
-def test_vizdoom_vllm_parser_registry_name_builds_both_parser_types():
-    observation_parser = build_observation_parser({"name": "vizdoom_vllm_parser", "video": True})
-    action_parser = build_action_parser({"name": "vizdoom_vllm_parser", "buttons": ["ATTACK"]})
+def test_vizdoom_registry_name_builds_both_parser_types():
+    observation_parser = build_observation_parser({"name": "vizdoom", "video": True})
+    action_parser = build_action_parser({"name": "vizdoom", "buttons": ["ATTACK"]})
 
-    assert isinstance(observation_parser, VizDoomVllmObservationParser)
-    assert isinstance(action_parser, VizDoomVllmActionParser)
+    assert isinstance(observation_parser, VizDoomObservationParser)
+    assert isinstance(action_parser, VizDoomActionParser)
 
 
 def test_vizdoom_env_manager_factory_builds_manager_without_registration():
-    manager = build_env_manager(vizdoom_utils.vizdoom_native_env_manager)
+    manager = build_env_manager(vizdoom_utils.vizdoom_env_manager)
 
     assert isinstance(manager, VizDoomEnvManager)
     assert manager.config["screen_resolution"] == "RES_320X240"
@@ -47,7 +47,7 @@ def test_vizdoom_env_manager_factory_builds_manager_without_registration():
 
 
 def test_vizdoom_action_parser_reads_json_button_values():
-    parser = VizDoomVllmActionParser(buttons=["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"])
+    parser = VizDoomActionParser(buttons=["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"])
     state = EnvState(env_id="vizdoom", step_idx=0, observation={})
 
     parsed = parser.parse(AgentOutput(content=[ContentBlock.text('{"buttons": {"ATTACK": 1, "MOVE_RIGHT": 0.5}, "tics": 4}')]), _ctx(state))
@@ -58,7 +58,7 @@ def test_vizdoom_action_parser_reads_json_button_values():
 
 
 def test_vizdoom_action_parser_reads_skill_call_metadata():
-    parser = VizDoomVllmActionParser(buttons=["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"])
+    parser = VizDoomActionParser(buttons=["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"])
     state = EnvState(env_id="vizdoom", step_idx=0, observation={})
 
     parsed = parser.parse(
@@ -75,7 +75,7 @@ def test_vizdoom_action_parser_reads_skill_call_metadata():
 
 
 def test_vizdoom_action_parser_reads_qwen_xml_skill_call():
-    parser = VizDoomVllmActionParser(buttons=["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"])
+    parser = VizDoomActionParser(buttons=["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"])
     state = EnvState(env_id="vizdoom", step_idx=0, observation={})
 
     parsed = parser.parse(
@@ -89,7 +89,7 @@ def test_vizdoom_action_parser_reads_qwen_xml_skill_call():
 
 
 def test_vizdoom_action_parser_reads_function_style_skill_call():
-    parser = VizDoomVllmActionParser(buttons=["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"])
+    parser = VizDoomActionParser(buttons=["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"])
     state = EnvState(env_id="vizdoom", step_idx=0, observation={})
 
     parsed = parser.parse(AgentOutput(content=[ContentBlock.text("press_buttons(MOVE_LEFT, ATTACK, tics=4)")]), _ctx(state))
@@ -100,7 +100,7 @@ def test_vizdoom_action_parser_reads_function_style_skill_call():
 
 
 def test_vizdoom_action_parser_maps_shooting_text_to_attack():
-    parser = VizDoomVllmActionParser(buttons=["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"])
+    parser = VizDoomActionParser(buttons=["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"])
     state = EnvState(env_id="vizdoom", step_idx=0, observation={})
 
     parsed = parser.parse(AgentOutput(content=[ContentBlock.text("The monster is visible, so continue shooting.")]), _ctx(state))
@@ -125,7 +125,7 @@ def test_vizdoom_observation_parser_can_emit_video_and_state_blocks():
             "game_variables": {"AMMO2": 50.0},
         },
     )
-    parser = VizDoomVllmObservationParser(video=True, image_buffers=["screen"])
+    parser = VizDoomObservationParser(video=True, image_buffers=["screen"])
 
     request = parser.parse(state, _ctx(state))
 
@@ -147,7 +147,7 @@ def test_vizdoom_observation_parser_can_disable_thinking_prompt():
             "available_buttons": ["ATTACK"],
         },
     )
-    parser = VizDoomVllmObservationParser(require_thinking=False)
+    parser = VizDoomObservationParser(require_thinking=False)
 
     request = parser.parse(state, _ctx(state))
 
@@ -155,7 +155,7 @@ def test_vizdoom_observation_parser_can_disable_thinking_prompt():
     assert "press_buttons" in request.first_text()
 
 
-def test_vizdoom_native_env_exposes_buffers_and_metadata():
+def test_vizdoom_env_exposes_buffers_and_metadata():
     pytest.importorskip("vizdoom")
     env = VizDoomEnv(
         config_path="basic.cfg",
@@ -190,7 +190,7 @@ def test_vizdoom_native_env_exposes_buffers_and_metadata():
         assert isinstance(observation["sectors"], list)
         assert len(observation["screen_history"]) == 1
 
-        parsed = VizDoomVllmActionParser(buttons=["ATTACK"]).parse(AgentOutput(content=[ContentBlock.text("ATTACK")]), _ctx(state))
+        parsed = VizDoomActionParser(buttons=["ATTACK"]).parse(AgentOutput(content=[ContentBlock.text("ATTACK")]), _ctx(state))
         assert parsed.action is not None
         result = env.step(parsed.action)
         assert result.info["action_vector"] == [0.0, 0.0, 1.0]
@@ -199,7 +199,7 @@ def test_vizdoom_native_env_exposes_buffers_and_metadata():
         env.close()
 
 
-def test_vizdoom_native_env_can_capture_frames_within_long_action():
+def test_vizdoom_env_can_capture_frames_within_long_action():
     pytest.importorskip("vizdoom")
     env = VizDoomEnv(
         config_path="basic.cfg",
@@ -215,7 +215,7 @@ def test_vizdoom_native_env_can_capture_frames_within_long_action():
     )
     try:
         state = env.reset({"id": "basic", "instruction": "shoot"}, seed=1)
-        parsed = VizDoomVllmActionParser(buttons=["ATTACK"]).parse(AgentOutput(content=[ContentBlock.text("ATTACK")]), _ctx(state))
+        parsed = VizDoomActionParser(buttons=["ATTACK"]).parse(AgentOutput(content=[ContentBlock.text("ATTACK")]), _ctx(state))
 
         result = env.step(parsed.action)
 

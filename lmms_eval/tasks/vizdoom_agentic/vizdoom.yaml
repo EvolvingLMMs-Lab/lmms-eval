@@ -1,14 +1,14 @@
 dataset_path: json
 dataset_kwargs:
   data_files:
-    test: lmms_eval/tasks/vizdoom_agentic/data/vizdoom_native_agentic.jsonl
-task: "vizdoom_native_agentic"
+    test: lmms_eval/tasks/vizdoom_agentic/data/vizdoom.jsonl
+task: "vizdoom"
 test_split: test
 output_type: generate_until_game
 doc_to_visual: !function utils.vizdoom_doc_to_visual
-doc_to_text: !function utils.vizdoom_native_doc_to_text
-doc_to_target: !function utils.vizdoom_native_doc_to_target
-game_env: !function utils.vizdoom_native_env_manager
+doc_to_text: !function utils.vizdoom_doc_to_text
+doc_to_target: !function utils.vizdoom_doc_to_target
+game_env: !function utils.vizdoom_env_manager
 generation_kwargs:
   max_new_tokens: 64
   temperature: 0
@@ -33,4 +33,4 @@ lmms_eval_specific_kwargs:
     post_prompt: ""
 metadata:
   version: 0.1
-  description: "Native ViZDoom game loop with video frame history and VizDoom state interfaces"
+  description: "ViZDoom game loop with video frame history and VizDoom state interfaces"

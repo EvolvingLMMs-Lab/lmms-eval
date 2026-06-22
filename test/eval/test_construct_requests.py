@@ -335,10 +335,10 @@ def test_configurable_task_game_unpack_order():
         _dummy_action_parser,
         _MODEL_SPECIFIC_KWARGS,
         12,
-        "vizdoom_native_agentic",
+        "vizdoom",
         "test",
     )
-    inst = _make_instance("generate_until_game", args, doc_id=12, task="vizdoom_native_agentic", split="test")
+    inst = _make_instance("generate_until_game", args, doc_id=12, task="vizdoom", split="test")
 
     # Act
     ctx, gen_kwargs, doc_to_visual, game_env, observation_parser, action_parser, lmms_eval_specific_kwargs, doc_id, task, split = inst.args
@@ -352,7 +352,7 @@ def test_configurable_task_game_unpack_order():
     assert callable(action_parser)
     assert lmms_eval_specific_kwargs == _MODEL_SPECIFIC_KWARGS
     assert doc_id == 12
-    assert task == "vizdoom_native_agentic"
+    assert task == "vizdoom"
     assert split == "test"
 
 

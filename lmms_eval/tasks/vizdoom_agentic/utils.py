@@ -7,18 +7,18 @@ def vizdoom_doc_to_visual(doc):
     return []
 
 
-def vizdoom_native_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+def vizdoom_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     kwargs = lmms_eval_specific_kwargs or {}
     pre_prompt = kwargs.get("pre_prompt", "")
     post_prompt = kwargs.get("post_prompt", "")
     return f"{pre_prompt}{doc['instruction']}\nUse the VizDoom visual input and state to choose the next action.{post_prompt}"
 
 
-def vizdoom_native_doc_to_target(doc):
+def vizdoom_doc_to_target(doc):
     return "maximize_reward"
 
 
-def vizdoom_native_env_manager(doc=None, lmms_eval_specific_kwargs=None):
+def vizdoom_env_manager(doc=None, lmms_eval_specific_kwargs=None):
     del doc, lmms_eval_specific_kwargs
     return VizDoomEnvManager(
         config_path="basic.cfg",
