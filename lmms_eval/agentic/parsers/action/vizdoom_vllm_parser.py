@@ -4,8 +4,8 @@ import json
 import re
 from typing import Any
 
-from lmms_eval.agentic.parsers.base import ActionParser
-from lmms_eval.agentic.types import AgentOutput, EnvState, GameAction, ParsedAction
+from lmms_eval.agentic.parsers.base import ActionParser, ParserContext
+from lmms_eval.agentic.types import AgentOutput, GameAction, ParsedAction
 from lmms_eval.imports import optional_import
 
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
@@ -32,8 +32,11 @@ class VizDoomVllmActionParser(ActionParser):
         self.noop_skill_names = set(_as_list(noop_skill_names))
         self.submit_skill_names = set(_as_list(submit_skill_names))
 
-    def parse(self, output: AgentOutput, state: EnvState, agent_id: str | None = None) -> ParsedAction:
-        del state
+    def parse(self, value: Any, ctx: ParserContext) -> ParsedAction:
+        if not isinstance(value, AgentOutput):
+            return ParsedAction(error=f"VizDoomVllmActionParser requires AgentOutput, got {type(value).__name__}")
+        output = value
+        agent_id = ctx.agent_id
         text = output.first_text() or ""
         for tool_call in output.metadata.get("tool_calls", []) if isinstance(output.metadata.get("tool_calls"), list) else []:
             parsed = self._parse_skill_call(tool_call, text, agent_id)

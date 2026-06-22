@@ -6,10 +6,9 @@ from lmms_eval.agentic.env import GameEnv
 from lmms_eval.agentic.loop.session import LoopSession
 from lmms_eval.agentic.loop.worker.base import LoopWorker
 from lmms_eval.agentic.model_server import ModelServer
-from lmms_eval.agentic.parsers import ActionParser, ModelOutputParser, ObservationParser
+from lmms_eval.agentic.parsers import ActionParser, ModelOutputParser, ObservationParser, ParserContext
 from lmms_eval.agentic.types import (
     AgentInput,
-    AgentOutput,
     EnvState,
     EpisodeResult,
     EpisodeStep,
@@ -102,7 +101,7 @@ class SimpleLoopSession(LoopSession):
         self.steps: list[EpisodeStep] = []
         self.history: list[dict[str, Any]] = []
         self._pending_state: EnvState | None = None
-        self._pending_request: AgentInput | None = None
+        self._pending_request: Any | None = None
 
     @property
     def done(self) -> bool:
@@ -110,53 +109,44 @@ class SimpleLoopSession(LoopSession):
             return False
         return self.state.terminal or len(self.steps) >= self.max_steps
 
-    def next_request(self) -> AgentInput | None:
+    def next_request(self) -> Any | None:
         if self.done:
             return None
         if self._pending_request is not None:
             return self._pending_request
 
-        request = self.observation_parser.parse(self.state, agent_id=self.agent_id)
-        request.generation_kwargs = {**self.generation_kwargs, **(request.generation_kwargs or {})}
-        request.metadata = {**self.request_metadata, **(request.metadata or {})}
+        ctx = self._parser_context(state=self.state)
+        request = self.observation_parser.parse(self.state, ctx)
         if self.multiturn:
             visible_history = _history_window(self.history, self.history_turns)
-            if visible_history:
+            if visible_history and isinstance(request, AgentInput):
                 request.metadata = {
                     **request.metadata,
                     "conversation_history": visible_history,
                     "conversation_history_turns": len(visible_history) // 2,
                 }
+        if isinstance(request, AgentInput):
+            request.generation_kwargs = {**self.generation_kwargs, **(request.generation_kwargs or {})}
+            request.metadata = {**self.request_metadata, **(request.metadata or {})}
         self._pending_state = self.state
         self._pending_request = request
         return request
 
-    def apply_model_output(self, raw_output: AgentOutput) -> None:
+    def apply_model_output(self, raw_output: Any) -> None:
         if self._pending_state is None or self._pending_request is None:
             raise RuntimeError("SimpleLoopSession.apply_model_output called without a pending request")
 
         state = self._pending_state
         request = self._pending_request
-        output = self.model_output_parser.parse(raw_output, state, agent_id=self.agent_id) if self.model_output_parser is not None else raw_output
-        parsed = self.action_parser.parse(output, state, agent_id=self.agent_id)
+        output_ctx = self._parser_context(state=state, request=request, raw_output=raw_output)
+        output = self.model_output_parser.parse(raw_output, output_ctx) if self.model_output_parser is not None else raw_output
+        action_ctx = self._parser_context(state=state, request=request, raw_output=raw_output)
+        parsed = self.action_parser.parse(output, action_ctx)
         action = parsed.action if parsed.action is not None else GameAction(type="parse_error", data=parsed.error, agent_id=self.agent_id)
         result = self.env.step(action)
         self.steps.append(EpisodeStep(state=state, request=request, raw_output=raw_output, output=output, parsed_action=parsed, result=result))
         if self.multiturn:
-            self.history.extend(
-                [
-                    {
-                        "role": "user",
-                        "content": list(request.content),
-                        "metadata": {"step_idx": state.step_idx, "agent_id": self.agent_id},
-                    },
-                    {
-                        "role": "assistant",
-                        "content": raw_output.first_text() or "",
-                        "metadata": {"step_idx": state.step_idx, "agent_id": self.agent_id},
-                    },
-                ]
-            )
+            self.history.extend(_history_turns(request, raw_output, state=state, agent_id=self.agent_id))
         self.state = result.state
         self._pending_state = None
         self._pending_request = None
@@ -170,6 +160,17 @@ class SimpleLoopSession(LoopSession):
             success=success if isinstance(success, bool) else None,
             metrics=metrics,
             metadata={"max_steps": self.max_steps, "agent_id": self.agent_id, "multiturn": self.multiturn, "history_turns": self.history_turns},
+        )
+
+    def _parser_context(self, *, state: EnvState, request: Any = None, raw_output: Any = None) -> ParserContext:
+        return ParserContext(
+            state=state,
+            agent_id=self.agent_id,
+            step_idx=state.step_idx,
+            request=request,
+            raw_output=raw_output,
+            history=list(self.history),
+            metadata={"max_steps": self.max_steps},
         )
 
 
@@ -198,3 +199,21 @@ def _history_window(history: list[dict[str, Any]], history_turns: int | None) ->
     if history_turns <= 0:
         return []
     return list(history[-2 * history_turns :])
+
+
+def _history_turns(request: Any, raw_output: Any, *, state: EnvState, agent_id: str) -> list[dict[str, Any]]:
+    if not isinstance(request, AgentInput):
+        return []
+    assistant_content = raw_output.first_text() if hasattr(raw_output, "first_text") else None
+    return [
+        {
+            "role": "user",
+            "content": list(request.content),
+            "metadata": {"step_idx": state.step_idx, "agent_id": agent_id},
+        },
+        {
+            "role": "assistant",
+            "content": assistant_content or "",
+            "metadata": {"step_idx": state.step_idx, "agent_id": agent_id},
+        },
+    ]

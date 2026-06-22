@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from lmms_eval.agentic.parsers.base import ModelOutputParser
-from lmms_eval.agentic.types import AgentOutput, ContentBlock, EnvState
+from lmms_eval.agentic.parsers.base import ModelOutputParser, ParserContext
+from lmms_eval.agentic.types import AgentOutput, ContentBlock
 
 
 class QwenModelOutputParser(ModelOutputParser):
@@ -14,8 +14,11 @@ class QwenModelOutputParser(ModelOutputParser):
         self.strip_thinking = strip_thinking
         self.extract_tool_calls = extract_tool_calls
 
-    def parse(self, output: AgentOutput, state: EnvState, agent_id: str | None = None) -> AgentOutput:
-        del state, agent_id
+    def parse(self, value: Any, ctx: ParserContext) -> AgentOutput:
+        del ctx
+        if not isinstance(value, AgentOutput):
+            raise TypeError(f"QwenModelOutputParser requires AgentOutput, got {type(value).__name__}")
+        output = value
         text = output.first_text() or ""
         normalized_text = _strip_thinking(text) if self.strip_thinking else text
         metadata = dict(output.metadata)

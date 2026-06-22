@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any
 
-from lmms_eval.agentic.types import AgentInput, AgentOutput, EpisodeResult
+from lmms_eval.agentic.types import EpisodeResult
 
 
 class LoopSession(ABC):
@@ -14,11 +15,11 @@ class LoopSession(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def next_request(self) -> AgentInput | None:
+    def next_request(self) -> Any | None:
         raise NotImplementedError
 
     @abstractmethod
-    def apply_model_output(self, raw_output: AgentOutput) -> None:
+    def apply_model_output(self, raw_output: Any) -> None:
         raise NotImplementedError
 
     @abstractmethod

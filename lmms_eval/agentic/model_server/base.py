@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from lmms_eval.agentic.loop.session import LoopSession
-from lmms_eval.agentic.types import AgentInput, AgentOutput
 
 
 @dataclass(slots=True)
@@ -21,7 +20,7 @@ class AgentModel(ABC):
     """Minimal single-request model interface."""
 
     @abstractmethod
-    def generate(self, request: AgentInput) -> AgentOutput:
+    def generate(self, request: Any) -> Any:
         raise NotImplementedError
 
 
@@ -29,10 +28,10 @@ class ModelServer(ABC):
     """Batch/scheduling boundary for agent inference."""
 
     @abstractmethod
-    def generate(self, request: AgentInput) -> AgentOutput:
+    def generate(self, request: Any) -> Any:
         raise NotImplementedError
 
-    def generate_batch(self, requests: list[AgentInput]) -> list[AgentOutput]:
+    def generate_batch(self, requests: list[Any]) -> list[Any]:
         return [self.generate(request) for request in requests]
 
     def run_rollouts(self, jobs: list[RolloutJob]) -> list[Any]:
@@ -71,7 +70,7 @@ class ModelServer(ABC):
 
     def run_loop_sessions(self, sessions: list[LoopSession]) -> list[Any]:
         while True:
-            ready: list[tuple[LoopSession, AgentInput]] = []
+            ready: list[tuple[LoopSession, Any]] = []
             active = False
             for session in sessions:
                 if session.done:

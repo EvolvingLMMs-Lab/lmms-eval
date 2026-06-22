@@ -7,6 +7,8 @@ from lmms_eval.agentic.parsers.base import (
     ActionParser,
     ModelOutputParser,
     ObservationParser,
+    Parser,
+    ParserContext,
 )
 from lmms_eval.agentic.parsers.model_output import (
     IdentityModelOutputParser,
@@ -23,6 +25,8 @@ __all__ = [
     "IdentityModelOutputParser",
     "ModelOutputParser",
     "ObservationParser",
+    "Parser",
+    "ParserContext",
     "QwenModelOutputParser",
     "VizDoomActionParser",
     "VizDoomObservationParser",

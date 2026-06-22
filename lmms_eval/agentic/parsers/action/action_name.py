@@ -4,8 +4,8 @@ import json
 import re
 from typing import Any
 
-from lmms_eval.agentic.parsers.base import ActionParser
-from lmms_eval.agentic.types import AgentOutput, EnvState, GameAction, ParsedAction
+from lmms_eval.agentic.parsers.base import ActionParser, ParserContext
+from lmms_eval.agentic.types import AgentOutput, GameAction, ParsedAction
 
 
 class ActionNameParser(ActionParser):
@@ -22,8 +22,11 @@ class ActionNameParser(ActionParser):
         self.aliases = {key.upper(): value.upper() for key, value in (aliases or {}).items()}
         self.valid_actions = self.actions | self.submit_actions
 
-    def parse(self, output: AgentOutput, state: EnvState, agent_id: str | None = None) -> ParsedAction:
-        del state
+    def parse(self, value: Any, ctx: ParserContext) -> ParsedAction:
+        if not isinstance(value, AgentOutput):
+            return ParsedAction(error=f"ActionNameParser requires AgentOutput, got {type(value).__name__}")
+        output = value
+        agent_id = ctx.agent_id
         text = output.first_text() or ""
         action_name = self._extract_action_name(text, output.metadata)
         if action_name is None:

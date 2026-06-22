@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from lmms_eval.agentic.parsers.base import ObservationParser
+from lmms_eval.agentic.parsers.base import ObservationParser, ParserContext
 from lmms_eval.agentic.types import AgentInput, ContentBlock, EnvState
 from lmms_eval.imports import optional_import
 
@@ -45,7 +45,11 @@ class VizDoomVllmObservationParser(ObservationParser):
         self.require_thinking = _as_bool(require_thinking)
         self.default_tics = max(1, int(default_tics))
 
-    def parse(self, state: EnvState, agent_id: str | None = None) -> AgentInput:
+    def parse(self, value: Any, ctx: ParserContext) -> AgentInput:
+        if not isinstance(value, EnvState):
+            raise TypeError(f"VizDoomVllmObservationParser requires EnvState, got {type(value).__name__}")
+        state = value
+        agent_id = ctx.agent_id
         observation = state.observation if isinstance(state.observation, dict) else {"observation": state.observation}
         content = [ContentBlock.text(self.prompt or self._prompt(observation))]
 

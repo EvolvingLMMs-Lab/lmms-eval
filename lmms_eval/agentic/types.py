@@ -67,7 +67,7 @@ class GameAction:
 
 @dataclass(slots=True)
 class ParsedAction:
-    action: GameAction | dict[str, GameAction] | None = None
+    action: Any = None
     is_submit: bool = False
     error: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -84,9 +84,9 @@ class StepResult:
 @dataclass(slots=True)
 class EpisodeStep:
     state: EnvState
-    request: AgentInput | None = None
-    raw_output: AgentOutput | None = None
-    output: AgentOutput | None = None
+    request: Any = None
+    raw_output: Any = None
+    output: Any = None
     parsed_action: ParsedAction | None = None
     result: StepResult | None = None
 
