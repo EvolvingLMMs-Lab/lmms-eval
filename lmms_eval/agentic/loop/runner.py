@@ -8,7 +8,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from lmms_eval.agentic.factory import DEFAULT_AGENTIC_FACTORY, AgenticFactory, import_from_path
+from lmms_eval.agentic.factory import (
+    DEFAULT_AGENTIC_FACTORY,
+    AgenticFactory,
+    import_from_path,
+)
 from lmms_eval.agentic.loop.manager import LoopManager, RolloutJob
 from lmms_eval.agentic.model_server import ModelServer
 from lmms_eval.agentic.types import (

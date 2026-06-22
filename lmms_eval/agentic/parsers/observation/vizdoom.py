@@ -109,6 +109,7 @@ class VizDoomObservationParser(ObservationParser):
             lines.extend(_skill_prompt_lines(self.skill_name, action_text, require_thinking=self.require_thinking, default_tics=decision_tics))
         return "\n".join(lines)
 
+
 def _as_list(value: Any) -> list[str]:
     if value is None:
         return []
