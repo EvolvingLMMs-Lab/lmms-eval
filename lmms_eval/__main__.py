@@ -372,13 +372,13 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         "--agentic_model_server",
         type=str,
         default=None,
-        help="Runtime model server for generate_until_game. Defaults to 'lmms', which reuses --model/--model_args.",
+        help="Runtime model server for generate_until_game. Defaults to 'openai'.",
     )
     parser.add_argument(
         "--agentic_model_server_args",
         type=str,
         default="",
-        help="Comma-separated runtime args for --agentic_model_server, e.g. model=Qwen/Qwen3.5-9B,trust_remote_code=True,max_parallel_rollouts=8.",
+        help="Comma-separated runtime args for --agentic_model_server, e.g. model=Qwen/Qwen3.5-9B,max_parallel_rollouts=8.",
     )
     parser.add_argument(
         "--agentic_model_output_parser",

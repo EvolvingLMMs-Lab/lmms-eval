@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from lmms_eval.agentic.model_server.lmms import _doc_to_messages, _split_agent_input
 from lmms_eval.agentic.parsers.action.vizdoom_vllm_parser import VizDoomVllmActionParser
 from lmms_eval.agentic.parsers.observation.vizdoom_vllm_parser import (
     VizDoomVllmObservationParser,
 )
 from lmms_eval.agentic.registry import build_action_parser, build_observation_parser
-from lmms_eval.agentic.types import AgentInput, AgentOutput, ContentBlock, EnvState
+from lmms_eval.agentic.types import AgentOutput, ContentBlock, EnvState
 from lmms_eval.tasks.vizdoom_agentic.env import VizDoomEnv
 
 
@@ -92,16 +91,6 @@ def test_vizdoom_action_parser_maps_shooting_text_to_attack():
 
     assert parsed.action is not None
     assert parsed.action.type == "ATTACK"
-
-
-def test_lmms_bridge_preserves_video_media_type():
-    request = AgentInput(content=[ContentBlock.text("play"), ContentBlock(type="video", data=["frame0", "frame1"])])
-
-    context, media = _split_agent_input(request)
-    messages = _doc_to_messages(context, media)({})
-
-    assert messages[0]["content"][0] == {"type": "video", "url": ["frame0", "frame1"]}
-    assert messages[0]["content"][1] == {"type": "text", "text": "play"}
 
 
 def test_vizdoom_observation_parser_can_emit_video_and_state_blocks():

@@ -25,9 +25,10 @@ task-specific action parsing lives in an action parser.
 - `generate_until_game` does not replace the existing `generate_until_agentic`
   tool-call loop. It is for environment-step loops with explicit `GameEnv`
   state transitions.
-- It does not require a long-running HTTP server. A `ModelServer` may wrap an
-  in-process model, the existing lmms-eval model object, direct vLLM Python API,
-  or an external endpoint.
+- It does not require task code to know how inference is served. The current
+  concrete `ModelServer` targets OpenAI-compatible HTTP endpoints; future
+  implementations may wrap other serving or in-process runtimes behind the same
+  base protocol.
 - Task code should not hard-code model-family parsing rules.
 
 ## Pipeline
@@ -57,7 +58,7 @@ reached.
 |-----------|-----------|----------------|
 | `GameEnv` | task state | Owns reset/step logic, terminal state, rewards, and task metrics. |
 | `ObservationParser` | `EnvState -> AgentInput` | Turns environment state into model-facing inputs. This may include text, image, video, tensors, embeddings, or other `ContentBlock` types. |
-| `ModelServer` | `AgentInput -> AgentOutput` | Runs inference. It hides backend details such as lmms-eval model calls, vLLM, HTTP APIs, batching, and generation parameters. |
+| `ModelServer` | `AgentInput -> AgentOutput` | Runs inference. It hides backend details such as HTTP APIs, batching, rollout concurrency, and generation parameters. |
 | `ModelOutputParser` | raw `AgentOutput -> AgentOutput` | Normalizes model-family output without knowing the task action schema. Examples: strip `<think>...</think>`, extract Qwen XML tool calls into metadata, normalize assistant wrappers. |
 | `ActionParser` | normalized `AgentOutput -> ParsedAction` | Parses one task action from normalized model output. It knows valid task actions but not the model backend. |
 | `LoopWorker` | orchestration | Wires components together and records per-step traces. |
@@ -163,31 +164,18 @@ Model-side runtime choices stay in the command line:
 
 ```bash
 python -m lmms_eval \
-  --model huggingface \
-  --model_args pretrained=Qwen/Qwen4-VL-Example,trust_remote_code=True \
+  --model dummy \
   --tasks vizdoom_native_agentic \
-  --agentic_model_server lmms \
+  --agentic_model_server openai \
+  --agentic_model_server_args 'model=Qwen/Qwen4-VL-Example,base_url=http://127.0.0.1:8000/v1,max_parallel_rollouts=4' \
   --agentic_model_output_parser qwen \
   --agentic_loop_worker simple \
   --gen_kwargs max_new_tokens=512,temperature=0,max_game_steps=24
 ```
 
-`agentic_model_server` defaults to `lmms`, which reuses the model selected by
-`--model` and `--model_args`. `agentic_model_output_parser` defaults to
+`agentic_model_server` currently defaults to `openai`, an OpenAI-compatible
+Chat Completions endpoint. `agentic_model_output_parser` defaults to
 `identity`. `agentic_loop_worker` defaults to `simple`.
-
-If a model should be served directly through another runtime, that is still a
-runtime choice:
-
-```bash
-python -m lmms_eval \
-  --model dummy \
-  --tasks vizdoom_native_agentic \
-  --agentic_model_server vllm \
-  --agentic_model_server_args 'model=/path/to/Qwen3.5-9B,trust_remote_code=True,gdn_prefill_backend=triton,chat_template_kwargs={"enable_thinking":true},max_model_len=16384' \
-  --agentic_model_output_parser qwen \
-  --gen_kwargs max_new_tokens=512,temperature=0,max_game_steps=24
-```
 
 This keeps task action semantics in the task config and model-family formatting
 in runtime/model configuration.
@@ -221,8 +209,8 @@ Enable that at runtime through the loop worker, not in task YAML:
 python -m lmms_eval \
   --model dummy \
   --tasks vizdoom_native_agentic \
-  --agentic_model_server vllm \
-  --agentic_model_server_args 'model=/path/to/Qwen3.5-9B,trust_remote_code=True,chat_template_kwargs={"enable_thinking":true}' \
+  --agentic_model_server openai \
+  --agentic_model_server_args 'model=Qwen/Qwen4-VL-Example,base_url=http://127.0.0.1:8000/v1' \
   --agentic_model_output_parser qwen \
   --agentic_loop_worker simple \
   --agentic_loop_worker_args 'multiturn=True,history_turns=6' \
@@ -284,51 +272,16 @@ returns the outputs to the sessions. This lets multiple independent rollouts
 share one inference backend without putting GPU scheduling in task YAML or in a
 task-specific loop worker.
 
-For the lmms-eval bridge, `LmmsModelServer.generate_batch()` converts the batch
-of `AgentInput` objects into a batch of `generate_until` `Instance` objects and
-calls the selected lmms-eval model once. This means model adapters that already
-own multi-GPU scheduling can use it directly inside agentic rollouts.
+The only concrete model server currently shipped here is `OpenAIModelServer`.
+It sends OpenAI-compatible Chat Completions requests and uses thread-level
+concurrency for independent rollout jobs and request batches. Use
+`max_parallel_rollouts` to bound simultaneous environments and
+`max_concurrent_requests` to bound concurrent HTTP calls.
 
-For ordinary HuggingFace checkpoints that need data-parallel inference, prefer
-the existing async HF backend:
-
-```bash
-python -m lmms_eval \
-  --model async_hf_model \
-  --model_args pretrained=Qwen/Qwen4-VL-Example,worker_gpus=0,1,2,3,4,5,6,7 \
-  --tasks vizdoom_native_agentic \
-  --agentic_model_server lmms \
-  --agentic_model_output_parser qwen \
-  --agentic_loop_worker simple \
-  --agentic_loop_worker_args 'multiturn=True,history_turns=2' \
-  --gen_kwargs max_new_tokens=8,temperature=0,max_game_steps=6
-```
-
-`async_hf_model` loads one model replica per worker GPU and dispatches batched
-`generate_until` jobs through its own queue. `LmmsModelServer` infers
-`max_parallel_rollouts` from that worker list by default. You can override it
-from runtime args when you want fewer or more simultaneous environments:
-
-```bash
---agentic_model_server_args max_parallel_rollouts=4
-```
-
-For direct vLLM, the vLLM engine already handles request batching and tensor
-parallelism. Configure that on the model-server runtime, not in task YAML:
-
-```bash
-python -m lmms_eval \
-  --model dummy \
-  --tasks vizdoom_native_agentic \
-  --agentic_model_server vllm \
-  --agentic_model_server_args 'model=/path/to/Qwen3.5-9B,tensor_parallel_size=4,max_num_seqs=8,max_parallel_rollouts=8,trust_remote_code=True' \
-  --agentic_model_output_parser qwen
-```
-
-If `max_parallel_rollouts` is omitted for vLLM, the server uses
-`max_num_seqs` when it is explicitly set; otherwise it stays conservative and
-runs one rollout at a time. This avoids accidentally launching hundreds of
-simulator instances for a large eval.
+Other concrete backends are intentionally not carried in this iteration. If a
+new backend needs GPU replicas, model ensembles, or another scheduler, keep that
+behind a future `ModelServer` implementation rather than adding backend details
+to task YAML.
 
 ## Tracing
 
@@ -449,9 +402,9 @@ action_parser:
 With `video: true`, each model request includes a
 `ContentBlock(type="video", data=[...frames...])` built from `screen_history`.
 It can also include `ContentBlock(type="image")` for the latest screen and
-structured blocks for non-visual state. The lmms-eval bridge preserves the media
-type when converting `AgentInput` into model messages, so video blocks are not
-silently downgraded to images.
+structured blocks for non-visual state. The OpenAI-compatible model server
+preserves media types when converting `AgentInput` into model messages, so video
+blocks are not silently downgraded to images.
 
 By default, `vizdoom_vllm_parser` asks the model to call a small set of
 VizDoom action skills instead of emitting raw JSON. The preferred Qwen-style
@@ -485,57 +438,32 @@ rule is: add the smallest component that matches the new behavior. Do not put
 model-family behavior into task code, and do not put task action semantics into
 model backend code.
 
-### 1. Adding a New HuggingFace VLM
+### 1. Adding a New VLM Endpoint
 
 Example: a future `Qwen4-VL` checkpoint appears on HuggingFace.
 
-HuggingFace here means the checkpoint is loaded from a HuggingFace model repo
-through lmms-eval's normal model registry, not that it must be served by vLLM.
 Prefer this path:
 
-1. Use an existing lmms-eval HuggingFace-capable model adapter if it supports
-   the architecture, such as `huggingface`, `qwen3_vl`, `llava_hf`,
-   `internvl_hf`, or another dedicated HF adapter.
+1. Serve the checkpoint through an OpenAI-compatible Chat Completions endpoint.
 2. Keep the game task unchanged.
-3. Choose the HuggingFace checkpoint, generation settings, and model-output
-   parser at runtime.
+3. Choose the endpoint, generation settings, and model-output parser at runtime.
 
 ```bash
 python -m lmms_eval \
-  --model huggingface \
-  --model_args pretrained=Qwen/Qwen4-VL-Example,trust_remote_code=True \
+  --model dummy \
   --tasks vizdoom_native_agentic \
+  --agentic_model_server openai \
+  --agentic_model_server_args 'model=Qwen/Qwen4-VL-Example,base_url=http://127.0.0.1:8000/v1' \
   --agentic_model_output_parser qwen \
   --gen_kwargs max_new_tokens=512,temperature=0,max_game_steps=24 \
   --limit 1 \
   --log_samples \
-  --output_path outputs/qwen4_hf_smoke
+  --output_path outputs/qwen4_openai_smoke
 ```
-
-If a dedicated adapter exists, use it instead of the generic `huggingface`
-adapter:
-
-```bash
-python -m lmms_eval \
-  --model qwen3_vl \
-  --model_args pretrained=Qwen/Qwen4-VL-Example \
-  --tasks vizdoom_native_agentic \
-  --agentic_model_output_parser qwen \
-  --gen_kwargs max_new_tokens=512,temperature=0,max_game_steps=24 \
-  --limit 1 \
-  --log_samples \
-  --output_path outputs/qwen4_hf_smoke
-```
-
-For multi-GPU local inference with a normal HuggingFace checkpoint, use
-`--model async_hf_model` plus `--agentic_model_server lmms`. That keeps the
-checkpoint loading and GPU-worker queue in the model backend while the agentic
-loop simply calls the model server.
 
 Use this path when:
 
-- The model is a normal HuggingFace VLM that can be loaded through Transformers
-  or an existing lmms-eval HF adapter.
+- The model can be exposed through an OpenAI-compatible Chat Completions API.
 - The task observation and action schema are unchanged.
 - The model output format is already handled by an existing
   `ModelOutputParser`, such as `qwen` or `identity`.
@@ -546,15 +474,8 @@ keeps the same thinking/tool-call format as current Qwen models, reuse
 `--agentic_model_output_parser qwen`. If it introduces a different wrapper,
 add `Qwen4ModelOutputParser` and register it under a new name.
 
-Add or update a HuggingFace/lmms-eval model adapter only if no existing adapter
-can load the checkpoint cleanly. For agentic game loops, the default
-`--agentic_model_server lmms` bridge reuses whichever lmms-eval model was
-selected by `--model`, so the game task does not need a separate server just
-because the checkpoint lives on HuggingFace.
-
-vLLM is an optional serving optimization, not the default answer for this
-scenario. Use `--agentic_model_server vllm` only when you specifically want
-direct vLLM execution and the checkpoint architecture is supported by vLLM.
+Add a new concrete `ModelServer` only if an OpenAI-compatible endpoint cannot
+represent the model's native interface cleanly.
 
 Inspect `raw_model_output`, `model_output`, `action`, and `parse_error` in the
 sample log before trusting aggregate metrics.

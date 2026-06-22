@@ -6,10 +6,8 @@ from typing import Any
 from lmms_eval.agentic.env import GameEnv
 from lmms_eval.agentic.loop.worker import LoopWorker, SimpleLoopWorker
 from lmms_eval.agentic.model_server import (
-    LmmsModelServer,
     ModelServer,
     OpenAIModelServer,
-    VllmModelServer,
 )
 from lmms_eval.agentic.parsers import (
     ActionNameParser,
@@ -99,9 +97,7 @@ register_observation_parser = OBSERVATION_PARSER_REGISTRY.register
 register_action_parser = ACTION_PARSER_REGISTRY.register
 register_model_output_parser = MODEL_OUTPUT_PARSER_REGISTRY.register
 
-register_model_server("lmms", LmmsModelServer, replace=True)
 register_model_server("openai", OpenAIModelServer, replace=True)
-register_model_server("vllm", VllmModelServer, replace=True)
 register_loop_worker("simple", SimpleLoopWorker, replace=True)
 register_observation_parser("vizdoom_vllm_parser", VizDoomVllmObservationParser, replace=True)
 register_observation_parser("vizdoom", VizDoomObservationParser, replace=True)
@@ -113,7 +109,7 @@ register_action_parser("vizdoom_action", VizDoomActionParser, replace=True)
 
 
 def build_model_server(spec: Any, **kwargs) -> ModelServer:
-    return MODEL_SERVER_REGISTRY.build(spec or "lmms", ModelServer, **kwargs)
+    return MODEL_SERVER_REGISTRY.build(spec or "openai", ModelServer, **kwargs)
 
 
 def build_loop_worker(spec: Any, **kwargs) -> LoopWorker:

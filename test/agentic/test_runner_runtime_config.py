@@ -17,14 +17,12 @@ def test_runtime_component_spec_uses_cli_name():
 
 def test_runtime_component_spec_combines_cli_name_and_args():
     cli_args = SimpleNamespace(
-        agentic_model_server="vllm",
-        agentic_model_server_args='model=Qwen/Qwen3.5-9B,trust_remote_code=True,max_model_len=4096,chat_template_kwargs={"enable_thinking":false}',
+        agentic_model_server="openai",
+        agentic_model_server_args="model=Qwen/Qwen3.5-9B,max_parallel_rollouts=4",
     )
 
-    assert _runtime_component_spec(cli_args, "agentic_model_server", "agentic_model_server_args", "lmms") == {
-        "name": "vllm",
+    assert _runtime_component_spec(cli_args, "agentic_model_server", "agentic_model_server_args", "openai") == {
+        "name": "openai",
         "model": "Qwen/Qwen3.5-9B",
-        "trust_remote_code": True,
-        "max_model_len": 4096,
-        "chat_template_kwargs": {"enable_thinking": False},
+        "max_parallel_rollouts": 4,
     }

@@ -19,7 +19,7 @@ _VIZDOOM_BUFFER_KEYS = {
 
 
 class VizDoomVllmObservationParser(ObservationParser):
-    """Convert VizDoom state into vLLM-friendly text, video, image, and state blocks."""
+    """Convert VizDoom state into chat-friendly text, video, image, and state blocks."""
 
     def __init__(
         self,

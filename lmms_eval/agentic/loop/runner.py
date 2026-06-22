@@ -79,7 +79,7 @@ class _RolloutPlan:
 def _rollout_plan_from_request(index: int, lm: Any, req: Instance, cli_args: Any) -> _RolloutPlan:
     if len(req.args) == 10:
         ctx, generation_kwargs, _doc_to_visual, game_env, observation_parser, action_parser, lmms_eval_specific_kwargs, doc_id, task_name, split = req.args
-        model_server_spec = "lmms"
+        model_server_spec = "openai"
         loop_worker_spec = "simple"
         model_output_parser_spec = "identity"
     elif len(req.args) == 12:

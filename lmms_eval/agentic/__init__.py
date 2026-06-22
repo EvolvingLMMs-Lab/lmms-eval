@@ -12,11 +12,9 @@ from lmms_eval.agentic.loop import (
 )
 from lmms_eval.agentic.model_server import (
     AgentModel,
-    LmmsModelServer,
     ModelServer,
     OpenAIModelServer,
     RolloutJob,
-    VllmModelServer,
 )
 from lmms_eval.agentic.parsers import (
     ActionNameParser,
@@ -78,7 +76,6 @@ __all__ = [
     "GameAction",
     "GameEnv",
     "IdentityModelOutputParser",
-    "LmmsModelServer",
     "LOOP_WORKER_REGISTRY",
     "LoopManager",
     "LoopSession",
@@ -97,7 +94,6 @@ __all__ = [
     "SimpleLoopWorker",
     "SingleAgentLoopWorker",
     "StepResult",
-    "VllmModelServer",
     "VizDoomActionParser",
     "VizDoomObservationParser",
     "VizDoomVllmActionParser",
