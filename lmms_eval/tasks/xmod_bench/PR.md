@@ -22,14 +22,22 @@ This PR adds *chat-style* (`is_simple = False`) wrappers that consume the
 task's `doc_to_messages` output and feed the full interleaved prompt to the
 model:
 
-- `lmms_eval/models/chat/_interleave_base.py` — shared request loop
-  (`InterleaveChatMixin`); per-model `video_kwargs`/`image_kwargs` budget.
-- `qwen2_5_omni_interleave`, `qwen3_omni_interleave` — `process_mm_info` path.
-- `omnivinci_interleave` — VILA processor path.
-- `baichuan_omni_interleave` — special-token string-prompt path.
+- `lmms_eval/models/chat/_chat_base.py` — shared request loop (`ChatMixin`);
+  per-model `video_kwargs`/`image_kwargs` budget.
+- `chat/qwen2_5_omni`, `chat/qwen3_omni` — `process_mm_info` path.
+- `chat/omnivinci` — VILA processor path.
+- `chat/baichuan_omni` — special-token string-prompt path.
+- `chat/minicpm_o` — `model.chat` interleaved-content path.
 
-**No upstream model file is modified.** The only change outside new files is
-4 registry lines in `lmms_eval/models/__init__.py`.
+The chat wrappers share the simple model ids (`qwen2_5_omni`, …) per the
+existing convention: `class_path = manifest.chat_class_path or
+manifest.simple_class_path`, so `--model qwen2_5_omni` resolves to the chat
+wrapper transparently.
+
+A small symmetric addition to `lmms_eval/protocol.py` —
+`ChatMessages.to_hf_messages(image_kwargs=...)` mirroring the existing
+`video_kwargs` — lets all chat wrappers cap per-image `max_pixels` without
+duplicating the HF message transform.
 
 ## Validation (XModBench-Lite vs. paper, ICLR 2026 Table 2)
 
@@ -58,15 +66,16 @@ model:
   `make_lite.py` (Lite generator), `summarize.py` (Level-2: by-config,
   by-family, modality disparity, directional imbalance),
   `README.md`, `RESULTS.md`.
-- `lmms_eval/models/chat/*_interleave.py` + base mixin.
+- `lmms_eval/models/chat/{qwen2_5_omni,qwen3_omni,baichuan_omni,omnivinci,minicpm_o}.py`
+  + `_chat_base.py` mixin.
 - Launchers: `submit_lite.sh`, `run_xmod_lite_generic.slurm`, etc.
 
 ## Reproduce
 
 ```bash
-./submit_lite.sh qwen2_5_omni_interleave Qwen/Qwen2.5-Omni-7B qwenomni3
+./submit_lite.sh qwen2_5_omni Qwen/Qwen2.5-Omni-7B qwenomni3
 python lmms_eval/tasks/xmod_bench/summarize.py \
-  --logs logs/xmod_bench_lite/results_qwen2_5_omni_interleave/
+  --logs logs/xmod_bench_lite/results_qwen2_5_omni/
 ```
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

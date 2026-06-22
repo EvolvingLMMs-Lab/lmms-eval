@@ -1,26 +1,26 @@
-"""baichuan_omni_interleave — Baichuan-Omni over interleaved doc_to_messages.
+"""baichuan_omni — Baichuan-Omni chat-style wrapper.
 
-See `_interleave_base.InterleaveChatMixin` for the shared rationale and
-request loop. Only the Baichuan-Omni-specific inference step lives here.
+See `_chat_base.ChatMixin` for the shared rationale and request loop.
+Only the Baichuan-Omni-specific inference step lives here.
 
 Baichuan-Omni's prompt is a single string with media encoded as
 `<start>{"local"|"path": ...}<end>` segments. We emit those segments in the
-exact order of the doc_to_messages blocks so the question stem and every
-option keep their positions.
+exact order of the chat blocks so the question stem and every option keep
+their positions.
 """
 
 import torch
 import ujson
-from loguru import logger as eval_logger
 
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.chat._interleave_base import InterleaveChatMixin
-from lmms_eval.models.simple.baichuan_omni import BaichuanOmni
+from lmms_eval.models.chat._chat_base import ChatMixin
+from lmms_eval.models.simple.baichuan_omni import BaichuanOmni as BaichuanOmniSimple
+from lmms_eval.protocol import ChatMessages
 
 
-@register_model("baichuan_omni_interleave")
-class BaichuanOmniInterleave(InterleaveChatMixin, BaichuanOmni):
-    """Baichuan-Omni that consumes interleaved doc_to_messages prompts."""
+@register_model("baichuan_omni_chat")
+class BaichuanOmni(ChatMixin, BaichuanOmniSimple):
+    """Baichuan-Omni that consumes chat-style doc_to_messages prompts."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -36,26 +36,22 @@ class BaichuanOmniInterleave(InterleaveChatMixin, BaichuanOmni):
             if ip is not None and hasattr(ip, "max_pixels"):
                 ip.max_pixels = 256 * 28 * 28  # ~0.2 MP (vs ~1 MP / 0.6 MP)
 
-    def _interleaved_content(self, messages: list) -> str:
+    def _interleaved_content(self, chat_messages: ChatMessages) -> str:
         parts = []
-        for msg in messages:
-            content = msg.get("content")
-            if not isinstance(content, list):
-                continue
-            for c in content:
-                t = c.get("type")
-                if t == "text":
-                    parts.append(c.get("text", ""))
-                elif t == "image":
-                    parts.append(self.image_start_token + ujson.dumps({"local": c["url"]}, ensure_ascii=False) + self.image_end_token)
-                elif t == "video":
-                    parts.append(self.video_start_token + ujson.dumps({"local": c["url"]}, ensure_ascii=False) + self.video_end_token)
-                elif t == "audio":
-                    parts.append(self.audio_start_token + ujson.dumps({"path": c["url"]}, ensure_ascii=False) + self.audio_end_token)
+        for msg in chat_messages.messages:
+            for c in msg.content:
+                if c.type == "text":
+                    parts.append(c.text)
+                elif c.type == "image":
+                    parts.append(self.image_start_token + ujson.dumps({"local": c.url}, ensure_ascii=False) + self.image_end_token)
+                elif c.type == "video":
+                    parts.append(self.video_start_token + ujson.dumps({"local": c.url}, ensure_ascii=False) + self.video_end_token)
+                elif c.type == "audio":
+                    parts.append(self.audio_start_token + ujson.dumps({"path": c.url}, ensure_ascii=False) + self.audio_end_token)
         return "".join(parts)
 
-    def _infer_one(self, messages: list, gen_kwargs: dict) -> str:
-        user_content = self._interleaved_content(messages)
+    def _infer_one(self, chat_messages: ChatMessages, gen_kwargs: dict) -> str:
+        user_content = self._interleaved_content(chat_messages)
         prompt = self._format_prompt(user_content)
 
         inputs = self.model.processor([prompt])

@@ -1,17 +1,18 @@
-"""omnivinci_interleave — OmniVinci over interleaved doc_to_messages.
+"""omnivinci — OmniVinci chat-style wrapper.
 
-See `_interleave_base.InterleaveChatMixin` for the shared rationale and
-request loop. Only the OmniVinci/VILA-specific inference step lives here.
+See `_chat_base.ChatMixin` for the shared rationale and request loop.
+Only the OmniVinci/VILA-specific inference step lives here.
 """
 
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.chat._interleave_base import InterleaveChatMixin
-from lmms_eval.models.simple.omnivinci import OmniVinci
+from lmms_eval.models.chat._chat_base import ChatMixin
+from lmms_eval.models.simple.omnivinci import OmniVinci as OmniVinciSimple
+from lmms_eval.protocol import ChatMessages
 
 
-@register_model("omnivinci_interleave")
-class OmniVinciInterleave(InterleaveChatMixin, OmniVinci):
-    """OmniVinci that consumes interleaved doc_to_messages prompts."""
+@register_model("omnivinci_chat")
+class OmniVinci(ChatMixin, OmniVinciSimple):
+    """OmniVinci that consumes chat-style doc_to_messages prompts."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -37,8 +38,8 @@ class OmniVinciInterleave(InterleaveChatMixin, OmniVinci):
         # not resolvable without upstream model edits, so OmniVinci is
         # reported best-effort on its 2 clean configs (a2t, v2t).
 
-    def _build_message(self, messages: list) -> list:
-        """doc_to_messages blocks -> OmniVinci message.
+    def _build_message(self, chat_messages: ChatMessages) -> list:
+        """Chat blocks -> OmniVinci message.
 
         OmniVinci/VILA's mm_info builder indexes media by *sample*; an extra
         system turn shifts that indexing and triggers an IndexError in
@@ -46,24 +47,20 @@ class OmniVinciInterleave(InterleaveChatMixin, OmniVinci):
         single user message with no system role — mirror it exactly.
         """
         user_content = []
-        for msg in messages:
-            content = msg.get("content")
-            if not isinstance(content, list):
-                continue
-            for c in content:
-                t = c.get("type")
-                if t == "text":
-                    user_content.append({"type": "text", "text": c.get("text", "")})
-                elif t == "image":
-                    user_content.append({"type": "image", "image": c["url"]})
-                elif t == "audio":
-                    user_content.append({"type": "audio", "audio": c["url"]})
-                elif t == "video":
-                    user_content.append({"type": "video", "video": c["url"]})
+        for msg in chat_messages.messages:
+            for c in msg.content:
+                if c.type == "text":
+                    user_content.append({"type": "text", "text": c.text})
+                elif c.type == "image":
+                    user_content.append({"type": "image", "image": c.url})
+                elif c.type == "audio":
+                    user_content.append({"type": "audio", "audio": c.url})
+                elif c.type == "video":
+                    user_content.append({"type": "video", "video": c.url})
         return [{"role": "user", "content": user_content}]
 
-    def _infer_one(self, messages: list, gen_kwargs: dict) -> str:
-        message = self._build_message(messages)
+    def _infer_one(self, chat_messages: ChatMessages, gen_kwargs: dict) -> str:
+        message = self._build_message(chat_messages)
 
         vila_text = self.processor.apply_chat_template(message, add_generation_prompt=True, tokenize=False)
         inputs = self.processor([vila_text])

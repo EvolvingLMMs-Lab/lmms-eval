@@ -1,23 +1,20 @@
-"""Shared scaffolding for interleaved-multimedia chat wrappers.
+"""Shared scaffolding for chat-style omni model wrappers.
 
-Many lmms-eval *simple* models (qwen2.5-omni, qwen3-omni, omnivinci,
-baichuan-omni, vita, ...) only attach one media object per request via
-`doc_to_visual`. Tasks like XModBench put media in the question stem AND
-every answer option (up to 5 per item), so the simple path drops most of it.
+Many lmms-eval *simple* omni model wrappers (qwen2.5-omni, qwen3-omni,
+omnivinci, baichuan-omni, minicpm-o, vita, ...) only attach one media object
+per request via `doc_to_visual`. Tasks like XModBench put media in the
+question stem AND every answer option (up to 5 per item), so the simple path
+drops most of it.
 
-The fix is the same for every model: become a *chat-style* model
+The fix is the same for every model: become a chat-style model
 (`is_simple = False`), read the task's `doc_to_messages` output, and feed the
-full interleaved prompt to the underlying model. Only the final
+full prompt to the underlying model. Only the final
 "messages -> model output string" step is model-specific.
 
-`InterleaveChatMixin` implements the common request loop once. A concrete
-wrapper subclasses it (plus the model's simple class) and implements a single
-method:
+`ChatMixin` implements the common request loop once. A concrete wrapper
+subclasses it (plus the model's simple class) and implements a single method:
 
-    def _infer_one(self, messages: list, gen_kwargs: dict) -> str: ...
-
-where `messages` is the raw `doc_to_messages` output (a list of
-{"role", "content":[{type,url|text}]} dicts).
+    def _infer_one(self, chat_messages: ChatMessages, gen_kwargs: dict) -> str: ...
 
 Per-media size/frame caps that match the upstream XModBench/AudioBench
 runners are exposed as module constants so wrappers stay consistent.
@@ -31,6 +28,7 @@ from tqdm import tqdm
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
+from lmms_eval.protocol import ChatMessages
 
 # Per-media caps. The upstream AudioBench runner used fps=12/max_frames=60/
 # 512px, but that assumes ~80 GB GPUs; on 24 GB a5000s a single
@@ -42,14 +40,14 @@ VIDEO_KWARGS = {"fps": 2, "max_frames": 16, "max_pixels": 384 * 384}
 IMAGE_KWARGS = {"max_pixels": 512 * 512}
 
 
-class InterleaveChatMixin:
+class ChatMixin:
     """Mixin providing a chat-style generate_until over doc_to_messages.
 
     Subclasses may override `video_kwargs` / `image_kwargs` class attributes
     to use a tighter media budget (e.g. Baichuan-Omni's video path needs far
     more memory than Qwen-Omni's for the same clip).
 
-    Subclasses must define `_infer_one(self, messages, gen_kwargs) -> str`.
+    Subclasses must define `_infer_one(self, chat_messages, gen_kwargs) -> str`.
     """
 
     is_simple = False
@@ -58,7 +56,7 @@ class InterleaveChatMixin:
     video_kwargs = VIDEO_KWARGS
     image_kwargs = IMAGE_KWARGS
 
-    def _infer_one(self, messages: list, gen_kwargs: dict) -> str:  # pragma: no cover
+    def _infer_one(self, chat_messages: ChatMessages, gen_kwargs: dict) -> str:  # pragma: no cover
         raise NotImplementedError
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
@@ -83,10 +81,11 @@ class InterleaveChatMixin:
             gen_kwargs = dict(all_gen_kwargs[0])
 
             doc = self.task_dict[task_name][split_name][doc_id[0]]
-            messages = doc_to_messages[0](doc)
+            raw_messages = doc_to_messages[0](doc)
+            chat_messages = ChatMessages(**{"messages": raw_messages})
 
             try:
-                answer = self._infer_one(messages, gen_kwargs)
+                answer = self._infer_one(chat_messages, gen_kwargs)
             except Exception as e:
                 eval_logger.error(f"Error in generating: {e}\n{traceback.format_exc()}")
                 answer = ""

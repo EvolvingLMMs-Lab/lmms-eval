@@ -2,13 +2,14 @@
 
 XModBench-Lite = 5 task families × 6 modality configs × 200 examples
 (6,000 samples), balanced across families and modality directions. Run
-through lmms-eval with chat-style *interleaved-multimedia* model wrappers
-(`*_interleave`) that feed the full question-stem + 4-option media prompt to
-each model (the stock *simple* wrappers attach only one media object per
-request and silently drop the option media).
+through lmms-eval with chat-style omni model wrappers that feed the full
+question-stem + 4-option media prompt to each model (the stock *simple*
+wrappers attach only one media object per request and silently drop the
+option media).
 
 No upstream lmms-eval model file was modified. All adaptations live in new
-`lmms_eval/models/chat/*_interleave.py` wrappers + the run launcher.
+`lmms_eval/models/chat/{qwen2_5_omni,qwen3_omni,baichuan_omni,omnivinci,minicpm_o}.py`
+wrappers (sharing `_chat_base.ChatMixin`) + the run launcher.
 
 ## By-config accuracy vs. paper (XModBench, ICLR 2026, Table 2)
 
@@ -33,7 +34,45 @@ No upstream lmms-eval model file was modified. All adaptations live in new
   `__embed_media_tokens`; a2v/t2v (4 vision options) OOM with dynamic_s2
   tiling and degenerate to empty output with fixed-tile resize.
 
-## Key fixes (all in `*_interleave` wrappers / launcher, not upstream)
+## Full benchmark (61,320 samples) — in progress
+
+Same chat wrappers via `submit_full.sh` (10 modality combinations).
+Runs are QoS-serialized; this table is filled per model as runs complete and
+the matching `eval_logs/<model>/full/` is published to HF.
+
+| Config | Qwen2.5-Omni | Qwen3-Omni | Baichuan-Omni-1.5 | OmniVinci |
+|--------|------:|------:|------:|------:|
+| A→T | _running_ | _queued_ | _queued_ | _queued_ |
+| A→V | _running_ | _queued_ | _queued_ | n/a |
+| T→A | _running_ | _queued_ | _queued_ | n/a |
+| T→V | _running_ | _queued_ | _queued_ | n/a |
+| V→A | _running_ | _queued_ | _queued_ | n/a |
+| V→T | _running_ | _queued_ | _queued_ | _queued_ |
+
+## Which models need a chat wrapper?
+
+XModBench items carry media in the question stem **and** all 4 options.
+Whether a model needs a dedicated chat wrapper depends solely on how its
+**stock** lmms-eval `simple` wrapper consumes `doc_to_visual`:
+
+| Model | Stock `generate_until` media handling | Needs chat wrapper? |
+|-------|---------------------------------------|:---------------------:|
+| qwen2_5_omni | `visual = visuals[i]` (one per request) | **Yes** ✓ written |
+| qwen3_omni | `visual = visuals[i]` | **Yes** ✓ written |
+| baichuan_omni | `visual = visuals[i]` | **Yes** ✓ written |
+| omnivinci | `visual = visuals[i]` | **Yes** ✓ written |
+| minicpm_o | `visual = visuals[i]` | **Yes** ✓ written |
+| uni_moe_2_omni | `for visual in visual_list[i]` (iterates all) | **No** — run `uni_moe_2_omni` directly |
+| video_salmonn_2 | `for visual in visuals` (iterates all) | **No** — run `video_salmonn_2` directly |
+| audio_flamingo_3 | (non-standard; inspect before running) | TBD |
+| kimi_audio | (non-standard; inspect before running) | TBD |
+
+Rule of thumb: if the stock wrapper does `visuals[i]` it sees only the first
+media and needs the chat variant; if it already loops over every element of
+the per-doc visual list it can be run as-is on XModBench (the task's
+`doc_to_visual` returns `[condition, optA..optD]`).
+
+## Key fixes (all in the chat wrappers / launcher, not upstream)
 
 1. **Decode**: decode the full generated sequence and take the text after the
    final `assistant\n` turn. Trimming by `input_ids` length yields empty
@@ -61,13 +100,13 @@ No upstream lmms-eval model file was modified. All adaptations live in new
 
 ```bash
 # qwen2.5-omni (env: qwenomni3)
-./submit_lite.sh qwen2_5_omni_interleave Qwen/Qwen2.5-Omni-7B qwenomni3
+./submit_lite.sh qwen2_5_omni Qwen/Qwen2.5-Omni-7B qwenomni3
 # qwen3-omni (30B MoE, all configs need 4 GPU)
 LIGHT_GRES=gpu:a5000:4 HEAVY_GRES=gpu:a5000:4 \
-  ./submit_lite.sh qwen3_omni_interleave Qwen/Qwen3-Omni-30B-A3B-Instruct qwenomni3 \
+  ./submit_lite.sh qwen3_omni Qwen/Qwen3-Omni-30B-A3B-Instruct qwenomni3 \
   device_map=auto,attn_implementation=flash_attention_2
 # baichuan-omni (env: /scratch/xwang378/envs/baichuan)
-./submit_lite.sh baichuan_omni_interleave baichuan-inc/Baichuan-Omni-1d5 \
+./submit_lite.sh baichuan_omni baichuan-inc/Baichuan-Omni-1d5 \
   /scratch/xwang378/envs/baichuan device_map=auto,max_num_frames=8
 
 # Level-2 metrics from the per-task sample logs
