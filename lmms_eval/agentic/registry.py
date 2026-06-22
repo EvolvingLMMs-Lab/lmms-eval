@@ -50,10 +50,7 @@ def build_env_manager(spec: Any, **kwargs) -> EnvManager:
         spec_kwargs = dict(spec)
         factory = spec_kwargs.pop("factory", None)
         if factory is None:
-            raise TypeError(
-                "EnvManager dict specs require a callable `factory`; registry names are not supported. "
-                "In YAML use `game_env: !function utils.<factory>`."
-            )
+            raise TypeError("EnvManager dict specs require a callable `factory`; registry names are not supported. " "In YAML use `game_env: !function utils.<factory>`.")
         kwargs = {**kwargs, **spec_kwargs}
 
     if not callable(factory):

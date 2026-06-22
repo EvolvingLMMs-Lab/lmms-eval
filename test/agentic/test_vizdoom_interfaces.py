@@ -7,7 +7,11 @@ from lmms_eval.agentic.parsers.action.vizdoom import VizDoomActionParser
 from lmms_eval.agentic.parsers.observation.vizdoom import (
     VizDoomObservationParser,
 )
-from lmms_eval.agentic.registry import build_action_parser, build_env_manager, build_observation_parser
+from lmms_eval.agentic.registry import (
+    build_action_parser,
+    build_env_manager,
+    build_observation_parser,
+)
 from lmms_eval.agentic.types import AgentOutput, ContentBlock, EnvState
 from lmms_eval.tasks.vizdoom_agentic import utils as vizdoom_utils
 from lmms_eval.tasks.vizdoom_agentic.env import VizDoomEnv, VizDoomEnvManager

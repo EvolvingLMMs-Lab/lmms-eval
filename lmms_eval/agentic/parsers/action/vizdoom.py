@@ -187,6 +187,7 @@ class VizDoomActionParser(ActionParser):
             buttons.append("MOVE_RIGHT")
         return buttons
 
+
 def _extract_json_payload(text: str) -> dict[str, Any] | None:
     match = _JSON_OBJECT_RE.search(text)
     if match is None:
