@@ -85,3 +85,8 @@ Bagel/
 MMaDA/
 .codex
 lmms_eval/tasks/hd_epic/hd_epic_questions.jsonl
+
+# user-specific cluster scripts (kept locally, not part of upstream PR)
+debug_xmod_bench_lite.slurm
+submit_lite.sh
+submit_full.sh
