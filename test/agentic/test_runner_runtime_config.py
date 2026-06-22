@@ -4,10 +4,10 @@ from types import SimpleNamespace
 
 from lmms_eval.agentic.factory import AgenticFactory
 from lmms_eval.agentic.loop.runner import (
+    _rollout_plan_from_request,
     _runtime_agentic_factory,
     _runtime_component_spec,
     _runtime_max_parallel_rollouts,
-    _rollout_plan_from_request,
     _split_model_server_loop_args,
 )
 from lmms_eval.api.instance import Instance
