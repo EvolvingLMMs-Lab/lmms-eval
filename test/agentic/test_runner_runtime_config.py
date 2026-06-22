@@ -5,8 +5,10 @@ from types import SimpleNamespace
 from lmms_eval.agentic.loop.runner import (
     _runtime_component_spec,
     _runtime_max_parallel_rollouts,
+    _rollout_plan_from_request,
     _split_model_server_loop_args,
 )
+from lmms_eval.api.instance import Instance
 
 
 def test_runtime_component_spec_uses_default_without_cli_args():
@@ -53,3 +55,50 @@ def test_agentic_max_parallel_rollouts_overrides_legacy_model_server_arg():
     cli_args = SimpleNamespace(agentic_max_parallel_rollouts=2)
 
     assert _runtime_max_parallel_rollouts(cli_args, default=4) == 2
+
+
+def test_rollout_plan_uses_cli_observation_and_action_parsers_when_yaml_omits_them():
+    req = Instance(
+        request_type="generate_until_game",
+        arguments=(
+            "prompt",
+            {"max_game_steps": 1},
+            lambda doc: [],
+            lambda: None,
+            None,
+            None,
+            {},
+            0,
+            "task",
+            "test",
+        ),
+        idx=0,
+        metadata={"task": "task", "doc_id": 0, "repeats": 0},
+    )
+    lm = SimpleNamespace(task_dict={"task": {"test": [{"id": "doc"}]}})
+    cli_args = SimpleNamespace(
+        agentic_model_server=None,
+        agentic_model_server_args="",
+        agentic_loop_worker=None,
+        agentic_loop_worker_args="",
+        agentic_model_output_parser=None,
+        agentic_model_output_parser_args="",
+        agentic_observation_parser="vizdoom_vllm_parser",
+        agentic_observation_parser_args='video=true,image_buffers=["screen"]',
+        agentic_action_parser="vizdoom_vllm_parser",
+        agentic_action_parser_args='submit_actions=["SUBMIT"],noop_actions=["NOOP"]',
+        agentic_max_parallel_rollouts=None,
+    )
+
+    plan = _rollout_plan_from_request(0, lm, req, cli_args)
+
+    assert plan.observation_parser == {
+        "name": "vizdoom_vllm_parser",
+        "video": True,
+        "image_buffers": ["screen"],
+    }
+    assert plan.action_parser == {
+        "name": "vizdoom_vllm_parser",
+        "submit_actions": ["SUBMIT"],
+        "noop_actions": ["NOOP"],
+    }

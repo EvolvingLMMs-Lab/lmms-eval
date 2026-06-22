@@ -12,7 +12,7 @@ from lmms_eval.agentic.loop.manager import LoopManager, RolloutJob
 from lmms_eval.agentic.model_server import ModelServer
 from lmms_eval.agentic.registry import (
     build_action_parser,
-    build_game_env,
+    build_env_manager,
     build_loop_worker,
     build_model_output_parser,
     build_model_server,
@@ -121,6 +121,8 @@ def _rollout_plan_from_request(index: int, lm: Any, req: Instance, cli_args: Any
     model_server_spec = _runtime_component_spec(cli_args, "agentic_model_server", "agentic_model_server_args", model_server_spec)
     loop_worker_spec = _runtime_component_spec(cli_args, "agentic_loop_worker", "agentic_loop_worker_args", loop_worker_spec)
     model_output_parser_spec = _runtime_component_spec(cli_args, "agentic_model_output_parser", "agentic_model_output_parser_args", model_output_parser_spec)
+    observation_parser = _runtime_component_spec(cli_args, "agentic_observation_parser", "agentic_observation_parser_args", observation_parser)
+    action_parser = _runtime_component_spec(cli_args, "agentic_action_parser", "agentic_action_parser_args", action_parser)
     model_server_spec, legacy_max_parallel_rollouts = _split_model_server_loop_args(model_server_spec)
     max_parallel_rollouts = _runtime_max_parallel_rollouts(cli_args, default=legacy_max_parallel_rollouts)
 
@@ -195,7 +197,7 @@ def _build_worker_for_plan(plan: _RolloutPlan, model_server: ModelServer):
     return build_loop_worker(
         plan.loop_worker_spec,
         model_server=model_server,
-        env=build_game_env(plan.game_env, doc=plan.doc, lmms_eval_specific_kwargs=plan.lmms_eval_specific_kwargs),
+        env_manager=build_env_manager(plan.game_env, doc=plan.doc, lmms_eval_specific_kwargs=plan.lmms_eval_specific_kwargs),
         observation_parser=build_observation_parser(plan.observation_parser, doc=plan.doc, lmms_eval_specific_kwargs=plan.lmms_eval_specific_kwargs),
         model_output_parser=build_model_output_parser(plan.model_output_parser_spec, doc=plan.doc, lmms_eval_specific_kwargs=plan.lmms_eval_specific_kwargs),
         action_parser=build_action_parser(plan.action_parser, doc=plan.doc, lmms_eval_specific_kwargs=plan.lmms_eval_specific_kwargs),

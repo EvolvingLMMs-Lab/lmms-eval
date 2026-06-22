@@ -7,9 +7,10 @@ from lmms_eval.agentic.parsers.action.vizdoom_vllm_parser import VizDoomVllmActi
 from lmms_eval.agentic.parsers.observation.vizdoom_vllm_parser import (
     VizDoomVllmObservationParser,
 )
-from lmms_eval.agentic.registry import build_action_parser, build_observation_parser
+from lmms_eval.agentic.registry import build_action_parser, build_env_manager, build_observation_parser
 from lmms_eval.agentic.types import AgentOutput, ContentBlock, EnvState
-from lmms_eval.tasks.vizdoom_agentic.env import VizDoomEnv
+from lmms_eval.tasks.vizdoom_agentic import utils as vizdoom_utils
+from lmms_eval.tasks.vizdoom_agentic.env import VizDoomEnv, VizDoomEnvManager
 
 
 def _ctx(state, agent_id=None):
@@ -33,6 +34,16 @@ def test_vizdoom_vllm_parser_registry_name_builds_both_parser_types():
 
     assert isinstance(observation_parser, VizDoomVllmObservationParser)
     assert isinstance(action_parser, VizDoomVllmActionParser)
+
+
+def test_vizdoom_env_manager_factory_builds_manager_without_registration():
+    manager = build_env_manager(vizdoom_utils.vizdoom_native_env_manager)
+
+    assert isinstance(manager, VizDoomEnvManager)
+    assert manager.config["screen_resolution"] == "RES_320X240"
+    assert manager.config["available_buttons"] == ["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"]
+    assert manager.frame_history == 12
+    assert manager.tics_per_action == 12
 
 
 def test_vizdoom_action_parser_reads_json_button_values():

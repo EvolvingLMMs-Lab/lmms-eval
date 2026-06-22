@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from lmms_eval.agentic.env import GameEnv
+from lmms_eval.agentic.env import EnvManager
 from lmms_eval.agentic.loop.session import LoopSession
 from lmms_eval.agentic.loop.worker.base import LoopWorker
 from lmms_eval.agentic.model_server import ModelServer
@@ -27,9 +27,9 @@ class SimpleLoopWorker(LoopWorker):
     def __init__(
         self,
         model_server: ModelServer,
-        env: GameEnv,
         observation_parser: ObservationParser,
         action_parser: ActionParser,
+        env_manager: EnvManager,
         max_steps: int = 32,
         model_output_parser: ModelOutputParser | None = None,
         multiturn: bool | str = False,
@@ -38,7 +38,7 @@ class SimpleLoopWorker(LoopWorker):
         request_metadata: dict[str, Any] | None = None,
     ) -> None:
         self.model_server = model_server
-        self.env = env
+        self.env_manager = env_manager
         self.observation_parser = observation_parser
         self.model_output_parser = model_output_parser
         self.action_parser = action_parser
@@ -59,7 +59,7 @@ class SimpleLoopWorker(LoopWorker):
 
     def new_session(self, doc: Any, seed: int | None = None, agent_id: str = "agent") -> "SimpleLoopSession":
         return SimpleLoopSession(
-            env=self.env,
+            env_manager=self.env_manager,
             observation_parser=self.observation_parser,
             action_parser=self.action_parser,
             max_steps=self.max_steps,
@@ -78,7 +78,7 @@ class SimpleLoopSession(LoopSession):
     def __init__(
         self,
         *,
-        env: GameEnv,
+        env_manager: EnvManager,
         observation_parser: ObservationParser,
         action_parser: ActionParser,
         max_steps: int,
@@ -91,7 +91,7 @@ class SimpleLoopSession(LoopSession):
         seed: int | None,
         agent_id: str,
     ) -> None:
-        self.env = env
+        self.env_manager = env_manager
         self.observation_parser = observation_parser
         self.action_parser = action_parser
         self.max_steps = max_steps
@@ -102,7 +102,8 @@ class SimpleLoopSession(LoopSession):
         self.request_metadata = dict(request_metadata or {})
         self.agent_id = agent_id
 
-        self.state = self.env.reset(doc, seed=seed)
+        self.state = self.env_manager.reset(doc, seed=seed)
+        self._closed = False
         self.steps: list[EpisodeStep] = []
         self.history: list[dict[str, Any]] = []
         self._pending_state: EnvState | None = None
@@ -148,7 +149,7 @@ class SimpleLoopSession(LoopSession):
         action_ctx = self._parser_context(state=state, request=request, raw_output=raw_output)
         parsed = self.action_parser.parse(output, action_ctx)
         action = parsed.action if parsed.action is not None else GameAction(type="parse_error", data=parsed.error, agent_id=self.agent_id)
-        result = self.env.step(action)
+        result = self.env_manager.step(action)
         self.steps.append(EpisodeStep(state=state, request=request, raw_output=raw_output, output=output, parsed_action=parsed, result=result))
         if self.multiturn:
             self.history.extend(_history_turns(request, raw_output, state=state, agent_id=self.agent_id))
@@ -159,13 +160,20 @@ class SimpleLoopSession(LoopSession):
     def result(self) -> EpisodeResult:
         metrics = self.state.metadata.get("metrics", {}) if isinstance(self.state.metadata.get("metrics"), dict) else {}
         success = self.state.metadata.get("success")
-        return EpisodeResult(
+        result = EpisodeResult(
             final_state=self.state,
             steps=self.steps,
             success=success if isinstance(success, bool) else None,
             metrics=metrics,
             metadata={"max_steps": self.max_steps, "agent_id": self.agent_id, "multiturn": self.multiturn, "history_turns": self.history_turns},
         )
+        self.close()
+        return result
+
+    def close(self) -> None:
+        if not self._closed:
+            self.env_manager.close()
+            self._closed = True
 
     def _parser_context(self, *, state: EnvState, request: Any = None, raw_output: Any = None) -> ParserContext:
         return ParserContext(

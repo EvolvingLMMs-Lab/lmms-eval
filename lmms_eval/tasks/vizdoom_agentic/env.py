@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from lmms_eval.agentic.env.base import GameEnv
+from lmms_eval.agentic.env.base import EnvManager
 from lmms_eval.agentic.types import EnvState, GameAction, StepResult
 from lmms_eval.imports import optional_import
 
@@ -23,8 +23,8 @@ _ENUM_SETTING_TYPES = {
 }
 
 
-class VizDoomEnv(GameEnv):
-    """ViZDoom-backed single-agent environment.
+class VizDoomEnvManager(EnvManager):
+    """ViZDoom-backed single-agent environment manager.
 
     The environment exposes VizDoom's native buffers and metadata through
     ``EnvState.observation``. It is intentionally model-agnostic: model-side
@@ -178,7 +178,7 @@ class VizDoomEnv(GameEnv):
 
     def step(self, action: GameAction | dict[str, GameAction]) -> StepResult:
         if self.game is None:
-            raise RuntimeError("VizDoomEnv.step() called before reset()")
+            raise RuntimeError("VizDoomEnvManager.step() called before reset()")
         if isinstance(action, dict):
             action = next(iter(action.values()))
 
@@ -223,6 +223,9 @@ class VizDoomEnv(GameEnv):
         if self.game is not None:
             self.game.close()
             self.game = None
+
+    def get_state(self) -> EnvState:
+        return self._state(capture_screen_frame=False)
 
     def _merged_config(self, doc: dict[str, Any]) -> dict[str, Any]:
         doc_config = doc.get("vizdoom", {})
@@ -324,7 +327,7 @@ class VizDoomEnv(GameEnv):
 
     def _state(self, *, capture_screen_frame: bool = True) -> EnvState:
         if self.game is None:
-            raise RuntimeError("VizDoomEnv state requested before reset()")
+            raise RuntimeError("VizDoomEnvManager state requested before reset()")
         terminal = self.terminal_override or bool(self.game.is_episode_finished())
         state = None if terminal else self.game.get_state()
         observation = self._observation_from_state(state, capture_screen_frame=capture_screen_frame)
@@ -536,10 +539,13 @@ class VizDoomEnv(GameEnv):
         return self.tics_per_action
 
 
+VizDoomEnv = VizDoomEnvManager
+
+
 def _require_vizdoom():
     vizdoom, has_vizdoom = optional_import("vizdoom")
     if not has_vizdoom:
-        raise ImportError("The 'vizdoom' package is required for game_env=vizdoom_native. Install it with `pip install vizdoom`.")
+        raise ImportError("The 'vizdoom' package is required for the VizDoom EnvManager. Install it with `pip install vizdoom`.")
     return vizdoom
 
 

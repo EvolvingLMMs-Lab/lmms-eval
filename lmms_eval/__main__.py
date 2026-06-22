@@ -399,6 +399,30 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         help="Comma-separated runtime args for --agentic_model_output_parser.",
     )
     parser.add_argument(
+        "--agentic_observation_parser",
+        type=str,
+        default=None,
+        help="Runtime observation parser for generate_until_game.",
+    )
+    parser.add_argument(
+        "--agentic_observation_parser_args",
+        type=str,
+        default="",
+        help="Comma-separated runtime args for --agentic_observation_parser.",
+    )
+    parser.add_argument(
+        "--agentic_action_parser",
+        type=str,
+        default=None,
+        help="Runtime action parser for generate_until_game.",
+    )
+    parser.add_argument(
+        "--agentic_action_parser_args",
+        type=str,
+        default="",
+        help="Comma-separated runtime args for --agentic_action_parser.",
+    )
+    parser.add_argument(
         "--agentic_loop_worker",
         type=str,
         default=None,

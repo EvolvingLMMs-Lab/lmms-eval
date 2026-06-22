@@ -1,7 +1,6 @@
 import json
 
-from lmms_eval.api.agentic import register_game_env
-from lmms_eval.tasks.vizdoom_agentic.env import VizDoomEnv
+from lmms_eval.tasks.vizdoom_agentic.env import VizDoomEnvManager
 
 
 def vizdoom_doc_to_visual(doc):
@@ -19,7 +18,29 @@ def vizdoom_native_doc_to_target(doc):
     return "maximize_reward"
 
 
-register_game_env("vizdoom_native", VizDoomEnv, replace=True)
+def vizdoom_native_env_manager(doc=None, lmms_eval_specific_kwargs=None):
+    del doc, lmms_eval_specific_kwargs
+    return VizDoomEnvManager(
+        config_path="basic.cfg",
+        screen_resolution="RES_320X240",
+        screen_format="RGB24",
+        available_buttons=["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"],
+        available_game_variables=["AMMO2", "HEALTH", "KILLCOUNT", "HITCOUNT", "DAMAGECOUNT", "DAMAGE_TAKEN"],
+        depth_buffer=True,
+        labels_buffer=True,
+        automap_buffer=True,
+        objects_info=True,
+        sectors_info=True,
+        notifications_buffer=True,
+        notifications_buffer_size=4,
+        audio_buffer=False,
+        sound_enabled=False,
+        window_visible=False,
+        frame_history=12,
+        tics_per_action=12,
+        capture_action_frames=True,
+        success_reward_min=1.0,
+    )
 
 
 def vizdoom_process_results(doc, results):

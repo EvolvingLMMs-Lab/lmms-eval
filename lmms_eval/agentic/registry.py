@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 from typing import Any
 
-from lmms_eval.agentic.env import GameEnv
+from lmms_eval.agentic.env import EnvManager
 from lmms_eval.agentic.loop.worker import LoopWorker, SimpleLoopWorker
 from lmms_eval.agentic.model_server import (
     ModelServer,
@@ -46,7 +46,7 @@ class AgenticRegistry:
             available = ", ".join(sorted(self._items)) or "<none>"
             raise KeyError(f"Unknown {self.kind} '{name}'. Available: {available}") from exc
 
-    def build(self, spec: Any, expected_type: type, **kwargs):
+    def build(self, spec: Any, expected_type: type | tuple[type, ...], **kwargs):
         if isinstance(spec, expected_type):
             return spec
 
@@ -66,7 +66,7 @@ class AgenticRegistry:
 
         component = _call_factory(factory, {**kwargs, **spec_kwargs})
         if not isinstance(component, expected_type):
-            raise TypeError(f"{self.kind} factory returned {type(component).__name__}, expected {expected_type.__name__}")
+            raise TypeError(f"{self.kind} factory returned {type(component).__name__}, expected {_type_name(expected_type)}")
         return component
 
     def names(self) -> list[str]:
@@ -83,16 +83,20 @@ def _call_factory(factory, kwargs: dict[str, Any]):
     return factory(**accepted_kwargs)
 
 
+def _type_name(expected_type: type | tuple[type, ...]) -> str:
+    if isinstance(expected_type, tuple):
+        return " or ".join(item.__name__ for item in expected_type)
+    return expected_type.__name__
+
+
 MODEL_SERVER_REGISTRY = AgenticRegistry("model_server")
 LOOP_WORKER_REGISTRY = AgenticRegistry("loop_worker")
-GAME_ENV_REGISTRY = AgenticRegistry("game_env")
 OBSERVATION_PARSER_REGISTRY = AgenticRegistry("observation_parser")
 ACTION_PARSER_REGISTRY = AgenticRegistry("action_parser")
 MODEL_OUTPUT_PARSER_REGISTRY = AgenticRegistry("model_output_parser")
 
 register_model_server = MODEL_SERVER_REGISTRY.register
 register_loop_worker = LOOP_WORKER_REGISTRY.register
-register_game_env = GAME_ENV_REGISTRY.register
 register_observation_parser = OBSERVATION_PARSER_REGISTRY.register
 register_action_parser = ACTION_PARSER_REGISTRY.register
 register_model_output_parser = MODEL_OUTPUT_PARSER_REGISTRY.register
@@ -116,8 +120,30 @@ def build_loop_worker(spec: Any, **kwargs) -> LoopWorker:
     return LOOP_WORKER_REGISTRY.build(spec or "simple", LoopWorker, **kwargs)
 
 
-def build_game_env(spec: Any, **kwargs) -> GameEnv:
-    return GAME_ENV_REGISTRY.build(spec, GameEnv, **kwargs)
+def build_env_manager(spec: Any, **kwargs) -> EnvManager:
+    if isinstance(spec, EnvManager):
+        return spec
+    if spec is None:
+        raise TypeError("EnvManager spec is required; in YAML use `game_env: !function utils.<factory>`")
+
+    factory = spec
+    if isinstance(spec, dict):
+        spec_kwargs = dict(spec)
+        factory = spec_kwargs.pop("factory", None)
+        if factory is None:
+            raise TypeError(
+                "EnvManager dict specs require a callable `factory`; registry names are not supported. "
+                "In YAML use `game_env: !function utils.<factory>`."
+            )
+        kwargs = {**kwargs, **spec_kwargs}
+
+    if not callable(factory):
+        raise TypeError(f"Expected EnvManager instance or callable factory; got {type(spec).__name__}")
+
+    component = _call_factory(factory, kwargs)
+    if not isinstance(component, EnvManager):
+        raise TypeError(f"EnvManager factory returned {type(component).__name__}, expected EnvManager")
+    return component
 
 
 def build_observation_parser(spec: Any, **kwargs) -> ObservationParser:

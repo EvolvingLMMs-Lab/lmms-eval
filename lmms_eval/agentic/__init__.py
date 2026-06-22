@@ -1,6 +1,6 @@
 """Minimal agentic/game evaluation interfaces."""
 
-from lmms_eval.agentic.env import EnvManager, GameEnv
+from lmms_eval.agentic.env import EnvManager
 from lmms_eval.agentic.loop import (
     LoopManager,
     LoopSession,
@@ -32,19 +32,17 @@ from lmms_eval.agentic.parsers import (
 )
 from lmms_eval.agentic.registry import (
     ACTION_PARSER_REGISTRY,
-    GAME_ENV_REGISTRY,
     LOOP_WORKER_REGISTRY,
     MODEL_OUTPUT_PARSER_REGISTRY,
     MODEL_SERVER_REGISTRY,
     OBSERVATION_PARSER_REGISTRY,
     build_action_parser,
-    build_game_env,
+    build_env_manager,
     build_loop_worker,
     build_model_output_parser,
     build_model_server,
     build_observation_parser,
     register_action_parser,
-    register_game_env,
     register_loop_worker,
     register_model_output_parser,
     register_model_server,
@@ -74,9 +72,7 @@ __all__ = [
     "EnvState",
     "EpisodeResult",
     "EpisodeStep",
-    "GAME_ENV_REGISTRY",
     "GameAction",
-    "GameEnv",
     "IdentityModelOutputParser",
     "LOOP_WORKER_REGISTRY",
     "LoopManager",
@@ -103,13 +99,12 @@ __all__ = [
     "VizDoomVllmActionParser",
     "VizDoomVllmObservationParser",
     "build_action_parser",
-    "build_game_env",
+    "build_env_manager",
     "build_loop_worker",
     "build_model_server",
     "build_model_output_parser",
     "build_observation_parser",
     "register_action_parser",
-    "register_game_env",
     "register_loop_worker",
     "register_model_server",
     "register_model_output_parser",
