@@ -90,3 +90,10 @@ lmms_eval/tasks/hd_epic/hd_epic_questions.jsonl
 debug_xmod_bench_lite.slurm
 submit_lite.sh
 submit_full.sh
+
+# user-specific cluster scripts (kept on dev branch, not part of upstream PR)
+run_xmod_bench_lite_qwen2_5_omni.slurm
+run_xmod_bench_qwen2_5_omni.slurm
+run_xmod_full_generic.slurm
+run_xmod_lite_generic.slurm
+upload_eval_logs.sh
