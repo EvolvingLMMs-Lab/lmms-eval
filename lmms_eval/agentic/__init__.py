@@ -5,6 +5,7 @@ from lmms_eval.agentic.loop import (
     LoopManager,
     LoopSession,
     LoopWorker,
+    RolloutJob,
     SimpleLoopSession,
     SimpleLoopWorker,
     SingleAgentLoopWorker,
@@ -14,7 +15,6 @@ from lmms_eval.agentic.model_server import (
     AgentModel,
     ModelServer,
     OpenAIModelServer,
-    RolloutJob,
 )
 from lmms_eval.agentic.parsers import (
     ActionNameParser,

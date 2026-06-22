@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 from PIL import Image
 
-from lmms_eval.agentic.model_server import OpenAIModelServer, RolloutJob
+from lmms_eval.agentic.model_server import OpenAIModelServer
 from lmms_eval.agentic.registry import MODEL_SERVER_REGISTRY, build_model_server
 from lmms_eval.agentic.types import AgentInput, ContentBlock
 
@@ -51,7 +51,7 @@ def test_openai_model_server_converts_agent_input_to_openai_request():
 
 def test_openai_model_server_batches_requests_concurrently_in_order():
     client = _Client()
-    server = OpenAIModelServer(model="qwen35-vl", client=client, max_parallel_rollouts=4)
+    server = OpenAIModelServer(model="qwen35-vl", client=client, max_concurrent_requests=4)
 
     outputs = server.generate_batch([AgentInput(content=[ContentBlock.text(f"step {idx}")]) for idx in range(4)])
 
@@ -60,10 +60,10 @@ def test_openai_model_server_batches_requests_concurrently_in_order():
 
 
 def test_agentic_registry_builds_openai_model_server():
-    server = build_model_server({"name": "openai", "model": "qwen35-vl", "client": _Client(), "max_parallel_rollouts": 8})
+    server = build_model_server({"name": "openai", "model": "qwen35-vl", "client": _Client(), "max_concurrent_requests": 8})
 
     assert isinstance(server, OpenAIModelServer)
-    assert server.max_parallel_rollouts(16) == 8
+    assert server.max_concurrent_requests == 8
 
 
 def test_agentic_registry_defaults_to_openai_only():
@@ -80,17 +80,7 @@ def test_openai_model_server_requires_explicit_model(monkeypatch):
         build_model_server(None, client=_Client())
 
 
-def test_openai_model_server_runs_rollout_jobs_in_threads():
-    import threading
-
-    barrier = threading.Barrier(3)
+def test_openai_model_server_ignores_legacy_rollout_concurrency_arg():
     server = OpenAIModelServer(model="qwen35-vl", client=_Client(), max_parallel_rollouts=3)
 
-    def make_job(index):
-        def run_serial(_server):
-            barrier.wait(timeout=2)
-            return f"result{index}"
-
-        return RolloutJob(index=index, make_session=lambda _server: None, run_serial=run_serial)
-
-    assert server.run_rollouts([make_job(index) for index in range(3)]) == ["result0", "result1", "result2"]
+    assert server.max_concurrent_requests == 1

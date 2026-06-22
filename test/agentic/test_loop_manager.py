@@ -4,9 +4,8 @@ import threading
 
 import pytest
 
-from lmms_eval.agentic.loop.manager import LoopManager
+from lmms_eval.agentic.loop.manager import LoopManager, RolloutJob
 from lmms_eval.agentic.loop.worker import LoopWorker
-from lmms_eval.agentic.model_server import RolloutJob
 from lmms_eval.agentic.types import EnvState, EpisodeResult
 
 

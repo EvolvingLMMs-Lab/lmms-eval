@@ -29,7 +29,6 @@ class OpenAIModelServer(ModelServer):
         client: Any = None,
         timeout: float | int = 600,
         default_max_tokens: int = 64,
-        max_parallel_rollouts: int | str = 1,
         max_concurrent_requests: int | str | None = None,
         lm: Any = None,
         doc_id: int | None = None,
@@ -46,8 +45,7 @@ class OpenAIModelServer(ModelServer):
         self.model = model
         self.generation_kwargs = dict(generation_kwargs or {})
         self.default_max_tokens = int(default_max_tokens)
-        self._max_parallel_rollouts = max(1, int(max_parallel_rollouts))
-        self.max_concurrent_requests = max(1, int(max_concurrent_requests or max_parallel_rollouts))
+        self.max_concurrent_requests = max(1, int(max_concurrent_requests or 1))
         self._request_semaphore = BoundedSemaphore(self.max_concurrent_requests)
         if client is not None:
             self.client = client
@@ -74,11 +72,6 @@ class OpenAIModelServer(ModelServer):
             return [self._generate_one(request) for request in requests]
         with ThreadPoolExecutor(max_workers=min(self.max_concurrent_requests, len(requests))) as executor:
             return list(executor.map(self._generate_one, requests))
-
-    def run_rollouts(self, jobs: list[Any]) -> list[Any]:
-        from lmms_eval.agentic.loop.manager import LoopManager
-
-        return LoopManager(max_workers=self.max_parallel_rollouts(len(jobs))).run_jobs(jobs, self)
 
     def _generate_one(self, request: AgentInput) -> AgentOutput:
         with self._request_semaphore:

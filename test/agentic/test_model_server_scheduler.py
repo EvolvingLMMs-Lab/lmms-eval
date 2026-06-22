@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from lmms_eval.agentic.loop.manager import LoopManager, RolloutJob
 from lmms_eval.agentic.loop.session import LoopSession
-from lmms_eval.agentic.model_server import ModelServer, RolloutJob
+from lmms_eval.agentic.model_server import ModelServer
 from lmms_eval.agentic.types import (
     AgentInput,
     AgentOutput,
@@ -12,8 +13,7 @@ from lmms_eval.agentic.types import (
 
 
 class _BatchServer(ModelServer):
-    def __init__(self, max_parallel_rollouts=2):
-        self._max_parallel_rollouts = max_parallel_rollouts
+    def __init__(self):
         self.batches = []
 
     def generate(self, request):
@@ -51,11 +51,12 @@ class _Session(LoopSession):
         )
 
 
-def test_model_server_schedules_loop_sessions_through_generate_batch():
-    server = _BatchServer(max_parallel_rollouts=2)
+def test_loop_manager_schedules_loop_sessions_through_generate_batch():
+    server = _BatchServer()
+    manager = LoopManager(max_workers=2)
     jobs = [RolloutJob(index=idx, make_session=lambda _server, idx=idx: _Session(f"job{idx}"), run_serial=lambda _server: None) for idx in range(3)]
 
-    results = server.run_rollouts(jobs)
+    results = manager.run_jobs(jobs, server)
 
     assert server.batches == [
         ["job0:0", "job1:0"],

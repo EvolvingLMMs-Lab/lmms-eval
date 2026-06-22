@@ -8,7 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from lmms_eval.agentic.model_server import ModelServer, RolloutJob
+from lmms_eval.agentic.loop.manager import LoopManager, RolloutJob
+from lmms_eval.agentic.model_server import ModelServer
 from lmms_eval.agentic.registry import (
     build_action_parser,
     build_game_env,
@@ -46,7 +47,7 @@ def run_generate_until_game(lm: Any, requests: list[Instance], response_cache: A
             response_cache=response_cache,
         )
         jobs = [_rollout_job_from_plan(local_index, plan) for local_index, plan in enumerate(group)]
-        episodes = model_server.run_rollouts(jobs)
+        episodes = LoopManager(max_workers=group[0].max_parallel_rollouts).run_jobs(jobs, model_server)
         for plan, episode in zip(group, episodes, strict=True):
             artifacts = _write_episode_artifacts(episode, output_path=getattr(cli_args, "output_path", None), task_name=plan.task_name, doc_id=plan.doc_id)
             if artifacts:
@@ -71,6 +72,7 @@ class _RolloutPlan:
     model_output_parser_spec: Any
     action_parser: Any
     lmms_eval_specific_kwargs: dict[str, Any]
+    max_parallel_rollouts: int
     doc_id: int
     task_name: str
     split: str
@@ -119,6 +121,8 @@ def _rollout_plan_from_request(index: int, lm: Any, req: Instance, cli_args: Any
     model_server_spec = _runtime_component_spec(cli_args, "agentic_model_server", "agentic_model_server_args", model_server_spec)
     loop_worker_spec = _runtime_component_spec(cli_args, "agentic_loop_worker", "agentic_loop_worker_args", loop_worker_spec)
     model_output_parser_spec = _runtime_component_spec(cli_args, "agentic_model_output_parser", "agentic_model_output_parser_args", model_output_parser_spec)
+    model_server_spec, legacy_max_parallel_rollouts = _split_model_server_loop_args(model_server_spec)
+    max_parallel_rollouts = _runtime_max_parallel_rollouts(cli_args, default=legacy_max_parallel_rollouts)
 
     gen_kwargs = dict(generation_kwargs or {})
     max_steps = int(gen_kwargs.pop("max_game_steps", gen_kwargs.pop("max_agentic_steps", 32)))
@@ -137,6 +141,7 @@ def _rollout_plan_from_request(index: int, lm: Any, req: Instance, cli_args: Any
         model_output_parser_spec=model_output_parser_spec,
         action_parser=action_parser,
         lmms_eval_specific_kwargs=lmms_eval_specific_kwargs,
+        max_parallel_rollouts=max_parallel_rollouts,
         doc_id=int(doc_id),
         task_name=str(task_name),
         split=str(split),
@@ -146,12 +151,32 @@ def _rollout_plan_from_request(index: int, lm: Any, req: Instance, cli_args: Any
 def _group_plans_by_model_server(plans: list[_RolloutPlan]) -> list[list[_RolloutPlan]]:
     groups: dict[str, list[_RolloutPlan]] = {}
     for plan in plans:
-        groups.setdefault(_model_server_spec_key(plan.model_server_spec), []).append(plan)
+        key = f"{_model_server_spec_key(plan.model_server_spec)}::{plan.max_parallel_rollouts}"
+        groups.setdefault(key, []).append(plan)
     return list(groups.values())
 
 
 def _model_server_spec_key(spec: Any) -> str:
     return json.dumps(_safe_data(spec), ensure_ascii=False, sort_keys=True, default=str)
+
+
+def _split_model_server_loop_args(spec: Any) -> tuple[Any, Any]:
+    if not isinstance(spec, dict) or "max_parallel_rollouts" not in spec:
+        return spec, None
+    model_server_spec = dict(spec)
+    max_parallel_rollouts = model_server_spec.pop("max_parallel_rollouts")
+    if "max_concurrent_requests" not in model_server_spec:
+        model_server_spec["max_concurrent_requests"] = max_parallel_rollouts
+    return model_server_spec, max_parallel_rollouts
+
+
+def _runtime_max_parallel_rollouts(cli_args: Any, *, default: Any = None) -> int:
+    value = getattr(cli_args, "agentic_max_parallel_rollouts", None) if cli_args is not None else None
+    if value is None:
+        value = default
+    if value is None:
+        return 1
+    return max(1, int(value))
 
 
 def _rollout_job_from_plan(index: int, plan: _RolloutPlan) -> RolloutJob:

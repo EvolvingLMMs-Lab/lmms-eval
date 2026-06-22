@@ -58,10 +58,11 @@ reached.
 |-----------|-----------|----------------|
 | `GameEnv` | task state | Owns reset/step logic, terminal state, rewards, and task metrics. |
 | `ObservationParser` | `EnvState -> Any` | Turns environment state into the model-facing request object. Chat/VLM tasks commonly return `AgentInput`; policy or VLA tasks can return tensors, dataclasses, dicts, or runtime-native objects. |
-| `ModelServer` | `Any -> Any` | Runs inference. It hides backend details such as HTTP APIs, batching, rollout concurrency, generation parameters, and native tensor/runtime adapters. |
+| `ModelServer` | `Any -> Any` | Runs inference. It hides backend details such as HTTP APIs, request batching, generation parameters, async-friendly calls, and native tensor/runtime adapters. |
 | `ModelOutputParser` | raw `Any -> Any` | Normalizes model-family or runtime output without knowing the task action schema. Examples: strip `<think>...</think>` from an `AgentOutput`, extract Qwen XML tool calls into metadata, or unwrap a policy output dataclass. |
 | `ActionParser` | normalized `Any -> ParsedAction` | Parses one task action from normalized model output. It knows valid task actions but not the model backend. |
 | `LoopWorker` | orchestration | Wires components together and records per-step traces. |
+| `LoopManager` | scheduling | Owns rollout concurrency, thread management, and loop-level batching across rollout sessions. |
 
 All parser roles implement the same base protocol:
 
@@ -180,7 +181,8 @@ python -m lmms_eval \
   --model dummy \
   --tasks vizdoom_native_agentic \
   --agentic_model_server openai \
-  --agentic_model_server_args 'model=Qwen/Qwen4-VL-Example,base_url=http://127.0.0.1:8000/v1,max_parallel_rollouts=4' \
+  --agentic_model_server_args 'model=Qwen/Qwen4-VL-Example,base_url=http://127.0.0.1:8000/v1,max_concurrent_requests=4' \
+  --agentic_max_parallel_rollouts 4 \
   --agentic_model_output_parser qwen \
   --agentic_loop_worker simple \
   --gen_kwargs max_new_tokens=512,temperature=0,max_game_steps=24
@@ -274,22 +276,24 @@ The loop boundary is intentionally split in two:
 
 - `LoopWorker` and `LoopSession` own environment control flow: reset, observe,
   parse model output, parse task action, step the environment, and record trace.
-- `ModelServer` owns inference scheduling: single-request generation, batched
-  generation, rollout concurrency, backend worker pools, and GPU placement.
+- `ModelServer` owns inference calls: single-request generation, batched
+  generation, backend request pools, and request-level GPU/runtime adapters.
+- `LoopManager` owns rollout scheduling: simultaneous environments,
+  thread-level concurrency, and loop-level batching across sessions.
 
 `run_generate_until_game()` builds one top-level `ModelServer` per model-server
-runtime spec and passes rollout jobs to `ModelServer.run_rollouts()`. The
-default scheduler starts a bounded set of rollout sessions, collects all ready
-model request objects at each decision point, calls `generate_batch()`, and
-returns the outputs to the sessions. This lets multiple independent rollouts
-share one inference backend without putting GPU scheduling in task YAML or in a
-task-specific loop worker.
+runtime spec and passes rollout jobs to `LoopManager.run_jobs()`. The loop
+manager starts a bounded set of rollout sessions, collects all ready model
+request objects at each decision point, calls `ModelServer.generate_batch()`,
+and returns the outputs to the sessions. This lets multiple independent
+rollouts share one inference backend without putting rollout scheduling in task
+YAML, task-specific loop workers, or concrete model-server implementations.
 
 The only concrete model server currently shipped here is `OpenAIModelServer`.
 It sends OpenAI-compatible Chat Completions requests and uses thread-level
-concurrency for independent rollout jobs and request batches. Use
-`max_parallel_rollouts` to bound simultaneous environments and
-`max_concurrent_requests` to bound concurrent HTTP calls.
+concurrency for request batches. Use `--agentic_max_parallel_rollouts` to bound
+simultaneous environments and `max_concurrent_requests` to bound concurrent HTTP
+calls.
 
 Other concrete backends are intentionally not carried in this iteration. If a
 new backend needs GPU replicas, model ensembles, or another scheduler, keep that
@@ -699,9 +703,10 @@ is a chat/VLM backend. Native policy or VLA backends may instead accept and
 return tensors, dataclasses, dicts, or other Python objects. Keep task-specific
 action parsing outside the backend either way.
 If the backend owns resources such as GPU replicas, worker queues, remote
-endpoints, or model ensembles, keep that scheduling inside the `ModelServer`.
-Override `run_rollouts()` only when simple `generate_batch()` scheduling is not
-enough.
+endpoints, or model ensembles, keep that request-level scheduling inside
+`generate()` or `generate_batch()`. Rollout scheduling remains in `LoopManager`;
+use a custom `LoopWorker` when the environment interaction pattern itself
+changes.
 
 ### Adding a Model Output Parser
 

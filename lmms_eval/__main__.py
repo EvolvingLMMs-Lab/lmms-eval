@@ -378,7 +378,13 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         "--agentic_model_server_args",
         type=str,
         default="",
-        help="Comma-separated runtime args for --agentic_model_server, e.g. model=Qwen/Qwen3.5-9B,max_parallel_rollouts=8.",
+        help="Comma-separated runtime args for --agentic_model_server, e.g. model=Qwen/Qwen3.5-9B,max_concurrent_requests=8.",
+    )
+    parser.add_argument(
+        "--agentic_max_parallel_rollouts",
+        type=int,
+        default=None,
+        help="Maximum number of agentic rollouts the loop manager may run at once.",
     )
     parser.add_argument(
         "--agentic_model_output_parser",

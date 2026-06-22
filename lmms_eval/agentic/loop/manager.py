@@ -2,10 +2,24 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
+from lmms_eval.agentic.loop.session import LoopSession
 from lmms_eval.agentic.loop.worker import LoopWorker
 from lmms_eval.agentic.types import EpisodeResult
+
+if TYPE_CHECKING:
+    from lmms_eval.agentic.model_server import ModelServer
+
+
+@dataclass(slots=True)
+class RolloutJob:
+    """A rollout factory owned by the runner and scheduled by LoopManager."""
+
+    index: int
+    make_session: Callable[["ModelServer"], LoopSession | None]
+    run_serial: Callable[["ModelServer"], Any]
 
 
 class LoopManager:
@@ -45,20 +59,68 @@ class LoopManager:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             return list(executor.map(lambda item: self._run_one_doc(item[0], item[1], seeds, agent_ids), enumerate(docs)))
 
-    def run_jobs(self, jobs: Sequence[Any], model_server: Any) -> list[Any]:
-        """Run rollout jobs concurrently through their serial worker path.
+    def run_jobs(self, jobs: Sequence[RolloutJob], model_server: "ModelServer") -> list[Any]:
+        """Run rollout jobs through loop-level scheduling."""
 
-        This is intended for OpenAI-compatible HTTP servers where request-level
-        concurrency is handled by the server/client rather than by model-side
-        tensor batching.
-        """
+        if not jobs:
+            return []
 
+        results_by_index: dict[int, Any] = {}
+        max_workers = min(self.max_workers, len(jobs))
+        for start in range(0, len(jobs), max_workers):
+            chunk = list(jobs[start : start + max_workers])
+            sessions: list[tuple[RolloutJob, LoopSession]] = []
+            serial_jobs: list[RolloutJob] = []
+            for job in chunk:
+                session = job.make_session(model_server)
+                if session is None:
+                    serial_jobs.append(job)
+                else:
+                    sessions.append((job, session))
+
+            if sessions:
+                session_results = self.run_loop_sessions([session for _, session in sessions], model_server)
+                for (job, _session), result in zip(sessions, session_results, strict=True):
+                    results_by_index[job.index] = result
+
+            for job, result in zip(serial_jobs, self._run_serial_jobs(serial_jobs, model_server), strict=True):
+                results_by_index[job.index] = result
+
+        return [results_by_index[job.index] for job in jobs]
+
+    def run_loop_sessions(self, sessions: Sequence[LoopSession], model_server: "ModelServer") -> list[Any]:
+        """Advance loop sessions and batch ready model requests."""
+
+        while True:
+            ready: list[tuple[LoopSession, Any]] = []
+            active = False
+            for session in sessions:
+                if session.done:
+                    continue
+                active = True
+                request = session.next_request()
+                if request is not None:
+                    ready.append((session, request))
+
+            if not active:
+                break
+            if not ready:
+                raise RuntimeError("Loop sessions are active but no model requests are ready")
+
+            outputs = model_server.generate_batch([request for _session, request in ready])
+            if len(outputs) != len(ready):
+                raise RuntimeError(f"ModelServer returned {len(outputs)} outputs for {len(ready)} requests")
+            for (session, _request), output in zip(ready, outputs, strict=True):
+                session.apply_model_output(output)
+
+        return [session.result() for session in sessions]
+
+    def _run_serial_jobs(self, jobs: Sequence[RolloutJob], model_server: "ModelServer") -> list[Any]:
         if not jobs:
             return []
         max_workers = min(self.max_workers, len(jobs))
         if max_workers <= 1:
             return [job.run_serial(model_server) for job in jobs]
-
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             return list(executor.map(lambda job: job.run_serial(model_server), jobs))
 
