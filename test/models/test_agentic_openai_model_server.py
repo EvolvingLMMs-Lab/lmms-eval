@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from PIL import Image
 import pytest
+from PIL import Image
 
 from lmms_eval.agentic.model_server import OpenAIModelServer, RolloutJob
 from lmms_eval.agentic.registry import MODEL_SERVER_REGISTRY, build_model_server
