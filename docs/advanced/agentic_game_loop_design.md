@@ -38,11 +38,11 @@ Each game request is executed by a `LoopWorker`:
 ```text
 EnvState
   -> ObservationParser
-  -> AgentInput
+  -> model request object
   -> ModelServer
-  -> raw AgentOutput
+  -> raw model output object
   -> ModelOutputParser
-  -> normalized AgentOutput
+  -> normalized output object
   -> ActionParser
   -> GameAction
   -> GameEnv.step(...)
@@ -57,11 +57,24 @@ reached.
 | Component | Direction | Responsibility |
 |-----------|-----------|----------------|
 | `GameEnv` | task state | Owns reset/step logic, terminal state, rewards, and task metrics. |
-| `ObservationParser` | `EnvState -> AgentInput` | Turns environment state into model-facing inputs. This may include text, image, video, tensors, embeddings, or other `ContentBlock` types. |
-| `ModelServer` | `AgentInput -> AgentOutput` | Runs inference. It hides backend details such as HTTP APIs, batching, rollout concurrency, and generation parameters. |
-| `ModelOutputParser` | raw `AgentOutput -> AgentOutput` | Normalizes model-family output without knowing the task action schema. Examples: strip `<think>...</think>`, extract Qwen XML tool calls into metadata, normalize assistant wrappers. |
-| `ActionParser` | normalized `AgentOutput -> ParsedAction` | Parses one task action from normalized model output. It knows valid task actions but not the model backend. |
+| `ObservationParser` | `EnvState -> Any` | Turns environment state into the model-facing request object. Chat/VLM tasks commonly return `AgentInput`; policy or VLA tasks can return tensors, dataclasses, dicts, or runtime-native objects. |
+| `ModelServer` | `Any -> Any` | Runs inference. It hides backend details such as HTTP APIs, batching, rollout concurrency, generation parameters, and native tensor/runtime adapters. |
+| `ModelOutputParser` | raw `Any -> Any` | Normalizes model-family or runtime output without knowing the task action schema. Examples: strip `<think>...</think>` from an `AgentOutput`, extract Qwen XML tool calls into metadata, or unwrap a policy output dataclass. |
+| `ActionParser` | normalized `Any -> ParsedAction` | Parses one task action from normalized model output. It knows valid task actions but not the model backend. |
 | `LoopWorker` | orchestration | Wires components together and records per-step traces. |
+
+All parser roles implement the same base protocol:
+
+```python
+class Parser:
+    def parse(self, value: Any, ctx: ParserContext) -> Any:
+        ...
+```
+
+`ParserContext` carries rollout side channels such as `state`, `agent_id`,
+`step_idx`, the pending `request`, raw model output, conversation history, and
+metadata. Parser payloads themselves intentionally stay unconstrained; use
+`AgentInput` and `AgentOutput` only when a chat-style envelope is useful.
 
 ## Parser Layering
 
@@ -183,7 +196,7 @@ in runtime/model configuration.
 ## Single-Turn vs Multi-Turn Rollouts
 
 By default, `simple` runs each environment step as an independent model call:
-the observation parser builds the current `AgentInput`, the model returns an
+the observation parser builds the current model request, the model returns an
 action, and the next step starts from a fresh request. This is useful for
 stateless policy models and keeps context size bounded.
 
@@ -267,7 +280,7 @@ The loop boundary is intentionally split in two:
 `run_generate_until_game()` builds one top-level `ModelServer` per model-server
 runtime spec and passes rollout jobs to `ModelServer.run_rollouts()`. The
 default scheduler starts a bounded set of rollout sessions, collects all ready
-`AgentInput` objects at each decision point, calls `generate_batch()`, and
+model request objects at each decision point, calls `generate_batch()`, and
 returns the outputs to the sessions. This lets multiple independent rollouts
 share one inference backend without putting GPU scheduling in task YAML or in a
 task-specific loop worker.
@@ -310,14 +323,16 @@ python -m lmms_eval \
   --output_path outputs/vizdoom_full_trace
 ```
 
-In `full` mode, each step also records:
+For non-text payloads, compact trace fields record a safe JSON summary instead
+of assuming `first_text()` exists. In `full` mode, each step also records:
 
 - `state_before`: environment id, step index, observation, terminal flag,
   active agents, and metadata before model inference.
-- `request`: the `AgentInput` sent to the model server, including content
-  blocks, generation kwargs, metadata, and first text block.
-- `raw_output`: the full raw `AgentOutput` returned by the model server.
-- `output`: the normalized `AgentOutput` after `ModelOutputParser`.
+- `request`: the request object sent to the model server. `AgentInput` requests
+  include content blocks, generation kwargs, metadata, and first text block;
+  other objects are logged as safe summaries.
+- `raw_output`: the full raw output returned by the model server.
+- `output`: the normalized output after `ModelOutputParser`.
 - `parsed_action`: parsed action, submit flag, parser error, and parser
   metadata.
 - `result`: reward, done flag, environment info, and `state_after`.
@@ -485,14 +500,13 @@ sample log before trusting aggregate metrics.
 Example: a TML interaction model consumes structured state, latent tokens, or a
 policy interface instead of chat-style image/text messages.
 
-Do not force it into the VLM path. Implement a new `ModelServer` that translates
-`AgentInput` into the model's native interface and returns an `AgentOutput`:
+Do not force it into the VLM path. Implement parsers and a `ModelServer` around
+the model's native request/output objects:
 
 ```python
 class TmlModelServer(ModelServer):
-    def generate(self, request: AgentInput) -> AgentOutput:
-        # Convert ContentBlock objects into the TML runtime input.
-        # Return text, logits, latent actions, or structured metadata.
+    def generate(self, request: TmlRequest) -> TmlPolicyOutput:
+        # Run the native TML runtime directly.
         ...
 
 register_model_server("tml", TmlModelServer)
@@ -504,17 +518,18 @@ Then choose parser layers based on the output:
   `--agentic_model_output_parser identity`.
 - If the model emits a reusable TML wrapper, add a `TmlModelOutputParser`.
 - If the model emits non-text policy outputs, add an `ActionParser` that reads
-  `AgentOutput.content` or metadata instead of relying on `first_text()`.
+  those native objects instead of relying on `first_text()`.
 
-The task observation parser may also need to emit non-text blocks:
+The task observation parser may emit a native object directly:
 
 ```python
-AgentInput(
-    content=[
-        ContentBlock(type="state_features", data=state.observation),
-        ContentBlock(type="tensor", data=observation_tensor),
-    ]
-)
+class VlaObservationParser(ObservationParser):
+    def parse(self, state, ctx):
+        return {
+            "image": image_tensor,
+            "state": proprioception_tensor,
+            "instruction": state.observation.get("instruction"),
+        }
 ```
 
 This keeps the loop protocol stable while allowing non-text models to bypass
@@ -530,7 +545,8 @@ observations, actions, and metrics, but not a specific model family.
 Implement:
 
 1. A `GameEnv` wrapper around the simulator.
-2. An `ObservationParser` that converts simulator state into `AgentInput`.
+2. An `ObservationParser` that converts simulator state into a model request
+   object, commonly `AgentInput` for chat/VLM tasks.
 3. An `ActionParser` or `ActionNameParser` config for the task action schema.
 4. `process_results` and metric aggregation functions.
 5. A YAML task that wires these components together.
@@ -593,15 +609,15 @@ planner, and critic fused into one action policy.
 
 Choose the integration point based on what changes.
 
-Use a composite `ModelServer` when the pipeline still maps one `AgentInput` to
-one final `AgentOutput`:
+Use a composite `ModelServer` when the pipeline still maps one request object
+to one final model output object:
 
 ```text
-AgentInput
+model request object
   -> vision model
   -> planner model
   -> critic/reranker
-  -> final AgentOutput
+  -> final model output object
 ```
 
 The composite server can own multiple submodels internally and expose one
@@ -612,7 +628,7 @@ class FusionModelServer(ModelServer):
     def __init__(self, planner, critic, vision=None, **kwargs):
         ...
 
-    def generate(self, request: AgentInput) -> AgentOutput:
+    def generate(self, request):
         ...
 
 register_model_server("fusion", FusionModelServer)
@@ -678,7 +694,10 @@ register_model_server("my_backend", MyModelServer)
 ```
 
 The backend should convert `AgentInput` typed content into the backend's native
-request format and return `AgentOutput` without task-specific parsing.
+request format and return `AgentOutput` without task-specific parsing when it
+is a chat/VLM backend. Native policy or VLA backends may instead accept and
+return tensors, dataclasses, dicts, or other Python objects. Keep task-specific
+action parsing outside the backend either way.
 If the backend owns resources such as GPU replicas, worker queues, remote
 endpoints, or model ensembles, keep that scheduling inside the `ModelServer`.
 Override `run_rollouts()` only when simple `generate_batch()` scheduling is not
@@ -690,7 +709,7 @@ Implement `ModelOutputParser` when a model family has reusable output wrappers:
 
 ```python
 class MyModelOutputParser(ModelOutputParser):
-    def parse(self, output, state, agent_id=None):
+    def parse(self, output, ctx):
         ...
 
 register_model_output_parser("my_model_family", MyModelOutputParser)
@@ -719,12 +738,13 @@ Implement:
 
 ## Notes on Non-text Models
 
-`AgentInput` and `AgentOutput` are lists of typed `ContentBlock` objects, not
-just strings. Text is one block type. Image, video, audio, tensor, embedding,
-latent, logits, or model-specific policy outputs can be represented by other
-block types.
+`AgentInput` and `AgentOutput` are optional chat-style envelopes with typed
+`ContentBlock` lists. They are not the parser protocol itself. Text is one block
+type; image, video, audio, tensor, embedding, latent, logits, or model-specific
+policy outputs can be represented by blocks when an envelope is convenient.
+They can also be passed as native objects directly.
 
 Parser implementations should therefore avoid assuming that all useful data is
 in `first_text()`. Text parsers can use it as a convenience, but non-text
-models should be able to communicate through blocks and metadata without
-changing the loop contract.
+models should be able to communicate through tensors, blocks, metadata, or
+custom runtime objects without changing the loop contract.

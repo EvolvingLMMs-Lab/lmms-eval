@@ -19,6 +19,12 @@ from lmms_eval.agentic.types import (
 )
 
 
+class _TensorLike:
+    def __init__(self, shape=(2, 3), dtype="float32"):
+        self.shape = shape
+        self.dtype = dtype
+
+
 def _episode() -> EpisodeResult:
     state_before = EnvState(
         env_id="trace-env",
@@ -91,6 +97,34 @@ def test_episode_json_full_records_rollout_io_and_state():
     assert step["output"]["first_text"] == "MOVE_FORWARD"
     assert step["parsed_action"]["action"]["type"] == "MOVE_FORWARD"
     assert step["result"]["state_after"]["step_idx"] == 1
+
+
+def test_episode_json_summarizes_arbitrary_parser_payloads():
+    state_before = EnvState(env_id="trace-env", step_idx=0, observation={})
+    state_after = EnvState(env_id="trace-env", step_idx=1, observation={}, terminal=True)
+    tensor = _TensorLike()
+    episode = EpisodeResult(
+        final_state=state_after,
+        steps=[
+            EpisodeStep(
+                state=state_before,
+                request=tensor,
+                raw_output={"policy_logits": tensor},
+                output={"action_scores": tensor},
+                parsed_action=ParsedAction(action={"agent": tensor}),
+                result=StepResult(state=state_after, reward=0.0, done=True),
+            )
+        ],
+    )
+
+    compact_step = json.loads(_episode_to_json(episode))["steps"][0]
+    assert compact_step["raw_model_output"]["policy_logits"]["shape"] == [2, 3]
+    assert compact_step["model_output"]["action_scores"]["dtype"] == "float32"
+    assert compact_step["action"]["agent"]["type"].endswith("_TensorLike")
+
+    full_step = json.loads(_episode_to_json(episode, trace_mode="full"))["steps"][0]
+    assert full_step["request"]["value"]["shape"] == [2, 3]
+    assert full_step["raw_output"]["value"]["policy_logits"]["dtype"] == "float32"
 
 
 def test_episode_artifacts_write_human_readable_summary_and_video(tmp_path):

@@ -19,6 +19,8 @@ from lmms_eval.agentic.parsers import (
     IdentityModelOutputParser,
     ModelOutputParser,
     ObservationParser,
+    Parser,
+    ParserContext,
     QwenModelOutputParser,
 )
 from lmms_eval.agentic.registry import (
@@ -78,6 +80,8 @@ __all__ = [
     "ModelServer",
     "OBSERVATION_PARSER_REGISTRY",
     "ObservationParser",
+    "Parser",
+    "ParserContext",
     "ParsedAction",
     "QwenModelOutputParser",
     "SimpleLoopWorker",

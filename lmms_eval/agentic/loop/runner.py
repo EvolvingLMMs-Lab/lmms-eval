@@ -253,8 +253,8 @@ def _episode_to_json(result: EpisodeResult, trace_mode: str = "basic") -> str:
 def _compact_step_to_dict(step: EpisodeStep) -> dict[str, Any]:
     return {
         "step_idx": step.state.step_idx,
-        "raw_model_output": step.raw_output.first_text() if step.raw_output is not None else None,
-        "model_output": step.output.first_text() if step.output is not None else None,
+        "raw_model_output": _payload_to_compact_trace(step.raw_output),
+        "model_output": _payload_to_compact_trace(step.output),
         "action": _action_to_dict(step.parsed_action.action) if step.parsed_action is not None else None,
         "parse_error": step.parsed_action.error if step.parsed_action is not None else None,
         "reward": _safe_data(step.result.reward) if step.result is not None else None,
@@ -294,9 +294,11 @@ def _state_to_dict(state: EnvState) -> dict[str, Any]:
     return payload
 
 
-def _agent_input_to_dict(request: AgentInput | None) -> dict[str, Any] | None:
+def _agent_input_to_dict(request: Any | None) -> dict[str, Any] | None:
     if request is None:
         return None
+    if not isinstance(request, AgentInput):
+        return _generic_payload_to_dict(request)
     return {
         "first_text": request.first_text(),
         "content": [_content_block_to_dict(block) for block in request.content],
@@ -305,9 +307,11 @@ def _agent_input_to_dict(request: AgentInput | None) -> dict[str, Any] | None:
     }
 
 
-def _agent_output_to_dict(output: AgentOutput | None) -> dict[str, Any] | None:
+def _agent_output_to_dict(output: Any | None) -> dict[str, Any] | None:
     if output is None:
         return None
+    if not isinstance(output, AgentOutput):
+        return _generic_payload_to_dict(output)
     return {
         "first_text": output.first_text(),
         "content": [_content_block_to_dict(block) for block in output.content],
@@ -345,12 +349,14 @@ def _step_result_to_dict(result: StepResult | None) -> dict[str, Any] | None:
     }
 
 
-def _action_to_dict(action: GameAction | dict[str, GameAction] | None) -> dict[str, Any] | None:
+def _action_to_dict(action: Any | None) -> Any | None:
     if action is None:
         return None
+    if isinstance(action, GameAction):
+        return {"type": action.type, "data": _safe_data(action.data), "agent_id": action.agent_id, "metadata": _safe_data(action.metadata)}
     if isinstance(action, dict):
-        return {agent_id: _action_to_dict(agent_action) for agent_id, agent_action in action.items()}
-    return {"type": action.type, "data": _safe_data(action.data), "agent_id": action.agent_id, "metadata": _safe_data(action.metadata)}
+        return {_safe_key(agent_id): _action_to_dict(agent_action) for agent_id, agent_action in action.items()}
+    return _safe_data(action)
 
 
 def _write_episode_artifacts(result: EpisodeResult, *, output_path: str | None, task_name: str, doc_id: int) -> dict[str, str]:
@@ -402,16 +408,17 @@ def _episode_action_rows(result: EpisodeResult) -> list[dict[str, Any]]:
     rows = []
     for step in result.steps:
         info = step.result.info if step.result is not None and isinstance(step.result.info, dict) else {}
-        requested_action = _action_label(step.parsed_action.action if step.parsed_action is not None else None)
+        action = step.parsed_action.action if step.parsed_action is not None else None
+        requested_action = _action_label(action)
         rows.append(
             {
                 "step_idx": step.state.step_idx,
-                "model_output": step.output.first_text() if step.output is not None else None,
-                "raw_model_output": step.raw_output.first_text() if step.raw_output is not None else None,
+                "model_output": _payload_to_compact_trace(step.output),
+                "raw_model_output": _payload_to_compact_trace(step.raw_output),
                 "action": requested_action,
                 "requested_action": requested_action,
                 "executed_action": _executed_action_label(info, fallback=requested_action),
-                "action_data": _safe_data(step.parsed_action.action.data) if step.parsed_action is not None and isinstance(step.parsed_action.action, GameAction) else None,
+                "action_data": _safe_data(action.data) if isinstance(action, GameAction) else _safe_data(action),
                 "parse_error": step.parsed_action.error if step.parsed_action is not None else None,
                 "env_error": _safe_data(info.get("error")),
                 "invalid_actions": _safe_data(info.get("invalid_actions")),
@@ -547,19 +554,24 @@ def _artifact_fps() -> int:
         return 12
 
 
-def _action_label(action: GameAction | dict[str, GameAction] | None) -> str:
+def _action_label(action: Any | None) -> str:
     if action is None:
         return "NONE"
+    if isinstance(action, GameAction):
+        data = action.data if isinstance(action.data, dict) else {}
+        buttons = data.get("buttons")
+        if isinstance(buttons, dict):
+            active = [name for name, value in buttons.items() if value]
+            return "+".join(active) if active else "NOOP"
+        if isinstance(buttons, list):
+            return "+".join(str(item) for item in buttons) if buttons else "NOOP"
+        return action.type
     if isinstance(action, dict):
         return ",".join(f"{agent_id}:{_action_label(agent_action)}" for agent_id, agent_action in action.items())
-    data = action.data if isinstance(action.data, dict) else {}
-    buttons = data.get("buttons")
-    if isinstance(buttons, dict):
-        active = [name for name, value in buttons.items() if value]
-        return "+".join(active) if active else "NOOP"
-    if isinstance(buttons, list):
-        return "+".join(str(item) for item in buttons) if buttons else "NOOP"
-    return action.type
+    summary = _safe_data(action)
+    if isinstance(summary, str):
+        return summary
+    return _safe_repr(summary, max_chars=120)
 
 
 def _executed_action_label(info: dict[str, Any], *, fallback: str) -> str:
@@ -568,6 +580,33 @@ def _executed_action_label(info: dict[str, Any], *, fallback: str) -> str:
         active = [name for name, value in buttons.items() if value]
         return "+".join(active) if active else "NOOP"
     return fallback
+
+
+def _payload_to_compact_trace(value: Any) -> Any:
+    if value is None:
+        return None
+    text = _payload_first_text(value)
+    return text if text is not None else _safe_data(value)
+
+
+def _payload_first_text(value: Any) -> str | None:
+    if isinstance(value, str):
+        return value
+    first_text = getattr(value, "first_text", None)
+    if not callable(first_text):
+        return None
+    try:
+        text = first_text()
+    except Exception:
+        return None
+    return text if isinstance(text, str) else None
+
+
+def _generic_payload_to_dict(value: Any) -> dict[str, Any]:
+    return {
+        "type": _type_name(value),
+        "value": _safe_data(value),
+    }
 
 
 def _md_cell(value: Any) -> str:

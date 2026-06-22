@@ -61,12 +61,15 @@ class OpenAIModelServer(ModelServer):
                 timeout=timeout,
             )
 
-    def generate(self, request: AgentInput) -> AgentOutput:
+    def generate(self, request: Any) -> AgentOutput:
         return self.generate_batch([request])[0]
 
-    def generate_batch(self, requests: list[AgentInput]) -> list[AgentOutput]:
+    def generate_batch(self, requests: list[Any]) -> list[AgentOutput]:
         if not requests:
             return []
+        for request in requests:
+            if not isinstance(request, AgentInput):
+                raise TypeError(f"OpenAIModelServer requires AgentInput requests, got {type(request).__name__}")
         if len(requests) == 1 or self.max_concurrent_requests <= 1:
             return [self._generate_one(request) for request in requests]
         with ThreadPoolExecutor(max_workers=min(self.max_concurrent_requests, len(requests))) as executor:
