@@ -25,10 +25,10 @@ task-specific action parsing lives in an action parser.
 - `generate_until_game` does not replace the existing `generate_until_agentic`
   tool-call loop. It is for environment-step loops with explicit `EnvManager`
   state transitions.
-- It does not require task code to know how inference is served. The current
-  concrete `ModelServer` targets OpenAI-compatible HTTP endpoints; future
-  implementations may wrap other serving or in-process runtimes behind the same
-  base protocol.
+- It does not require task code to know how inference is served. The shipped
+  inference `ModelServer` targets OpenAI-compatible HTTP endpoints (plus a
+  backend-free `debug` server for smoke tests); future implementations may wrap
+  other serving or in-process runtimes behind the same base protocol.
 - Task code should not hard-code model-family parsing rules.
 
 ## Pipeline
@@ -282,16 +282,48 @@ and returns the outputs to the sessions. This lets multiple independent
 rollouts share one inference backend without putting rollout scheduling in task
 YAML, task-specific loop workers, or concrete model-server implementations.
 
-The only concrete model server currently shipped here is `OpenAIModelServer`.
-It sends OpenAI-compatible Chat Completions requests and uses thread-level
-concurrency for request batches. Use `--agentic_max_parallel_rollouts` to bound
-simultaneous environments and `max_concurrent_requests` to bound concurrent HTTP
-calls.
+Two concrete model servers ship here:
 
-Other concrete backends are intentionally not carried in this iteration. If a
-new backend needs GPU replicas, model ensembles, or another scheduler, keep that
-behind a future `ModelServer` implementation rather than adding backend details
-to task YAML.
+- `OpenAIModelServer` (registered name `openai`, the default) sends
+  OpenAI-compatible Chat Completions requests and uses thread-level concurrency
+  for request batches. Use `--agentic_max_parallel_rollouts` to bound
+  simultaneous environments and `max_concurrent_requests` to bound concurrent
+  HTTP calls.
+- `FixedActionModelServer` (registered name `debug`) ignores the observation and
+  always returns a single fixed action. It needs no backend, so it is for
+  smoke-testing the whole loop — see "Smoke Testing Without a Backend" below.
+
+Other real inference backends are intentionally not carried in this iteration.
+If a new backend needs GPU replicas, model ensembles, or another scheduler, keep
+that behind a future `ModelServer` implementation rather than adding backend
+details to task YAML.
+
+### Smoke Testing Without a Backend
+
+`FixedActionModelServer` lets you exercise the entire pipeline — env reset,
+observation parser, action parser, `EnvManager.step`, tracing, and artifact
+writing — without serving a model. It always emits the same action text
+(default `ATTACK`), which the action parser maps to a real environment action:
+
+```bash
+python -m lmms_eval \
+  --model dummy \
+  --tasks vizdoom \
+  --agentic_model_server debug \
+  --agentic_model_server_args 'action=ATTACK' \
+  --agentic_observation_parser vizdoom \
+  --agentic_action_parser vizdoom \
+  --gen_kwargs max_game_steps=12 \
+  --limit 1 --log_samples --output_path outputs/vizdoom_debug
+```
+
+Set `action=` to any valid button (for example `action=MOVE_LEFT`). Because the
+server is instant and synchronous, this is also the cheapest way to stress
+rollout scheduling: combine it with `--repeats N` and
+`--agentic_max_parallel_rollouts K` to run many concurrent environments. Note
+that the resulting wall-clock reflects environment stepping and artifact
+encoding under the GIL, not the latency a real `ModelServer` would add, so it is
+not a proxy for backend throughput.
 
 ## Tracing
 
@@ -355,12 +387,27 @@ The artifact directory contains:
   per-step table.
 - `actions.jsonl`: one normalized action/reward row per step.
 - `rollout.mp4`: a gameplay video when the environment exposes screen frames
-  such as VizDoom `screen_buffer`. The default artifact video is written at 12
-  FPS, matching the default VizDoom task's decision segment length. It is
-  also upscaled 4x for easier viewing when the task uses low simulator
-  resolutions. Set
-  `LMMS_AGENTIC_ARTIFACT_FPS` or `LMMS_AGENTIC_ARTIFACT_SCALE` to override these
-  defaults.
+  such as VizDoom `screen_buffer`. By default it contains **one frame per model
+  decision** (the screen at each decision point), so a short episode renders as a
+  brief decision-by-decision clip rather than real-time gameplay. The video is
+  written at 12 FPS and upscaled 4x for easier viewing at low simulator
+  resolutions; set `LMMS_AGENTIC_ARTIFACT_FPS` or `LMMS_AGENTIC_ARTIFACT_SCALE`
+  to override.
+- `segments/step_NNN.mp4`: one short clip per action, holding the intra-action
+  frames captured while that single decision was held for `tics_per_action`
+  simulator tics. Only written when action frames are emitted (see below).
+
+By default the intra-action frames captured during `tics_per_action` are used
+only as the model's next `screen_history` input and are not retained for the
+artifacts, which is why `rollout.mp4` is one-frame-per-decision. Enable
+**`emit_action_frames`** on the env (toggle the default VizDoom task with the
+`VIZDOOM_EMIT_ACTION_FRAMES=1` env var) to keep them: `rollout.mp4` then becomes
+a full-motion video of every captured frame, and per-action `segments/` clips
+are written. The raw frame arrays are attached to `StepResult.info` for the
+artifact writers only and are stripped from the JSON trace, so `actions.jsonl`
+and the sample log stay compact. This roughly multiplies per-episode frame
+memory and video-encoding work by `tics_per_action`, so leave it off for large
+parallel runs unless you need the playback.
 
 ## VizDoom Interfaces
 
@@ -374,8 +421,11 @@ generic `EnvManager` interface, loop, factory, and reusable parser layers.
   `automap_buffer`, `audio_buffer`, and `notifications_buffer`;
 - frame history: `screen_history`, controlled by `frame_history`;
 - action cadence: `tics_per_action` controls simulator frames per model
-  decision, and `capture_action_frames` records intermediate frames during that
-  action for the next `screen_history` segment;
+  decision; `capture_action_frames` records the intermediate frames during that
+  action for the next `screen_history` segment; `emit_action_frames` (off by
+  default, toggled by `VIZDOOM_EMIT_ACTION_FRAMES`) additionally retains those
+  frames so the rollout artifacts render full-motion video and per-action
+  `segments/` clips instead of one frame per decision;
 - game variables from `set_available_game_variables`, plus optional
   `tracked_game_variables` read through `get_game_variable`;
 - world metadata: `labels`, `objects`, `sectors`, and multiplayer
