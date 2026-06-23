@@ -35,6 +35,11 @@ load_dotenv(verbose=True)
 class OpenAICompatible(OpenAICompatibleSimple):
     is_simple = False
 
+    def __init__(self, *args, pass_video_url: bool = False, enable_thinking_kwarg: object = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pass_video_url = bool(pass_video_url)
+        self.enable_thinking_kwarg = enable_thinking_kwarg
+
     def generate_until(self, requests) -> List[GenerationResult]:
         if not requests:
             return []
@@ -187,11 +192,20 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 video_kwargs = {"nframes": self.max_frames_num}
 
             payload = {
-                "messages": chat_messages.to_openai_messages(video_kwargs=video_kwargs),
+                "messages": chat_messages.to_openai_messages(video_kwargs=video_kwargs, pass_video_url=self.pass_video_url),
                 "model": self.model_version,
                 "max_tokens": max_new_tokens,
                 "temperature": temperature,
             }
+            extra_body = {}
+            if self.pass_video_url:
+                extra_body["media_io_kwargs"] = {"video": {"num_frames": int(self.max_frames_num)}}
+            if self.enable_thinking_kwarg is not None:
+                ek = self.enable_thinking_kwarg
+                ek_bool = ek.lower() == "true" if isinstance(ek, str) else bool(ek)
+                extra_body["chat_template_kwargs"] = {"enable_thinking": ek_bool}
+            if extra_body:
+                payload["extra_body"] = extra_body
 
             if "o1" in self.model_version or "o3" in self.model_version or "o4" in self.model_version or "gpt-5" in self.model_version:
                 payload.pop("temperature")

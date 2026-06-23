@@ -1,0 +1,22 @@
+dataset_path: json
+test_split: train
+output_type: generate_until
+
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+metric_list:
+  - metric: xmod_bench_score
+    aggregation: !function utils.xmod_bench_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    post_prompt: "Answer with the option's letter (A, B, C, or D) directly."
+
+metadata:
+  version: 0.0
