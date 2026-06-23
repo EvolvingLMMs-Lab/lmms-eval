@@ -191,35 +191,12 @@ class OpenAICompatible(OpenAICompatibleSimple):
             else:
                 video_kwargs = {"nframes": self.max_frames_num}
 
-            if self.pass_video_url:
-                # Build messages manually — pass video file path as video_url so vLLM does server-side decode
-                manual_messages = []
-                for msg in chat_messages.messages:
-                    content_items = []
-                    for c in msg.content:
-                        if c.type == "text":
-                            content_items.append({"type": "text", "text": c.text})
-                        elif c.type == "image":
-                            content_items.append({"type": "image_url", "image_url": {"url": c.url}})
-                        elif c.type == "video":
-                            url = c.url
-                            if not url.startswith(("file://", "http://", "https://")):
-                                url = "file://" + url
-                            content_items.append({"type": "video_url", "video_url": {"url": url}})
-                    manual_messages.append({"role": msg.role, "content": content_items})
-                payload = {
-                    "messages": manual_messages,
-                    "model": self.model_version,
-                    "max_tokens": max_new_tokens,
-                    "temperature": temperature,
-                }
-            else:
-                payload = {
-                    "messages": chat_messages.to_openai_messages(video_kwargs=video_kwargs),
-                    "model": self.model_version,
-                    "max_tokens": max_new_tokens,
-                    "temperature": temperature,
-                }
+            payload = {
+                "messages": chat_messages.to_openai_messages(video_kwargs=video_kwargs, pass_video_url=self.pass_video_url),
+                "model": self.model_version,
+                "max_tokens": max_new_tokens,
+                "temperature": temperature,
+            }
             extra_body = {}
             if self.pass_video_url:
                 extra_body["media_io_kwargs"] = {"video": {"num_frames": int(self.max_frames_num)}}
