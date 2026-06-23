@@ -86,7 +86,7 @@ class ChatMessages(BaseModel):
             hf_messages.append(hf_message)
         return hf_messages
 
-    def to_openai_messages(self, video_kwargs: Optional[Dict[str, str]] = None):
+    def to_openai_messages(self, video_kwargs: Optional[Dict[str, str]] = None, pass_video_url: bool = False):
         if video_kwargs is None:
             video_kwargs = {}
         openai_messages = []
@@ -107,6 +107,15 @@ class ChatMessages(BaseModel):
                         }
                     )
                 elif content.type == "video":
+                    if pass_video_url:
+                        # Forward the video as a URL so the server can decode it (e.g., vLLM's
+                        # media_io_kwargs). Local paths are normalized to file:// so absolute-time
+                        # frame indexing is preserved instead of being lost in client-side decoding.
+                        url = content.url
+                        if not url.startswith(("http://", "https://", "file://", "data:")):
+                            url = f"file://{os.path.abspath(url)}"
+                        openai_message["content"].append({"type": "video_url", "video_url": {"url": url}})
+                        continue
                     if fetch_video is None:
                         raise ImportError("qwen_vl_utils is required for video processing. Please install it with: pip install qwen-vl-utils")
                     video_input = fetch_video({"type": "video", "video": content.url, **video_kwargs})
