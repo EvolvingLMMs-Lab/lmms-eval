@@ -116,11 +116,7 @@ def ewb_doc_to_visual(doc: dict[str, Any]) -> list[str]:
     # process_docs preflight should have caught this already; fall back to a
     # per-doc error if the task is invoked without the preflight (e.g., when
     # users disable process_docs).
-    raise FileNotFoundError(
-        f"Video for qid={doc['qid']} ({corpus}/{vid}) not found. "
-        f"Download via:\n  {_DOWNLOAD_HINT[corpus]}\n"
-        f"or set EWB_{corpus.upper()}_PATH to a directory containing {vid}.mp4."
-    )
+    raise FileNotFoundError(f"Video for qid={doc['qid']} ({corpus}/{vid}) not found. " f"Download via:\n  {_DOWNLOAD_HINT[corpus]}\n" f"or set EWB_{corpus.upper()}_PATH to a directory containing {vid}.mp4.")
 
 
 DEFAULT_PROMPT = (
