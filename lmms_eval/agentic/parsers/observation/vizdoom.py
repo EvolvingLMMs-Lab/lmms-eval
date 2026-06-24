@@ -28,6 +28,7 @@ class VizDoomObservationParser(ObservationParser):
         video_buffer: str = "screen_history",
         include_structured_state: bool = True,
         include_raw_buffers: bool = True,
+        human_view: bool | str = False,
         prompt: str | None = None,
         action_format: str = "skill",
         skill_name: str = "press_buttons",
@@ -37,8 +38,13 @@ class VizDoomObservationParser(ObservationParser):
         self.image_buffers = _as_list(image_buffers)
         self.video = bool(video)
         self.video_buffer = video_buffer
-        self.include_structured_state = include_structured_state
-        self.include_raw_buffers = include_raw_buffers
+        # human_view: feed the model only what a human player sees on screen
+        # (first-person view + on-screen HUD), and suppress every oracle channel
+        # (depth/labels/objects/sectors buffers and exact game-variable / reward /
+        # step text). Privileged variables stay in the env state for logging.
+        self.human_view = _as_bool(human_view)
+        self.include_structured_state = _as_bool(include_structured_state) and not self.human_view
+        self.include_raw_buffers = _as_bool(include_raw_buffers) and not self.human_view
         self.prompt = prompt
         self.action_format = str(action_format).lower()
         self.skill_name = skill_name
@@ -77,28 +83,30 @@ class VizDoomObservationParser(ObservationParser):
         instruction = observation.get("instruction")
         if instruction:
             lines.append(str(instruction))
-        lines.append(f"VizDoom step: {observation.get('step_idx', 0)}")
-        lines.append(f"Episode time: {observation.get('episode_time', 0)}")
-        lines.append(f"Total reward: {observation.get('total_reward', 0.0)}")
         decision_tics = int(observation.get("decision_tics") or self.default_tics)
-        history_length = observation.get("screen_history_length")
-        if history_length:
-            lines.append(f"Current video segment: {history_length} recent simulator frames from the last executed action.")
 
-        game_variables = observation.get("game_variables") or {}
-        tracked_variables = observation.get("tracked_game_variables") or {}
-        if game_variables or tracked_variables:
-            merged = {**game_variables, **tracked_variables}
-            lines.append(f"Game variables: {json.dumps(merged, ensure_ascii=False, sort_keys=True)}")
+        if not self.human_view:
+            lines.append(f"VizDoom step: {observation.get('step_idx', 0)}")
+            lines.append(f"Episode time: {observation.get('episode_time', 0)}")
+            lines.append(f"Total reward: {observation.get('total_reward', 0.0)}")
+            history_length = observation.get("screen_history_length")
+            if history_length:
+                lines.append(f"Current video segment: {history_length} recent simulator frames from the last executed action.")
 
-        for key in ["labels", "objects", "sectors"]:
-            values = observation.get(key)
-            if isinstance(values, list):
-                lines.append(f"{key}: {len(values)} visible")
+            game_variables = observation.get("game_variables") or {}
+            tracked_variables = observation.get("tracked_game_variables") or {}
+            if game_variables or tracked_variables:
+                merged = {**game_variables, **tracked_variables}
+                lines.append(f"Game variables: {json.dumps(merged, ensure_ascii=False, sort_keys=True)}")
 
-        notifications = observation.get("notifications_buffer")
-        if notifications:
-            lines.append(f"Notifications: {notifications}")
+            for key in ["labels", "objects", "sectors"]:
+                values = observation.get(key)
+                if isinstance(values, list):
+                    lines.append(f"{key}: {len(values)} visible")
+
+            notifications = observation.get("notifications_buffer")
+            if notifications:
+                lines.append(f"Notifications: {notifications}")
 
         actions = observation.get("available_buttons") or []
         action_text = ", ".join(actions) if actions else "the scenario's available buttons"

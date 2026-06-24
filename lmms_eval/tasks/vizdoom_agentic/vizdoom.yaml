@@ -9,6 +9,16 @@ doc_to_visual: !function utils.vizdoom_doc_to_visual
 doc_to_text: !function utils.vizdoom_doc_to_text
 doc_to_target: !function utils.vizdoom_doc_to_target
 game_env: !function utils.vizdoom_env_manager
+# Default to human-view parity: the model only gets what a human sees on screen
+# (first-person frame + on-screen HUD), no oracle state. Override via
+# --agentic_observation_parser only if you deliberately want the raw-state view.
+observation_parser:
+  name: vizdoom
+  human_view: true
+  video: true
+  image_buffers: ["screen"]
+action_parser:
+  name: vizdoom
 generation_kwargs:
   max_new_tokens: 64
   temperature: 0

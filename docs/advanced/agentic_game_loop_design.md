@@ -311,11 +311,15 @@ python -m lmms_eval \
   --tasks vizdoom \
   --agentic_model_server debug \
   --agentic_model_server_args 'action=ATTACK' \
-  --agentic_observation_parser vizdoom \
-  --agentic_action_parser vizdoom \
   --gen_kwargs max_game_steps=12 \
   --limit 1 --log_samples --output_path outputs/vizdoom_debug
 ```
+
+The `vizdoom` task self-configures its observation/action parsers in YAML
+(human-view by default — see "VizDoom Interfaces"), so no
+`--agentic_observation_parser`/`--agentic_action_parser` flags are needed. Passing
+a bare `--agentic_observation_parser vizdoom` would *override* the YAML spec and
+drop its `human_view=true`, reverting to the raw-state view.
 
 Set `action=` to any valid button (for example `action=MOVE_LEFT`). Because the
 server is instant and synchronous, this is also the cheapest way to stress
@@ -432,6 +436,31 @@ generic `EnvManager` interface, loop, factory, and reusable parser layers.
   `server_state`;
 - action metadata: `available_buttons`, `last_action`, reward, episode time,
   timeout, and player-death state.
+
+### Human-view default
+
+The `vizdoom` task ships configured for **human-view parity**: the model is fed
+exactly what a human player sees on screen and nothing more. This is set in
+`vizdoom.yaml` (`observation_parser: {name: vizdoom, human_view: true, ...}`) and
+in the env factory (`utils.vizdoom_env_manager`):
+
+- on (what a human sees on screen): `render_hud`, `render_weapon`,
+  `render_messages`, `render_screen_flashes`, particles/decals/corpses/effects;
+  `render_crosshair` stays off (vanilla Doom has none).
+- off (oracle channels a human never has): `depth_buffer`, `labels_buffer`,
+  `automap_buffer`, `objects_info`, `sectors_info`, `notifications_buffer`.
+- `human_view: true` also makes the observation parser suppress all non-visual
+  prompt text — exact game variables, `labels/objects/sectors` counts, and the
+  step/episode-time/total-reward lines. Privileged game variables are still
+  *declared* on the env (`available_game_variables`) so they are recorded for
+  metrics/analysis, but they never enter the model's prompt.
+
+The result: each request is the instruction + the screen frame(s) with HUD + the
+control list. To get the full raw-state view instead (game variables, oracle
+buffers, world metadata in the prompt), override at runtime with
+`--agentic_observation_parser_args` setting `human_view=false,
+include_structured_state=true, include_raw_buffers=true` and enabling the desired
+buffers on the env.
 
 The `vizdoom` observation parser can emit both a video block and a
 current screen image when selected at runtime:

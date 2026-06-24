@@ -21,19 +21,34 @@ def vizdoom_doc_to_target(doc):
 
 def vizdoom_env_manager(doc=None, lmms_eval_specific_kwargs=None):
     del doc, lmms_eval_specific_kwargs
+    # Default to "human-view" parity: the model sees exactly what a human player
+    # sees on screen (first-person view + the on-screen HUD), and nothing else.
+    # Every oracle channel (depth / labels / objects / sectors / automap) is off.
+    # Privileged game variables stay declared for logging/metrics, but the
+    # observation parser's human_view flag keeps them out of the model's prompt.
     return VizDoomEnvManager(
         config_path="basic.cfg",
         screen_resolution="RES_320X240",
         screen_format="RGB24",
         available_buttons=["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"],
-        available_game_variables=["AMMO2", "HEALTH", "KILLCOUNT", "HITCOUNT", "DAMAGECOUNT", "DAMAGE_TAKEN"],
-        depth_buffer=True,
-        labels_buffer=True,
-        automap_buffer=True,
-        objects_info=True,
-        sectors_info=True,
-        notifications_buffer=True,
-        notifications_buffer_size=4,
+        available_game_variables=["AMMO2", "HEALTH", "ARMOR", "KILLCOUNT", "HITCOUNT", "DAMAGECOUNT", "DAMAGE_TAKEN", "SELECTED_WEAPON", "SELECTED_WEAPON_AMMO"],
+        # Human-visible rendering: everything a real player sees on screen.
+        render_hud=True,
+        render_weapon=True,
+        render_messages=True,
+        render_screen_flashes=True,
+        render_particles=True,
+        render_decals=True,
+        render_corpses=True,
+        render_effects_sprites=True,
+        render_crosshair=False,  # vanilla Doom has no crosshair
+        # Oracle channels a human never has -> off.
+        depth_buffer=False,
+        labels_buffer=False,
+        automap_buffer=False,
+        objects_info=False,
+        sectors_info=False,
+        notifications_buffer=False,
         audio_buffer=False,
         sound_enabled=False,
         window_visible=False,

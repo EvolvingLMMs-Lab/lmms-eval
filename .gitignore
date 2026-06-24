@@ -48,6 +48,10 @@ span.log
 
 # Data and models (large / local-only)
 data/
+# ...but keep the hand-written VizDoom scenario list under version control
+!lmms_eval/tasks/vizdoom_agentic/data/
+lmms_eval/tasks/vizdoom_agentic/data/*
+!lmms_eval/tasks/vizdoom_agentic/data/vizdoom.jsonl
 pretrained/
 ckpt
 submissions/
