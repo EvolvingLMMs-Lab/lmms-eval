@@ -153,29 +153,47 @@ def _buffer_to_image(buffer: Any) -> Any:
 
 
 def _skill_prompt_lines(skill_name: str, action_text: str, *, require_thinking: bool = True, default_tics: int = 12) -> list[str]:
+    # Draw the tool-call examples from the buttons that are actually available in
+    # this scenario. Hard-coding "ATTACK" made the model copy a button that some
+    # scenarios (e.g. take_cover, health_gathering) do not allow, producing
+    # invalid actions.
+    buttons = [item.strip() for item in action_text.split(",") if item.strip()]
+    has_button_list = bool(buttons) and not action_text.startswith("the scenario")
+    single_example = buttons[0] if has_button_list else "ATTACK"
+    # A meaningful simultaneous combo only exists when ATTACK can be held together
+    # with a movement/turn button (e.g. move and shoot at once). For strafe-only
+    # or turn-only scenarios there is no sensible combo, so we do not advertise one
+    # (and never suggest opposing buttons like MOVE_LEFT + MOVE_RIGHT).
+    move_like = [b for b in buttons if b != "ATTACK"] if has_button_list else []
+    combo_example = f"{move_like[0]}, ATTACK" if (has_button_list and "ATTACK" in buttons and move_like) else None
+
     lines = []
     if require_thinking:
         lines.extend(
             [
                 "First write a concise <think>...</think> block.",
-                "In <think>, inspect the current video/state, compare with recent history, and explain the next action in 1-3 short sentences.",
+                "In <think>, inspect the current video/state, compare with recent history, and decide the single next action in 1-3 short sentences.",
                 "After </think>, immediately write exactly one VizDoom skill call. Do not stop after the thinking block.",
             ]
         )
     lines.extend(
         [
-            "The skill call chooses the next action and will run for the requested tics before the next model decision.",
-            f"- {skill_name}(buttons, tics={default_tics}): press one or more available buttons. buttons must come from: {action_text}.",
+            "Decide only the action for the CURRENT frame, then output exactly one skill call for that single action. The call runs for the requested tics, and you will be asked again for the next frame.",
+            f"- {skill_name}(buttons, tics={default_tics}): choose your action for this frame. buttons must come from: {action_text}.",
+            "Only use buttons from that list; any other button is rejected as an invalid action.",
+            "Almost always pick a SINGLE button. Buttons listed together are held down at the same time (e.g. move and shoot at once) for this one frame — they are NOT a sequence of moves. Do not plan ahead, do not repeat a button, and never combine opposing buttons such as MOVE_LEFT with MOVE_RIGHT or TURN_LEFT with TURN_RIGHT.",
             f"- noop(tics={default_tics}): do nothing until the next decision.",
             "- submit(): end the rollout only when the objective is complete.",
-            "Prefer Qwen tool-call format:",
+            "Prefer Qwen tool-call format (a single button):",
             "<tool_call>",
             f"<function={skill_name}>",
-            "<parameter=buttons>ATTACK</parameter>",
+            f"<parameter=buttons>{single_example}</parameter>",
             f"<parameter=tics>{default_tics}</parameter>",
             f"</function>",
             "</tool_call>",
-            f"For multiple buttons, use <parameter=buttons>MOVE_LEFT, ATTACK</parameter>. If tool calls are unavailable, write {skill_name}(ATTACK). Do not answer with JSON.",
         ]
     )
+    if combo_example:
+        lines.append(f"Only when you genuinely need two buttons held at once this frame, list them together, e.g. <parameter=buttons>{combo_example}</parameter>.")
+    lines.append(f"If tool calls are unavailable, write {skill_name}({single_example}). Do not answer with JSON.")
     return lines

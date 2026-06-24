@@ -30,6 +30,8 @@ class OpenAIModelServer(ModelServer):
         timeout: float | int = 600,
         default_max_tokens: int = 64,
         max_concurrent_requests: int | str | None = None,
+        enable_thinking: bool | str | None = None,
+        chat_template_kwargs: dict[str, Any] | None = None,
         lm: Any = None,
         doc_id: int | None = None,
         task_name: str | None = None,
@@ -46,6 +48,11 @@ class OpenAIModelServer(ModelServer):
         self.generation_kwargs = dict(generation_kwargs or {})
         self.default_max_tokens = int(default_max_tokens)
         self.max_concurrent_requests = max(1, int(max_concurrent_requests or 1))
+        # Per-request chat-template controls (e.g. Qwen reasoning toggle). Sent
+        # via OpenAI `extra_body` so vLLM forwards them to the chat template.
+        self.chat_template_kwargs = dict(chat_template_kwargs or {})
+        if enable_thinking is not None:
+            self.chat_template_kwargs["enable_thinking"] = _as_bool(enable_thinking)
         self._request_semaphore = BoundedSemaphore(self.max_concurrent_requests)
         if client is not None:
             self.client = client
@@ -94,6 +101,11 @@ class OpenAIModelServer(ModelServer):
         for key in _AGENTIC_ONLY_KEYS | _GENERATION_KEYS_TO_DROP:
             generation_kwargs.pop(key, None)
         params.update(generation_kwargs)
+        if self.chat_template_kwargs:
+            extra_body = dict(params.get("extra_body") or {})
+            extra_body.setdefault("chat_template_kwargs", {})
+            extra_body["chat_template_kwargs"] = {**self.chat_template_kwargs, **extra_body["chat_template_kwargs"]}
+            params["extra_body"] = extra_body
         return params
 
     def _request_to_openai_messages(self, request: AgentInput) -> list[dict[str, Any]]:
@@ -225,6 +237,12 @@ def _tool_call_to_dict(tool_call: Any) -> dict[str, Any]:
         "id": getattr(tool_call, "id", None),
         "type": getattr(tool_call, "type", None),
     }
+
+
+def _as_bool(value: bool | str | None) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
 def _normalize_top_p(top_p: Any) -> Any:
