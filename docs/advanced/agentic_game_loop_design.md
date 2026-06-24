@@ -501,7 +501,59 @@ VizDoom's `basic.cfg`. It should be treated as a starting point for real
 scenarios, not as the only supported scenario. Other bundled VizDoom configs
 such as `deadly_corridor.cfg`, `defend_the_center.cfg`, or
 `health_gathering.cfg` can be selected by changing task-side `config_path` and
-the available buttons/variables.
+the available buttons/variables. The `vizdoom_scenarios` task bundles eight such
+scenarios (basic, defend-the-center/line, deadly-corridor, health-gathering,
+my-way-home, predict-position, take-cover) as one dataset.
+
+### Worked example: Qwen3.6-27B on vLLM
+
+End-to-end recipe for running `vizdoom_scenarios` against a locally served
+Qwen3.6-27B over its OpenAI-compatible API.
+
+**1. Serve the model.** Qwen3.5/3.6 use Gated-DeltaNet hybrid attention, which
+flashinfer JIT-builds at startup, so `ninja`/`nvcc` must be on `PATH` and the JIT
+cache must be on local disk (the default `~/.cache` on NFS deadlocks FileLock
+under tensor parallelism):
+
+```bash
+export PATH="$PWD/.venv/bin:/usr/local/cuda/bin:$PATH"   # ninja + nvcc on PATH
+export FLASHINFER_WORKSPACE_BASE=/tmp/qwen36_cache       # JIT cache on local disk
+.venv/bin/vllm serve outputs/models/Qwen3.6-27B \
+  --served-model-name Qwen3.6-27B \
+  --tensor-parallel-size 2 --max-model-len 32768 \
+  --limit-mm-per-prompt '{"image": 5, "video": 1}' \
+  --trust-remote-code --port 8000
+```
+
+**2. Run the eval.** Qwen3.6 is a reasoning model; pass `enable_thinking=false`
+so it emits one clean tool call instead of spending the token budget on `<think>`
+and getting truncated. `VIZDOOM_EMIT_ACTION_FRAMES=1` makes `rollout.mp4`
+full-motion (every simulator frame) rather than one frame per decision step:
+
+```bash
+# local HF cache: this task loads a local-file jsonl dataset; NFS cache crashes on flock
+export HF_HOME=/tmp/qwen36_cache/hf HF_DATASETS_CACHE=/tmp/qwen36_cache/hf_datasets
+export VIZDOOM_EMIT_ACTION_FRAMES=1 LMMS_AGENTIC_ARTIFACT_FPS=35   # full-motion rollout video
+.venv/bin/python -m lmms_eval \
+  --model dummy \
+  --tasks vizdoom_scenarios \
+  --agentic_model_server openai \
+  --agentic_model_server_args 'model=Qwen3.6-27B,base_url=http://localhost:8000/v1,max_concurrent_requests=8,enable_thinking=false' \
+  --agentic_max_parallel_rollouts 4 \
+  --agentic_model_output_parser qwen \
+  --gen_kwargs max_new_tokens=256,temperature=0,max_game_steps=16 \
+  --log_samples --output_path outputs/vizdoom_qwen36
+```
+
+Artifacts land in `outputs/vizdoom_qwen36/agentic_artifacts/<doc>/`: `rollout.mp4`,
+`summary.md` (per-step action + model output), and `actions.jsonl`.
+
+Notes:
+- `enable_thinking` (and `chat_template_kwargs`) on the openai model server are
+  forwarded to vLLM via the OpenAI `extra_body`. For visual-reasoning evals keep
+  thinking on instead and raise `max_new_tokens` (e.g. `3072`).
+- `--agentic_max_parallel_rollouts` runs scenarios concurrently; size it together
+  with the server's `max_concurrent_requests`.
 
 ## Common Extension Scenarios
 
