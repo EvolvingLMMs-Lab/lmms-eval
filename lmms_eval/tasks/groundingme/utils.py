@@ -305,7 +305,14 @@ def groundingme_aggregation_result(results, metric):
         else:
             results_dict[metric].append(score)
 
-    results_dict[metric] = sum(results_dict[metric]) / len(results_dict[metric])
+    scores = results_dict[metric]
+    if not scores:
+        # No samples fell into this subtask bucket (e.g. when running with --limit).
+        # Guard against ZeroDivisionError, which would otherwise crash the whole run.
+        # Return NaN so an empty bucket is not conflated with a genuine 0.0 score.
+        eval_logger.warning(f"No samples for metric {metric}; returning NaN")
+        return float("nan")
+    results_dict[metric] = sum(scores) / len(scores)
     eval_logger.info(f"Aggregated {metric} score: {results_dict[metric]}")
     return results_dict[metric]
 
