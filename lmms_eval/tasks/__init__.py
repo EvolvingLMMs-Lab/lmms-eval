@@ -378,8 +378,8 @@ class TaskManager:
         all_loaded_tasks = dict(collections.ChainMap(*map(load_fn, task_list)))
         return all_loaded_tasks
 
-    def load_config(self, config: Dict):
-        return self._load_individual_task_or_group(config)
+    def load_config(self, config: Dict, task_type: Literal["simple", "chat"] = "simple"):
+        return self._load_individual_task_or_group(config, task_type=task_type)
 
     def _get_task_and_group(self, task_dir: str):
         """Creates a dictionary of tasks index with the following metadata,
@@ -571,7 +571,7 @@ def get_task_dict(
         if isinstance(task_element, dict):
             task_name_from_config_dict = {
                 **task_name_from_config_dict,
-                **task_manager.load_config(config=task_element),
+                **task_manager.load_config(config=task_element, task_type=task_type),
             }
 
         elif isinstance(task_element, Task):
