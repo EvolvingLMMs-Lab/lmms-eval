@@ -1,0 +1,6 @@
+task: vbench2_multi-view_consistency
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vbench/data/multi-view_consistency.jsonl
+test_split: test
+include: _default_template_yaml

@@ -1,0 +1,6 @@
+task: vbench2_motion_rationality
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vbench/data/motion_rationality.jsonl
+test_split: test
+include: _default_template_yaml
