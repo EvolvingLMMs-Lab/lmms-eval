@@ -11,7 +11,11 @@ import zss
 from nltk import edit_distance
 from zss import Node
 
-from lmms_eval.tasks.cc_ocr.evaluators.common import kie_normalize_text, normalize_values_of_nested_dict, post_process_to_json
+from lmms_eval.tasks.cc_ocr.evaluators.common import (
+    kie_normalize_text,
+    normalize_values_of_nested_dict,
+    post_process_to_json,
+)
 
 
 def _flatten(data: dict) -> List:
@@ -93,7 +97,8 @@ def _cal_acc(pred: dict, answer: dict) -> float:
     a_tree = _dict_to_tree(_normalize_dict(answer))
     empty_tree = _dict_to_tree(_normalize_dict({}))
     d = zss.distance(
-        p_tree, a_tree,
+        p_tree,
+        a_tree,
         get_children=zss.Node.get_children,
         insert_cost=_insert_remove_cost,
         remove_cost=_insert_remove_cost,
@@ -101,7 +106,8 @@ def _cal_acc(pred: dict, answer: dict) -> float:
         return_operations=False,
     )
     denom = zss.distance(
-        empty_tree, a_tree,
+        empty_tree,
+        a_tree,
         get_children=zss.Node.get_children,
         insert_cost=_insert_remove_cost,
         remove_cost=_insert_remove_cost,

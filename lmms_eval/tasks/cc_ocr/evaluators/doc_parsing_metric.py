@@ -64,13 +64,7 @@ def _eval_doc(pred: str, gt: str) -> float:
 
 
 def _eval_formula(pred: str, gt: str) -> float:
-    pred = (
-        pred.replace("\n", " ")
-        .replace("```latex", "")
-        .replace("```", "")
-        .replace("\t", " ")
-        .replace(" ", "")
-    )
+    pred = pred.replace("\n", " ").replace("```latex", "").replace("```", "").replace("\t", " ").replace(" ", "")
     gt = gt.replace(" ", "")
     denom = max(len(pred), len(gt))
     if denom == 0:
@@ -79,12 +73,7 @@ def _eval_formula(pred: str, gt: str) -> float:
 
 
 def _eval_molecular(pred: str, gt: str) -> float:
-    pred = (
-        pred.replace("\n", "")
-        .replace(" ", "")
-        .replace("<smiles>", "")
-        .replace("</smiles>", "")
-    )
+    pred = pred.replace("\n", "").replace(" ", "").replace("<smiles>", "").replace("</smiles>", "")
     gt = gt.replace(" ", "")
     denom = max(len(pred), len(gt))
     if denom == 0:

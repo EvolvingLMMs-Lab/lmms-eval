@@ -74,12 +74,15 @@ class BedrockProvider(ServerInterface):
                             media_type, b64_data = url.split(";base64,", 1)
                             media_type = media_type.replace("data:", "")
                             import base64
-                            content_blocks.append({
-                                "image": {
-                                    "format": media_type.split("/")[-1],
-                                    "source": {"bytes": base64.b64decode(b64_data)},
+
+                            content_blocks.append(
+                                {
+                                    "image": {
+                                        "format": media_type.split("/")[-1],
+                                        "source": {"bytes": base64.b64decode(b64_data)},
+                                    }
                                 }
-                            })
+                            )
             bedrock_messages.append({"role": m["role"], "content": content_blocks})
 
         inference_config = {

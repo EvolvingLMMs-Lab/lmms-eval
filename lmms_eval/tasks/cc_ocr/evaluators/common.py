@@ -12,12 +12,8 @@ from typing import Any, Dict, List, Union
 def convert_to_halfwidth(text: str) -> str:
     """Convert full-width ASCII characters to half-width."""
     halfwidth_chars = str.maketrans(
-        "！＂＃＄％＆＇（）＊＋，－．／０１２３４５６７８９：；＜＝＞？＠"
-        "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ［＼］＾＿｀"
-        "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ｛｜｝～",
-        '!"#$%&\'()*+,-./0123456789:;<=>?@'
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`"
-        "abcdefghijklmnopqrstuvwxyz{|}~",
+        "！＂＃＄％＆＇（）＊＋，－．／０１２３４５６７８９：；＜＝＞？＠" "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ［＼］＾＿｀" "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ｛｜｝～",
+        "!\"#$%&'()*+,-./0123456789:;<=>?@" "ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`" "abcdefghijklmnopqrstuvwxyz{|}~",
     )
     return text.translate(halfwidth_chars)
 
