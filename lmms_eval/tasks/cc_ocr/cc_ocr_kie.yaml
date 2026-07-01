@@ -1,0 +1,15 @@
+include: _default_yaml_template
+
+task: cc_ocr_kie
+dataset_name: kie
+
+metric_list:
+  - metric: f1_score
+    aggregation: !function utils.cc_ocr_agg_kie_f1
+    higher_is_better: true
+  - metric: acc
+    aggregation: !function utils.cc_ocr_agg_kie_acc
+    higher_is_better: true
+
+metadata:
+  - version: 0.0
