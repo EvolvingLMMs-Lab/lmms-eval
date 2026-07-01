@@ -1,5 +1,5 @@
 dataset_kwargs:
-  token: true
+  token: false
 dataset_name: action_prediction
 dataset_path: lmms-lab/VisualWebBench
 doc_to_target: !function utils.visualwebbench_doc_to_target
