@@ -12,7 +12,10 @@ __all__ = [
 
 def __getattr__(name):
     if name in {"EpisodeComponentBuilder", "EpisodeComponents"}:
-        from lmms_eval.agentic.rollout.builder import EpisodeComponentBuilder, EpisodeComponents
+        from lmms_eval.agentic.rollout.builder import (
+            EpisodeComponentBuilder,
+            EpisodeComponents,
+        )
 
         return {
             "EpisodeComponentBuilder": EpisodeComponentBuilder,
