@@ -369,6 +369,72 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         help="Controls agentic trace logging level. 'basic' logs compact final trace payload, 'full' logs per-round input/output/state snapshots.",
     )
     parser.add_argument(
+        "--agentic_model_server",
+        type=str,
+        default=None,
+        help="Runtime model server for generate_until_game. Defaults to 'openai'.",
+    )
+    parser.add_argument(
+        "--agentic_model_server_args",
+        type=str,
+        default="",
+        help="Comma-separated runtime args for --agentic_model_server, e.g. model=Qwen/Qwen3.5-9B,max_concurrent_requests=8.",
+    )
+    parser.add_argument(
+        "--agentic_max_parallel_rollouts",
+        type=int,
+        default=None,
+        help="Maximum number of agentic rollouts the loop manager may run at once.",
+    )
+    parser.add_argument(
+        "--agentic_model_output_parser",
+        type=str,
+        default=None,
+        help="Runtime model-output parser for generate_until_game. Defaults to 'identity'. Example: qwen.",
+    )
+    parser.add_argument(
+        "--agentic_model_output_parser_args",
+        type=str,
+        default="",
+        help="Comma-separated runtime args for --agentic_model_output_parser.",
+    )
+    parser.add_argument(
+        "--agentic_observation_parser",
+        type=str,
+        default=None,
+        help="Runtime observation parser for generate_until_game.",
+    )
+    parser.add_argument(
+        "--agentic_observation_parser_args",
+        type=str,
+        default="",
+        help="Comma-separated runtime args for --agentic_observation_parser.",
+    )
+    parser.add_argument(
+        "--agentic_action_parser",
+        type=str,
+        default=None,
+        help="Runtime action parser for generate_until_game.",
+    )
+    parser.add_argument(
+        "--agentic_action_parser_args",
+        type=str,
+        default="",
+        help="Comma-separated runtime args for --agentic_action_parser.",
+    )
+    parser.add_argument(
+        "--agentic_loop_worker",
+        type=str,
+        default=None,
+        help="Runtime loop worker for generate_until_game. Defaults to 'simple'.",
+    )
+    parser.add_argument(
+        "--agentic_loop_worker_args",
+        type=str,
+        default="",
+        help="Comma-separated runtime args for --agentic_loop_worker.",
+    )
+    parser.add_argument(
         "--force_simple",
         action="store_true",
         help="Force the evaluation to use the simple mode of the models",

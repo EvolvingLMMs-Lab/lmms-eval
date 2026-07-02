@@ -481,6 +481,8 @@ class FastVideo(lmms):
         Trust `expected_path` first; otherwise look at the returned dict."""
         if os.path.isfile(expected_path):
             return os.path.abspath(expected_path)
+        if result is None:
+            return None
         # Scan the sibling directory for a recently written mp4
         parent = os.path.dirname(expected_path)
         candidates = []
@@ -554,6 +556,11 @@ class FastVideo(lmms):
         pbar = tqdm(total=len(prepared), disable=(self.rank != 0), desc="FastVideo generating")
         for prep in prepared:
             output_path = prep["output_path"]
+            existing_mp4 = self._resolve_mp4(None, output_path)
+            if existing_mp4 is not None:
+                res.append(self._pack_result(existing_mp4))
+                pbar.update(1)
+                continue
             prompt = prep["prompt"]
 
             if not prompt:
@@ -592,6 +599,10 @@ class FastVideo(lmms):
 
         for task_id, prep in enumerate(prepared):
             output_path = prep["output_path"]
+            existing_mp4 = self._resolve_mp4(None, output_path)
+            if existing_mp4 is not None:
+                results[task_id] = self._pack_result(existing_mp4)
+                continue
             prompt = prep["prompt"]
             if not prompt:
                 eval_logger.warning(f"FastVideo DP: empty prompt, skipping → {output_path}")
