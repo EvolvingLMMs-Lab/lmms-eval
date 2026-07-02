@@ -1,93 +1,58 @@
 """Minimal agentic/game evaluation interfaces."""
 
-from lmms_eval.agentic.env import EnvManager
-from lmms_eval.agentic.factory import (
-    DEFAULT_AGENTIC_FACTORY,
-    AgenticFactory,
-    build_action_parser,
-    build_env_manager,
-    build_loop_worker,
-    build_model_output_parser,
-    build_model_server,
-    build_observation_parser,
-)
-from lmms_eval.agentic.loop import (
-    LoopManager,
-    LoopSession,
-    LoopWorker,
-    RolloutJob,
-    SimpleLoopSession,
-    SimpleLoopWorker,
-    SingleAgentLoopWorker,
-    run_generate_until_game,
-)
-from lmms_eval.agentic.model_server import (
-    AgentModel,
-    ModelServer,
-    OpenAIModelServer,
-)
-from lmms_eval.agentic.parsers import (
-    ActionNameParser,
-    ActionParser,
-    IdentityModelOutputParser,
-    ModelOutputParser,
-    ObservationParser,
-    Parser,
-    ParserContext,
-    QwenModelOutputParser,
-    VizDoomActionParser,
-    VizDoomObservationParser,
-)
-from lmms_eval.agentic.types import (
-    AgentInput,
-    AgentOutput,
-    ContentBlock,
-    EnvState,
-    EpisodeResult,
-    EpisodeStep,
-    GameAction,
-    ParsedAction,
-    StepResult,
-)
+from __future__ import annotations
 
-__all__ = [
-    "ActionParser",
-    "ActionNameParser",
-    "AgenticFactory",
-    "AgentInput",
-    "AgentModel",
-    "AgentOutput",
-    "ContentBlock",
-    "DEFAULT_AGENTIC_FACTORY",
-    "EnvManager",
-    "EnvState",
-    "EpisodeResult",
-    "EpisodeStep",
-    "GameAction",
-    "IdentityModelOutputParser",
-    "LoopManager",
-    "LoopSession",
-    "LoopWorker",
-    "ModelOutputParser",
-    "ModelServer",
-    "OpenAIModelServer",
-    "ObservationParser",
-    "Parser",
-    "ParserContext",
-    "ParsedAction",
-    "QwenModelOutputParser",
-    "RolloutJob",
-    "SimpleLoopSession",
-    "SimpleLoopWorker",
-    "SingleAgentLoopWorker",
-    "StepResult",
-    "VizDoomActionParser",
-    "VizDoomObservationParser",
-    "build_action_parser",
-    "build_env_manager",
-    "build_loop_worker",
-    "build_model_server",
-    "build_model_output_parser",
-    "build_observation_parser",
-    "run_generate_until_game",
-]
+from importlib import import_module
+
+_EXPORTS = {
+    "ActionNameParser": "lmms_eval.agentic.parsers",
+    "ActionParser": "lmms_eval.agentic.parsers",
+    "AgenticFactory": "lmms_eval.agentic.factory",
+    "AgentInput": "lmms_eval.agentic.types",
+    "AgentModel": "lmms_eval.agentic.model_server",
+    "AgentOutput": "lmms_eval.agentic.types",
+    "ContentBlock": "lmms_eval.agentic.types",
+    "DEFAULT_AGENTIC_FACTORY": "lmms_eval.agentic.factory",
+    "EnvManager": "lmms_eval.agentic.env",
+    "EnvState": "lmms_eval.agentic.types",
+    "EpisodeResult": "lmms_eval.agentic.types",
+    "EpisodeStep": "lmms_eval.agentic.types",
+    "GameAction": "lmms_eval.agentic.types",
+    "IdentityModelOutputParser": "lmms_eval.agentic.parsers",
+    "LoopManager": "lmms_eval.agentic.loop",
+    "LoopSession": "lmms_eval.agentic.loop",
+    "LoopWorker": "lmms_eval.agentic.loop",
+    "ModelOutputParser": "lmms_eval.agentic.parsers",
+    "ModelServer": "lmms_eval.agentic.model_server",
+    "ObservationParser": "lmms_eval.agentic.parsers",
+    "OpenAIModelServer": "lmms_eval.agentic.model_server",
+    "ParsedAction": "lmms_eval.agentic.types",
+    "Parser": "lmms_eval.agentic.parsers",
+    "ParserContext": "lmms_eval.agentic.parsers",
+    "QwenModelOutputParser": "lmms_eval.agentic.parsers",
+    "RolloutJob": "lmms_eval.agentic.loop",
+    "SimpleLoopSession": "lmms_eval.agentic.loop",
+    "SimpleLoopWorker": "lmms_eval.agentic.loop",
+    "SingleAgentLoopWorker": "lmms_eval.agentic.loop",
+    "StepResult": "lmms_eval.agentic.types",
+    "VizDoomActionParser": "lmms_eval.agentic.parsers",
+    "VizDoomObservationParser": "lmms_eval.agentic.parsers",
+    "build_action_parser": "lmms_eval.agentic.factory",
+    "build_env_manager": "lmms_eval.agentic.factory",
+    "build_loop_worker": "lmms_eval.agentic.factory",
+    "build_model_output_parser": "lmms_eval.agentic.factory",
+    "build_model_server": "lmms_eval.agentic.factory",
+    "build_observation_parser": "lmms_eval.agentic.factory",
+    "run_generate_until_game": "lmms_eval.agentic.loop",
+}
+
+__all__ = sorted(_EXPORTS)
+
+
+def __getattr__(name):
+    if name in _EXPORTS:
+        module = import_module(_EXPORTS[name])
+        value = getattr(module, name)
+        globals()[name] = value
+        return value
+    raise AttributeError(name)
