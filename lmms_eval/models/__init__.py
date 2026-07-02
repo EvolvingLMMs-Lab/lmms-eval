@@ -114,6 +114,7 @@ AVAILABLE_SIMPLE_MODELS = {
 
 AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "bagel_lmms_engine": "BagelLmmsEngine",
+    "ollama": "Ollama",
     "fastvideo": "FastVideo",
     "internvl_hf": "InternVLHf",
     "llava_hf": "LlavaHf",
