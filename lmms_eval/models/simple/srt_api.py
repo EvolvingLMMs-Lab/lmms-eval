@@ -196,6 +196,8 @@ class SRT_API(lmms):
         for attempt in range(5):
             try:
                 response = await self.client.chat.completions.create(model=self.model_version, messages=messages, temperature=gen_kwargs["temperature"], max_tokens=gen_kwargs["max_new_tokens"], timeout=self.timeout)
+                if not response.choices or response.choices[0].message is None:
+                    raise ValueError("LLM returned empty or filtered response")
                 response_text = response.choices[0].message.content.strip()
                 break  # If successful, break out of the loop
 
@@ -259,6 +261,8 @@ class SRT_API(lmms):
         for attempt in range(5):
             try:
                 response = self.client.chat.completions.create(model=self.model_version, messages=messages, temperature=gen_kwargs["temperature"], max_tokens=gen_kwargs["max_new_tokens"], timeout=self.timeout)
+                if not response.choices or response.choices[0].message is None:
+                    raise ValueError("LLM returned empty or filtered response")
                 response_text = response.choices[0].message.content.strip()
                 break  # If successful, break out of the loop
 

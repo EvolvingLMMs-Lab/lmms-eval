@@ -206,6 +206,8 @@ Your extracted letter is:
         "temperature": 0.0,
     }
     response = client.chat.completions.create(**params)
+    if not response.choices or response.choices[0].message is None:
+        raise ValueError("LLM returned empty or filtered response")
     response = response.choices[0].message.content
 
     return response

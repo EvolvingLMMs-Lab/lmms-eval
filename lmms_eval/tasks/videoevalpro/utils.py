@@ -64,6 +64,8 @@ Grade the predicted answer ofthe question as one of: A: CORRECT B: INCORRECT C: 
 
         response = self.client.chat.completions.create(model=self.model_name, messages=[{"role": "user", "content": prompt}], temperature=0, max_tokens=5)
 
+        if not response.choices or response.choices[0].message is None:
+            raise ValueError("LLM returned empty or filtered response")
         answer = response.choices[0].message.content.strip()
         # print(f"---------------------->>>>gpt answer: {answer}")
         return answer[0].upper() == "A"
