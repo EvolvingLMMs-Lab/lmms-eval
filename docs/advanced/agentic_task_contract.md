@@ -60,6 +60,34 @@ Payload blocks are not restricted to text, image, or video. Tasks may use
 tensors, embeddings, latent states, logits, or other structured objects as long
 as their parser/model-server pair agrees on the schema.
 
+## Model Server Transport
+
+`ModelServer` is an lmms-eval interface. Tasks and external runtimes should
+select a model-server transport by spec, not by embedding runtime-specific code
+in task implementations.
+
+Built-in transports include:
+
+```yaml
+model_server:
+  name: openai
+  model: my-model
+  base_url: http://127.0.0.1:8000/v1
+```
+
+```yaml
+model_server:
+  name: ray
+  load_balancer_name: policy-lb
+  namespace: null
+```
+
+The Ray transport calls named Ray model-server actors directly from the
+lmms-eval rollout worker. A training runtime such as lmms-engine may create and
+own those actors, but the rollout-side client remains the lmms-eval
+`RayActorModelServer`. This keeps new agentic tasks independent of whether
+inference is served through HTTP, Ray actor RPC, or a future model runtime.
+
 ## Data Contract
 
 Evaluation data can be declared by the task YAML using lmms-eval's normal

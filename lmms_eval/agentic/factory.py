@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import inspect
+from pathlib import Path
 from dataclasses import dataclass, field
 from importlib import import_module
+import importlib.util
 from typing import Any
 
 from lmms_eval.agentic.env import EnvManager
@@ -32,7 +34,13 @@ class AgenticFactory:
     factory with ``with_components``.
     """
 
-    model_servers: dict[str, Any] = field(default_factory=lambda: {"openai": OpenAIModelServer, "debug": FixedActionModelServer})
+    model_servers: dict[str, Any] = field(
+        default_factory=lambda: {
+            "openai": OpenAIModelServer,
+            "debug": FixedActionModelServer,
+            "ray": "lmms_eval.agentic.model_server.ray:RayActorModelServer",
+        }
+    )
     loop_workers: dict[str, Any] = field(default_factory=lambda: {"simple": "lmms_eval.agentic.loop.worker.simple:SimpleLoopWorker"})
     model_output_parsers: dict[str, Any] = field(default_factory=lambda: {"identity": IdentityModelOutputParser, "qwen": QwenModelOutputParser})
     observation_parsers: dict[str, Any] = field(default_factory=lambda: {"vizdoom": VizDoomObservationParser})
@@ -135,6 +143,14 @@ def import_from_path(path: str) -> Any:
         module_name, sep, attr = path.rpartition(".")
     if not module_name or not attr:
         raise ValueError(f"Import path must be 'module:attribute' or 'module.attribute', got {path!r}")
+    if module_name.endswith(".py") or Path(module_name).exists():
+        module_path = Path(module_name).expanduser().resolve()
+        spec = importlib.util.spec_from_file_location(f"lmms_eval_agentic_dynamic_{module_path.stem}", module_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Could not import {attr!r} from file {module_path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return getattr(module, attr)
     module = import_module(module_name)
     return getattr(module, attr)
 
