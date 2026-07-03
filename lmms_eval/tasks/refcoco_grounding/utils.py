@@ -22,7 +22,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from loguru import logger as eval_logger
 
-
 _GROUNDING_METRICS = ["IoU", "ACC@0.1", "ACC@0.3", "ACC@0.5", "ACC@0.7", "ACC@0.9", "Center_ACC"]
 
 
@@ -117,10 +116,7 @@ def _bbox_list_from_json(data: Any) -> List[List[float]]:
     return boxes
 
 
-_BBOX_REGEX = re.compile(
-    r"\[?\s*(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)\s*[,\s]\s*"
-    r"(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)\s*\]?"
-)
+_BBOX_REGEX = re.compile(r"\[?\s*(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)\s*[,\s]\s*" r"(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)\s*\]?")
 
 
 def _regex_fallback_boxes(text: str) -> List[List[float]]:

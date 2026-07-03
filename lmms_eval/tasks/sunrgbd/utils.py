@@ -235,9 +235,7 @@ def _compute_ap_per_category(
             detections.append((score, img_id, box))
     detections.sort(key=lambda x: x[0], reverse=True)
 
-    matched_gts: Dict[int, np.ndarray] = {
-        img_id: np.zeros(len(gts), dtype=bool) for img_id, gts in per_image_gt.items()
-    }
+    matched_gts: Dict[int, np.ndarray] = {img_id: np.zeros(len(gts), dtype=bool) for img_id, gts in per_image_gt.items()}
 
     tp = np.zeros(len(detections), dtype=np.float64)
     fp = np.zeros(len(detections), dtype=np.float64)
@@ -288,9 +286,7 @@ def _map_at_iou(records: List[Dict[str, Any]], iou_thresh: float) -> float:
             per_cat_gt.setdefault(key, {}).setdefault(img_id, []).append(gt["bbox"])
         for pred in rec["preds"]:
             key = _norm_label(pred.get("label"))
-            per_cat_dt.setdefault(key, {}).setdefault(img_id, []).append(
-                (pred["bbox"], float(pred.get("score", 1.0)))
-            )
+            per_cat_dt.setdefault(key, {}).setdefault(img_id, []).append((pred["bbox"], float(pred.get("score", 1.0))))
 
     aps: List[float] = []
     for cat, gt_map in per_cat_gt.items():

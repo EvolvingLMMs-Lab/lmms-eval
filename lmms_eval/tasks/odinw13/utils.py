@@ -7,10 +7,7 @@ from datasets import Dataset
 
 eval_logger = logging.getLogger("lmms-eval")
 
-PROMPT = (
-    "Locate every instance that belongs to the following categories: ´{obj_names}´. "
-    "Report bbox coordinates in JSON format."
-)
+PROMPT = "Locate every instance that belongs to the following categories: ´{obj_names}´. " "Report bbox coordinates in JSON format."
 
 IOU_THRESHOLDS = [0.1, 0.3, 0.5, 0.7, 0.9]
 
