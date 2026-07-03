@@ -1,0 +1,8 @@
+include: _default_template_yaml
+
+task: refcoco_plus_grounding_testA
+dataset_path: lmms-lab/RefCOCOPlus
+test_split: testA
+
+metadata:
+  version: 0.0

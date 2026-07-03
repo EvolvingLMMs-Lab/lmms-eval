@@ -1,0 +1,40 @@
+dataset_path: lmms-lab/RefCOCO
+output_type: generate_until
+
+process_results_use_image: true
+
+doc_to_visual: !function utils.refcoco_grounding_doc_to_visual
+doc_to_text: !function utils.refcoco_grounding_doc_to_text
+doc_to_target: "bbox"
+
+generation_kwargs:
+  max_new_tokens: 512
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+process_results: !function utils.refcoco_grounding_process_result
+
+metric_list:
+  - metric: refcoco_grounding_IoU
+    aggregation: !function utils.refcoco_grounding_iou
+    higher_is_better: true
+  - metric: refcoco_grounding_ACC@0.1
+    aggregation: !function utils.refcoco_grounding_acc01
+    higher_is_better: true
+  - metric: refcoco_grounding_ACC@0.3
+    aggregation: !function utils.refcoco_grounding_acc03
+    higher_is_better: true
+  - metric: refcoco_grounding_ACC@0.5
+    aggregation: !function utils.refcoco_grounding_acc05
+    higher_is_better: true
+  - metric: refcoco_grounding_ACC@0.7
+    aggregation: !function utils.refcoco_grounding_acc07
+    higher_is_better: true
+  - metric: refcoco_grounding_ACC@0.9
+    aggregation: !function utils.refcoco_grounding_acc09
+    higher_is_better: true
+  - metric: refcoco_grounding_Center_ACC
+    aggregation: !function utils.refcoco_grounding_center_acc
+    higher_is_better: true
