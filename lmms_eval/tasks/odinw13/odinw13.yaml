@@ -1,0 +1,37 @@
+task: odinw13
+output_type: generate_until
+test_split: test
+dataset_path: kcz358/ODinW-13
+process_docs: !function utils.odinw13_process_docs
+doc_to_visual: !function utils.odinw13_doc_to_visual
+doc_to_text: !function utils.odinw13_doc_to_text
+doc_to_target: ""
+generation_kwargs:
+  max_new_tokens: 8192
+  temperature: 0.0
+  do_sample: false
+process_results: !function utils.odinw13_process_results
+metric_list:
+  - metric: odinw13_IoU
+    aggregation: !function utils.odinw13_iou
+    higher_is_better: true
+  - metric: odinw13_ACC@0.1
+    aggregation: !function utils.odinw13_acc_01
+    higher_is_better: true
+  - metric: odinw13_ACC@0.3
+    aggregation: !function utils.odinw13_acc_03
+    higher_is_better: true
+  - metric: odinw13_ACC@0.5
+    aggregation: !function utils.odinw13_acc_05
+    higher_is_better: true
+  - metric: odinw13_ACC@0.7
+    aggregation: !function utils.odinw13_acc_07
+    higher_is_better: true
+  - metric: odinw13_ACC@0.9
+    aggregation: !function utils.odinw13_acc_09
+    higher_is_better: true
+  - metric: odinw13_Center_ACC
+    aggregation: !function utils.odinw13_center_acc
+    higher_is_better: true
+metadata:
+  version: '0.0'
