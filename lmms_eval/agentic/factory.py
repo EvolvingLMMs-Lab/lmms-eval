@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import importlib.util
 import inspect
-from pathlib import Path
 from dataclasses import dataclass, field
 from importlib import import_module
-import importlib.util
+from pathlib import Path
 from typing import Any
 
 from lmms_eval.agentic.env import EnvManager

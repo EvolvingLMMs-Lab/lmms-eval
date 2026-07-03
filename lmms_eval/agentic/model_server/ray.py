@@ -120,9 +120,7 @@ class RayActorModelServer(ModelServer):
         self.sticky = bool(sticky)
         self.request_id_metadata_key = request_id_metadata_key
         self._counter = itertools.count()
-        self._load_balancer = (
-            ray.get_actor(load_balancer_name, namespace=namespace) if load_balancer_name is not None else None
-        )
+        self._load_balancer = ray.get_actor(load_balancer_name, namespace=namespace) if load_balancer_name is not None else None
 
         names: list[str] = []
         if actor_name:
