@@ -33,5 +33,14 @@ metric_list:
   - metric: odinw13_Center_ACC
     aggregation: !function utils.odinw13_center_acc
     higher_is_better: true
+  - metric: odinw13_mAP
+    aggregation: !function utils.odinw13_map
+    higher_is_better: true
+  - metric: odinw13_mAP50
+    aggregation: !function utils.odinw13_map50
+    higher_is_better: true
+  - metric: odinw13_mAP75
+    aggregation: !function utils.odinw13_map75
+    higher_is_better: true
 metadata:
   version: '0.0'

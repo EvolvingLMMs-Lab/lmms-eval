@@ -30,10 +30,19 @@ ODINW13_SUBSETS = [
     "thermalDogsAndPeople",
 ]
 
+MAP_METRIC_KEYS = ["mAP", "mAP50", "mAP75"]
+
 
 def odinw13_process_docs(dataset: Dataset) -> Dataset:
-    """Attach image dimensions so process_results has them without needing the PIL image."""
-    return dataset.map(lambda x: {"image_width": x["image"].width, "image_height": x["image"].height})
+    """Attach image dimensions and a stable per-doc id used for COCO mAP."""
+    return dataset.map(
+        lambda x, idx: {
+            "image_width": x["image"].width,
+            "image_height": x["image"].height,
+            "image_id": idx,
+        },
+        with_indices=True,
+    )
 
 
 def odinw13_doc_to_visual(doc: Dict[str, Any]) -> List[Any]:
@@ -288,6 +297,12 @@ def odinw13_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str
 
     record = {
         "dataset_name": doc["dataset_name"],
+        "image_id": int(doc["image_id"]),
+        "image_width": width,
+        "image_height": height,
+        "categories": list(doc["categories"]),
+        "gts": gts,
+        "preds": preds,
         "n_gt": len(gts),
         "n_pred": len(preds),
         "iou_sum": float(sum(per_gt_iou)),
@@ -298,6 +313,8 @@ def odinw13_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str
     metrics = {"odinw13_IoU": record, "odinw13_Center_ACC": record}
     for t in IOU_THRESHOLDS:
         metrics[f"odinw13_ACC@{t}"] = record
+    for key in MAP_METRIC_KEYS:
+        metrics[f"odinw13_{key}"] = record
     return metrics
 
 
@@ -345,3 +362,125 @@ odinw13_acc_03 = _make_acc_aggregator(0.3)
 odinw13_acc_05 = _make_acc_aggregator(0.5)
 odinw13_acc_07 = _make_acc_aggregator(0.7)
 odinw13_acc_09 = _make_acc_aggregator(0.9)
+
+
+def _coco_eval_one_dataset(records: List[Dict[str, Any]]) -> Dict[str, float]:
+    """Run pycocotools COCOeval on a single ODinW sub-dataset.
+
+    Returns {"mAP": AP@[.5:.95], "mAP50": AP50, "mAP75": AP75}. NaN if the
+    subset has no ground-truth boxes.
+    """
+    import contextlib
+    import io as _io
+
+    from pycocotools.coco import COCO
+    from pycocotools.cocoeval import COCOeval
+
+    all_cats: Dict[str, int] = {}
+    for rec in records:
+        for name in rec["categories"]:
+            key = _norm_label(name)
+            if key not in all_cats:
+                all_cats[key] = len(all_cats) + 1
+
+    images: List[Dict[str, Any]] = []
+    annotations: List[Dict[str, Any]] = []
+    detections: List[Dict[str, Any]] = []
+    ann_id = 1
+
+    for rec in records:
+        img_id = rec["image_id"]
+        images.append({"id": img_id, "width": rec["image_width"], "height": rec["image_height"]})
+        for gt in rec["gts"]:
+            key = _norm_label(gt["label"])
+            cat_id = all_cats.get(key)
+            if cat_id is None:
+                continue
+            x1, y1, x2, y2 = gt["bbox"]
+            w = max(0.0, x2 - x1)
+            h = max(0.0, y2 - y1)
+            annotations.append(
+                {
+                    "id": ann_id,
+                    "image_id": img_id,
+                    "category_id": cat_id,
+                    "bbox": [x1, y1, w, h],
+                    "area": w * h,
+                    "iscrowd": 0,
+                }
+            )
+            ann_id += 1
+        for pred in rec["preds"]:
+            key = _norm_label(pred.get("label"))
+            cat_id = all_cats.get(key)
+            if cat_id is None:
+                continue
+            x1, y1, x2, y2 = pred["bbox"]
+            w = max(0.0, x2 - x1)
+            h = max(0.0, y2 - y1)
+            detections.append(
+                {
+                    "image_id": img_id,
+                    "category_id": cat_id,
+                    "bbox": [x1, y1, w, h],
+                    "score": float(pred.get("score", 1.0)),
+                }
+            )
+
+    if not annotations:
+        return {k: float("nan") for k in MAP_METRIC_KEYS}
+
+    coco_gt = COCO()
+    coco_gt.dataset = {
+        "images": images,
+        "annotations": annotations,
+        "categories": [{"id": v, "name": k} for k, v in all_cats.items()],
+    }
+    coco_gt.createIndex()
+
+    if not detections:
+        return {"mAP": 0.0, "mAP50": 0.0, "mAP75": 0.0}
+
+    coco_dt = coco_gt.loadRes(detections)
+
+    with contextlib.redirect_stdout(_io.StringIO()):
+        coco_eval = COCOeval(coco_gt, coco_dt, "bbox")
+        coco_eval.evaluate()
+        coco_eval.accumulate()
+        coco_eval.summarize()
+
+    stats = coco_eval.stats
+    return {"mAP": float(stats[0]), "mAP50": float(stats[1]), "mAP75": float(stats[2])}
+
+
+def _macro_map(results: List[Dict[str, Any]], metric_key: str) -> float:
+    """Macro-average COCO mAP over the 13 sub-datasets."""
+    groups: Dict[str, List[Dict[str, Any]]] = {}
+    for rec in results:
+        groups.setdefault(rec["dataset_name"], []).append(rec)
+
+    per_dataset: Dict[str, float] = {}
+    for name, recs in groups.items():
+        vals = _coco_eval_one_dataset(recs)
+        per_dataset[name] = vals[metric_key]
+
+    for name in ODINW13_SUBSETS:
+        v = per_dataset.get(name, float("nan"))
+        eval_logger.info(f"[odinw13] {metric_key} {name}: {v:.4f}")
+
+    keep = [v for v in per_dataset.values() if v == v]  # drop NaN
+    if not keep:
+        return 0.0
+    return float(sum(keep) / len(keep))
+
+
+def odinw13_map(results: List[Dict[str, Any]]) -> float:
+    return _macro_map(results, "mAP")
+
+
+def odinw13_map50(results: List[Dict[str, Any]]) -> float:
+    return _macro_map(results, "mAP50")
+
+
+def odinw13_map75(results: List[Dict[str, Any]]) -> float:
+    return _macro_map(results, "mAP75")
