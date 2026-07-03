@@ -1,7 +1,8 @@
+import importlib.util
 import json
 import os
-
-from lmms_eval.tasks.vizdoom_agentic.env import VizDoomEnvManager
+from functools import lru_cache
+from pathlib import Path
 
 
 def vizdoom_doc_to_visual(doc):
@@ -21,12 +22,13 @@ def vizdoom_doc_to_target(doc):
 
 def vizdoom_env_manager(doc=None, lmms_eval_specific_kwargs=None):
     del doc, lmms_eval_specific_kwargs
+    env_cls = _vizdoom_env_manager_cls()
     # Default to "human-view" parity: the model sees exactly what a human player
     # sees on screen (first-person view + the on-screen HUD), and nothing else.
     # Every oracle channel (depth / labels / objects / sectors / automap) is off.
     # Privileged game variables stay declared for logging/metrics, but the
     # observation parser's human_view flag keeps them out of the model's prompt.
-    return VizDoomEnvManager(
+    return env_cls(
         config_path="basic.cfg",
         screen_resolution="RES_320X240",
         screen_format="RGB24",
@@ -58,6 +60,17 @@ def vizdoom_env_manager(doc=None, lmms_eval_specific_kwargs=None):
         emit_action_frames=os.getenv("VIZDOOM_EMIT_ACTION_FRAMES", "0").lower() in {"1", "true", "yes", "on"},
         success_reward_min=1.0,
     )
+
+
+@lru_cache(maxsize=1)
+def _vizdoom_env_manager_cls():
+    env_path = Path(__file__).resolve().with_name("env.py")
+    spec = importlib.util.spec_from_file_location("lmms_eval_vizdoom_agentic_env", env_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not load VizDoom EnvManager from {env_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.VizDoomEnvManager
 
 
 def vizdoom_process_results(doc, results):

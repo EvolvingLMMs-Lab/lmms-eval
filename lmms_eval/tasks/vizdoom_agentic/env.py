@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Any
 
 from lmms_eval.agentic.env.base import EnvManager
@@ -242,6 +244,10 @@ class VizDoomEnvManager(EnvManager):
                 config[key] = doc[key]
         config["available_buttons"] = _as_list(config.get("available_buttons"))
         config["available_game_variables"] = _as_list(config.get("available_game_variables"))
+        for key in ("config_path", "scenario_path"):
+            value = config.get(key)
+            if isinstance(value, str) and value:
+                config[key] = str(_resolve_vizdoom_asset(value, self.vzd))
         return config
 
     def _configure_game(self, game: Any, config: dict[str, Any], seed: int | None) -> None:
@@ -552,6 +558,20 @@ def _require_vizdoom():
     if not has_vizdoom:
         raise ImportError("The 'vizdoom' package is required for the VizDoom EnvManager. Install it with `pip install vizdoom`.")
     return vizdoom
+
+
+def _resolve_vizdoom_asset(path: str, vzd: Any) -> Path:
+    expanded = Path(os.path.expandvars(os.path.expanduser(path)))
+    if expanded.is_absolute() and expanded.exists():
+        return expanded
+    if not expanded.is_absolute():
+        scenarios_path = Path(vzd.scenarios_path) / expanded
+        if scenarios_path.exists():
+            return scenarios_path
+        task_path = Path(__file__).resolve().parent / expanded
+        if task_path.exists():
+            return task_path
+    return expanded
 
 
 def _enum_value(vzd: Any, enum_type: str, value: Any) -> Any:
