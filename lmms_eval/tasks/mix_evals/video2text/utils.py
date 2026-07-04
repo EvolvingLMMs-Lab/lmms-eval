@@ -109,6 +109,8 @@ def get_eval(question, model_response: str, ground_truth: str, max_tokens: int, 
             # response.raise_for_status()
 
             # content = response_data["choices"][0]["message"]["content"].strip()
+            if not response.choices or response.choices[0].message is None:
+                raise ValueError("LLM returned empty or filtered response")
             content = response.choices[0].message.content.strip()
             if content != "":
                 return content
@@ -379,6 +381,8 @@ class GPTMultiChoiceFilter(Filter):
                     # response.raise_for_status()
 
                     # content =["choices"][0]["message"]["content"].strip()
+                    if not response.choices or response.choices[0].message is None:
+                        raise ValueError("LLM returned empty or filtered response")
                     content = response.choices[0].message.content
                     print("content:", content)
                     if content:

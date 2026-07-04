@@ -138,6 +138,8 @@ def mmesci_agg(results: List[Dict[str, Any]]) -> Dict[str, float]:
                 max_tokens=8,
                 timeout=TIMEOUT,
             )
+            if not resp.choices or resp.choices[0].message is None:
+                raise ValueError("LLM returned empty or filtered response")
             judge_result = resp.choices[0].message.content.strip()
             if judge_result not in ["correct", "incorrect"]:
                 judge_result = "error"

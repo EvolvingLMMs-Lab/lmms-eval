@@ -70,6 +70,8 @@ def call_gpt4o(prompt: str, max_tokens: int = 512) -> str:
             max_tokens=max_tokens,
             temperature=0,
         )
+        if not resp.choices or resp.choices[0].message is None:
+            raise ValueError("LLM returned empty or filtered response")
         return resp.choices[0].message.content
     except Exception as e:
         print(f"[GPT-4o Error] {e}")

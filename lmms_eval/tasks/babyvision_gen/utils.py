@@ -106,6 +106,8 @@ def _call_openai_for_evaluation(
             temperature=0.0,
         )
 
+        if not response.choices or response.choices[0].message is None:
+            raise ValueError("LLM returned empty or filtered response")
         return response.choices[0].message.content
     except Exception as e:
         eval_logger.error(f"Error calling OpenAI API: {e}")

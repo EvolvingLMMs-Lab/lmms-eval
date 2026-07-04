@@ -369,6 +369,8 @@ def llm_as_judge_sync(predict_str, ground_truth, extra_info):
     }
     response = client.chat.completions.create(**payload)
     try:
+        if not response.choices or response.choices[0].message is None:
+            raise ValueError("LLM returned empty or filtered response")
         score = int(response.choices[0].message.content)
     except Exception:
         score = 0

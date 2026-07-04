@@ -95,6 +95,8 @@ def _llm_match_option(question, model_answer, options):
             temperature=0,
         )
 
+        if not response.choices or response.choices[0].message is None:
+            raise ValueError("LLM returned empty or filtered response")
         result = response.choices[0].message.content.strip()
         return _extract_abcdx(result)
 

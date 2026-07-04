@@ -195,6 +195,8 @@ class GPT4V(lmms):
             for attempt in range(MAX_RETRIES):
                 try:
                     response = self.client.chat.completions.create(**payload)
+                    if not response.choices or response.choices[0].message is None:
+                        raise ValueError("LLM returned empty or filtered response")
                     response_text = response.choices[0].message.content
                     break  # If successful, break out of the loop
 
