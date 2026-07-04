@@ -862,6 +862,16 @@ def evaluate(
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     global_rank = int(os.environ.get("RANK", 0))
     world_size = int(os.environ.get("WORLD_SIZE", 1))
+
+    # Auto-init torch.distributed for multi-rank launches where the model
+    # backend did not call init_process_group itself (e.g. image/video
+    # generation models using diffusers). Without this, evaluator collectives
+    # like gather_object / barrier crash with "process group not initialized".
+    # gloo is used because it requires no GPU and works everywhere.
+    if world_size > 1 and dist.is_available() and not dist.is_initialized():
+        dist.init_process_group(backend="gloo")
+        eval_logger.info(f"evaluator: auto-initialized gloo process group (world={world_size})")
+
     eval_logger.info(f"Running on rank {global_rank} (local rank {local_rank})")
 
     def _infer_task_request_type(task_obj: Task) -> Optional[str]:
