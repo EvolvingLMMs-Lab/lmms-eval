@@ -92,9 +92,30 @@ class RayModelServerLoadBalancer:
         self._inflight[actor_name] += 1
         return actor_name, self._actors[actor_name]
 
+    def acquire_batch(self, request_ids: list[str] | None = None) -> tuple[str, Any]:
+        if not self._actors:
+            raise RuntimeError("No Ray model-server actors are registered.")
+        actor_name = None
+        if request_ids and self.sticky:
+            for request_id in request_ids:
+                if request_id in self._request_to_actor and self._request_to_actor[request_id] in self._actors:
+                    actor_name = self._request_to_actor[request_id]
+                    break
+        if actor_name is None:
+            actor_name = min(self._inflight, key=lambda name: self._inflight[name])
+        if request_ids and self.sticky:
+            for request_id in request_ids:
+                self._request_to_actor[request_id] = actor_name
+        self._inflight[actor_name] += max(1, len(request_ids or []))
+        return actor_name, self._actors[actor_name]
+
     def release(self, actor_name: str) -> None:
         if actor_name in self._inflight and self._inflight[actor_name] > 0:
             self._inflight[actor_name] -= 1
+
+    def release_batch(self, actor_name: str, count: int) -> None:
+        if actor_name in self._inflight and self._inflight[actor_name] > 0:
+            self._inflight[actor_name] = max(0, self._inflight[actor_name] - max(1, int(count)))
 
     def status(self) -> dict[str, Any]:
         return {"actors": dict(self._inflight), "sticky_sessions": len(self._request_to_actor)}
@@ -146,7 +167,18 @@ class RayActorModelServer(ModelServer):
         return self._ray_get(actor.generate.remote(request))
 
     def generate_batch(self, requests: list[Any]) -> list[Any]:
-        return [self.generate(request) for request in requests]
+        if not requests:
+            return []
+        if self._load_balancer is not None:
+            request_ids = [self._request_id(request) for request in requests]
+            actor_name, actor = self._ray_get(self._load_balancer.acquire_batch.remote(request_ids))
+            try:
+                return self._ray_get(actor.generate_batch.remote(requests))
+            finally:
+                self._load_balancer.release_batch.remote(actor_name, len(requests))
+
+        actor = self._actors[next(self._counter) % len(self._actors)]
+        return self._ray_get(actor.generate_batch.remote(requests))
 
     def _ray_get(self, ref: Any) -> Any:
         ray = _require_ray()
