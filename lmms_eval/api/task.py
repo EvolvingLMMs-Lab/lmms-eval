@@ -154,7 +154,11 @@ class TaskConfig(dict):
     model_specific_generation_kwargs: dict = None
     model_specific_target_kwargs: dict = None
     reasoning_tags: Union[str, list] = None
-    auto_strip_thinking: bool = True
+    # Opt-in. When True, a StripThinkingFilter is prepended to every filter
+    # pipeline so <think>/<thinking> reasoning blocks are removed before answer
+    # extraction. Defaults False so scoring inputs for existing tasks are
+    # unchanged; ignored when `reasoning_tags` is configured (that path already strips).
+    auto_strip_thinking: bool = False
 
     def __post_init__(self) -> None:
         if self.dataset_path and os.path.exists(os.path.dirname(self.dataset_path)):
