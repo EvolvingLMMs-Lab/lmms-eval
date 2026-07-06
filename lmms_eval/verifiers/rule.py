@@ -60,11 +60,16 @@ class MCQMatchVerifier(Verifier):
     def verify(self, question: str, prediction: str, ground_truth: str, **kwargs: Any) -> VerifyResult:
         pred = prediction.strip().upper().strip("(). ")
         gt = ground_truth.strip().upper().strip("(). ")
+        # Parse-based: confident only when a single MCQ letter was extracted.
+        # An unparseable prediction is low-confidence so a composite chain
+        # falls through to a downstream (e.g. LLM) verifier.
+        extracted = bool(re.fullmatch(r"[A-Z]", pred))
         correct = pred == gt
         return VerifyResult(
             score=1.0 if correct else 0.0,
             is_correct=correct,
             raw_output=f"mcq_match: '{pred}' vs '{gt}'",
+            metadata={"confident": extracted},
         )
 
 
@@ -97,8 +102,11 @@ class NumericToleranceVerifier(Verifier):
             )
 
         correct = math.isclose(pred_num, gt_num, rel_tol=self.rel_tol, abs_tol=self.abs_tol)
+        # Parse-based: both numbers parsed cleanly, so this is a confident
+        # verdict even when wrong (no fallback for a cleanly-parsed mismatch).
         return VerifyResult(
             score=1.0 if correct else 0.0,
             is_correct=correct,
             raw_output=f"numeric: {pred_num} vs {gt_num} (rel_tol={self.rel_tol})",
+            metadata={"confident": True},
         )

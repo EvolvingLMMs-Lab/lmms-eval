@@ -1,16 +1,19 @@
 """OpenAI / GPT-4o judge verifier.
 
 Wraps the existing ``lmms_eval.llm_judge`` provider layer to expose a
-``Verifier`` interface.  Supports three judge modes:
+``Verifier`` interface.  Two ``judge_type`` modes are supported:
 
 * **binary** — correct / incorrect (uses ``evaluate_binary``)
-* **score** — numerical rating normalised to 0-1
-* **custom** — full prompt control via template or callable
+* **comparative** — pairwise scoring (uses ``evaluate_comparative``)
+
+Score-style output is controlled by *response_format* (``"binary"`` /
+``"score"``) and full prompt control by *custom_prompt* — both independent
+of *judge_type*.
 """
 
 import logging
 import os
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Tuple, Union
 
 from .base import Verifier, VerifyResult, parse_binary_response
 
@@ -43,8 +46,9 @@ class OpenAIVerifier(Verifier):
         ``$API_TYPE`` env var.
     judge_type : str
         ``"binary"`` — correct/incorrect via ``evaluate_binary``.
-        ``"score"``  — numerical rating (requires *score_range*).
-        ``"custom"`` — caller provides *custom_prompt*.
+        ``"comparative"`` — pairwise scoring via ``evaluate_comparative``.
+        Score-style output is driven by *response_format* and custom
+        prompts by *custom_prompt*, independent of *judge_type*.
     custom_prompt : str | callable | None
         For ``"custom"`` mode.  If a string, may contain
         ``{question}``, ``{prediction}``, ``{ground_truth}`` placeholders.
@@ -59,6 +63,14 @@ class OpenAIVerifier(Verifier):
         Min/max of the raw score the judge produces (used for normalisation).
     max_retries / retry_delay : int / float
         Retry parameters for transient API failures.
+
+    Notes
+    -----
+    If the judge call fails (an exception is raised, or the provider reports
+    ``success=False``), :meth:`verify` returns a :class:`VerifyResult` with
+    ``metadata["judge_failed"] = True`` (and ``score=0.0`` /
+    ``is_correct=False``) so callers can exclude infra failures instead of
+    counting them as a genuinely wrong prediction.
     """
 
     def __init__(
@@ -123,7 +135,7 @@ class OpenAIVerifier(Verifier):
             return self._verify_once(question, prediction, ground_truth, **kwargs)
         except Exception as e:
             logger.error("OpenAI judge failed: %s", e)
-            return VerifyResult(score=0.0, is_correct=False, raw_output=f"error: {e}")
+            return VerifyResult(score=0.0, is_correct=False, raw_output=f"error: {e}", metadata={"judge_failed": True})
 
     def _verify_once(self, question: str, prediction: str, ground_truth: str, **kwargs: Any) -> VerifyResult:
         # --- custom prompt mode -------------------------------------------------
@@ -147,6 +159,13 @@ class OpenAIVerifier(Verifier):
                 prediction=prediction,
                 output_format=kwargs.get("output_format", "0/1"),
             )
+            if not result.get("success", True):
+                return VerifyResult(
+                    score=0.0,
+                    is_correct=False,
+                    raw_output=result.get("raw_response", ""),
+                    metadata={"model": result.get("model", ""), "judge_failed": True},
+                )
             is_correct = bool(result.get("result"))
             return VerifyResult(
                 score=1.0 if is_correct else 0.0,
@@ -164,6 +183,13 @@ class OpenAIVerifier(Verifier):
                 custom_prompt=None,
                 images=kwargs.get("images"),
             )
+            if not result.get("success", True):
+                return VerifyResult(
+                    score=0.0,
+                    is_correct=False,
+                    raw_output=result.get("raw_response", ""),
+                    metadata={"model": result.get("model", ""), "judge_failed": True},
+                )
             scores = result.get("scores", (-1.0, -1.0))
             s1, s2 = scores if isinstance(scores, tuple) else (-1.0, -1.0)
             lo, hi = self.score_range
