@@ -64,11 +64,17 @@ class SwanLabLogger:
                 login_kwargs["host"] = host
             swanlab.login(**login_kwargs)
 
-        # Initialize (or attach to) a SwanLab run.
-        if swanlab.get_run() is None:
+        # Initialize (or attach to) a SwanLab run. swanlab.get_run() returns the
+        # active run (or None) on <0.8, but raises RuntimeError on >=0.8 when no
+        # run is active; treat "no active run" uniformly across both.
+        try:
+            active_run = swanlab.get_run()
+        except Exception:
+            active_run = None
+        if active_run is None:
             self.run = swanlab.init(**self.swanlab_args)
         else:
-            self.run = swanlab.get_run()
+            self.run = active_run
 
     def post_init(self, results: Dict[str, Any]) -> None:
         self.results: Dict[str, Any] = copy.deepcopy(results)
