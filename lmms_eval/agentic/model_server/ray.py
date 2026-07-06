@@ -4,6 +4,7 @@ import itertools
 import os
 import socket
 import uuid
+from pathlib import Path
 from typing import Any
 
 from lmms_eval.agentic.model_server.base import ModelServer
@@ -57,6 +58,12 @@ class RayModelServerActor:
         if method is None:
             raise NotImplementedError(f"{type(self.server).__name__} does not implement update_weights().")
         return method(*args, **kwargs)
+
+    def validate_weight_path(self, checkpoint_path: str, require_hf_checkpoint: bool = True) -> dict[str, Any]:
+        method = getattr(self.server, "validate_weight_path", None)
+        if method is not None:
+            return method(checkpoint_path, require_hf_checkpoint=require_hf_checkpoint)
+        return _validate_weight_path(checkpoint_path, require_hf_checkpoint=require_hf_checkpoint)
 
     def status(self) -> dict[str, Any]:
         ray = _require_ray()
@@ -221,3 +228,32 @@ class RayActorModelServer(ModelServer):
             if env_id is not None:
                 return f"{env_id}:{agent_id or 'agent'}:{step_idx or 0}"
         return uuid.uuid4().hex
+
+
+def _validate_weight_path(checkpoint_path: str, require_hf_checkpoint: bool = True) -> dict[str, Any]:
+    resolved = Path(checkpoint_path).expanduser().resolve()
+    if not resolved.exists():
+        raise FileNotFoundError(f"Model-server weight checkpoint does not exist: {resolved}")
+    if not resolved.is_dir():
+        raise FileNotFoundError(f"Model-server weight checkpoint must be a directory: {resolved}")
+
+    config_path = resolved / "config.json"
+    safetensors_files = sorted(resolved.glob("*.safetensors"))
+    bin_files = sorted(resolved.glob("*.bin"))
+    index_files = sorted(resolved.glob("*.index.json"))
+    if require_hf_checkpoint and not config_path.exists():
+        raise FileNotFoundError(f"Model-server HF checkpoint is missing config.json: {resolved}")
+    if require_hf_checkpoint and not (safetensors_files or bin_files or index_files):
+        raise FileNotFoundError(
+            "Model-server HF checkpoint has no model weight files (*.safetensors, *.bin, or *.index.json): "
+            f"{resolved}"
+        )
+
+    return {
+        "resolved_path": str(resolved),
+        "require_hf_checkpoint": bool(require_hf_checkpoint),
+        "has_config": config_path.exists(),
+        "num_safetensors": len(safetensors_files),
+        "num_bin": len(bin_files),
+        "num_index": len(index_files),
+    }
