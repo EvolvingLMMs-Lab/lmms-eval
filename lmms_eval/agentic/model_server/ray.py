@@ -41,6 +41,12 @@ class RayModelServerActor:
     def generate_batch(self, requests: list[Any]) -> list[Any]:
         return self.server.generate_batch(requests)
 
+    def score_logprobs(self, requests: list[Any], responses: list[Any], **kwargs) -> list[Any]:
+        method = getattr(self.server, "score_logprobs", None)
+        if method is None:
+            raise NotImplementedError(f"{type(self.server).__name__} does not implement score_logprobs().")
+        return method(requests, responses, **kwargs)
+
     def wake_up(self, *args, **kwargs) -> Any:
         method = getattr(self.server, "wake_up", None)
         return method(*args, **kwargs) if method is not None else None
@@ -63,6 +69,14 @@ class RayModelServerActor:
         method = getattr(self.server, "validate_weight_path", None)
         if method is not None:
             return method(checkpoint_path, require_hf_checkpoint=require_hf_checkpoint)
+        return _validate_weight_path(checkpoint_path, require_hf_checkpoint=require_hf_checkpoint)
+
+    def validate_weight_update(self, *args, **kwargs) -> dict[str, Any]:
+        method = getattr(self.server, "validate_weight_update", None)
+        if method is not None:
+            return method(*args, **kwargs)
+        checkpoint_path = kwargs.get("weights_path") or kwargs.get("checkpoint_path")
+        require_hf_checkpoint = kwargs.get("require_hf_checkpoint", True)
         return _validate_weight_path(checkpoint_path, require_hf_checkpoint=require_hf_checkpoint)
 
     def status(self) -> dict[str, Any]:
@@ -209,6 +223,22 @@ class RayActorModelServer(ModelServer):
 
         actor = self._actors[next(self._counter) % len(self._actors)]
         return self._ray_get(actor.generate_batch.remote(requests))
+
+    def score_logprobs(self, requests: list[Any], responses: list[Any], **kwargs) -> list[Any]:
+        if not requests:
+            return []
+        if len(requests) != len(responses):
+            raise ValueError(f"score_logprobs requires equal requests/responses lengths, got {len(requests)} and {len(responses)}.")
+        if self._load_balancer is not None:
+            request_ids = [self._request_id(request) for request in requests]
+            actor_name, actor = self._ray_get(self._load_balancer.acquire_batch.remote(request_ids))
+            try:
+                return self._ray_get(actor.score_logprobs.remote(requests, responses, **kwargs))
+            finally:
+                self._load_balancer.release_batch.remote(actor_name, len(requests))
+
+        actor = self._actors[next(self._counter) % len(self._actors)]
+        return self._ray_get(actor.score_logprobs.remote(requests, responses, **kwargs))
 
     def _ray_get(self, ref: Any) -> Any:
         ray = _require_ray()
