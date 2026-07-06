@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import itertools
+import os
+import socket
 import uuid
 from typing import Any
 
@@ -57,7 +59,21 @@ class RayModelServerActor:
         return method(*args, **kwargs)
 
     def status(self) -> dict[str, Any]:
-        return {"server_type": type(self.server).__name__}
+        ray = _require_ray()
+        accelerator_ids = ray.get_runtime_context().get_accelerator_ids()
+        get_node_ip_address = getattr(ray.util, "get_node_ip_address", None)
+        node_ip = (
+            get_node_ip_address()
+            if get_node_ip_address is not None
+            else socket.gethostbyname(socket.gethostname())
+        )
+        return {
+            "server_type": type(self.server).__name__,
+            "node_ip": node_ip,
+            "hostname": socket.gethostname(),
+            "accelerator_ids": accelerator_ids,
+            "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
+        }
 
 
 class RayModelServerLoadBalancer:
@@ -73,6 +89,8 @@ class RayModelServerLoadBalancer:
         self.namespace = namespace
         self.sticky = bool(sticky)
         self._actors = {name: ray.get_actor(name, namespace=namespace) for name in actor_names}
+        self._actor_order = list(actor_names)
+        self._next_actor_idx = 0
         self._inflight = {name: 0 for name in actor_names}
         self._request_to_actor: dict[str, str] = {}
 
@@ -86,7 +104,7 @@ class RayModelServerLoadBalancer:
                 return actor_name, self._actors[actor_name]
             self._request_to_actor.pop(request_id, None)
 
-        actor_name = min(self._inflight, key=lambda name: self._inflight[name])
+        actor_name = self._next_least_loaded_actor()
         if request_id and self.sticky:
             self._request_to_actor[request_id] = actor_name
         self._inflight[actor_name] += 1
@@ -102,7 +120,7 @@ class RayModelServerLoadBalancer:
                     actor_name = self._request_to_actor[request_id]
                     break
         if actor_name is None:
-            actor_name = min(self._inflight, key=lambda name: self._inflight[name])
+            actor_name = self._next_least_loaded_actor()
         if request_ids and self.sticky:
             for request_id in request_ids:
                 self._request_to_actor[request_id] = actor_name
@@ -119,6 +137,15 @@ class RayModelServerLoadBalancer:
 
     def status(self) -> dict[str, Any]:
         return {"actors": dict(self._inflight), "sticky_sessions": len(self._request_to_actor)}
+
+    def _next_least_loaded_actor(self) -> str:
+        min_inflight = min(self._inflight.values())
+        for _ in range(len(self._actor_order)):
+            actor_name = self._actor_order[self._next_actor_idx]
+            self._next_actor_idx = (self._next_actor_idx + 1) % len(self._actor_order)
+            if self._inflight[actor_name] == min_inflight:
+                return actor_name
+        return min(self._inflight, key=lambda name: self._inflight[name])
 
 
 class RayActorModelServer(ModelServer):
