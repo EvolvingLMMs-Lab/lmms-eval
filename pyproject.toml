@@ -110,6 +110,9 @@ gemini = [
 litellm = [
     "litellm",
 ]
+swanlab = [
+    "swanlab",
+]
 reka = [
     "httpx>=0.23.3",
     "reka-api",
