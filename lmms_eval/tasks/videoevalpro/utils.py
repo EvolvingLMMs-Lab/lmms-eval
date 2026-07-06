@@ -122,11 +122,13 @@ def videoevalpro_aggregate_results(results):
 
     for result in results:
         task_type = result["task_type"]
+        if task_type not in category2score:
+            category2score[task_type] = {"correct": 0, "answered": 0}
         category2score[task_type]["answered"] += 1
-        category2score[task_type]["correct"] += result["judge_result"] == True
+        category2score[task_type]["correct"] += result["judge_result"] is True
         # overall score
         category2score["overall"]["answered"] += 1
-        category2score["overall"]["correct"] += result["judge_result"] == True
+        category2score["overall"]["correct"] += result["judge_result"] is True
 
     final_scores = {}
     for task_type, score in category2score.items():
