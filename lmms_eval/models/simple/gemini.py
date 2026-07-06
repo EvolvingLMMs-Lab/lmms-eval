@@ -1,4 +1,5 @@
 import io
+import mimetypes
 import os
 import threading
 import time
@@ -223,9 +224,14 @@ class Gemini(lmms):
         # Poll for ACTIVE state
         for _ in range(60):  # max ~2 min wait
             state = getattr(uploaded, "state", None)
-            if state is None or str(state).upper() in ("ACTIVE", "STATE_UNSPECIFIED"):
+            if state is None:
                 break
-            if str(state).upper() == "FAILED":
+            # state may be a FileState enum whose str() is "FileState.ACTIVE"; take the bare member name
+            s = getattr(state, "name", None) or str(state)
+            s = s.upper().rsplit(".", 1)[-1]
+            if s in ("ACTIVE", "STATE_UNSPECIFIED"):
+                break
+            if s == "FAILED":
                 raise RuntimeError(f"Video upload failed: {video_path}")
             time.sleep(2)
             uploaded = self.client.files.get(name=uploaded.name)
@@ -273,7 +279,8 @@ class Gemini(lmms):
             if _is_audio_path(visual):
                 with open(visual, "rb") as f:
                     audio_bytes = f.read()
-                return types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav")
+                mime_type = mimetypes.guess_type(visual)[0] or "audio/wav"
+                return types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
             # Assume image path
             return types.Part.from_bytes(data=_image_to_bytes(Image.open(visual).convert("RGB")), mime_type="image/png")
         if isinstance(visual, dict) and "sampling_rate" in visual:
