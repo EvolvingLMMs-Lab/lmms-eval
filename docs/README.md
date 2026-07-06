@@ -12,6 +12,7 @@ This documentation covers every layer of `lmms-eval` — from running your first
 - [Extending the Framework](#extending-the-framework)
   - [Adding a Model](#adding-a-model)
   - [Adding a Task](#adding-a-task)
+  - [Verifying Results](#verifying-results)
 - [Using lmms-eval as a Library](#using-lmms-eval-as-a-library)
 - [Performance and Caching](#performance-and-caching)
 - [Task Catalog](#task-catalog)
@@ -150,6 +151,10 @@ generation_kwargs:
 metric_list:
   - metric: acc
 ```
+
+### Verifying Results
+
+The [Verifiers Guide](guides/verifiers_guide.md) covers `lmms_eval.verifiers`, a pluggable per-sample verification pipeline for scoring predictions in `process_results` - rule-based matching (exact/contains/MCQ/numeric), LLM-as-judge (OpenAI, Gemini), and composite fallback chains, all built from extractors that clean model output before it's judged.
 
 ## Using lmms-eval as a Library
 
