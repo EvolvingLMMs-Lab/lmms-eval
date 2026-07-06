@@ -125,6 +125,33 @@ def test_subprocess_cancellation_kills_orphan():
     asyncio.run(_scenario())
 
 
+def test_subprocess_started_in_new_session(monkeypatch):
+    """The eval child must be spawned with ``start_new_session=True`` so a
+    cancel can SIGKILL the whole process group (the accelerate launcher plus
+    its GPU worker grandchildren) rather than orphaning them."""
+    captured = {}
+
+    class _FakeProc:
+        returncode = None
+
+        async def wait(self):
+            self.returncode = 0
+            return 0
+
+    async def _fake_exec(*args, **kwargs):
+        captured["kwargs"] = kwargs
+        return _FakeProc()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", _fake_exec)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        log_path = Path(tmp) / "eval.log"
+        returncode = asyncio.run(JobScheduler._run_subprocess_with_log([sys.executable, "-c", "pass"], log_path))
+
+    assert returncode == 0
+    assert captured["kwargs"].get("start_new_session") is True
+
+
 def test_extra_env_reaches_subprocess():
     """``extra_env`` must layer on top of os.environ + the PYTHONUNBUFFERED
     default so callers can ship per-job env (WANDB_DISABLED, task-specific
@@ -187,76 +214,6 @@ def test_extra_env_overrides_inherited_env(monkeypatch):
 
         assert returncode == 0
         assert log_path.read_text() == "from-extra-env"
-
-
-# ---------------------------------------------------------------------------
-# _iter_stream_lines — chunked-read replacement for readline()
-# ---------------------------------------------------------------------------
-
-
-def test_iter_stream_lines_yields_lines_without_separator_overflow():
-    """A 200 KiB chunk without a newline used to crash ``async for line in
-    stream`` with ValueError("Separator is not found..."); the helper must
-    deliver the bytes as a single yielded line and keep going."""
-
-    async def _run():
-        proc = await asyncio.create_subprocess_exec(
-            sys.executable,
-            "-c",
-            "import sys; sys.stdout.write('x' * 200_000); sys.stdout.write('\\nshort\\n')",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-        )
-        lines = []
-        async for line in JobScheduler._iter_stream_lines(proc.stdout):
-            lines.append(line)
-        await proc.wait()
-        return proc.returncode, lines
-
-    returncode, lines = asyncio.run(_run())
-    assert returncode == 0
-    assert any(len(line) >= 200_000 for line in lines)
-    assert any(line == b"short" for line in lines)
-
-
-def test_iter_stream_lines_splits_multiple_lines():
-    async def _run():
-        proc = await asyncio.create_subprocess_exec(
-            sys.executable,
-            "-c",
-            "print('alpha'); print('beta'); print('gamma')",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-        )
-        lines = [line.decode() async for line in JobScheduler._iter_stream_lines(proc.stdout)]
-        await proc.wait()
-        return lines
-
-    lines = asyncio.run(_run())
-    assert lines == ["alpha", "beta", "gamma"]
-
-
-def test_iter_stream_lines_flushes_overflow_buffer():
-    """If no newline ever arrives, the helper must flush at ``max_line_bytes``
-    rather than holding the buffer forever."""
-
-    async def _run():
-        proc = await asyncio.create_subprocess_exec(
-            sys.executable,
-            "-c",
-            "import sys; sys.stdout.write('y' * 300_000); sys.stdout.flush()",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-        )
-        total_bytes = 0
-        async for line in JobScheduler._iter_stream_lines(proc.stdout, max_line_bytes=128 * 1024):
-            total_bytes += len(line)
-        await proc.wait()
-        return proc.returncode, total_bytes
-
-    returncode, total_bytes = asyncio.run(_run())
-    assert returncode == 0
-    assert total_bytes == 300_000
 
 
 # ---------------------------------------------------------------------------

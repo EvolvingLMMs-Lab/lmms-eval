@@ -8,6 +8,7 @@ GPU resource management.
 
 import asyncio
 import os
+import signal
 import sys
 import tempfile
 import uuid
@@ -338,7 +339,8 @@ class JobScheduler:
 
     async def _run_evaluation(self, config: dict) -> dict:
         """
-        Run evaluation in a subprocess using accelerate/torchrun.
+        Run evaluation in a subprocess (``python -m lmms_eval`` for a single
+        GPU, ``accelerate launch`` for multi-GPU).
 
         This allows GPU-based evaluation to run in a separate process
         while the server remains responsive.
@@ -442,8 +444,10 @@ class JobScheduler:
         The HTTP server's event loop never touches the subprocess pipe — the
         kernel writes directly to the log file — so the StreamReader buffer /
         backpressure / readline-separator failure class is gone by design.
-        The try/finally still kills and reaps the subprocess on cancellation
-        or unexpected exceptions so we never leak a GPU-resident process.
+        The try/finally still kills and reaps the whole subprocess process
+        group on cancellation or unexpected exceptions so we never leak a
+        GPU-resident process — the multi-GPU worker grandchildren an
+        ``accelerate launch`` parent spawns are killed with it, not orphaned.
 
         ``extra_env`` is merged on top of ``os.environ`` + the forced
         ``PYTHONUNBUFFERED=1`` default so callers can layer their own env
@@ -474,6 +478,7 @@ class JobScheduler:
                 stdout=log_fp,
                 stderr=asyncio.subprocess.STDOUT,
                 env=env,
+                start_new_session=True,
             )
             try:
                 await proc.wait()
@@ -481,47 +486,22 @@ class JobScheduler:
                 return proc.returncode
             finally:
                 if proc.returncode is None:
-                    proc.kill()
+                    # start_new_session=True put the child in its own process
+                    # group; SIGKILL the whole group so a multi-GPU launcher's
+                    # GPU worker grandchildren are killed too instead of being
+                    # orphaned holding GPU memory.
+                    try:
+                        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    except Exception:
+                        # getpgid/killpg unavailable or failed for any other
+                        # reason — fall back to killing the direct child.
+                        proc.kill()
                     try:
                         await asyncio.wait_for(proc.wait(), timeout=10)
                     except (asyncio.TimeoutError, ProcessLookupError):
                         pass
-
-    @staticmethod
-    async def _iter_stream_lines(
-        stream: asyncio.StreamReader,
-        chunk_size: int = 64 * 1024,
-        max_line_bytes: int = 1 * 1024 * 1024,
-    ):
-        """Yield lines from a StreamReader without readline()'s 64 KiB cap.
-
-        ``async for line in stream`` and ``await stream.readline()`` both raise
-        ``ValueError("Separator is not found, and chunk exceed the limit")``
-        as soon as a single run of >64 KiB without a newline arrives — tqdm
-        ``\\r`` progress, long tracebacks, multi-line JSON dumps all trip it.
-        Use this for streaming consumers (SSE / log forwarders) where the
-        caller still wants line-shaped events but cannot tolerate the
-        separator overflow. If a logical line ever exceeds ``max_line_bytes``
-        it is yielded as-is and the buffer is reset so memory stays bounded.
-        """
-        pending = bytearray()
-        while True:
-            chunk = await stream.read(chunk_size)
-            if not chunk:
-                if pending:
-                    yield bytes(pending)
-                return
-            pending.extend(chunk)
-            while True:
-                idx = pending.find(b"\n")
-                if idx < 0:
-                    if len(pending) > max_line_bytes:
-                        yield bytes(pending)
-                        pending.clear()
-                    break
-                line = bytes(pending[:idx])
-                del pending[: idx + 1]
-                yield line
 
     @staticmethod
     def _tail_log(log_path: Path, max_lines: int = 50, max_bytes: int = 256 * 1024) -> str:
