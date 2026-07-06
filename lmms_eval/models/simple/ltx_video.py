@@ -25,7 +25,10 @@ class LTXVideo(DiffusersWMBase):
 
     def _patch_pipeline_cls_before_load(self) -> None:
         if type(self)._pipeline_cls is None:
-            from diffusers import LTXPipeline
+            try:
+                from diffusers import LTXPipeline
+            except ImportError as exc:
+                raise ImportError("ltx_video requires diffusers: `pip install diffusers imageio imageio-ffmpeg`") from exc
 
             type(self)._pipeline_cls = LTXPipeline
 

@@ -30,7 +30,10 @@ class Wan2_1_T2V(DiffusersWMBase):
 
     def _patch_pipeline_cls_before_load(self) -> None:
         if type(self)._pipeline_cls is None:
-            from diffusers import WanPipeline
+            try:
+                from diffusers import WanPipeline
+            except ImportError as exc:
+                raise ImportError("wan2_1_t2v requires diffusers: `pip install diffusers imageio imageio-ffmpeg`") from exc
 
             type(self)._pipeline_cls = WanPipeline
 

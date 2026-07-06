@@ -20,6 +20,7 @@ Usage::
 
 from __future__ import annotations
 
+import hashlib
 import traceback
 from pathlib import Path
 from typing import List, Union
@@ -40,7 +41,10 @@ class Wan2_1_T2I(DiffusersWMBase):
 
     def _patch_pipeline_cls_before_load(self) -> None:
         if type(self)._pipeline_cls is None:
-            from diffusers import WanPipeline
+            try:
+                from diffusers import WanPipeline
+            except ImportError as exc:
+                raise ImportError("wan2_1_t2i requires diffusers: `pip install diffusers imageio imageio-ffmpeg`") from exc
 
             type(self)._pipeline_cls = WanPipeline
 
@@ -138,7 +142,7 @@ class Wan2_1_T2I(DiffusersWMBase):
                 pbar.update(1)
                 continue
 
-            pid = int(doc_id) if isinstance(doc_id, int) else hash(str(doc_id)) % 100000
+            pid = int(doc_id) if isinstance(doc_id, int) else int(hashlib.sha1(str(doc_id).encode()).hexdigest(), 16) % 100000
             seed_paths = [task_dir / f"{pid:04d}_s{si}.png" for si in range(self.num_images_per_prompt)]
 
             if all(p.exists() and p.stat().st_size > 100 for p in seed_paths):

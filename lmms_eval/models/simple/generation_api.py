@@ -80,6 +80,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import requests as http_requests
+from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from tqdm import tqdm
 
@@ -298,6 +299,20 @@ class GenerationApi(lmms):
         **kwargs,
     ) -> None:
         super().__init__()
+
+        # DP wiring for accelerate-launched runs: the evaluator reads lm.device,
+        # lm.rank, lm.world_size for cross-rank sync (evaluator.py:950). Mirror
+        # the sibling API backends (gemini_api / gpt4v).
+        accelerator = Accelerator()
+        if accelerator.num_processes > 1:
+            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            if accelerator.is_local_main_process:
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
+        self.accelerator = accelerator
+        self._rank = accelerator.local_process_index
+        self._world_size = accelerator.num_processes
+        self.device = accelerator.device
+
         self.mode = str(mode).lower()
         if self.mode not in ("t2v", "v2v"):
             raise ValueError(f"generation_api mode must be 't2v' or 'v2v', got {mode!r}")
@@ -495,15 +510,22 @@ class GenerationApi(lmms):
         return video_url, data
 
     def _download_video(self, video_url: str, output_path: str) -> str:
-        """Download video from CDN URL to local file."""
+        """Download video from CDN URL to local file, atomically.
+
+        Stream into a ``.part`` sidecar and ``os.replace`` into place only on
+        clean completion, so an interrupted download never leaves a truncated
+        file that ``_resume_hit`` would mistake for a finished cache entry.
+        """
         resp = self._session.get(video_url, stream=True, timeout=300)
         resp.raise_for_status()
 
         path = Path(output_path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "wb") as f:
+        part = f"{path}.part"
+        with open(part, "wb") as f:
             for chunk in resp.iter_content(chunk_size=65536):
                 f.write(chunk)
+        os.replace(part, path)
         return str(path)
 
     def _infer_extension(self, video_url: str) -> str:

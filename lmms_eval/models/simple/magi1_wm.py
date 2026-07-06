@@ -13,7 +13,8 @@ Requirements
     - Provide a config JSON (from ``MAGI-1/example/``).
     - CUDA-enabled torch.  ffmpeg recommended (for fps resampling).
     - 4.5B variant: 1× GPU (≥24 GB VRAM).
-      24B variant: 8× H100/H800.
+      24B variant: 8× H100/H800 (model-parallel — NOT supported under the
+      stock lmms-eval evaluator; see the usage note below).
 
 Performance note
     Pass ``kv_offload=False`` (model arg) to keep the KV cache resident on the
@@ -29,14 +30,13 @@ Usage (4.5B, single GPU)::
         --tasks physics_iq_v2v \\
         --batch_size 1 --log_samples
 
-Usage (24B, 8 GPUs via torchrun)::
-
-    torchrun --nproc_per_node=8 --rdzv-backend=c10d --rdzv-endpoint=localhost:29400 --nnodes=1 \\
-        -m lmms_eval \\
-        --model magi1_wm \\
-        --model_args "magi_root=/path/to/MAGI-1,config_file=/path/to/24B_base_config.json,output_dir=./logs/magi1" \\
-        --tasks physics_iq_v2v \\
-        --batch_size 1 --log_samples
+Model parallelism (24B, ``cp_size * pp_size > 1``) is NOT supported under the
+stock lmms-eval evaluator: it shards docs across all ranks by RANK/WORLD_SIZE,
+which desyncs MAGI-1's model-parallel collectives (each rank would try to
+generate a different doc). Use the single-GPU 4.5B config above, or pure
+data-parallel (``cp_size=pp_size=1``, one full replica per rank via
+``torchrun --nproc_per_node=N``). ``__init__`` raises if model parallel is
+combined with a multi-rank world.
 """
 
 import hashlib
@@ -205,29 +205,26 @@ class Magi1WorldModel(lmms):
         self._modified_config_path: Optional[str] = None
         self._load_lock = threading.Lock()
         self._mp_group = None  # set in _load_pipeline for DP>1
+        self._parallel_layout: Optional[_ParallelLayout] = None  # computed in _load_pipeline
 
-        # Peek at config to compute parallel layout before build_all_requests.
-        # The evaluator calls build_all_requests with (data_parallel_rank,
-        # data_parallel_world_size) right after __init__ — those properties
-        # read self._parallel_layout, so it must be set here, not lazily in
-        # _load_pipeline.
+        # MAGI-1 model parallelism (cp_size * pp_size > 1) needs every MP rank to
+        # co-run each generation, but the stock lmms-eval evaluator shards docs
+        # across all WORLD_SIZE ranks by env RANK/WORLD_SIZE. Under model parallel
+        # the two collide: each MP rank would be handed a different disjoint slice
+        # of docs and desync on MAGI's collectives. Single-GPU 4.5B and pure
+        # data-parallel (cp_size=pp_size=1, one full replica per rank) are fine.
         with open(self.config_file) as f:
-            _cfg_peek = json.load(f)
-        _engine = _cfg_peek.get("engine_config", {})
-        _cp = int(_engine.get("cp_size", 1))
-        _pp = int(_engine.get("pp_size", 1))
-        _mp_size = max(1, _cp * _pp)
-        _dp_replicas = self._world_size // _mp_size if self._world_size >= _mp_size else 1
-        _replica_rank = self._global_rank // _mp_size if _mp_size > 0 else 0
-
-        self._parallel_layout = _ParallelLayout(
-            global_rank=self._global_rank,
-            local_rank=self._local_rank,
-            world_size=self._world_size,
-            model_parallel_world_size=_mp_size,
-            data_parallel_replicas=_dp_replicas,
-            replica_rank=_replica_rank,
-        )
+            _engine = json.load(f).get("engine_config", {})
+        _mp_size = max(1, int(_engine.get("cp_size", 1)) * int(_engine.get("pp_size", 1)))
+        if self._world_size > 1 and _mp_size > 1:
+            raise ValueError(
+                f"Model-parallel MAGI-1 (cp_size*pp_size={_mp_size} with "
+                f"WORLD_SIZE={self._world_size}) is not supported under the stock "
+                "lmms-eval evaluator: it shards docs across all ranks by "
+                "RANK/WORLD_SIZE, which desyncs the model-parallel collectives. "
+                "Use the single-GPU 4.5B config, or pure data-parallel "
+                "(cp_size=pp_size=1, one full replica per rank)."
+            )
 
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
         eval_logger.info(
@@ -245,16 +242,6 @@ class Magi1WorldModel(lmms):
     @property
     def device(self):
         return self._device
-
-    @property
-    def data_parallel_rank(self) -> int:
-        # MAGI-1 ranks within one MP subgroup share input; only replica_rank
-        # distinguishes data shards. For 4.5B (mp_size=1) this equals rank.
-        return self._parallel_layout.replica_rank
-
-    @property
-    def data_parallel_world_size(self) -> int:
-        return self._parallel_layout.data_parallel_replicas
 
     def _is_mp_leader(self) -> bool:
         """Return True on the first rank of this replica's MP subgroup.
@@ -339,7 +326,7 @@ class Magi1WorldModel(lmms):
 
         num_frames = runtime.get("num_frames", 96)
         num_steps = runtime.get("num_steps", 64)
-        seed = runtime.get("seed", 1234)
+        seed = runtime.get("seed", 42)
 
         # ── Distributed setup ──
         cp_size = engine.get("cp_size", 1)
@@ -451,7 +438,7 @@ class Magi1WorldModel(lmms):
     ) -> str:
         safe_task = str(task).replace("/", "_").replace(" ", "_")
         runtime = (self._config_data or {}).get("runtime_config", {})
-        cache_hash = hashlib.sha256(f"{self.config_file}:{runtime.get('seed', 1234)}:{runtime.get('num_frames', 96)}:{runtime.get('num_steps', 64)}:{self.eval_fps}:{input_key}:{prompt[:100]}".encode()).hexdigest()[:12]
+        cache_hash = hashlib.sha256(f"{self.config_file}:{runtime.get('seed', 42)}:{runtime.get('num_frames', 96)}:{runtime.get('num_steps', 64)}:{self.eval_fps}:{input_key}:{prompt[:100]}".encode()).hexdigest()[:12]
         return os.path.join(
             self.output_dir,
             safe_task,
@@ -726,27 +713,31 @@ class Magi1WorldModel(lmms):
                     pbar.update(1)
                     continue
 
-                if len(visuals) == 1:
-                    # Single frame → save as temp image, run I2V
-                    from PIL import Image
+                try:
+                    if len(visuals) == 1:
+                        # Single frame → save as temp image, run I2V
+                        from PIL import Image
 
-                    img = visuals[0]
-                    if isinstance(img, str):
-                        img = Image.open(img)
-                    tmp_dir = os.path.join(self.output_dir, ".tmp_cond")
-                    os.makedirs(tmp_dir, exist_ok=True)
-                    safe_task = str(task).replace("/", "_")
-                    tmp_img = os.path.join(tmp_dir, f"img_{safe_task}_{doc_id}.jpg")
-                    if not os.path.exists(tmp_img):
-                        img.save(tmp_img)
-                    results[i] = self._generate_i2v(tmp_img, prompt, task, doc_id)
-                else:
-                    # Multiple frames → save as temp video, run V2V
-                    tmp_video = self._save_frames_as_video(visuals, task, doc_id)
-                    if tmp_video:
-                        results[i] = self._generate_v2v(tmp_video, prompt, task, doc_id)
+                        img = visuals[0]
+                        if isinstance(img, str):
+                            img = Image.open(img)
+                        tmp_dir = os.path.join(self.output_dir, ".tmp_cond")
+                        os.makedirs(tmp_dir, exist_ok=True)
+                        safe_task = str(task).replace("/", "_")
+                        tmp_img = os.path.join(tmp_dir, f"img_{safe_task}_{doc_id}.jpg")
+                        if not os.path.exists(tmp_img):
+                            img.save(tmp_img)
+                        results[i] = self._generate_i2v(tmp_img, prompt, task, doc_id)
                     else:
-                        results[i] = "[ERROR] Failed to save conditioning frames"
+                        # Multiple frames → save as temp video, run V2V
+                        tmp_video = self._save_frames_as_video(visuals, task, doc_id)
+                        if tmp_video:
+                            results[i] = self._generate_v2v(tmp_video, prompt, task, doc_id)
+                        else:
+                            results[i] = "[ERROR] Failed to save conditioning frames"
+                except Exception as exc:
+                    eval_logger.error(f"Fallback conditioning failed: task={task} doc_id={doc_id}: {exc}")
+                    results[i] = f"[ERROR] Fallback conditioning failed: {exc}"
 
             pbar.update(1)
 

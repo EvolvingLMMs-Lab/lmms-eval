@@ -1,16 +1,15 @@
 """Wan2.2 Image-to-Video (I2V) backend for evaluating video generation quality.
 
 Uses Wan2.2-I2V-A14B via HuggingFace diffusers to generate video continuations
-from conditioning images.  Supports agentic multi-round rollout (last frame
-chains into the next round).
+from conditioning images.
 
 Dual-expert (``transformer`` + ``transformer_2``) device placement and
 UniPCMultistepScheduler sigma-device patches are inherited from
 ``DiffusersWMBase``.  I2V-specific behavior kept here: conditioning-image
-preprocessing, doc→visual extraction fallback, and the rollout routine.
+preprocessing and doc→visual extraction fallback.
 
 Default generation parameters: resolution=832x480, frames=81, steps=40,
-guidance=3.5, fps=16, seed=114514.
+guidance=3.5, fps=16, seed=42.
 
 Usage::
 
@@ -23,22 +22,20 @@ Usage::
 """
 
 import os
-from typing import List, Optional, Union
+from typing import Union
 
 from loguru import logger as eval_logger
-from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.simple.diffusers_wm_base import DiffusersWMBase, _cache_path
+from lmms_eval.models.simple.diffusers_wm_base import DiffusersWMBase
 
 _DEFAULT_PROMPT = "Generate a natural video continuation of this image."
-_DEFAULT_CONT_PROMPT = "Continue the video naturally."
 
 
 @register_model("wan2_2")
 class Wan2_2(DiffusersWMBase):
-    """Wan2.2 Image-to-Video backend with agentic multi-round rollout support."""
+    """Wan2.2 Image-to-Video backend for evaluating video generation quality."""
 
     def __init__(
         self,
@@ -49,7 +46,7 @@ class Wan2_2(DiffusersWMBase):
         num_inference_steps: int = 40,
         guidance_scale: float = 3.5,
         fps: int = 16,
-        seed: int = 114514,
+        seed: int = 42,
         dtype: str = "bfloat16",
         output_dir: str = "./logs/wan2_2_videos",
         batch_size: Union[int, str] = 1,
@@ -74,7 +71,10 @@ class Wan2_2(DiffusersWMBase):
 
     def _patch_pipeline_cls_before_load(self) -> None:
         if type(self)._pipeline_cls is None:
-            from diffusers import WanImageToVideoPipeline
+            try:
+                from diffusers import WanImageToVideoPipeline
+            except ImportError as exc:
+                raise ImportError("wan2_2 requires diffusers: `pip install diffusers imageio imageio-ffmpeg`") from exc
 
             type(self)._pipeline_cls = WanImageToVideoPipeline
         # Wan2.2-I2V-A14B conditions images through the VAE only, so its
@@ -138,68 +138,3 @@ class Wan2_2(DiffusersWMBase):
         if isinstance(image, Image.Image) and image.mode != "RGB":
             image = image.convert("RGB")
         return image.resize((self.width, self.height))
-
-    # ── Agentic multi-round rollout ─────────────────────────────
-
-    def generate_until_agentic(self, requests: List[Instance]) -> List[str]:
-        """Multi-round rollout: last frame conditions the next round."""
-        self._ensure_loaded()
-        results: List[Optional[str]] = [None] * len(requests)
-        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Wan2.2 Rollout")
-        for i, req in enumerate(requests):
-            ctx, _kw, _dtv, doc_id, task, _split = req.args
-            prompts = [str(p).strip() for p in ctx] if isinstance(ctx, list) else [str(ctx).strip()]
-            visuals = self._extract_visuals(req)
-            if not visuals:
-                results[i] = "[ERROR] No conditioning visuals"
-                pbar.update(1)
-                continue
-            if len(prompts) > 1:
-                results[i] = self._rollout(visuals, prompts, task, doc_id)
-            else:
-                results[i] = self._generate_one(prompts[0], visuals, doc_id, task)
-            pbar.update(1)
-        pbar.close()
-        return [r if r is not None else "[ERROR] Unknown" for r in results]
-
-    def _rollout(self, visuals, prompts, task, doc_id) -> str:
-        import torch
-        from diffusers.utils import export_to_video
-        from PIL import Image
-
-        sig = f"rollout:{self.pretrained}:{self.seed}:{self.num_inference_steps}:" f"{self.guidance_scale}:{self.num_frames}:{len(prompts)}:" f"{len(visuals)}:{'|'.join(p[:50] for p in prompts)}"
-        out_path = _cache_path(self.output_dir, task, doc_id, sig, ext=self._output_ext)
-        if out_path.exists():
-            eval_logger.debug(f"Cache hit (rollout): {out_path}")
-            return str(out_path)
-        try:
-            image = self._prepare_image(visuals[0])
-            all_frames = []
-            device = self.plan.device_str()
-            for step_idx, prompt in enumerate(prompts):
-                if not prompt:
-                    prompt = _DEFAULT_CONT_PROMPT
-                generator = torch.Generator(device=device).manual_seed(self.seed + step_idx)
-                output = self._pipe(
-                    image=image,
-                    prompt=prompt,
-                    num_frames=self.num_frames,
-                    height=self.height,
-                    width=self.width,
-                    num_inference_steps=self.num_inference_steps,
-                    guidance_scale=self.guidance_scale,
-                    generator=generator,
-                )
-                frames = output.frames[0]
-                all_frames.extend(frames if step_idx == 0 else frames[1:])
-                image = frames[-1]
-                if isinstance(image, Image.Image):
-                    image = image.resize((self.width, self.height))
-                eval_logger.info(f"Rollout step {step_idx + 1}/{len(prompts)} done ({len(frames)} frames)")
-            out_path.parent.mkdir(parents=True, exist_ok=True)
-            export_to_video(all_frames, str(out_path), fps=self.fps)
-            eval_logger.info(f"Rollout video saved: {out_path} ({len(all_frames)} total frames)")
-            return str(out_path)
-        except Exception as exc:
-            eval_logger.error(f"Rollout failed: task={task} doc_id={doc_id}: {exc}")
-            return f"[ROLLOUT_FAILED] {exc}"

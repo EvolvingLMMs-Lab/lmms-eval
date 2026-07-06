@@ -59,6 +59,15 @@ def _is_world_model_task(task: str) -> bool:
     return task.startswith(_WORLD_MODEL_TASK_PREFIXES)
 
 
+def _lazy_export_to_video():
+    """Import diffusers' export_to_video, with an actionable error if missing."""
+    try:
+        from diffusers.utils import export_to_video
+    except ImportError as exc:
+        raise ImportError("Cosmos local backend requires diffusers: `pip install diffusers imageio imageio-ffmpeg`") from exc
+    return export_to_video
+
+
 def _image_to_base64(image: Any, fmt: str = "JPEG") -> str:
     """Convert a PIL Image or file path to base64 data URI."""
     if isinstance(image, str):
@@ -163,6 +172,21 @@ class CosmosWorldModel(lmms):
         self.nim_model = nim_model
         self.nim_base_url = nim_base_url.rstrip("/")
         self.revision = revision
+        self._rank = int(os.environ.get("RANK", 0))
+        self._world_size = int(os.environ.get("WORLD_SIZE", 1))
+        # Pin each rank to its own GPU. The evaluator reads lm.device to place
+        # cross-rank sync tensors *before* _load_pipeline runs, so a bare "cuda"
+        # (the default) would put every rank's tensor on cuda:0 and collide.
+        # Mirror DiffusersWMBase: cuda:{LOCAL_RANK} when available, else mps/cpu.
+        if device == "cuda":
+            import torch
+
+            if torch.cuda.is_available():
+                device = f"cuda:{int(os.environ.get('LOCAL_RANK', 0))}"
+            elif torch.backends.mps.is_available():
+                device = "mps"
+            else:
+                device = "cpu"
         self.device = device
         self.enable_safety_checker = bool(enable_safety_checker)
         self.flow_shift = float(flow_shift) if flow_shift is not None else None
@@ -314,8 +338,12 @@ class CosmosWorldModel(lmms):
     # NIM API helpers
     # ------------------------------------------------------------------
 
-    def _nim_submit(self, image_b64: str, prompt: str) -> str:
-        """Submit image-to-video generation to NIM. Returns request_id."""
+    def _nim_submit(self, image_b64: str, prompt: str) -> Dict:
+        """Submit image-to-video generation to NIM.
+
+        Returns the synchronous result dict when the video is returned directly,
+        otherwise ``{"request_id": ..., "data": ...}`` for async polling.
+        """
         url = f"{self.nim_base_url}/{self.nim_model}"
         payload = {
             "image": image_b64,
@@ -440,38 +468,32 @@ class CosmosWorldModel(lmms):
             _stub.CosmosGuardrail = _NoopGuardrail
             sys.modules["cosmos_guardrail"] = _stub
 
-        if self._is_v3:
-            # Cosmos3OmniPipeline lives in diffusers git-main (not in any
-            # released diffusers as of 0.38.0). Import lazily so the class
-            # import does not require diffusers at module import time.
-            from diffusers import Cosmos3OmniPipeline as PipeClass
-        elif self._is_v2_5:
-            from diffusers import Cosmos2_5_PredictBasePipeline as PipeClass
-        else:
-            from diffusers import Cosmos2VideoToWorldPipeline as PipeClass
+        try:
+            if self._is_v3:
+                # Cosmos3OmniPipeline lives in diffusers git-main (not in any
+                # released diffusers as of 0.38.0). Import lazily so the class
+                # import does not require diffusers at module import time.
+                from diffusers import Cosmos3OmniPipeline as PipeClass
+            elif self._is_v2_5:
+                from diffusers import Cosmos2_5_PredictBasePipeline as PipeClass
+            else:
+                from diffusers import Cosmos2VideoToWorldPipeline as PipeClass
+        except ImportError as exc:
+            raise ImportError("Cosmos local backend requires diffusers: `pip install diffusers imageio imageio-ffmpeg`") from exc
 
         # MPS (Apple Silicon) does not support bfloat16 → fall back to float16
         dtype = getattr(torch, self._torch_dtype_str, torch.bfloat16)
         actual_device = self.device
-        # Under `accelerate launch --multi_gpu`, every rank starts with
-        # self.device="cuda" (the default) and would race onto cuda:0,
-        # colliding into an NCCL/OOM crash. Pin each rank to its own GPU
-        # via LOCAL_RANK so DP works. (Same fix as wan2_2.py:107-109.)
-        if actual_device == "cuda" and torch.cuda.is_available():
-            local_rank = int(os.environ.get("LOCAL_RANK", 0))
-            actual_device = f"cuda:{local_rank}"
-            torch.cuda.set_device(local_rank)
-        if actual_device == "cuda" and not torch.cuda.is_available():
-            if torch.backends.mps.is_available():
-                actual_device = "mps"
-                dtype = torch.float16  # MPS doesn't support bfloat16
-                eval_logger.info("CUDA not available, using MPS with float16")
-            else:
-                actual_device = "cpu"
-                dtype = torch.float32
-                eval_logger.warning("No GPU available, falling back to CPU (very slow)")
+        # Each rank is pinned to cuda:{LOCAL_RANK} in __init__; set the current
+        # CUDA device on the loading thread so implicitly-placed tensors don't
+        # default to cuda:0 and collide under multi-GPU DP. MPS/CPU adjust dtype.
+        if actual_device.startswith("cuda"):
+            torch.cuda.set_device(torch.device(actual_device))
         elif actual_device == "mps":
-            dtype = torch.float16
+            dtype = torch.float16  # MPS doesn't support bfloat16
+        elif actual_device == "cpu":
+            dtype = torch.float32
+            eval_logger.warning("No GPU available, running Cosmos on CPU (very slow)")
 
         self._actual_device = actual_device
         hf_token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
@@ -687,7 +709,8 @@ class CosmosWorldModel(lmms):
     def _local_generate(self, image: Image.Image, prompt: str, output_path: str) -> str:
         """Generate video using local diffusers pipeline (I2V mode)."""
         import torch
-        from diffusers.utils import export_to_video
+
+        export_to_video = _lazy_export_to_video()
 
         # Cosmos guardrail rejects empty prompts; use a neutral default.
         if not prompt or not prompt.strip():
@@ -739,7 +762,8 @@ class CosmosWorldModel(lmms):
         to I2V using the last conditioning frame.
         """
         import torch
-        from diffusers.utils import export_to_video
+
+        export_to_video = _lazy_export_to_video()
 
         if not self._is_v2_5:
             # Fallback: use last frame as I2V conditioning
@@ -811,7 +835,8 @@ class CosmosWorldModel(lmms):
         the pipeline downscale (it never upscales).
         """
         import torch
-        from diffusers.utils import export_to_video
+
+        export_to_video = _lazy_export_to_video()
 
         if image is not None and video is not None:
             raise ValueError("Cosmos3 generation accepts either image (I2V) or video (V2V), not both.")
@@ -886,7 +911,10 @@ class CosmosWorldModel(lmms):
 
     def _encode_frames_to_mp4(self, frames: List[Image.Image], path: str, fps: int) -> None:
         """Encode a list of PIL frames to an H.264 mp4 at the given fps."""
-        import imageio.v3 as iio
+        try:
+            import imageio.v3 as iio
+        except ImportError as exc:
+            raise ImportError("Cosmos frame encoding requires imageio: `pip install imageio imageio-ffmpeg`") from exc
         import numpy as np
 
         arr = []
@@ -945,7 +973,7 @@ class CosmosWorldModel(lmms):
                     "guardrails": self.enable_safety_checker,
                 }
             ),
-            "seed": str(self.seed if self.seed is not None else 0),
+            "seed": str(self.seed if self.seed is not None else 42),
         }
 
         # Round-robin across replicas for throughput.
@@ -1083,12 +1111,11 @@ class CosmosWorldModel(lmms):
 
         dtype = getattr(torch, self._torch_dtype_str, torch.bfloat16)
         actual_device = self.device
-        if actual_device == "cuda" and torch.cuda.is_available():
-            local_rank = int(os.environ.get("LOCAL_RANK", 0))
-            actual_device = f"cuda:{local_rank}"
-            torch.cuda.set_device(local_rank)
-        elif actual_device == "cuda" and not torch.cuda.is_available():
-            actual_device = "cpu"
+        if actual_device.startswith("cuda"):
+            torch.cuda.set_device(torch.device(actual_device))
+        elif actual_device == "mps":
+            dtype = torch.float16  # MPS doesn't support bfloat16
+        elif actual_device == "cpu":
             dtype = torch.float32
             eval_logger.warning("CUDA not available, loading Cosmos3 Reasoner on CPU (very slow)")
 
@@ -1420,8 +1447,13 @@ class CosmosWorldModel(lmms):
         with ThreadPoolExecutor(max_workers=self.num_concurrent) as pool:
             futures = {pool.submit(_process, i): i for i in range(len(requests))}
             for future in as_completed(futures):
-                idx, result = future.result()
-                results[idx] = result
+                idx = futures[future]
+                try:
+                    _, result = future.result()
+                    results[idx] = result
+                except Exception as exc:
+                    eval_logger.error(f"Generation failed (idx={idx}): {exc}\n{traceback.format_exc()}")
+                    results[idx] = f"[GENERATION_FAILED] {exc}"
                 pbar.update(1)
 
         pbar.close()

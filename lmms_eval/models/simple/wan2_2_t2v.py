@@ -30,7 +30,10 @@ class Wan2_2_T2V(DiffusersWMBase):
 
     def _patch_pipeline_cls_before_load(self) -> None:
         if type(self)._pipeline_cls is None:
-            from diffusers import WanPipeline
+            try:
+                from diffusers import WanPipeline
+            except ImportError as exc:
+                raise ImportError("wan2_2_t2v requires diffusers: `pip install diffusers imageio imageio-ffmpeg`") from exc
 
             type(self)._pipeline_cls = WanPipeline
 
@@ -43,7 +46,7 @@ class Wan2_2_T2V(DiffusersWMBase):
         num_inference_steps: int = 50,
         guidance_scale: float = 5.0,
         fps: int = 16,
-        seed: int = 114514,
+        seed: int = 42,
         dtype: str = "bfloat16",
         output_dir: str = "./logs/wan2_2_t2v_videos",
         batch_size: Union[int, str] = 1,
