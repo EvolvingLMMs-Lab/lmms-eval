@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import requests
 from loguru import logger as eval_logger
@@ -11,6 +11,22 @@ from lmms_eval.models.model_utils.usage_metrics import log_usage
 
 from ..base import ServerInterface
 from ..protocol import Request, Response, ServerConfig
+
+
+def _is_reasoning_model(model_name: str) -> bool:
+    """Reasoning models (gpt-5*, o1/o3/o4*) require max_completion_tokens and reject an explicit temperature."""
+    return model_name.startswith(("gpt-5", "o1", "o3", "o4"))
+
+
+def build_sampling_kwargs(config: ServerConfig) -> Dict[str, Any]:
+    """Token-limit and temperature kwargs for a chat.completions payload.
+
+    Reasoning models use max_completion_tokens and reject a non-default temperature
+    (the API returns 400), so temperature is omitted for them.
+    """
+    if _is_reasoning_model(config.model_name):
+        return {"max_completion_tokens": config.max_tokens}
+    return {"max_tokens": config.max_tokens, "temperature": config.temperature}
 
 
 class OpenAIProvider(ServerInterface):
@@ -46,14 +62,11 @@ class OpenAIProvider(ServerInterface):
         if request.images:
             messages = self._add_images_to_messages(messages, request.images)
 
-        # Prepare payload — use max_completion_tokens for newer models (gpt-5-*)
-        model = config.model_name
-        token_key = "max_completion_tokens" if model.startswith(("gpt-5", "o1", "o3", "o4")) else "max_tokens"
+        # Prepare payload
         payload = {
-            "model": model,
+            "model": config.model_name,
             "messages": messages,
-            "temperature": config.temperature,
-            token_key: config.max_tokens,
+            **build_sampling_kwargs(config),
         }
 
         if config.top_p is not None:
@@ -120,7 +133,7 @@ class OpenAIProvider(ServerInterface):
         response.raise_for_status()
         return response.json()
 
-    def _add_images_to_messages(self, messages: List[Dict], images: List[Union[str, bytes]]) -> List[Dict]:
+    def _add_images_to_messages(self, messages: List[Dict], images: List[Union[str, bytes, Image.Image]]) -> List[Dict]:
         """Add images to the last user message"""
         # Find the last user message
         for i in range(len(messages) - 1, -1, -1):
