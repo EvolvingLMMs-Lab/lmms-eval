@@ -919,31 +919,6 @@ def get_datetime_str(timezone="Asia/Singapore"):
     return local_time.strftime("%Y%m%d_%H%M%S")
 
 
-def build_eval_output_dir(output_root: str, model_name: str, tasks: str, datetime_str: str) -> str:
-    """Build a structured eval output directory.
-
-    Returns ``{output_root}/{model}_{tasks}/{YYYY_MM_DD_HHMMSS}``.
-
-    *model_name* should already be sanitized (e.g. from
-    ``GeneralConfigTracker.model_name_sanitized`` or the CLI ``--model`` value).
-    *tasks* is a comma-separated task string (sanitized to underscores).
-    *datetime_str* is ``YYYYMMDD_HHMMSS`` (from :func:`get_datetime_str`)
-    and reformatted to ``YYYY_MM_DD_HHMMSS``.
-    """
-    model_sanitized = model_name or ""
-
-    # Sanitize task string: replace commas and non-word chars
-    tasks_sanitized = re.sub(r"\W+", "_", tasks.strip()).strip("_") if tasks else "unknown"
-
-    # Reformat YYYYMMDD_HHMMSS → YYYY_MM_DD_HHMMSS
-    dt = datetime_str.replace(":", "-")
-    if len(dt) >= 15 and dt[8] == "_":
-        dt = f"{dt[:4]}_{dt[4:6]}_{dt[6:]}"
-
-    subdir = f"{model_sanitized}_{tasks_sanitized}" if model_sanitized else tasks_sanitized
-    return os.path.join(output_root, subdir, dt)
-
-
 def sanitize_long_string(s, max_length=40):
     if len(s) > max_length:
         return s[: max_length // 2] + "..." + s[-max_length // 2 :]

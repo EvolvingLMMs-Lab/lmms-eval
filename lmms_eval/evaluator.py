@@ -81,13 +81,20 @@ _SENSITIVE_CONFIG_KEYS = {
     "huggingfacehub_api_token",
     "token",
 }
-_SECRET_ASSIGNMENT_RE = re.compile(r"(?i)(^|[,\s])(api_key|client_secret|hf_token|huggingface_hub_token|huggingfacehub_api_token|token)=([^,\s]+)")
+# Suffixes also catch prefixed variants: openai_api_key, github_token, my_secret, db_password.
+_SENSITIVE_KEY_SUFFIXES = ("api_key", "_token", "_secret", "password")
+_SECRET_ASSIGNMENT_RE = re.compile(r"(?i)(^|[,\s])(\w*(?:api_key|token|secret|password))=([^,\s]+)")
 _HF_TOKEN_VALUE_RE = re.compile(r"\bhf_[A-Za-z0-9]{20,}\b")
+
+
+def _is_sensitive_config_key(key) -> bool:
+    key_lower = str(key).lower()
+    return key_lower in _SENSITIVE_CONFIG_KEYS or key_lower.endswith(_SENSITIVE_KEY_SUFFIXES)
 
 
 def _redact_eval_config_secrets(value):
     if isinstance(value, dict):
-        return {key: ("[REDACTED]" if str(key).lower() in _SENSITIVE_CONFIG_KEYS else _redact_eval_config_secrets(item)) for key, item in value.items()}
+        return {key: ("[REDACTED]" if _is_sensitive_config_key(key) else _redact_eval_config_secrets(item)) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
         return type(value)(_redact_eval_config_secrets(item) for item in value)
     if isinstance(value, str):
@@ -896,15 +903,6 @@ def evaluate(
     global_rank = int(os.environ.get("RANK", 0))
     world_size = int(os.environ.get("WORLD_SIZE", 1))
 
-    # Auto-init torch.distributed for multi-rank launches where the model
-    # backend did not call init_process_group itself (e.g. video generation
-    # models using diffusers).  Without this, evaluator collectives like
-    # gather_object / barrier crash with "process group not initialized".
-    # gloo is used because it requires no GPU and works everywhere.
-    if world_size > 1 and dist.is_available() and not dist.is_initialized():
-        dist.init_process_group(backend="gloo")
-        eval_logger.info(f"evaluator: auto-initialized gloo process group (world={world_size})")
-
     eval_logger.info(f"Running on rank {global_rank} (local rank {local_rank})")
 
     def _infer_task_request_type(task_obj: Task) -> Optional[str]:
@@ -925,8 +923,24 @@ def evaluate(
         if not all("bypass" not in getattr(task_output.task, "_metric_fn_list", {}).keys() for task_output in eval_tasks):
             raise ValueError("log_samples must be True for 'bypass' metric-only tasks")
 
-    if distributed_executor_backend == "accelerate" and not hasattr(lm, "accelerator"):
-        lm.accelerator = Accelerator()
+    if distributed_executor_backend == "accelerate":
+        if not hasattr(lm, "accelerator"):
+            lm.accelerator = Accelerator()
+    else:
+        # Torchrun/native path: auto-init a process group for multi-rank runs
+        # whose model backend never called init_process_group (e.g. diffusers
+        # video-gen models), so evaluator collectives don't crash. gloo needs no
+        # GPU. Gated out of the accelerate path on purpose: pre-initializing here
+        # would make Accelerator() adopt this gloo group instead of building NCCL,
+        # silently running GPU collectives on CPU.
+        if world_size > 1 and dist.is_available() and not dist.is_initialized():
+            if os.environ.get("MASTER_ADDR") and os.environ.get("MASTER_PORT"):
+                dist.init_process_group(backend="gloo")
+                eval_logger.info(f"evaluator: auto-initialized gloo process group (world={world_size})")
+            else:
+                eval_logger.warning(
+                    f"evaluator: WORLD_SIZE={world_size} but MASTER_ADDR/MASTER_PORT are unset; skipping torch.distributed auto-init. Distributed collectives will fail unless the model backend initializes the process group itself."
+                )
 
     # Inject rank/world_size into the model so that logging (tqdm disable)
     # and rank-conditional logic work on non-zero ranks.  Many simple models
@@ -1053,8 +1067,8 @@ def evaluate(
             if pad_source is None:
                 eval_logger.warning(f"Running {reqtype} requests but could not find a pad source request on rank {global_rank}; skipping rank padding.")
             else:
-                pad_instance = _clone_padding_request(pad_source)
                 for _ in range(padding_requests[reqtype]):
+                    pad_instance = _clone_padding_request(pad_source)
                     cloned_reqs.extend([pad_instance] * pad_instance.repeats)
 
         # run requests through model (with optional response cache)
