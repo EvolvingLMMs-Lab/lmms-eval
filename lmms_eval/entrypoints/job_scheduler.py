@@ -7,12 +7,14 @@ GPU resource management.
 """
 
 import asyncio
+import os
+import sys
 import tempfile
 import uuid
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from loguru import logger
 
@@ -20,6 +22,41 @@ from lmms_eval.entrypoints.protocol import (
     EvaluateRequest,
     JobInfo,
     JobStatus,
+)
+
+# Env vars that Slurm's srun (and torch.distributed launchers generally) set
+# on a process and that leak into a subprocess spawned from within it. If the
+# HTTP eval server itself runs under such a launcher, these vars would
+# otherwise leak into the eval subprocess and trick Accelerate's
+# PartialState into attempting env:// rendezvous. Scrubbed from the
+# subprocess env by _run_subprocess_with_log.
+_SLURM_DISTRIBUTED_ENV_SCRUB = (
+    "SLURM_PROCID",
+    "SLURM_NTASKS",
+    "SLURM_LOCALID",
+    "SLURM_NPROCS",
+    "SLURM_NODEID",
+    "SLURM_JOB_NUM_NODES",
+    "SLURM_NTASKS_PER_NODE",
+    "SLURM_STEP_NUM_TASKS",
+    "SLURM_STEP_NUM_NODES",
+    "SLURM_STEP_TASKS_PER_NODE",
+    "SLURM_TASKS_PER_NODE",
+    "PMIX_RANK",
+    "RANK",
+    "WORLD_SIZE",
+    "LOCAL_RANK",
+    "LOCAL_WORLD_SIZE",
+    "MASTER_ADDR",
+    "MASTER_PORT",
+    "SLURM_CPU_BIND",
+    "SLURM_CPU_BIND_LIST",
+    "SLURM_CPU_BIND_TYPE",
+    "SLURM_CPU_BIND_VERBOSE",
+    "SLURM_MEM_BIND",
+    "SLURM_MEM_BIND_LIST",
+    "SLURM_MEM_BIND_TYPE",
+    "SLURM_MEM_BIND_VERBOSE",
 )
 
 # =============================================================================
@@ -308,24 +345,65 @@ class JobScheduler:
         """
         output_path = config.get("output_dir") or tempfile.mkdtemp(prefix=self._temp_dir_prefix)
 
-        # Build command
-        num_gpus = config.get("num_gpus", 1)
-        cmd = [
-            "accelerate",
-            "launch",
-            "--num_processes",
-            str(num_gpus),
-            "-m",
-            "lmms_eval",
-            "--model",
-            config["model"],
-            "--tasks",
-            ",".join(config["tasks"]),
-            "--output_path",
-            output_path,
-        ]
+        cmd = self._build_eval_cmd(config, output_path)
 
-        # Add optional arguments
+        log_path = Path(output_path) / f"eval-{datetime.now().strftime('%Y%m%d-%H%M%S')}.log"
+        logger.info(f"[EVAL] Launching: {' '.join(cmd)}")
+        logger.info(f"[EVAL] Subprocess output -> {log_path}")
+
+        returncode = await self._run_subprocess_with_log(cmd, log_path)
+
+        if returncode != 0:
+            tail = self._tail_log(log_path)
+            raise RuntimeError(f"Evaluation failed with return code {returncode}. " f"Last lines of {log_path}:\n{tail}")
+
+        result = self._parse_output_directory(output_path)
+        if not result:
+            tail = self._tail_log(log_path)
+            raise RuntimeError("Evaluation produced no parsed results. " f"Last lines of {log_path}:\n{tail}")
+
+        return result
+
+    @staticmethod
+    def _build_eval_cmd(config: dict, output_path: str) -> List[str]:
+        """Build the ``python -m lmms_eval`` (or accelerate-launched) cmd.
+
+        For ``num_gpus == 1`` we invoke ``python -m lmms_eval`` directly. Going
+        through ``accelerate launch --num_processes 1`` falls into
+        ``simple_launcher``, which spawns the child without setting
+        ``WORLD_SIZE`` / ``RANK`` / ``MASTER_ADDR``. lmms_eval's ``cli_evaluate``
+        unconditionally constructs an ``Accelerator()``, which then tries
+        env:// rendezvous and raises ``ValueError: ... environment variable
+        WORLD_SIZE expected, but not set``.
+        """
+        num_gpus = int(config.get("num_gpus") or 1)
+        if num_gpus > 1:
+            cmd: List[str] = [
+                sys.executable,
+                "-m",
+                "accelerate.commands.launch",
+                "--multi_gpu",
+                "--num_processes",
+                str(num_gpus),
+                "--num_machines",
+                "1",
+                "-m",
+                "lmms_eval",
+            ]
+        else:
+            cmd = [sys.executable, "-m", "lmms_eval"]
+
+        cmd.extend(
+            [
+                "--model",
+                config["model"],
+                "--tasks",
+                ",".join(config["tasks"]),
+                "--output_path",
+                output_path,
+            ]
+        )
+
         if config.get("model_args"):
             if isinstance(config["model_args"], dict):
                 model_args_str = ",".join(f"{k}={v}" for k, v in config["model_args"].items())
@@ -351,27 +429,113 @@ class JobScheduler:
         if config.get("predict_only"):
             cmd.append("--predict_only")
 
-        # Run subprocess with streaming output
-        logger.info(f"[EVAL] Launching: {' '.join(cmd)}")
+        return cmd
 
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-        )
+    @staticmethod
+    async def _run_subprocess_with_log(
+        cmd: list,
+        log_path: Path,
+        extra_env: Optional[Dict[str, str]] = None,
+    ) -> int:
+        """Spawn ``cmd`` with stdout+stderr redirected to ``log_path``, await exit.
 
+        The HTTP server's event loop never touches the subprocess pipe — the
+        kernel writes directly to the log file — so the StreamReader buffer /
+        backpressure / readline-separator failure class is gone by design.
+        The try/finally still kills and reaps the subprocess on cancellation
+        or unexpected exceptions so we never leak a GPU-resident process.
+
+        ``extra_env`` is merged on top of ``os.environ`` + the forced
+        ``PYTHONUNBUFFERED=1`` default so callers can layer their own env
+        without touching the helper's contract.
+
+        Distributed-launcher parents (e.g. an ``srun``-spawned process) export
+        ``SLURM_PROCID`` / ``SLURM_NTASKS`` / ``RANK`` / ``WORLD_SIZE`` etc.
+        into the eval child's env. Accelerate's ``PartialState`` then treats
+        the child as a Slurm-launched distributed task and tries env://
+        rendezvous, which raises ``ValueError: ... WORLD_SIZE expected, but
+        not set`` because the relevant vars aren't fully wired up. Scrub
+        those vars from the child env so the eval subprocess runs as a clean
+        single-process job.
+        """
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        # Force unbuffered child stdout so `tail -f` on the log file shows
+        # progress in real time. Without this, Python's default block
+        # buffering when stdout isn't a TTY hides output until the subprocess
+        # exits, which makes the log useless for live debugging.
+        env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+        for var in _SLURM_DISTRIBUTED_ENV_SCRUB:
+            env.pop(var, None)
+        if extra_env:
+            env.update(extra_env)
+        with log_path.open("wb") as log_fp:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=log_fp,
+                stderr=asyncio.subprocess.STDOUT,
+                env=env,
+            )
+            try:
+                await proc.wait()
+                assert proc.returncode is not None
+                return proc.returncode
+            finally:
+                if proc.returncode is None:
+                    proc.kill()
+                    try:
+                        await asyncio.wait_for(proc.wait(), timeout=10)
+                    except (asyncio.TimeoutError, ProcessLookupError):
+                        pass
+
+    @staticmethod
+    async def _iter_stream_lines(
+        stream: asyncio.StreamReader,
+        chunk_size: int = 64 * 1024,
+        max_line_bytes: int = 1 * 1024 * 1024,
+    ):
+        """Yield lines from a StreamReader without readline()'s 64 KiB cap.
+
+        ``async for line in stream`` and ``await stream.readline()`` both raise
+        ``ValueError("Separator is not found, and chunk exceed the limit")``
+        as soon as a single run of >64 KiB without a newline arrives — tqdm
+        ``\\r`` progress, long tracebacks, multi-line JSON dumps all trip it.
+        Use this for streaming consumers (SSE / log forwarders) where the
+        caller still wants line-shaped events but cannot tolerate the
+        separator overflow. If a logical line ever exceeds ``max_line_bytes``
+        it is yielded as-is and the buffer is reset so memory stays bounded.
+        """
+        pending = bytearray()
         while True:
-            line = await proc.stdout.readline()
-            if not line:
-                break
-            logger.info(f"[EVAL] {line.decode().rstrip()}")
+            chunk = await stream.read(chunk_size)
+            if not chunk:
+                if pending:
+                    yield bytes(pending)
+                return
+            pending.extend(chunk)
+            while True:
+                idx = pending.find(b"\n")
+                if idx < 0:
+                    if len(pending) > max_line_bytes:
+                        yield bytes(pending)
+                        pending.clear()
+                    break
+                line = bytes(pending[:idx])
+                del pending[: idx + 1]
+                yield line
 
-        await proc.wait()
-
-        if proc.returncode != 0:
-            raise RuntimeError(f"Evaluation failed with return code {proc.returncode}")
-
-        return self._parse_output_directory(output_path)
+    @staticmethod
+    def _tail_log(log_path: Path, max_lines: int = 50, max_bytes: int = 256 * 1024) -> str:
+        """Best-effort read of the last ``max_lines`` from ``log_path``."""
+        try:
+            with log_path.open("rb") as fp:
+                fp.seek(0, 2)
+                size = fp.tell()
+                fp.seek(max(0, size - max_bytes))
+                data = fp.read()
+            text = data.decode(errors="replace")
+            return "\n".join(text.splitlines()[-max_lines:])
+        except OSError:
+            return "(log file unreadable)"
 
     @staticmethod
     def _parse_output_directory(output_path: str) -> Dict[str, Dict[str, Any]]:
