@@ -105,7 +105,7 @@ metrics = [
     "Levenshtein",
 ]
 gemini = [
-    "google-generativeai",
+    "google-genai>=1.0.0",
 ]
 litellm = [
     "litellm",
