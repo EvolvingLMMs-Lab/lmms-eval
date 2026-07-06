@@ -244,10 +244,7 @@ def _validate_weight_path(checkpoint_path: str, require_hf_checkpoint: bool = Tr
     if require_hf_checkpoint and not config_path.exists():
         raise FileNotFoundError(f"Model-server HF checkpoint is missing config.json: {resolved}")
     if require_hf_checkpoint and not (safetensors_files or bin_files or index_files):
-        raise FileNotFoundError(
-            "Model-server HF checkpoint has no model weight files (*.safetensors, *.bin, or *.index.json): "
-            f"{resolved}"
-        )
+        raise FileNotFoundError("Model-server HF checkpoint has no model weight files (*.safetensors, *.bin, or *.index.json): " f"{resolved}")
 
     return {
         "resolved_path": str(resolved),
