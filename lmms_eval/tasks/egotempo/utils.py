@@ -5,6 +5,7 @@ import tempfile
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from lmms_eval.tasks._task_utils.media_resolver import resolve_media_reference
 from lmms_eval.utils import eval_logger
@@ -12,8 +13,16 @@ from lmms_eval.utils import eval_logger
 _VIDEO_EXTENSIONS = ("mp4", "MP4", "mkv", "webm", "mov")
 
 # ---------------------------------------------------------------------------
-# Lazy S3 extraction — pull trimmed segments on demand
+# Lazy S3 extraction — pull trimmed segments on demand (optional fast path)
+#
+# Enabled only when EGOTEMPO_LANCE_INDEX_URI points at a Lance table indexing
+# ego4d tar shards (columns: member_path, tar_path, offset, size); the tar
+# shards must live in the same bucket as the table. Credentials, region, and
+# endpoint resolve through the standard AWS chain (AWS_ACCESS_KEY_ID /
+# AWS_SECRET_ACCESS_KEY / AWS_REGION / AWS_ENDPOINT_URL, ~/.aws/*). When the
+# env var is unset, clips resolve through the regular media fallback.
 # ---------------------------------------------------------------------------
+_LANCE_INDEX_URI = os.getenv("EGOTEMPO_LANCE_INDEX_URI", "")
 _S3_INDEX = None  # populated on first miss
 _S3_CLIENT = None
 
@@ -34,27 +43,14 @@ def _get_s3_client():
     global _S3_CLIENT
     if _S3_CLIENT is not None:
         return _S3_CLIENT
+    if not _LANCE_INDEX_URI:
+        return None
     try:
         import boto3
 
-        creds_path = os.path.expanduser("~/.aws/credentials")
-        cfg_path = os.path.expanduser("~/.aws/config")
-        if not os.path.exists(creds_path):
-            return None
-        creds = open(creds_path).read()
-        cfg = open(cfg_path).read() if os.path.exists(cfg_path) else ""
-        endpoint = "https://storage.eu-north1.nebius.cloud:443"
-        for line in cfg.split("\n"):
-            if "endpoint_url" in line:
-                endpoint = line.split("=", 1)[1].strip()
-                break
-        _S3_CLIENT = boto3.client(
-            "s3",
-            endpoint_url=endpoint,
-            region_name="eu-north1",
-            aws_access_key_id=creds.split("aws_access_key_id = ")[1].split("\n")[0].strip(),
-            aws_secret_access_key=creds.split("aws_secret_access_key = ")[1].split("\n")[0].strip(),
-        )
+        # Credentials, region, and endpoint resolve through boto3's standard
+        # chain (env vars, ~/.aws/*, instance profiles).
+        _S3_CLIENT = boto3.client("s3", endpoint_url=os.getenv("AWS_ENDPOINT_URL") or None)
         return _S3_CLIENT
     except Exception as e:
         eval_logger.warning("S3 client init failed: {}", e)
@@ -67,20 +63,19 @@ def _get_s3_index():
     if _S3_INDEX is not None:
         return _S3_INDEX
     _S3_INDEX = {}
+    if not _LANCE_INDEX_URI:
+        return _S3_INDEX
     try:
         import lance
 
-        creds = open(os.path.expanduser("~/.aws/credentials")).read()
-        opts = {
-            "aws_endpoint": "https://storage.eu-north1.nebius.cloud:443",
-            "aws_region": "eu-north1",
-            "aws_access_key_id": creds.split("aws_access_key_id = ")[1].split("\n")[0].strip(),
-            "aws_secret_access_key": creds.split("aws_secret_access_key = ")[1].split("\n")[0].strip(),
-        }
-        ds = lance.dataset(
-            "s3://ami-labs-data/public/tables/s3_video_primary.lance",
-            storage_options=opts,
-        )
+        # Credentials come from the standard AWS env vars; only forward the
+        # endpoint/region overrides when they are explicitly set.
+        opts = {}
+        if os.getenv("AWS_ENDPOINT_URL"):
+            opts["aws_endpoint"] = os.environ["AWS_ENDPOINT_URL"]
+        if os.getenv("AWS_REGION"):
+            opts["aws_region"] = os.environ["AWS_REGION"]
+        ds = lance.dataset(_LANCE_INDEX_URI, storage_options=opts or None)
         table = ds.to_table(
             filter="source = 'ego4d' AND member_path LIKE 'ego4d_full_scale/%'",
             columns=["member_path", "tar_path", "offset", "size"],
@@ -107,7 +102,8 @@ def _extract_trimmed_from_s3(uid: str, start: float, end: float, out_path: str) 
         return False
 
     info = index[uid]
-    bucket = "ami-labs-data"
+    # Tar shards live in the same bucket as the Lance index table.
+    bucket = urlparse(_LANCE_INDEX_URI).netloc
     tar_key = info["tar_path"]
     offset = info["offset"]
     size = info["size"]
