@@ -17,6 +17,14 @@ logger.add(sys.stdout, level="WARNING", format=log_format)
 
 AVAILABLE_SIMPLE_MODELS = {
     "aero": "Aero",
+    "generation_api": "GenerationApi",
+    "cosmos_wm": "CosmosWorldModel",
+    "wan2_1_t2i": "Wan2_1_T2I",
+    "wan2_1_t2v": "Wan2_1_T2V",
+    "wan2_2": "Wan2_2",
+    "wan2_2_t2v": "Wan2_2_T2V",
+    "ltx_video": "LTXVideo",
+    "magi1_wm": "Magi1WorldModel",
     "aria": "Aria",
     "audio_flamingo_3": "AudioFlamingo3",
     "glm4v": "GLM4V",
