@@ -155,6 +155,11 @@ def _judge_is_correct(question: str, response: str, correct_answer: str):
     try:
         pipeline = _get_pipeline()
         result = pipeline(question=question, prediction=response, ground_truth=correct_answer)
+        # OpenAIVerifier swallows judge-call errors and flags them via
+        # judge_failed metadata; return None so the caller falls back to exact
+        # match instead of scoring an infra failure as incorrect.
+        if result.metadata.get("judge_failed"):
+            return None
         return result.is_correct
     except Exception as err:
         eval_logger.debug("BrowseComp LLM judge failed, fallback to exact match: {}", err)

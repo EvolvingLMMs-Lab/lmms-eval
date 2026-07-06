@@ -79,12 +79,6 @@ Answer: {answer}
 Correct_or_not:"""
 
 
-def _create_judge_prompt(doc: dict[str, Any], pred: str) -> str:
-    """Build judge prompt: response + ground truth answer."""
-    answer = str(doc.get("answer", "")).strip()
-    return CORECOGNITION_JUDGE_PROMPT.format(response=pred, answer=answer)
-
-
 # Answer options for template matching
 OPTIONS_MCQ = ["A", "B", "C", "D", "E", "F"]
 OPTIONS_YORN = ["YES", "NO"]
@@ -223,8 +217,17 @@ def corecognition_process_results(doc: dict[str, Any], results: list[str]) -> di
             try:
                 pipeline = _get_pipeline()
                 result = pipeline(question=pred, prediction=pred, ground_truth=ground_truth)
-                is_correct = result.is_correct
+                if result.metadata.get("judge_failed"):
+                    # OpenAIVerifier swallows judge-call errors and flags them
+                    # here; fall back to direct comparison rather than counting
+                    # an infra failure as a wrong answer.
+                    pred_normalized = _rm_model_special(pred).upper().strip()
+                    gt_normalized = ground_truth.upper().strip()
+                    is_correct = pred_normalized == gt_normalized
+                else:
+                    is_correct = result.is_correct
             except Exception as e:
+                # Pipeline construction (import/config) failed.
                 eval_logger.debug("CoreCognition LLM judge failed, falling back to direct comparison: %s", e)
                 pred_normalized = _rm_model_special(pred).upper().strip()
                 gt_normalized = ground_truth.upper().strip()

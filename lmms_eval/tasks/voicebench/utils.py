@@ -155,8 +155,13 @@ After evaluating, please output the score only without anything else.
 You don't need to provide any explanations."""
 
 
+# Previously sent as a system message; now included as a prefix in the user prompt.
+_VOICEBENCH_OPEN_SYSTEM_INSTRUCTION = "You are a helpful assistant who tries to help answer the user's question."
+
+
 def _voicebench_open_prompt_fn(question, prediction, ground_truth, **kwargs):
-    return VOICEBENCH_OPEN_JUDGE_PROMPT.format(prompt=question, response=prediction)
+    prompt = VOICEBENCH_OPEN_JUDGE_PROMPT.format(prompt=question, response=prediction)
+    return f"{_VOICEBENCH_OPEN_SYSTEM_INSTRUCTION}\n\n{prompt}"
 
 
 def _parse_raw_score(text):

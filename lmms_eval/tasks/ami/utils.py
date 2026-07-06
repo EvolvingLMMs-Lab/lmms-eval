@@ -276,8 +276,13 @@ After evaluating, please output the score only without anything else.
 You don't need to provide any explanations."""
 
 
+# Previously sent as a system message; now included as a prefix in the user prompt.
+_AMI_SYSTEM_INSTRUCTION = "You are a helpful assistant who evaluates speech recognition quality."
+
+
 def _ami_judge_prompt_fn(question, prediction, ground_truth, **kwargs):
-    return AMI_LLM_JUDGE_PROMPT.format(reference=ground_truth, hypothesis=prediction)
+    prompt = AMI_LLM_JUDGE_PROMPT.format(reference=ground_truth, hypothesis=prediction)
+    return f"{_AMI_SYSTEM_INSTRUCTION}\n\n{prompt}"
 
 
 def _parse_raw_score(text):
