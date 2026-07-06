@@ -62,11 +62,7 @@ class RayModelServerActor:
         ray = _require_ray()
         accelerator_ids = ray.get_runtime_context().get_accelerator_ids()
         get_node_ip_address = getattr(ray.util, "get_node_ip_address", None)
-        node_ip = (
-            get_node_ip_address()
-            if get_node_ip_address is not None
-            else socket.gethostbyname(socket.gethostname())
-        )
+        node_ip = get_node_ip_address() if get_node_ip_address is not None else socket.gethostbyname(socket.gethostname())
         return {
             "server_type": type(self.server).__name__,
             "node_ip": node_ip,
