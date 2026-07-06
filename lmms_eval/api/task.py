@@ -154,6 +154,7 @@ class TaskConfig(dict):
     model_specific_generation_kwargs: dict = None
     model_specific_target_kwargs: dict = None
     reasoning_tags: Union[str, list] = None
+    auto_strip_thinking: bool = True
 
     def __post_init__(self) -> None:
         if self.dataset_path and os.path.exists(os.path.dirname(self.dataset_path)):

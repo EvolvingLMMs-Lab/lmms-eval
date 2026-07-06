@@ -1053,6 +1053,23 @@ def evaluate(
 
     ### Postprocess outputs ###
     # TODO: del model here, maybe (idea: allow user to specify device of e.g. reward model separately)
+
+    # Unconditionally prepend StripThinkingFilter to every task's filter
+    # pipeline.  This strips <think>...</think> (and <thinking>...</thinking>)
+    # reasoning blocks from model responses before task-specific filters run.
+    # The filter is a no-op when no reasoning tags are present, so it is safe
+    # for non-reasoning models too.
+    from lmms_eval.filters import build_filter_ensemble
+
+    for task_output in eval_tasks:
+        task = task_output.task
+        if not hasattr(task, "_filters"):
+            continue
+        if not getattr(getattr(task, "config", None), "auto_strip_thinking", True):
+            continue
+        strip_ensemble = build_filter_ensemble("strip_thinking", [["strip_thinking", None]])
+        task._filters.insert(0, strip_ensemble)
+
     for task_output in eval_tasks:
         task = task_output.task
         task.apply_filters()
