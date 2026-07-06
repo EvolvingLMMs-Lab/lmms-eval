@@ -59,7 +59,7 @@ pipeline = build_verification_pipeline({
 | `contains` | `ContainsVerifier` | Ground truth appears as a substring of the prediction |
 | `mcq_match` | `MCQMatchVerifier` | Multiple-choice letter match, tolerant of `(A)` / `A.` / `A)` formatting |
 | `numeric` | `NumericToleranceVerifier` | Numeric comparison within relative/absolute tolerance |
-| `openai` | `OpenAIVerifier` | LLM-as-judge via `lmms_eval.llm_judge` (binary, score, comparative, or custom-prompt modes) |
+| `openai` | `OpenAIVerifier` | LLM-as-judge via `lmms_eval.llm_judge`; `judge_type` is `binary` or `comparative`, with score-style output set by `response_format` and custom prompts by `custom_prompt` |
 | `gemini` | `GeminiVerifier` | LLM-as-judge via the Gemini SDK, including multimodal (text + image) judging |
 | `composite` | `CompositeVerifier` | Chains verifiers, falling through to the next when one reports low confidence |
 
@@ -67,7 +67,12 @@ pipeline = build_verification_pipeline({
 
 ### Composite Fallback
 
-Run a cheap rule-based check first, and only pay for an LLM judge when the cheap check is uncertain. A verifier signals uncertainty via `result.metadata["confident"] = False`; the composite verifier moves to the next one in the chain when it sees that flag, and always accepts the last verifier's result regardless of confidence.
+Run a cheap rule-based check first, and only pay for an LLM judge when the cheap check is uncertain. A verifier signals uncertainty via `result.metadata["confident"] = False`; the composite verifier moves to the next one in the chain when it sees that flag, and always accepts the last verifier's result regardless of confidence. A result with no `confident` key counts as confident (the chain stops), so every rule verifier sets the key explicitly.
+
+Rule verifiers follow a two-tier convention for `confident`:
+
+- **String-match** verifiers (`exact_match`, `contains`) treat any non-match as low-confidence, so a mismatch falls through to the next verifier.
+- **Parse-based** verifiers (`mcq_match`, `numeric`) treat only a *parse failure* as low-confidence — `mcq_match` when no single MCQ letter can be extracted, `numeric` when either the prediction or ground truth can't be parsed as a number. A cleanly-parsed but wrong answer is a *confident wrong* and does **not** fall through.
 
 ```python
 from lmms_eval.verifiers.composite import CompositeVerifier
@@ -78,6 +83,19 @@ verifier = CompositeVerifier([
     ExactMatchVerifier(),   # fast, always confident
     OpenAIVerifier(),       # expensive fallback
 ])
+```
+
+### Judge Failures
+
+The LLM-judge verifiers (`openai`, `gemini`) never raise out of `verify`. When the judge call fails — an exception, retry exhaustion, or the provider reporting `success=False` — they return a `VerifyResult` with `score=0.0` / `is_correct=False` **and** `metadata["judge_failed"] = True`. The score stays 0 so nothing downstream breaks, but the flag lets a task tell an infra failure apart from a genuinely wrong prediction, instead of silently counting it as wrong:
+
+```python
+def my_process_results(doc, results):
+    verdict = _pipeline(doc["question"], results[0], doc["answer"])
+    if verdict.metadata.get("judge_failed"):
+        # judge infra failed — track separately so it doesn't count against acc
+        return {"acc": 0.0, "judge_failed": 1.0}
+    return {"acc": 1.0 if verdict.is_correct else 0.0, "judge_failed": 0.0}
 ```
 
 ## Using it in a Task

@@ -14,8 +14,20 @@ class CompositeVerifier(Verifier):
 
     A verifier signals uncertainty by setting
     ``result.metadata["confident"] = False``.  When that happens the
-    composite moves on to the next verifier in the chain.  The last
-    verifier's result is always accepted regardless of confidence.
+    composite moves on to the next verifier in the chain.  A result with no
+    ``confident`` key counts as confident (the chain stops), so every
+    verifier meant for a chain sets the key explicitly.  The last verifier's
+    result is always accepted regardless of confidence.
+
+    The rule verifiers follow a two-tier convention for *confident*:
+
+    * **string-match** verifiers (``ExactMatchVerifier``,
+      ``ContainsVerifier``) treat any non-match as low-confidence, so a
+      mismatch falls through to the next (typically LLM) verifier.
+    * **parse-based** verifiers (``MCQMatchVerifier``,
+      ``NumericToleranceVerifier``) treat only a *parse failure* as
+      low-confidence; a cleanly-parsed but wrong answer is a confident
+      wrong and does **not** fall through.
 
     Example::
 

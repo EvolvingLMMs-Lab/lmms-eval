@@ -4,12 +4,13 @@ Wraps the ``google-genai`` SDK to provide a ``Verifier`` interface.
 Supports text-only and multimodal (text + image) evaluation.
 """
 
+import io
 import json
 import logging
 import os
 import re
 import time
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Tuple, Union
 
 from .base import Verifier, VerifyResult, parse_binary_response
 
@@ -55,6 +56,13 @@ class GeminiVerifier(Verifier):
         Key to look up in JSON responses (default ``"score"``).
     max_retries / retry_delay : int / float
         Retry parameters.
+
+    Notes
+    -----
+    If every retry is exhausted, :meth:`verify` returns a
+    :class:`VerifyResult` with ``metadata["judge_failed"] = True`` (and
+    ``score=0.0`` / ``is_correct=False``) so callers can exclude infra
+    failures instead of counting them as a genuinely wrong prediction.
     """
 
     def __init__(
@@ -110,6 +118,7 @@ class GeminiVerifier(Verifier):
         images = kwargs.get("images")
         if images:
             from google.genai import types
+            from PIL import Image
 
             for img in images:
                 if isinstance(img, bytes):
@@ -117,6 +126,12 @@ class GeminiVerifier(Verifier):
                 elif isinstance(img, str) and os.path.isfile(img):
                     with open(img, "rb") as f:
                         contents.append(types.Part.from_bytes(data=f.read(), mime_type="image/png"))
+                elif isinstance(img, Image.Image):
+                    buf = io.BytesIO()
+                    img.save(buf, format="PNG")
+                    contents.append(types.Part.from_bytes(data=buf.getvalue(), mime_type="image/png"))
+                else:
+                    logger.warning("GeminiVerifier: unhandled image type %s; skipping", type(img).__name__)
 
         contents.append(text)
         return contents
@@ -143,7 +158,7 @@ class GeminiVerifier(Verifier):
                     time.sleep(self.retry_delay * (2**attempt))
 
         logger.error("Gemini judge failed after %d retries", self.max_retries)
-        return VerifyResult(score=0.0, is_correct=False, raw_output="all_retries_exhausted")
+        return VerifyResult(score=0.0, is_correct=False, raw_output="all_retries_exhausted", metadata={"judge_failed": True})
 
     # ------------------------------------------------------------------
     # Response parsing
