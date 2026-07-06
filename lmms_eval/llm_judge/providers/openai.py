@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Union
 
 import requests
 from loguru import logger as eval_logger
+from PIL import Image
 
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 from lmms_eval.models.model_utils.usage_metrics import log_usage
@@ -18,13 +19,13 @@ class OpenAIProvider(ServerInterface):
     def __init__(self, config: Optional[ServerConfig] = None):
         super().__init__(config)
         self.api_key = os.getenv("OPENAI_API_KEY", "")
-        self.api_url = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions/v1")
+        self.base_url = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1")
 
         # Initialize OpenAI client
         try:
             from openai import OpenAI
 
-            self.client = OpenAI(api_key=self.api_key, base_url=self.api_url)
+            self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
             self.use_client = True
         except ImportError:
             eval_logger.warning("OpenAI client not available, falling back to requests")
@@ -45,12 +46,14 @@ class OpenAIProvider(ServerInterface):
         if request.images:
             messages = self._add_images_to_messages(messages, request.images)
 
-        # Prepare payload
+        # Prepare payload — use max_completion_tokens for newer models (gpt-5-*)
+        model = config.model_name
+        token_key = "max_completion_tokens" if model.startswith(("gpt-5", "o1", "o3", "o4")) else "max_tokens"
         payload = {
-            "model": config.model_name,
+            "model": model,
             "messages": messages,
             "temperature": config.temperature,
-            "max_tokens": config.max_tokens,
+            token_key: config.max_tokens,
         }
 
         if config.top_p is not None:
@@ -112,7 +115,8 @@ class OpenAIProvider(ServerInterface):
             "Content-Type": "application/json",
         }
 
-        response = requests.post(self.api_url, headers=headers, json=payload, timeout=timeout)
+        url = self.base_url.rstrip("/") + "/chat/completions"
+        response = requests.post(url, headers=headers, json=payload, timeout=timeout)
         response.raise_for_status()
         return response.json()
 
@@ -127,7 +131,11 @@ class OpenAIProvider(ServerInterface):
 
                 # Add images
                 for image in images:
-                    if isinstance(image, str):
+                    if isinstance(image, Image.Image):
+                        # PIL Image object
+                        base64_image = encode_image_to_base64(image, image_format="JPEG", convert_rgb=True, quality=85)
+                        messages[i]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}})
+                    elif isinstance(image, str):
                         # File path
                         base64_image = self._encode_image(image)
                         messages[i]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}})

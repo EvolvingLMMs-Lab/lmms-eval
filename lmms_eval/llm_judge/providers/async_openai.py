@@ -18,14 +18,15 @@ class AsyncOpenAIProvider(AsyncServerInterface):
     def __init__(self, config: Optional[ServerConfig] = None):
         super().__init__(config)
         self.api_key = os.getenv("OPENAI_API_KEY", "")
-        self.api_url = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+        base_url = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1")
+        self.api_url = base_url.rstrip("/") + "/chat/completions"
 
         # Try to use async OpenAI client if available
         self.use_async_client = False
         try:
             from openai import AsyncOpenAI
 
-            self.async_client = AsyncOpenAI(api_key=self.api_key)
+            self.async_client = AsyncOpenAI(api_key=self.api_key, base_url=base_url)
             self.use_async_client = True
         except ImportError:
             eval_logger.warning("AsyncOpenAI client not available, using aiohttp")
