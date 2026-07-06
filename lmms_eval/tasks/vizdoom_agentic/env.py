@@ -36,6 +36,7 @@ class VizDoomEnvManager(EnvManager):
     def __init__(
         self,
         config_path: str | None = "basic.cfg",
+        doom_config_path: str | None = None,
         scenario_path: str | None = None,
         game_path: str | None = None,
         doom_map: str | None = None,
@@ -96,6 +97,7 @@ class VizDoomEnvManager(EnvManager):
         del doc, lmms_eval_specific_kwargs
         self.config = {
             "config_path": config_path,
+            "doom_config_path": doom_config_path,
             "scenario_path": scenario_path,
             "game_path": game_path,
             "doom_map": doom_map,
@@ -253,6 +255,8 @@ class VizDoomEnvManager(EnvManager):
     def _configure_game(self, game: Any, config: dict[str, Any], seed: int | None) -> None:
         if config.get("config_path"):
             game.load_config(str(config["config_path"]))
+        if config.get("doom_config_path"):
+            game.set_doom_config_path(str(config["doom_config_path"]))
         if config.get("scenario_path"):
             game.set_doom_scenario_path(str(config["scenario_path"]))
         if config.get("game_path"):

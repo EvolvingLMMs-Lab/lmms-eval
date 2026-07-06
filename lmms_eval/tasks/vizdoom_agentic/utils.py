@@ -1,6 +1,8 @@
 import importlib.util
 import json
 import os
+import tempfile
+import uuid
 from functools import lru_cache
 from pathlib import Path
 
@@ -30,6 +32,7 @@ def vizdoom_env_manager(doc=None, lmms_eval_specific_kwargs=None):
     # observation parser's human_view flag keeps them out of the model's prompt.
     return env_cls(
         config_path="basic.cfg",
+        doom_config_path=_vizdoom_runtime_config_path(),
         screen_resolution="RES_320X240",
         screen_format="RGB24",
         available_buttons=["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"],
@@ -71,6 +74,12 @@ def _vizdoom_env_manager_cls():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.VizDoomEnvManager
+
+
+def _vizdoom_runtime_config_path():
+    root = Path(os.getenv("VIZDOOM_CONFIG_DIR", tempfile.gettempdir())) / "lmms_eval_vizdoom"
+    root.mkdir(parents=True, exist_ok=True)
+    return str(root / f"_vizdoom_{os.getpid()}_{uuid.uuid4().hex}.ini")
 
 
 def vizdoom_process_results(doc, results):
