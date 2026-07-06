@@ -478,12 +478,17 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
             args.wandb_args += f",name={name}"
         wandb_logger = WandbLogger(**simple_parse_args_string(args.wandb_args))
 
+    swanlab_logger = None
     if args.swanlab_args:
         if "exp_name" not in args.swanlab_args:
             name = f"{args.model}_{args.model_args}_{utils.get_datetime_str(timezone=args.timezone)}"
             name = utils.sanitize_long_string(name)
             args.swanlab_args += f",exp_name={name}"
-        swanlab_logger = SwanLabLogger(**simple_parse_args_string(args.swanlab_args))
+        try:
+            swanlab_logger = SwanLabLogger(**simple_parse_args_string(args.swanlab_args))
+        except Exception as e:
+            eval_logger.warning(f"swanlab logger initialization failed; continuing without swanlab: {e}")
+            swanlab_logger = None
 
     # reset logger
     eval_logger.remove()
@@ -574,7 +579,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                     eval_logger.info(f"Logging to Weights and Biases failed due to {e}")
                 # wandb_logger.finish()
 
-            if is_main_process and args.swanlab_args:
+            if is_main_process and args.swanlab_args and swanlab_logger is not None:
                 try:
                     swanlab_logger.post_init(results)
                     swanlab_logger.log_eval_result()
@@ -603,7 +608,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     if args.wandb_args:
         wandb_logger.run.finish()
 
-    if args.swanlab_args:
+    if args.swanlab_args and swanlab_logger is not None:
         swanlab_logger.finish()
 
 
