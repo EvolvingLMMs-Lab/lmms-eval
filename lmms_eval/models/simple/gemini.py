@@ -39,6 +39,17 @@ except ImportError:
 _VIDEO_EXTS = {".mp4", ".avi", ".mov", ".flv", ".wmv", ".webm", ".mkv"}
 _AUDIO_EXTS = {".wav", ".mp3", ".flac", ".aac", ".ogg", ".m4a"}
 
+# Gemini expects these exact audio MIME strings; mimetypes.guess_type would yield OS-dependent / x- variants.
+_AUDIO_MIME_TYPES = {
+    ".wav": "audio/wav",
+    ".mp3": "audio/mp3",
+    ".flac": "audio/flac",
+    ".aac": "audio/aac",
+    ".ogg": "audio/ogg",
+    ".aiff": "audio/aiff",
+    ".m4a": "audio/mp4",
+}
+
 
 def _is_video_path(path: str) -> bool:
     return any(path.lower().endswith(ext) for ext in _VIDEO_EXTS)
@@ -46,6 +57,12 @@ def _is_video_path(path: str) -> bool:
 
 def _is_audio_path(path: str) -> bool:
     return any(path.lower().endswith(ext) for ext in _AUDIO_EXTS)
+
+
+def _audio_mime_type(path: str) -> str:
+    """Map an audio file path to Gemini's canonical MIME type by extension."""
+    ext = os.path.splitext(path)[1].lower()
+    return _AUDIO_MIME_TYPES.get(ext) or mimetypes.guess_type(path)[0] or "audio/wav"
 
 
 def _extract_safety_tag(response) -> str:
@@ -279,8 +296,7 @@ class Gemini(lmms):
             if _is_audio_path(visual):
                 with open(visual, "rb") as f:
                     audio_bytes = f.read()
-                mime_type = mimetypes.guess_type(visual)[0] or "audio/wav"
-                return types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
+                return types.Part.from_bytes(data=audio_bytes, mime_type=_audio_mime_type(visual))
             # Assume image path
             return types.Part.from_bytes(data=_image_to_bytes(Image.open(visual).convert("RGB")), mime_type="image/png")
         if isinstance(visual, dict) and "sampling_rate" in visual:

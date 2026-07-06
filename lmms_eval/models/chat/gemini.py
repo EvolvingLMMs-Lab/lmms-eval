@@ -19,7 +19,11 @@ from lmms_eval.models.model_utils.usage_metrics import (
     log_usage,
 )
 from lmms_eval.models.simple.gemini import Gemini as GeminiSimple
-from lmms_eval.models.simple.gemini import _extract_safety_tag, _image_to_bytes
+from lmms_eval.models.simple.gemini import (
+    _audio_mime_type,
+    _extract_safety_tag,
+    _image_to_bytes,
+)
 from lmms_eval.protocol import ChatMessages
 
 try:
@@ -67,7 +71,7 @@ def _chat_messages_to_gemini_contents(chat_messages: ChatMessages, upload_fn, sy
                 audio_url = content.url
                 if isinstance(audio_url, str):
                     with open(audio_url, "rb") as f:
-                        parts.append(types.Part.from_bytes(data=f.read(), mime_type="audio/wav"))
+                        parts.append(types.Part.from_bytes(data=f.read(), mime_type=_audio_mime_type(audio_url)))
                 elif isinstance(audio_url, dict) and "array" in audio_url:
                     import io
 
