@@ -553,7 +553,6 @@ python -m lmms_eval --tasks list_with_num
 - [Mix Evals](https://github.com/mix-evals/mix-evals) (mix_evals)
 - [Multimodal RewardBench](https://huggingface.co/datasets/allenai/reward-bench) (multimodal_rewardbench)
 - [Omni-Bench](https://omni-bench.github.io/) (omni_bench)
-- [PhysBench](https://physbench.github.io/) (physbench) - Multi-domain physics reasoning (image & video)
 - [PhyX](https://phyx-bench.github.io/) (phyx) - Physics grounded reasoning
 - [UEval](https://github.com/UEval/UEval) (ueval)
 - [VL-RewardBench](https://vl-rewardbench.github.io) (vl_rewardbench)

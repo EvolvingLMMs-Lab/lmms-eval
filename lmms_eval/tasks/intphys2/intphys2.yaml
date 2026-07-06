@@ -1,5 +1,4 @@
 task: intphys2
-primary_metric: intphys2_accuracy
 dataset_path: facebook/IntPhys2
 test_split: Main
 output_type: generate_until
