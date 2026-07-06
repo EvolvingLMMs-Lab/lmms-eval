@@ -76,7 +76,7 @@ def escaped_split(text, sep_char, maxsplit=-1):
         return text
     maxsplit = max(0, maxsplit)
 
-    return re.split(r"(?<!\\)" + sep_char, text, maxsplit)
+    return re.split(r"(?<!\\)" + sep_char, text, maxsplit=maxsplit)
 
 
 def handle_arg_string(arg):
@@ -775,27 +775,65 @@ def run_task_tests(task_list: List[str]):
         raise ValueError(f"Not all tests for the specified tasks ({task_list}) ran successfully! Error code: {pytest_return_val}")
 
 
+def _lmms_eval_repo_root() -> pathlib.Path:
+    return pathlib.Path(__file__).resolve().parents[1]
+
+
+def _git_output(*args: str) -> str:
+    return (
+        subprocess.check_output(
+            ["git", "-C", str(_lmms_eval_repo_root()), *args],
+            stderr=subprocess.DEVNULL,
+        )
+        .strip()
+        .decode()
+    )
+
+
+def _first_env(*names: str) -> str | None:
+    for name in names:
+        value = os.environ.get(name, "").strip()
+        if value:
+            return value
+    return None
+
+
+def _normalize_branch_name(branch: str) -> str:
+    return branch.removeprefix("remotes/origin/")
+
+
+def _is_exact_git_ref_name(branch: str) -> bool:
+    return bool(branch and branch != "undefined" and "^" not in branch and "~" not in branch)
+
+
 def get_git_commit_hash():
-    """
-    Gets the git commit hash of your current repo (if it exists).
-    Source: https://github.com/EleutherAI/gpt-neox/blob/b608043be541602170bfcfb8ec9bf85e8a0799e0/megatron/neox_arguments/neox_args.py#L42
-    """
     try:
-        git_hash = subprocess.check_output(["git", "describe", "--always"]).strip()
-        git_hash = git_hash.decode()
+        git_hash = _git_output("describe", "--always")
     except (subprocess.CalledProcessError, FileNotFoundError):
-        # FileNotFoundError occurs when git not installed on system
-        git_hash = None
+        git_hash = _first_env("LMMS_EVAL_GIT_COMMIT", "GIT_COMMIT", "GITHUB_SHA")
     return git_hash
 
 
 def get_git_branch_name():
-    """Gets the current git branch name (if in a repo)."""
     try:
-        branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).strip()
-        return branch.decode()
+        branch = _git_output("branch", "--show-current")
+        if branch:
+            return _normalize_branch_name(branch)
     except (subprocess.CalledProcessError, FileNotFoundError):
-        return None
+        pass
+
+    branch = _first_env("LMMS_EVAL_GIT_BRANCH", "GIT_BRANCH", "BRANCH_NAME", "GITHUB_REF_NAME")
+    if branch:
+        return _normalize_branch_name(branch)
+
+    try:
+        branch = _git_output("name-rev", "--name-only", "--exclude=tags/*", "HEAD")
+        if _is_exact_git_ref_name(branch):
+            return _normalize_branch_name(branch)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+
+    return "detached" if get_git_commit_hash() else None
 
 
 def get_lmms_eval_version_string():
@@ -881,6 +919,31 @@ def get_datetime_str(timezone="Asia/Singapore"):
     return local_time.strftime("%Y%m%d_%H%M%S")
 
 
+def build_eval_output_dir(output_root: str, model_name: str, tasks: str, datetime_str: str) -> str:
+    """Build a structured eval output directory.
+
+    Returns ``{output_root}/{model}_{tasks}/{YYYY_MM_DD_HHMMSS}``.
+
+    *model_name* should already be sanitized (e.g. from
+    ``GeneralConfigTracker.model_name_sanitized`` or the CLI ``--model`` value).
+    *tasks* is a comma-separated task string (sanitized to underscores).
+    *datetime_str* is ``YYYYMMDD_HHMMSS`` (from :func:`get_datetime_str`)
+    and reformatted to ``YYYY_MM_DD_HHMMSS``.
+    """
+    model_sanitized = model_name or ""
+
+    # Sanitize task string: replace commas and non-word chars
+    tasks_sanitized = re.sub(r"\W+", "_", tasks.strip()).strip("_") if tasks else "unknown"
+
+    # Reformat YYYYMMDD_HHMMSS → YYYY_MM_DD_HHMMSS
+    dt = datetime_str.replace(":", "-")
+    if len(dt) >= 15 and dt[8] == "_":
+        dt = f"{dt[:4]}_{dt[4:6]}_{dt[6:]}"
+
+    subdir = f"{model_sanitized}_{tasks_sanitized}" if model_sanitized else tasks_sanitized
+    return os.path.join(output_root, subdir, dt)
+
+
 def sanitize_long_string(s, max_length=40):
     if len(s) > max_length:
         return s[: max_length // 2] + "..." + s[-max_length // 2 :]
@@ -917,6 +980,58 @@ def import_function(loader, node):
     except Exception as ex:
         # Re-raise with context to aid debugging
         raise ImportError(f"Failed to import function '{function_name}' from module '{module_name}'. " f"Tried relative path '{module_path}' and absolute import.") from ex
+
+
+_LOCAL_BUILDERS = frozenset({"csv", "json", "parquet", "text", "pandas", "arrow"})
+
+
+def _looks_like_url(value: str) -> bool:
+    return value.startswith(("http://", "https://", "s3://", "gs://", "ftp://", "ftps://"))
+
+
+def _resolve_local_data_files(value, yaml_dir: str):
+    """Rewrite relative ``data_files`` paths to absolute paths anchored at ``yaml_dir``.
+
+    Conservative: only rewrites a string when it's a relative path AND the
+    resolved absolute path exists on disk. Leaves absolute paths, URLs, and
+    non-existent relatives untouched. Recurses into dict/list to handle the
+    ``data_files: {train: <path>, validation: <path>}`` and ``data_files:
+    [<path>, <path>]`` shapes that ``datasets.load_dataset`` accepts.
+    """
+    if isinstance(value, str):
+        if not value or _looks_like_url(value) or os.path.isabs(value):
+            return value
+        candidate = os.path.join(yaml_dir, value)
+        if os.path.isfile(candidate):
+            return candidate
+        return value
+    if isinstance(value, dict):
+        return {k: _resolve_local_data_files(v, yaml_dir) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_resolve_local_data_files(v, yaml_dir) for v in value]
+    return value
+
+
+def _maybe_resolve_yaml_local_data_files(yaml_config: dict, yaml_dir: str) -> dict:
+    """Resolve ``dataset_kwargs.data_files`` relative paths against ``yaml_dir``.
+
+    Only applied for the generic local builders (``csv``, ``json``,
+    ``parquet``, ``text``, ``pandas``, ``arrow``). For HF hub dataset
+    paths (e.g. ``lmms-lab-eval/ssv2``) ``data_files`` is left as-is to
+    preserve the upstream behavior of letting HF resolve relative paths
+    against the dataset's hub root.
+    """
+    dataset_path = yaml_config.get("dataset_path")
+    if not isinstance(dataset_path, str) or dataset_path not in _LOCAL_BUILDERS:
+        return yaml_config
+    dataset_kwargs = yaml_config.get("dataset_kwargs")
+    if not isinstance(dataset_kwargs, dict) or "data_files" not in dataset_kwargs:
+        return yaml_config
+    resolved = _resolve_local_data_files(dataset_kwargs["data_files"], yaml_dir)
+    if resolved is dataset_kwargs["data_files"]:
+        return yaml_config
+    new_kwargs = {**dataset_kwargs, "data_files": resolved}
+    return {**yaml_config, "dataset_kwargs": new_kwargs}
 
 
 def load_yaml_config(yaml_path=None, yaml_config=None, yaml_dir=None, mode="full"):
@@ -962,8 +1077,8 @@ def load_yaml_config(yaml_path=None, yaml_config=None, yaml_dir=None, mode="full
                 raise ex
 
         final_yaml_config.update(yaml_config)
-        return final_yaml_config
-    return yaml_config
+        return _maybe_resolve_yaml_local_data_files(final_yaml_config, yaml_dir)
+    return _maybe_resolve_yaml_local_data_files(yaml_config, yaml_dir)
 
 
 def regex_replace(string, pattern, repl, count: int = 0):

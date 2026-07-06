@@ -73,6 +73,36 @@ from lmms_eval.utils import (
 )
 
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff")
+_SENSITIVE_CONFIG_KEYS = {
+    "api_key",
+    "client_secret",
+    "hf_token",
+    "huggingface_hub_token",
+    "huggingfacehub_api_token",
+    "token",
+}
+_SECRET_ASSIGNMENT_RE = re.compile(r"(?i)(^|[,\s])(api_key|client_secret|hf_token|huggingface_hub_token|huggingfacehub_api_token|token)=([^,\s]+)")
+_HF_TOKEN_VALUE_RE = re.compile(r"\bhf_[A-Za-z0-9]{20,}\b")
+
+
+def _redact_eval_config_secrets(value):
+    if isinstance(value, dict):
+        return {key: ("[REDACTED]" if str(key).lower() in _SENSITIVE_CONFIG_KEYS else _redact_eval_config_secrets(item)) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return type(value)(_redact_eval_config_secrets(item) for item in value)
+    if isinstance(value, str):
+        value = _SECRET_ASSIGNMENT_RE.sub(r"\1\2=[REDACTED]", value)
+        return _HF_TOKEN_VALUE_RE.sub("[REDACTED]", value)
+    return value
+
+
+def _clone_padding_request(pad_source: Instance) -> Instance:
+    pad_instance = copy.copy(pad_source)
+    pad_instance.metadata = dict(pad_source.metadata or {})
+    pad_instance.metadata["__padding_only__"] = True
+    pad_instance.resps = []
+    pad_instance.token_counts = []
+    return pad_instance
 
 
 def _enable_reentrant_filelocks() -> None:
@@ -531,6 +561,7 @@ def simple_evaluate(
         # add info about execution
         results["config"].update(
             {
+                "model_backend": f"{type(lm).__module__}.{type(lm).__name__} ({task_type})",
                 "batch_size": batch_size,
                 "batch_sizes": (list(lm.batch_sizes.values()) if hasattr(lm, "batch_sizes") else []),
                 "device": device,
@@ -555,6 +586,8 @@ def simple_evaluate(
                 except (TypeError, ValueError):
                     resolved[key] = str(value)
             results["config"]["resolved_cli_args"] = resolved
+
+        results["config"] = _redact_eval_config_secrets(results["config"])
 
         results["git_hash"] = get_git_commit_hash()
         results["git_branch"] = get_git_branch_name()
@@ -862,6 +895,16 @@ def evaluate(
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     global_rank = int(os.environ.get("RANK", 0))
     world_size = int(os.environ.get("WORLD_SIZE", 1))
+
+    # Auto-init torch.distributed for multi-rank launches where the model
+    # backend did not call init_process_group itself (e.g. video generation
+    # models using diffusers).  Without this, evaluator collectives like
+    # gather_object / barrier crash with "process group not initialized".
+    # gloo is used because it requires no GPU and works everywhere.
+    if world_size > 1 and dist.is_available() and not dist.is_initialized():
+        dist.init_process_group(backend="gloo")
+        eval_logger.info(f"evaluator: auto-initialized gloo process group (world={world_size})")
+
     eval_logger.info(f"Running on rank {global_rank} (local rank {local_rank})")
 
     def _infer_task_request_type(task_obj: Task) -> Optional[str]:
@@ -884,6 +927,14 @@ def evaluate(
 
     if distributed_executor_backend == "accelerate" and not hasattr(lm, "accelerator"):
         lm.accelerator = Accelerator()
+
+    # Inject rank/world_size into the model so that logging (tqdm disable)
+    # and rank-conditional logic work on non-zero ranks.  Many simple models
+    # only read LOCAL_RANK for device binding and leave _rank/_world_size
+    # at their defaults (0, 1).
+    if world_size > 1:
+        lm._rank = global_rank
+        lm._world_size = world_size
 
     for task_output in eval_tasks:
         task = task_output.task
@@ -950,8 +1001,8 @@ def evaluate(
                 instances_rnk = torch.tensor(len(task._instances), device=lm.device)
                 gathered_item = lm.accelerator.gather(instances_rnk).cpu().detach().numpy().tolist()
             elif distributed_executor_backend == "torchrun":
-                instances_rnk = torch.tensor(len(task._instances), device=lm.device)
-                gathered_item = torch.zeros(world_size * 1, dtype=instances_rnk.dtype, device=lm.device)
+                instances_rnk = torch.tensor([len(task._instances)], device=lm.device)
+                gathered_item = torch.zeros(world_size, dtype=instances_rnk.dtype, device=lm.device)
                 dist.all_gather_into_tensor(gathered_item, instances_rnk)
                 gathered_item = gathered_item.cpu().detach().numpy().tolist()
             else:
@@ -1002,8 +1053,9 @@ def evaluate(
             if pad_source is None:
                 eval_logger.warning(f"Running {reqtype} requests but could not find a pad source request on rank {global_rank}; skipping rank padding.")
             else:
+                pad_instance = _clone_padding_request(pad_source)
                 for _ in range(padding_requests[reqtype]):
-                    cloned_reqs.extend([pad_source] * pad_source.repeats)
+                    cloned_reqs.extend([pad_instance] * pad_instance.repeats)
 
         # run requests through model (with optional response cache)
         if reqtype == "generate_until_agentic":
@@ -1124,6 +1176,12 @@ def evaluate(
             pbar = tqdm(total=total_docs, desc="Postprocessing", disable=(RANK != 0))
             for doc_id, doc in doc_iterator:
                 requests = instances_by_doc_id[doc_id]
+                # Defensive skip: if a doc landed in this rank's shard but has
+                # no requests (e.g. a split mismatch during a partial rerun),
+                # skip rather than crashing at `requests[0].doc` below.
+                if not requests:
+                    pbar.update(1)
+                    continue
 
                 # Strip reasoning tags before scoring
                 if reasoning_tags is not None:
