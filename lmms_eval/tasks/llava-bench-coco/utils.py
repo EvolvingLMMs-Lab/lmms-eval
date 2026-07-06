@@ -1,6 +1,6 @@
 import json
 import os
-import time
+import threading
 from copy import deepcopy
 from pathlib import Path
 
@@ -8,7 +8,8 @@ import numpy as np
 import yaml
 from loguru import logger as eval_logger
 
-from lmms_eval.llm_judge import Request, ServerConfig, get_server
+from lmms_eval.verifiers import VerificationPipeline, VerifyResult
+from lmms_eval.verifiers.openai import OpenAIVerifier
 
 NUM_SECONDS_TO_SLEEP = 0.5
 
@@ -29,60 +30,70 @@ with open(Path(__file__).parent / "llava-bench-coco.yaml", "r") as f:
 GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 API_TYPE = os.getenv("API_TYPE", "openai")
 
-# Initialize the judge server
-server_config = ServerConfig(model_name=GPT_EVAL_MODEL_NAME, temperature=0.2, max_tokens=1024)
-server = get_server(server_name=API_TYPE, config=server_config)
+# Previously sent as a system message; now included as a prefix in the user prompt.
+_SYSTEM_INSTRUCTION = "You are a helpful and precise assistant for checking the quality of the answer."
 
 
-def get_eval(content: str, max_tokens: int, retries: int = 3):
-    messages = [
-        {
-            "role": "system",
-            "content": "You are a helpful and precise assistant for checking the quality of the answer.",
-        },
-        {"role": "user", "content": content},
-    ]
-
-    # Update server config with specific parameters for this request
-    custom_config = ServerConfig(model_name=GPT_EVAL_MODEL_NAME, temperature=0.2, max_tokens=max_tokens)
-
-    for attempt in range(retries):
-        try:
-            # Create a Request object for the unified judge API
-            request = Request(messages=messages, config=custom_config)
-
-            # Use the unified judge API
-            response = server.evaluate(request)
-
-            content = response.content.strip() if response.content else ""
-            if content != "":
-                return content, response.model_used
-            break  # If successful, break out of the loop
-
-        except Exception as e:
-            eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}")
-            if attempt < retries - 1:  # If we have retries left, sleep and then continue to next attempt
-                time.sleep(NUM_SECONDS_TO_SLEEP)
-            else:  # If this was the last attempt, log and return empty
-                eval_logger.error(f"All {retries} attempts failed. Last error message: {str(e)}")
-                return "", ""
-    return "", ""
+# ---------------------------------------------------------------------------
+# Verification pipeline (replaces get_eval + parse_score)
+# ---------------------------------------------------------------------------
 
 
-def parse_score(review):
+def _parse_comparative_scores(text: str) -> VerifyResult:
+    """Parse two scores from the first line of the judge response.
+
+    Matches the original parse_score logic: split first line by space
+    after replacing commas, expect exactly 2 values.
+    """
     try:
-        score_pair = review.split("\n")[0]
+        score_pair = text.strip().split("\n")[0]
         score_pair = score_pair.replace(",", " ")
         sp = score_pair.split(" ")
         if len(sp) == 2:
-            return [float(sp[0]), float(sp[1])]
+            scores = [float(sp[0]), float(sp[1])]
         else:
-            eval_logger.debug("error", review)
-            return [-1, -1]
+            eval_logger.debug("error", text)
+            scores = [-1, -1]
     except Exception as e:
         eval_logger.debug(e)
-        eval_logger.debug("error", review)
-        return [-1, -1]
+        eval_logger.debug("error", text)
+        scores = [-1, -1]
+    return VerifyResult(
+        score=scores[1] / 10.0 if scores[1] > 0 else 0.0,
+        is_correct=scores[1] > scores[0],
+        raw_output=text,
+        metadata={"scores": scores},
+    )
+
+
+def _build_coco_prompt(question, prediction, ground_truth, **kwargs):
+    """Build the full prompt, preserving the original system instruction."""
+    return f"{_SYSTEM_INSTRUCTION}\n\n{kwargs['content']}"
+
+
+_pipeline = None
+_pipeline_lock = threading.Lock()
+
+
+def _get_pipeline() -> VerificationPipeline:
+    global _pipeline
+    if _pipeline is None:
+        with _pipeline_lock:
+            if _pipeline is None:  # double-check
+                _pipeline = VerificationPipeline(
+                    extractors=[],
+                    verifier=OpenAIVerifier(
+                        model=GPT_EVAL_MODEL_NAME,
+                        api_type=API_TYPE,
+                        custom_prompt=_build_coco_prompt,
+                        response_parser=_parse_comparative_scores,
+                        temperature=0.2,
+                        max_tokens=1024,
+                        max_retries=3,
+                        retry_delay=0.5,
+                    ),
+                )
+    return _pipeline
 
 
 def llava_doc_to_visual(doc):
@@ -117,8 +128,12 @@ def llava_process_results(doc, result):
         role = rule.get("role", "user")
         content = f"[Context]\n{context}\n\n" f"[Question]\n{question}\n\n" f"[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n" f"[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n" f"[System]\n{prompt}\n\n"
 
-        review, model_name = get_eval(content, 1024)
-        scores = parse_score(review)
+        pipeline = _get_pipeline()
+        vresult = pipeline(question=question, prediction=ans2, ground_truth=ans1, content=content)
+
+        review = vresult.raw_output
+        model_name = GPT_EVAL_MODEL_NAME
+        scores = vresult.metadata.get("scores", [-1, -1])
     except Exception as e:
         eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
         review = "Failed to Get a Proper Review."

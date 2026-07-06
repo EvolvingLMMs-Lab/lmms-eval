@@ -1,5 +1,7 @@
 import json
 import os
+import re
+import threading
 from copy import deepcopy
 from pathlib import Path
 
@@ -7,7 +9,8 @@ import numpy as np
 import yaml
 from loguru import logger as eval_logger
 
-from lmms_eval.llm_judge import ServerConfig, get_server
+from lmms_eval.verifiers import VerificationPipeline, VerifyResult
+from lmms_eval.verifiers.openai import OpenAIVerifier
 
 NUM_SECONDS_TO_SLEEP = 5
 
@@ -28,10 +31,60 @@ with open(Path(__file__).parent / "llava-in-the-wild.yaml", "r") as f:
 API_TYPE = os.getenv("API_TYPE", "openai")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 
-server_config = ServerConfig(
-    model_name=MODEL_VERSION,
-)
-server = get_server(server_name=API_TYPE, config=server_config)
+
+# ---------------------------------------------------------------------------
+# Verification pipeline (replaces direct llm_judge evaluate_comparative)
+# ---------------------------------------------------------------------------
+
+
+def _parse_comparative_scores(text: str) -> VerifyResult:
+    """Parse comparative scores from judge response.
+
+    Matches the parsing logic of ResponseParser.parse_comparative_response:
+    extracts first two numbers from the first line of the response.
+    """
+    try:
+        lines = text.strip().split("\n")
+        if lines:
+            score_line = lines[0].replace(",", " ").replace(";", " ")
+            numbers = re.findall(r"-?\d+(?:\.\d+)?", score_line)
+            if len(numbers) >= 2:
+                scores = [float(numbers[0]), float(numbers[1])]
+            else:
+                scores = [-1, -1]
+        else:
+            scores = [-1, -1]
+    except Exception:
+        scores = [-1, -1]
+    return VerifyResult(
+        score=scores[1] / 10.0 if scores[1] > 0 else 0.0,
+        is_correct=scores[1] > scores[0],
+        raw_output=text,
+        metadata={"scores": scores},
+    )
+
+
+_pipeline = None
+_pipeline_lock = threading.Lock()
+
+
+def _get_pipeline() -> VerificationPipeline:
+    global _pipeline
+    if _pipeline is None:
+        with _pipeline_lock:
+            if _pipeline is None:  # double-check
+                _pipeline = VerificationPipeline(
+                    extractors=[],
+                    verifier=OpenAIVerifier(
+                        model=MODEL_VERSION,
+                        api_type=API_TYPE,
+                        custom_prompt=lambda q, p, gt, **kw: kw["content"],
+                        response_parser=_parse_comparative_scores,
+                        max_retries=5,
+                        retry_delay=2.0,
+                    ),
+                )
+    return _pipeline
 
 
 def llava_doc_to_visual(doc):
@@ -66,11 +119,12 @@ def llava_process_results(doc, result):
         role = rule.get("role", "user")
         content = f"[Context]\n{context}\n\n" f"[Question]\n{question}\n\n" f"[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n" f"[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n" f"[System]\n{prompt}\n\n"
 
-        result = server.evaluate_comparative(question=question, response1=ans1, response2=ans2, context=context, custom_prompt=content, score_range=(1, 10))
+        pipeline = _get_pipeline()
+        vresult = pipeline(question=question, prediction=ans2, ground_truth=ans1, content=content)
 
-        review = result["raw_response"]
-        model_name = result["model"]
-        scores = list(result["scores"])
+        review = vresult.raw_output
+        model_name = MODEL_VERSION
+        scores = vresult.metadata.get("scores", [-1, -1])
     except Exception as e:
         eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
         review = "Failed to Get a Proper Review."
