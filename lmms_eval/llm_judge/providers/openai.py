@@ -21,11 +21,21 @@ class OpenAIProvider(ServerInterface):
         self.api_url = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions/v1")
 
         # Initialize OpenAI client
+        self.client = None
+        self.use_client = False
         try:
             from openai import OpenAI
 
-            self.client = OpenAI(api_key=self.api_key, base_url=self.api_url)
-            self.use_client = True
+            # Only construct the client when a key is configured. Recent openai
+            # SDKs raise OpenAIError on an empty api_key, which would crash any
+            # task that builds a judge server at import time (e.g. on CI or any
+            # machine without OPENAI_API_KEY set). is_available()/evaluate()
+            # already guard usage, so a missing key just disables the provider.
+            if self.api_key:
+                self.client = OpenAI(api_key=self.api_key, base_url=self.api_url)
+                self.use_client = True
+            else:
+                eval_logger.warning("OpenAI is not configured (OPENAI_API_KEY is empty)")
         except ImportError:
             eval_logger.warning("OpenAI client not available, falling back to requests")
             self.use_client = False

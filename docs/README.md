@@ -137,6 +137,8 @@ class MyModel(lmms):
 
 The [Task Guide](guides/task_guide.md) explains the YAML configuration format. Each task defines a dataset source, prompt template, generation parameters, and scoring function. The simplest tasks require only a YAML file; complex tasks add a `utils.py` with custom prompt formatting and metric computation.
 
+For interactive simulator tasks, see the [Agentic Game Loop Design](advanced/agentic_game_loop_design.md). It explains the `generate_until_game` component split, including model servers, environment loops, model output parsers, and task action parsers.
+
 ```yaml
 task: "my_benchmark"
 dataset_path: "my-org/my-dataset"

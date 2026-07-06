@@ -1,0 +1,45 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vizdoom_agentic/data/vizdoom_scenarios.jsonl
+task: "vizdoom_scenarios"
+test_split: test
+output_type: generate_until_game
+doc_to_visual: !function utils.vizdoom_doc_to_visual
+doc_to_text: !function utils.vizdoom_doc_to_text
+doc_to_target: !function utils.vizdoom_doc_to_target
+game_env: !function utils.vizdoom_env_manager
+# Human-view parity: the model only sees what a human player sees (first-person
+# frame + on-screen HUD), no oracle state.
+observation_parser:
+  name: vizdoom
+  human_view: true
+  video: true
+  image_buffers: ["screen"]
+action_parser:
+  name: vizdoom
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+  max_game_steps: 64
+process_results: !function utils.vizdoom_process_results
+metric_list:
+  - metric: vizdoom_success
+    aggregation: !function utils.vizdoom_aggregate_success
+    higher_is_better: true
+  - metric: vizdoom_steps
+    aggregation: !function utils.vizdoom_aggregate_steps
+    higher_is_better: false
+  - metric: vizdoom_invalid_actions
+    aggregation: !function utils.vizdoom_aggregate_invalid_actions
+    higher_is_better: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  version: 0.1
+  description: "ViZDoom multi-scenario game loop (basic, defend, corridor, health, maze, dodge)"

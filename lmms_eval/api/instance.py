@@ -73,7 +73,7 @@ def unwrap_generation_output(output: Any) -> Tuple[Any, Optional[TokenCounts]]:
 
 @dataclass
 class Instance:
-    request_type: Literal["loglikelihood", "generate_until", "generate_until_multi_round", "generate_until_agentic"]
+    request_type: Literal["loglikelihood", "generate_until", "generate_until_multi_round", "generate_until_agentic", "generate_until_game"]
     arguments: tuple
     idx: int
     metadata: Dict[str, Union[str, int]] = field(default_factory=dict)
