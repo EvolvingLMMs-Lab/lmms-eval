@@ -7,6 +7,7 @@ with optional LLM judge fallback when enabled via task config (see stare/utils.p
 import logging
 import os
 import re
+import threading
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -30,24 +31,43 @@ def _load_yaml_stripped(path: Path) -> dict:
 _corecognition_config = _load_yaml_stripped(_default_template_path)
 _corecognition_config.update(_load_yaml_stripped(_corecognition_config_path))
 
-# Initialize LLM judge server when use_lmms_judge is True (reference: stare/utils.py)
-_judge_server = None
-_judge_server_config = None
-if _corecognition_config.get("metadata", {}).get("use_lmms_judge"):
-    try:
-        from lmms_eval.llm_judge import get_server
-        from lmms_eval.llm_judge.protocol import ServerConfig
+_use_lmms_judge = _corecognition_config.get("metadata", {}).get("use_lmms_judge", False)
 
-        eval_logger.info("Using LMMS judge server for CoreCognition task.")
-        API_TYPE = os.getenv("API_TYPE", "openai").lower()
-        DEPLOYMENT_NAME = os.getenv("DEPLOYMENT_NAME") or os.getenv("OPENAI_API_MODEL", "gpt-4o")
+# Lazy pipeline singleton for LLM judge
+_pipeline = None
+_pipeline_lock = threading.Lock()
 
-        _judge_server_config = ServerConfig(model_name=DEPLOYMENT_NAME)
-        _judge_server = get_server(server_name=API_TYPE, config=_judge_server_config)
-    except Exception as e:
-        eval_logger.warning("Failed to initialize LMMS judge for CoreCognition: %s", e)
-        _judge_server = None
-        _judge_server_config = None
+
+def _get_pipeline():
+    global _pipeline
+    if _pipeline is None:
+        with _pipeline_lock:
+            if _pipeline is None:  # double-check
+                from lmms_eval.verifiers import VerificationPipeline
+                from lmms_eval.verifiers.extractors import StripReasoningExtractor
+                from lmms_eval.verifiers.openai import OpenAIVerifier
+
+                eval_logger.info("Using LMMS judge server for CoreCognition task.")
+                API_TYPE = os.getenv("API_TYPE", "openai").lower()
+                DEPLOYMENT_NAME = os.getenv("DEPLOYMENT_NAME") or os.getenv("OPENAI_API_MODEL", "gpt-4o")
+
+                def _build_prompt(question, prediction, ground_truth, **kwargs):
+                    return CORECOGNITION_JUDGE_PROMPT.format(
+                        response=prediction,
+                        answer=ground_truth,
+                    )
+
+                _pipeline = VerificationPipeline(
+                    extractors=[StripReasoningExtractor()],
+                    verifier=OpenAIVerifier(
+                        model=DEPLOYMENT_NAME,
+                        api_type=API_TYPE,
+                        custom_prompt=_build_prompt,
+                        response_format="binary",
+                    ),
+                )
+    return _pipeline
+
 
 # Judge prompt for binary correct/incorrect (same style as stare create_test_prompt)
 CORECOGNITION_JUDGE_PROMPT = """You are judging whether a model's response matches the correct answer for a single-choice or yes/no question.
@@ -57,12 +77,6 @@ Otherwise output Incorrect. Output only one word: Correct or Incorrect.
 Response: {response}
 Answer: {answer}
 Correct_or_not:"""
-
-
-def _create_judge_prompt(doc: dict[str, Any], pred: str) -> str:
-    """Build judge prompt: response + ground truth answer."""
-    answer = str(doc.get("answer", "")).strip()
-    return CORECOGNITION_JUDGE_PROMPT.format(response=pred, answer=answer)
 
 
 # Answer options for template matching
@@ -199,19 +213,21 @@ def corecognition_process_results(doc: dict[str, Any], results: list[str]) -> di
         is_correct = matched == gt_normalized
     else:
         # Template match failed: try LLM judge if enabled, else direct comparison
-        if _judge_server is not None and _judge_server_config is not None:
+        if _use_lmms_judge:
             try:
-                from lmms_eval.llm_judge.protocol import Request
-
-                submit_prompt = _create_judge_prompt(doc, pred)
-                request = Request(
-                    messages=[{"role": "user", "content": submit_prompt}],
-                    config=_judge_server_config,
-                )
-                judge_response_obj = _judge_server.evaluate(request)
-                judge_result = judge_response_obj.content.strip().lower()
-                is_correct = "correct" in judge_result and "incorrect" not in judge_result
+                pipeline = _get_pipeline()
+                result = pipeline(question=pred, prediction=pred, ground_truth=ground_truth)
+                if result.metadata.get("judge_failed"):
+                    # OpenAIVerifier swallows judge-call errors and flags them
+                    # here; fall back to direct comparison rather than counting
+                    # an infra failure as a wrong answer.
+                    pred_normalized = _rm_model_special(pred).upper().strip()
+                    gt_normalized = ground_truth.upper().strip()
+                    is_correct = pred_normalized == gt_normalized
+                else:
+                    is_correct = result.is_correct
             except Exception as e:
+                # Pipeline construction (import/config) failed.
                 eval_logger.debug("CoreCognition LLM judge failed, falling back to direct comparison: %s", e)
                 pred_normalized = _rm_model_special(pred).upper().strip()
                 gt_normalized = ground_truth.upper().strip()
