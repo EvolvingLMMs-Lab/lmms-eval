@@ -1,0 +1,4 @@
+group: slake
+task:
+  - slake_en
+  - slake_zh
