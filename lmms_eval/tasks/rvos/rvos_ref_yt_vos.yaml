@@ -1,0 +1,8 @@
+task: rvos_ref_yt_vos
+dataset_path: kcz358/RVOS-Ref-YT-VOS
+dataset_kwargs:
+  token: True
+  video: True
+  cache_dir: rvos_ref_yt_vos
+test_split: valid
+include: _default_template_yaml
