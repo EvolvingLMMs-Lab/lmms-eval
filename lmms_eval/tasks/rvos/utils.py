@@ -494,17 +494,17 @@ def rvos_process_results(doc, results):
 # ---------------------------------------------------------------------------
 
 
-def _dump_submission(records: List[Dict[str, Any]]) -> str:
+def _dump_submission(records: List[Dict[str, Any]], args) -> str:
+    import datetime
+    from lmms_eval.tasks._task_utils import file_utils
+
     task = records[0]["id"].split("_track_")[0] if records else "rvos"
-    output_dir = os.environ.get("RVOS_OUTPUT_DIR", "rvos_output")
-    os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir, f"{task}_submission.json")
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_name = f"{task}_submission_{ts}.json"
+    path = file_utils.generate_submission_file(file_name, args)
     with open(path, "w") as f:
         json.dump(records, f)
     return path
-
-
-_MEAN = {"f1": None, "precision": None, "recall": None, "HOTA": None}
 
 
 def _mean_metric(records: List[Dict[str, Any]], key: str) -> float:
@@ -513,20 +513,20 @@ def _mean_metric(records: List[Dict[str, Any]], key: str) -> float:
     return float(np.mean([r.get(key, 0.0) for r in records]))
 
 
-def rvos_aggregate_f1(results):
+def rvos_aggregate_f1(results, args):
     if results:
-        path = _dump_submission(results)
+        path = _dump_submission(results, args)
         eval_logger.info(f"[rvos] Submission saved to {path} ({len(results)} predictions).")
     return _mean_metric(results, "f1")
 
 
-def rvos_aggregate_precision(results):
+def rvos_aggregate_precision(results, args):
     return _mean_metric(results, "precision")
 
 
-def rvos_aggregate_recall(results):
+def rvos_aggregate_recall(results, args):
     return _mean_metric(results, "recall")
 
 
-def rvos_aggregate_hota(results):
+def rvos_aggregate_hota(results, args):
     return _mean_metric(results, "HOTA")

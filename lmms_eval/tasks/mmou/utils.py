@@ -201,10 +201,14 @@ def mmou_process_results_scored(doc, results):
     return {"mmou_accuracy": data}
 
 
-def _write_submission(results, filename: str) -> str:
-    output_dir = os.environ.get("MMOU_OUTPUT_DIR", "mmou_output")
-    os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir, filename)
+def _write_submission(results, filename: str, args) -> str:
+    import datetime
+    from lmms_eval.tasks._task_utils import file_utils
+
+    stem, _, ext = filename.rpartition(".")
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_name = f"{stem}_{ts}.{ext}" if stem else f"{filename}_{ts}"
+    path = file_utils.generate_submission_file(file_name, args)
     submission = [{"question_id": r["question_id"], "answer": r["answer"]} for r in results]
     with open(path, "w", encoding="utf-8") as f:
         json.dump(submission, f, indent=2, ensure_ascii=False)
@@ -230,8 +234,8 @@ def _log_breakdown(results):
         eval_logger.info(f"  {k}: {v}")
 
 
-def mmou_aggregate_submission(results):
-    path = _write_submission(results, "mmou_submission.json")
+def mmou_aggregate_submission(results, args):
+    path = _write_submission(results, "mmou_submission.json", args)
     eval_logger.info(
         f"MMOU submission saved to {path} ({len(results)} predictions). "
         "Upload to https://huggingface.co/spaces/nvidia/MMOU-Eval for scoring."
@@ -240,15 +244,13 @@ def mmou_aggregate_submission(results):
     return len(results)
 
 
-def mmou_aggregate_accuracy(results):
-    path = _write_submission(results, "mmou_test_mini_submission.json")
+def mmou_aggregate_accuracy(results, args):
     total = len(results)
     if total == 0:
         return 0.0
     correct = sum(r["score"] for r in results)
     acc = correct / total * 100
     eval_logger.info(f"MMOU Test Mini Accuracy: {acc:.2f}% [{correct}/{total}]")
-    eval_logger.info(f"MMOU predictions saved to {path}")
 
     per_skill = {}
     for r in results:
