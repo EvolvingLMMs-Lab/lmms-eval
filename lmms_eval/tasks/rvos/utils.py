@@ -116,11 +116,13 @@ def rvos_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
 # ---------------------------------------------------------------------------
 
 
-_COORD_REGEX = re.compile(r'coords\s*=\s*[\'"]([^\'"]+)[\'"]')
+_COORD_REGEX = re.compile(r'coords\s*=\s*[\'"]([^\'"]*)(?:[\'"]|$)')
 # Match one segment "time obj_id x y [obj_id x y ...]" separated by any of ;, \t, , : (and leading start).
 # Trailing/leading spaces around the delimiter are tolerated.
 _FRAME_REGEX = re.compile(r'(?:^|[\t:,;])\s*([0-9]+(?:\.[0-9]+)?)\s+([0-9.\s]+?)(?=[\t:,;]|$)')
-_POINTS_REGEX = re.compile(r'([0-9]+)\s+([0-9]{1,4})\s+([0-9]{1,4})')
+# obj_id / x / y can appear as either ints or floats (e.g. "0.0"). x/y coordinates are
+# in a 0..1000 normalized frame, so cap the integer portion at 4 digits.
+_POINTS_REGEX = re.compile(r'([0-9]+)(?:\.[0-9]+)?\s+([0-9]{1,4})(?:\.[0-9]+)?\s+([0-9]{1,4})(?:\.[0-9]+)?')
 
 
 def parse_xml_tracks(text: str, width: int, height: int, video_fps: float) -> List[Dict[str, Any]]:
