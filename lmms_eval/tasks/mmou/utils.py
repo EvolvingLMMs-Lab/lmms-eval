@@ -1,24 +1,23 @@
 """MMOU: Massive Multi-Task Omni Understanding benchmark.
 
-Annotations: ``nvidia/MMOU`` (HF dataset).
-Videos: ``sonalkum/MMOU-Videos`` (flat ``<video_id>.mp4`` files at repo root).
+Repackaged self-contained dataset: ``kcz358/MMOU``
+  data/{train,test}-*.parquet                  annotations for available videos
+  data_missing/{train,test}_missing-*.parquet  annotations whose upstream video is missing
+  videos_chunked_*.zip                          videos/<video_id>.mp4 for main split and
+                                                videos/test/<video_id>.mp4 for Test Mini
 
-Videos are fetched lazily via ``huggingface_hub.hf_hub_download`` and cached
-under the standard HF cache, so only videos referenced by the evaluation split
-(e.g. Test Mini) are downloaded on first use.
+``dataset_kwargs.video=True`` in the yaml lets lmms-eval auto-extract every
+zip into ``$HF_HOME/mmou/`` on first run, so runtime just does a path lookup.
 """
 
 import json
 import os
 import re
-from functools import lru_cache
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import yaml
 from loguru import logger as eval_logger
-
-VIDEO_REPO_ID = "sonalkum/MMOU-Videos"
 
 DOMAINS = [
     "Sports",
@@ -47,7 +46,7 @@ video_cache_dir = os.path.join(base_cache_dir, cache_name, "videos")
 
 
 def extract_youtube_id(url: str) -> str:
-    """Extract YouTube video ID from various URL formats."""
+    """Extract YouTube video ID from various URL formats (fallback for pre-packed docs)."""
     parsed = urlparse(url)
     if parsed.hostname == "youtu.be":
         return parsed.path.lstrip("/")
@@ -75,50 +74,29 @@ def duration_bucket(seconds: float) -> str:
     return "> 30"
 
 
-# Videos live either at the repo root (main split) or under ``test/`` (Test Mini).
-_VIDEO_PREFIXES = ("", "test/")
-_VIDEO_EXTS = ("mp4", "MP4", "mkv", "webm")
+def _video_id(doc) -> str:
+    vid = doc.get("video_id")
+    if vid:
+        return str(vid)
+    return extract_youtube_id(doc["video_url"])
 
 
-@lru_cache(maxsize=None)
-def _fetch_video(video_id: str) -> str:
-    """Download a single MMOU video from the HF hub and return its local path.
-
-    Uses ``hf_hub_download`` with ``local_dir=video_cache_dir`` so files land in
-    a predictable location and are only fetched once.
-    """
-    from huggingface_hub import hf_hub_download
-    from huggingface_hub.errors import EntryNotFoundError
-
-    os.makedirs(video_cache_dir, exist_ok=True)
-    for prefix in _VIDEO_PREFIXES:
-        for ext in _VIDEO_EXTS:
-            local_path = os.path.join(video_cache_dir, prefix, f"{video_id}.{ext}")
-            if os.path.exists(local_path):
-                return local_path
-    for prefix in _VIDEO_PREFIXES:
-        for ext in _VIDEO_EXTS:
-            try:
-                return hf_hub_download(
-                    repo_id=VIDEO_REPO_ID,
-                    filename=f"{prefix}{video_id}.{ext}",
-                    repo_type="dataset",
-                    local_dir=video_cache_dir,
-                )
-            except EntryNotFoundError:
-                continue
-            except Exception as e:
-                eval_logger.warning(f"[mmou] hf_hub_download failed for {prefix}{video_id}.{ext}: {e}")
-                continue
+def _resolve_video_path(doc) -> str:
+    vid = _video_id(doc)
+    is_test = bool(doc.get("is_test"))
+    # Test Mini videos land under videos/test/, main split at videos root.
+    for prefix in (("test",) if is_test else ("", "test")):
+        candidate = os.path.join(video_cache_dir, prefix, f"{vid}.mp4") if prefix else os.path.join(video_cache_dir, f"{vid}.mp4")
+        if os.path.exists(candidate):
+            return candidate
     return ""
 
 
 def mmou_doc_to_visual(doc):
-    video_id = extract_youtube_id(doc["video_url"])
-    path = _fetch_video(video_id)
-    if path and os.path.exists(path):
+    path = _resolve_video_path(doc)
+    if path:
         return [path]
-    eval_logger.warning(f"[mmou] Video not found for {video_id} ({doc['video_url']}).")
+    eval_logger.warning(f"[mmou] Video not found for {_video_id(doc)} ({doc.get('video_url')}).")
     return []
 
 
@@ -176,7 +154,7 @@ def _extract_answer(response: str) -> str:
 
 
 def _build_result_dict(doc, pred: str, pred_ans: str) -> dict:
-    video_id = extract_youtube_id(doc["video_url"])
+    video_id = _video_id(doc)
     dur = doc.get("video_duration", 0) or 0
     qtypes = doc.get("question_type", [])
     if isinstance(qtypes, str):

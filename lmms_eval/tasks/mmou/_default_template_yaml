@@ -1,4 +1,4 @@
-dataset_path: nvidia/MMOU
+dataset_path: kcz358/MMOU
 dataset_kwargs:
   token: True
   cache_dir: mmou
@@ -19,4 +19,3 @@ lmms_eval_specific_kwargs:
     post_prompt: "\nAnswer with the option's letter from the given choices directly."
 metadata:
   - version: 0.0
-    video_repo_id: sonalkum/MMOU-Videos

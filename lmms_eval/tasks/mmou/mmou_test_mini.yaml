@@ -1,6 +1,5 @@
 task: mmou_test_mini
 include: _default_template_yaml
-dataset_name: test
 test_split: test
 doc_to_target: "correct_option_letter"
 process_results: !function utils.mmou_process_results_scored
