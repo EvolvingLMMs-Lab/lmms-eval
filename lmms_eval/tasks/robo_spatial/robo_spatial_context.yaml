@@ -1,3 +1,7 @@
 task: robo_spatial_context
 include: _default_template.yaml
 test_split: context
+generation_kwargs:
+  max_new_tokens: 512
+  temperature: 0
+  do_sample: false
