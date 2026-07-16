@@ -66,10 +66,14 @@ def _save_mask(doc):
         except Exception:
             return {"mask_path": ""}
     if isinstance(mask, Image.Image):
-        doc_hash = hashlib.md5(doc.get("question", "").encode()).hexdigest()
-        mask_path = os.path.join(_MASK_CACHE_DIR, f"{doc_hash}.png")
+        buffer = BytesIO()
+        mask.save(buffer, format="PNG")
+        payload = buffer.getvalue()
+        mask_hash = hashlib.md5(payload).hexdigest()
+        mask_path = os.path.join(_MASK_CACHE_DIR, f"{mask_hash}.png")
         if not os.path.exists(mask_path):
-            mask.save(mask_path)
+            with open(mask_path, "wb") as f:
+                f.write(payload)
         return {"mask_path": mask_path}
     return {"mask_path": ""}
 
