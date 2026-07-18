@@ -327,6 +327,7 @@ python -m lmms_eval --tasks list_with_num
     - perceptiontest_val_mcppl
 - [PLM VideoBench](https://github.com/PLM-VideoBench/PLM-VideoBench) (plm_videobench)
 - [SciVideoBench](https://scivideobench.github.io/) (scivideobench)
+- [SIS-Bench](https://huggingface.co/datasets/choucsan/SIS-Bench) (sis_bench)
 - [MINERVA](https://arxiv.org/abs/2505.00681) (minerva)
 - [VANTAGE-Bench](https://huggingface.co/datasets/nvidia/PhysicalAI-VANTAGE-Bench) (vantage_vqa) - Physical AI video VQA
 - [Video-ChatGPT](https://github.com/mbzuai-oryx/Video-ChatGPT) (videochatgpt)
