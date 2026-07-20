@@ -528,6 +528,7 @@ python -m lmms_eval --tasks list_with_num
 - [OmniSpatial](https://omnispatial.github.io/) (omnispatial)
 - [Point-Bench](https://pointarena.github.io/) (pointbench)
 - [Where2Place](https://where2place.github.io/) (where2place)
+- [MultihopSpatial](https://huggingface.co/datasets/etri-vilab/MultihopSpatial) (multihopspatial)
 
 ---
 

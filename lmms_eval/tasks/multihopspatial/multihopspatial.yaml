@@ -1,0 +1,25 @@
+dataset_path: etri-vilab/MultihopSpatial
+dataset_name: benchmark
+task: multihopspatial
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.multihopspatial_doc_to_visual
+doc_to_text: !function utils.multihopspatial_doc_to_text
+doc_to_target: answer
+generation_kwargs:
+  max_new_tokens: 512
+  temperature: 0
+  do_sample: false
+process_results: !function utils.multihopspatial_process_results
+metric_list:
+  - metric: mcq_acc
+    aggregation: !function utils.multihopspatial_aggregate_mcq_acc
+    higher_is_better: true
+  - metric: acc50iou
+    aggregation: !function utils.multihopspatial_aggregate_acc50iou
+    higher_is_better: true
+  - metric: avg_iou
+    aggregation: !function utils.multihopspatial_aggregate_avg_iou
+    higher_is_better: true
+metadata:
+  - version: 0.0
