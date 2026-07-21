@@ -2,7 +2,7 @@ import re
 from typing import Optional
 
 
-def mindcube_doc_to_text(doc):
+def mindcube_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     """Extracts the text prompt from a MindCube dataset sample.
 
     Args:
@@ -27,6 +27,44 @@ def mindcube_doc_to_visual(doc):
         list: A list of visual elements (e.g., PIL Images) converted to 'RGB' format.
     """
     return [visual.convert("RGB") for visual in doc["images"]]
+
+
+def _mindcube_interleaved_messages(prompt, images):
+    content = []
+    prompt_parts = prompt.split("<image>")
+    for idx, part in enumerate(prompt_parts):
+        text = part.strip()
+        if text:
+            content.append({"type": "text", "text": text})
+        if idx != len(prompt_parts) - 1 and idx < len(images):
+            content.append({"type": "image", "url": images[idx]})
+    return [{"role": "user", "content": content}]
+
+
+def _mindcube_neo_ov_messages(doc, images):
+    question = doc["question"].replace("<image>", "").strip()
+    prompt = f"{question}\nAnswer the question directly."
+
+    content = []
+    for idx, image in enumerate(images, start=1):
+        content.append({"type": "text", "text": f"Image-{idx}: "})
+        content.append({"type": "image", "url": image})
+    content.append({"type": "text", "text": prompt})
+    return [{"role": "user", "content": content}]
+
+
+def mindcube_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    """Builds an interleaved chat message from MindCube's <image> placeholders."""
+    lmms_eval_specific_kwargs = lmms_eval_specific_kwargs or {}
+    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
+    images = [visual.convert("RGB") for visual in doc["images"]]
+
+    if lmms_eval_specific_kwargs.get("prompt_format") == "neo_ov":
+        return _mindcube_neo_ov_messages(doc, images)
+
+    prompt = f"{pre_prompt}{doc['input_prompt']}{post_prompt}"
+    return _mindcube_interleaved_messages(prompt, images)
 
 
 # This is taken directly from the official mindcube codebase
