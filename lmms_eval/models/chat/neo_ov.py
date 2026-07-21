@@ -113,11 +113,7 @@ def _preprocess_pixel_values(pixel_values: torch.Tensor, patch_size: int = 16) -
     c, h, w = pixel_values.shape
     grid_h = h // patch_size
     grid_w = w // patch_size
-    flat_pixel_values = (
-        pixel_values.view(c, grid_h, patch_size, grid_w, patch_size)
-        .permute(1, 3, 0, 2, 4)
-        .reshape(grid_h * grid_w, c * patch_size**2)
-    )
+    flat_pixel_values = pixel_values.view(c, grid_h, patch_size, grid_w, patch_size).permute(1, 3, 0, 2, 4).reshape(grid_h * grid_w, c * patch_size**2)
     return flat_pixel_values, torch.tensor([[grid_h, grid_w]], device=pixel_values.device)
 
 

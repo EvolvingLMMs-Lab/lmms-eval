@@ -5,10 +5,10 @@ from loguru import logger as eval_logger
 from PIL import Image
 
 from lmms_eval.tasks.vsibench.utils import (
+    _get_specific_kwarg,
     base_cache_dir,
     cache_name,
     format_vsibench_neo_ov_video_content,
-    _get_specific_kwarg,
     sample_vsibench_video_frames,
     vsibench_doc_to_text,
 )

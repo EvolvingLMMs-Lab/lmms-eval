@@ -7,6 +7,8 @@ from PIL import Image
 
 from lmms_eval.tasks.sitebench.utils import (
     UpperLetters,
+    _format_neo_ov_video_content,
+    _get_specific_kwarg,
     aggregate_3d_information_understanding_acc,
     aggregate_3d_information_understanding_caa,
     aggregate_counting_and_existence_acc,
@@ -21,8 +23,6 @@ from lmms_eval.tasks.sitebench.utils import (
     aggregate_spatial_relationship_reasoning_caa,
     base_cache_dir,
     cache_name,
-    _format_neo_ov_video_content,
-    _get_specific_kwarg,
     spatial_aggregate_results,
     spatial_doc_to_text_video,
     spatial_process_results,
