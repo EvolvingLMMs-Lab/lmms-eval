@@ -101,6 +101,47 @@ def doc_to_text(doc, lmms_eval_specific_kwargs=None):
     return prompt
 
 
+def _format_neo_ov_content(images, prompt):
+    if len(images) == 1:
+        return [{"type": "image", "url": images[0]}, {"type": "text", "text": prompt}]
+
+    content = []
+    for idx, image in enumerate(images, start=1):
+        content.append({"type": "text", "text": f"Image-{idx}: "})
+        content.append({"type": "image", "url": image})
+    content.append({"type": "text", "text": prompt})
+    return content
+
+
+def _doc_to_neo_ov_prompt(doc):
+    question = doc["question"].replace("<image>", "").strip()
+
+    for cand in string.ascii_uppercase:
+        if cand in doc and doc[cand] is not None:
+            val = doc[cand]
+            if isinstance(val, str) and val.lower() == "nan":
+                continue
+            if pd.isna(val):
+                continue
+            question += f"\n{cand}. {val}"
+
+    return question + "\nAnswer with the option's letter from the given choices directly."
+
+
+def doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    lmms_eval_specific_kwargs = lmms_eval_specific_kwargs or {}
+    images = doc_to_visual(doc)
+
+    if lmms_eval_specific_kwargs.get("prompt_format") == "neo_ov":
+        prompt = _doc_to_neo_ov_prompt(doc)
+        return [{"role": "user", "content": _format_neo_ov_content(images, prompt)}]
+
+    prompt = doc_to_text(doc, lmms_eval_specific_kwargs)
+    content = [{"type": "image", "url": image} for image in images]
+    content.append({"type": "text", "text": prompt})
+    return [{"role": "user", "content": content}]
+
+
 def extract_answer(text: str) -> Optional[str]:
     """Extract the answer letter (A, B, C, D) from the model's response.
 
