@@ -349,6 +349,14 @@ python -m lmms_eval --tasks list_with_num
 
 ### Long Video & Temporal Understanding
 - [Charades-STA](https://github.com/jiyanggao/TALL) (charades_sta)
+- [CG-Bench](https://github.com/CG-Bench/CG-Bench) (cgbench)
+  - Video-only MCQ (cgbench)
+  - Video plus frame-aligned subtitles (cgbench_subtitles)
+  - Both variants (cgbench_all)
+- [CG-AV-Counting](https://av-reasoner.github.io/) (cgav_counting)
+  - Full-video counting (cgav_counting_long): ACC, OBOA, MAE, RMSE
+  - Reference-clip counting (cgav_counting_ref): ACC, OBOA, MAE, RMSE
+  - White-box event/object/attribute clue grounding (cgav_counting_clue): WCS, IFA
 - [FALCON-Bench](https://falcon-bench.github.io/) (FALCONBench) - One-hour-long video understanding
 - [LEMONADE](https://huggingface.co/datasets/amathislab/LEMONADE) (lemonade)
 - [LongTimescope](https://longtimescope.github.io/) (longtimescope)
