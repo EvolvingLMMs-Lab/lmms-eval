@@ -15,17 +15,6 @@ PROMPT_SUFFIX_0_999 = (
 
 FORMAT = "Return only list of tuples, don't add anything else."
 
-# JSON ("json") variant: replace the dataset's default tuple-format suffix with a
-# Qwen-native single-point JSON instruction on a 0-1000 grid. Any task-specific
-# clarification suffix is kept.
-_SUFFIX_TO_STRIP = "Your answer should be formatted as a list of tuples, i.e. [(x1, y1)], where each tuple contains the x and y coordinates of a point satisfying the conditions above. The coordinates should be between 0 and 1, indicating the normalized pixel locations of the points in the image."
-
-_JSON_POST_PROMPT = """Pinpoint the SINGLE best 2D point that satisfies the description. Output exactly one coordinate pair in JSON, normalized to [0, 1000]:
-```json
-[{"point_2d": [x, y], "label": "target"}]
-```
-Do not output more than one point. Do not include additional text after the JSON block."""
-
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
@@ -45,12 +34,8 @@ def refspatial_doc_to_text(doc: dict[str, Any]) -> str:
 
 
 def refspatial_doc_to_text_json(doc: dict[str, Any]) -> str:
-    """Qwen-native variant: ask for a single point_2d in JSON on a 0-1000 grid."""
-    prompt = doc["prompt"]
-    suffix = doc.get("suffix", "")
-    if suffix and suffix.strip() != _SUFFIX_TO_STRIP.strip():
-        prompt = f"{prompt} {suffix}"
-    return f"{prompt}\n{_JSON_POST_PROMPT}"
+    """Use RoboRefer's Qwen prompt, which elicits native ``point_2d`` JSON."""
+    return f"Locate {doc['object']} in this image and output the point coordinates in JSON format."
 
 
 def refspatial_doc_to_visual(doc: dict) -> list:
