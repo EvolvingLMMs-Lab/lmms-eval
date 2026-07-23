@@ -3,7 +3,8 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
+from lmms_eval.tasks._task_utils.default_template_yaml import \
+    load_default_template_yaml
 from lmms_eval.tasks._task_utils.point_format import parse_point2d
 
 PROMPT_SUFFIX_0_999 = "Your answer should be formatted as a list of tuples, i.e. [(x1, y1), (x2, y2), ...], where each tuple contains the x and y coordinates of a point satisfying the conditions above. The coordinates should be integers between 0 and 999, representing the pixel locations scaled to a 1000×1000 grid."
