@@ -235,7 +235,8 @@ class LFM2_5_VL(lmms):
 
             # Filter out samples with no image
             valid_texts = [batch_texts[i] for i in valid_indices if batch_images[i] is not None]
-            valid_imgs = [batch_images[i] for i in valid_indices if batch_images[i] is not None]
+            # Processor expects images as list-of-lists: one list per sample
+            valid_imgs = [[batch_images[i]] for i in valid_indices if batch_images[i] is not None]
 
             if not valid_texts:
                 continue
