@@ -7,7 +7,7 @@ tiling and a chat template interface.
 Example usage:
 
     accelerate launch --num_processes=1 -m lmms_eval \\
-        --model liquid \\
+        --model lfm2_5_vl \\
         --model_args pretrained=LiquidAI/LFM2.5-VL-1.6B \\
         --tasks docvqa_val \\
         --batch_size 8
