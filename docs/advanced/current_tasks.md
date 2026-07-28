@@ -143,6 +143,12 @@ python -m lmms_eval --tasks list_with_num
   - Benign split (safety_jailbreakbench_benign)
 
 ### Multilingual Benchmarks
+- [Kaleidoscope](https://arxiv.org/abs/2504.07072) (kaleidoscope)
+  - Kaleidoscope multimodal, direct prompting (kaleidoscope_multimodal)
+  - Kaleidoscope text-only, direct prompting (kaleidoscope_text_only)
+  - Kaleidoscope all questions, direct prompting (kaleidoscope_direct)
+  - Kaleidoscope multimodal, zero-shot CoT (kaleidoscope_multimodal_cot)
+  - Kaleidoscope all questions, zero-shot CoT (kaleidoscope_cot)
 - [Multilingual LLaVA Bench](https://huggingface.co/datasets/gagan3012/multilingual-llava-bench)
   - llava_in_the_wild_arabic
   - llava_in_the_wild_bengali
