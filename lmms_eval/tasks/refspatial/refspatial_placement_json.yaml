@@ -1,0 +1,5 @@
+test_split: placement
+task: "refspatial_placement_json"
+include: _default_template_yaml
+doc_to_text: !function utils.refspatial_doc_to_text_json
+process_results: !function utils.refspatial_process_results_json

@@ -5,6 +5,8 @@ from typing import Any, Dict, List
 import numpy as np
 import yaml
 
+from lmms_eval.tasks._task_utils.point_format import parse_point2d
+
 PROMPT_SUFFIX_0_999 = (
     "Your answer should be formatted as a list of tuples, i.e. [(x1, y1)], "
     "where each tuple contains the x and y coordinates of a point satisfying the conditions above. "
@@ -31,6 +33,11 @@ def refspatial_doc_to_text(doc: dict[str, Any]) -> str:
     return f"{doc['prompt']} {doc['suffix']} {FORMAT}"
 
 
+def refspatial_doc_to_text_json(doc: dict[str, Any]) -> str:
+    """Use RoboRefer's Qwen prompt, which elicits native ``point_2d`` JSON."""
+    return f"Locate {doc['object']} in this image and output the point coordinates in JSON format."
+
+
 def refspatial_doc_to_visual(doc: dict) -> list:
     return [doc["image"].convert("RGB")]
 
@@ -53,6 +60,14 @@ def _text2pts(text: str, width: int = 640, height: int = 480, normalization_cons
     return np.array(points)
 
 
+def _refspatial_acc(mask: np.ndarray, points: np.ndarray) -> float:
+    acc = 0.0
+    if len(points) > 0:
+        in_range = (points[:, 0] >= 0) & (points[:, 0] < mask.shape[1]) & (points[:, 1] >= 0) & (points[:, 1] < mask.shape[0])
+        acc = np.concatenate([mask[points[in_range, 1], points[in_range, 0]], np.zeros(points.shape[0] - in_range.sum())]).mean()
+    return acc
+
+
 # inspired by original work: https://github.com/Zhoues/RoboRefer/blob/main/Evaluation/summarize_acc.py
 def refspatial_process_results(doc: Dict, result: List[str]) -> Dict[str, Dict]:
     key_name = "refspatial_acc"
@@ -73,15 +88,24 @@ def refspatial_process_results(doc: Dict, result: List[str]) -> Dict[str, Dict]:
     normalization_constant = 1000 if prompt_suffix_type == "0_999" else 1
     points = _text2pts(response, mask.shape[1], mask.shape[0], normalization_constant)
 
-    # process the answer
-    acc = 0.0
-    if len(points) > 0:
-        in_range = (points[:, 0] >= 0) & (points[:, 0] < mask.shape[1]) & (points[:, 1] >= 0) & (points[:, 1] < mask.shape[0])
-        acc = np.concatenate([mask[points[in_range, 1], points[in_range, 0]], np.zeros(points.shape[0] - in_range.sum())]).mean()
-
+    acc = _refspatial_acc(mask, points)
     query = refspatial_doc_to_text(doc)
     omnispatial_submission = {"id": doc["id"], "query": query, "pred": response, "parsed_points": list(map(tuple, points)), "accuracy": acc}
     return {key_name: omnispatial_submission}
+
+
+def refspatial_process_results_json(doc: Dict, result: List[str]) -> Dict[str, Dict]:
+    """Qwen-native variant: parse JSON point_2d; identical mask scoring."""
+    mask = np.array(doc["mask"]) / 255.0
+    mask = np.round(mask, 0).astype(int)
+    if mask.ndim == 3:
+        mask = mask[:, :, 0]
+
+    response = result[0]
+    points = parse_point2d(response, mask.shape[1], mask.shape[0])
+    acc = _refspatial_acc(mask, points)
+    submission = {"id": doc["id"], "query": refspatial_doc_to_text_json(doc), "pred": response, "parsed_points": list(map(tuple, points)), "accuracy": acc}
+    return {"refspatial_acc": submission}
 
 
 def refspatial_aggregate_results(results: List[Dict]) -> float:
