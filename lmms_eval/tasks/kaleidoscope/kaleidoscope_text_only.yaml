@@ -1,0 +1,10 @@
+task: "kaleidoscope_text_only"
+task_alias: "Kaleidoscope (direct, text-only)"
+process_docs: !function utils.kaleidoscope_filter_text_only
+process_results: !function utils.kaleidoscope_process_results
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt_type: "direct"
+
+include: _default_template_yaml

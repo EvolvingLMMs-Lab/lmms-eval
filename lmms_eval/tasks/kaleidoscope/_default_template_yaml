@@ -1,0 +1,37 @@
+dataset_path: CohereLabs/kaleidoscope
+# The Hub release ships every one of the 20,911 questions in a single `train`
+# split; the paper evaluates on all of it, so it doubles as the test split.
+test_split: train
+output_type: generate_until
+
+doc_to_visual: !function utils.kaleidoscope_doc_to_visual
+doc_to_text: !function utils.kaleidoscope_doc_to_text
+doc_to_messages: !function utils.kaleidoscope_doc_to_messages
+doc_to_target: "answer"
+
+# Sampling parameters from the reference implementation (model_utils.py).
+# Override with e.g. `--gen_kwargs temperature=0,do_sample=False` for greedy runs.
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0.7
+  top_p: 0.9
+  do_sample: true
+
+metric_list:
+  - metric: kaleidoscope_acc
+    aggregation: !function utils.kaleidoscope_aggregate_accuracy
+    higher_is_better: true
+  - metric: kaleidoscope_valid_acc
+    aggregation: !function utils.kaleidoscope_aggregate_valid_accuracy
+    higher_is_better: true
+  - metric: kaleidoscope_format_error
+    aggregation: !function utils.kaleidoscope_aggregate_format_error
+    higher_is_better: false
+
+metadata:
+  version: 0.0
+  # Edge length images are resized to, matching the reference pipeline.
+  # Set to `none` (or KALEIDOSCOPE_IMAGE_SIZE=0) to feed native resolution.
+  image_size: 512
+  # Keep strict paper-style parsing so the format-error rate stays meaningful.
+  lenient_extraction: false
