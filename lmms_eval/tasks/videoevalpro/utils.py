@@ -6,6 +6,7 @@ from pathlib import Path
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
 from lmms_eval.verifiers import VerificationPipeline, VerifyResult
 from lmms_eval.verifiers.extractors import StripReasoningExtractor
 from lmms_eval.verifiers.openai import OpenAIVerifier
@@ -45,6 +46,15 @@ def videoevalpro_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
     return pre_prompt + question + post_prompt
+
+
+def videoevalpro_mcq_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    kwargs = lmms_eval_specific_kwargs or {}
+    pre_prompt = kwargs.get("pre_prompt", "")
+    post_prompt = kwargs.get("post_prompt", "\nAnswer with the option letter only.")
+    options = doc.get("options", [])
+    options_text = options.strip() if isinstance(options, str) else "\n".join(str(option).strip() for option in options)
+    return f"{pre_prompt}{doc['question']}\n{options_text}{post_prompt}"
 
 
 # ---------------------------------------------------------------------------
@@ -105,6 +115,42 @@ def _get_pipeline() -> VerificationPipeline:
 
 def _safe_strip(x):
     return x.strip() if isinstance(x, str) else ""
+
+
+def videoevalpro_mcq_process_results(doc, results):
+    prediction = results[0] if results else ""
+    answer = _safe_strip(doc.get("answer", "")).upper()
+    choices = [chr(ord("A") + idx) for idx in range(len(doc.get("options", [])))]
+    parsed_prediction = extract_mcq_answer(str(prediction), choices=choices)
+    return {
+        "videoevalpro_mcq_score": {
+            "question": _safe_strip(doc.get("question", "")),
+            "task_type": _safe_strip(doc.get("qa_type", "")),
+            "answer": answer,
+            "prediction": prediction,
+            "parsed_prediction": parsed_prediction,
+            "correct": parsed_prediction == answer,
+        }
+    }
+
+
+def videoevalpro_mcq_aggregate_results(results):
+    task_types = {"Local Perception", "Local Reasoning", "Holistic Perception", "Holistic Reasoning"}
+    category2score = {task_type: {"correct": 0, "answered": 0} for task_type in task_types}
+    category2score["overall"] = {"correct": 0, "answered": 0}
+
+    for result in results:
+        task_type = result["task_type"]
+        if task_type in category2score:
+            category2score[task_type]["answered"] += 1
+            category2score[task_type]["correct"] += int(result["correct"])
+        category2score["overall"]["answered"] += 1
+        category2score["overall"]["correct"] += int(result["correct"])
+
+    return {
+        task_type: score["correct"] / score["answered"] if score["answered"] else 0.0
+        for task_type, score in category2score.items()
+    }
 
 
 def videoevalpro_process_results(doc, results):
