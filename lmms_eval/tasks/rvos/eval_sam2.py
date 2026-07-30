@@ -117,11 +117,7 @@ def run_sam2(predictor, prompt_map: Dict[tuple, List[tuple]], inference_state) -
     prompt_frames = sorted(prompts_by_frame)
 
     if prompt_frames:
-        autocast_ctx = (
-            torch.autocast(device_type="cuda", dtype=torch.bfloat16)
-            if torch.cuda.is_available() and "cuda" in str(inference_state["device"])
-            else nullcontext()
-        )
+        autocast_ctx = torch.autocast(device_type="cuda", dtype=torch.bfloat16) if torch.cuda.is_available() and "cuda" in str(inference_state["device"]) else nullcontext()
         with torch.inference_mode(), autocast_ctx:
             for i, fidx in enumerate(prompt_frames):
                 for obj_id, points in prompts_by_frame[fidx]:
@@ -181,8 +177,7 @@ def build_prompt_map(tracks: List[Dict[str, Any]], W: int, H: int, video_fps: fl
 def extract_frames_ffmpeg(video_path: str, out_dir: str, fps: float) -> None:
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     subprocess.run(
-        ["ffmpeg", "-y", "-loglevel", "error", "-i", video_path, "-vf", f"fps={fps}",
-         os.path.join(out_dir, "%05d.jpg")],
+        ["ffmpeg", "-y", "-loglevel", "error", "-i", video_path, "-vf", f"fps={fps}", os.path.join(out_dir, "%05d.jpg")],
         check=True,
     )
 
@@ -193,8 +188,8 @@ def extract_frames_ffmpeg(video_path: str, out_dir: str, fps: float) -> None:
 
 
 def load_gt_masks(cache_root: str, video: str, mask_ids: List[str], num_frames: int, H: int, W: int) -> np.ndarray:
-    from pycocotools import mask as mask_utils
     import cv2
+    from pycocotools import mask as mask_utils
 
     gt = np.zeros((num_frames, H, W), dtype=np.uint8)
     for mid in mask_ids:
@@ -231,8 +226,8 @@ def _seg2bmap(seg: np.ndarray) -> np.ndarray:
 
 
 def f_measure(fg: np.ndarray, gt: np.ndarray, bound_th: float = 0.008) -> float:
-    from skimage.morphology import disk
     import cv2
+    from skimage.morphology import disk
 
     bound_pix = bound_th if bound_th >= 1 else np.ceil(bound_th * np.linalg.norm(fg.shape))
     fg_b = _seg2bmap(fg)
@@ -314,8 +309,7 @@ def evaluate_masks(gt: np.ndarray, pred: np.ndarray) -> Dict[str, float]:
 # ---------------------------------------------------------------------------
 
 
-def process_query(predictor, record: Dict[str, Any], cache_root: str, tmp_root: Optional[str],
-                  video_fps: float, device: torch.device) -> Optional[Dict[str, Any]]:
+def process_query(predictor, record: Dict[str, Any], cache_root: str, tmp_root: Optional[str], video_fps: float, device: torch.device) -> Optional[Dict[str, Any]]:
     video = record["video"]
     video_path = os.path.join(cache_root, "videos", f"{video}.mp4")
     if not os.path.exists(video_path):
@@ -335,8 +329,7 @@ def process_query(predictor, record: Dict[str, Any], cache_root: str, tmp_root: 
             pred_masks = np.zeros((state["num_frames"], state["video_height"], state["video_width"]), dtype=np.uint8)
         else:
             pred_masks = run_sam2(predictor, prompt_map, state)
-        gt_masks = load_gt_masks(cache_root, video, list(record.get("mask_ids") or []),
-                                 pred_masks.shape[0], pred_masks.shape[1], pred_masks.shape[2])
+        gt_masks = load_gt_masks(cache_root, video, list(record.get("mask_ids") or []), pred_masks.shape[0], pred_masks.shape[1], pred_masks.shape[2])
 
     metrics = evaluate_masks(gt_masks, pred_masks)
     return {
@@ -370,8 +363,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--task", required=True, choices=list(TASK_TO_CACHE.keys()))
     ap.add_argument("--predictions", required=True, help="Path to stage-1 <task>_submission.json")
-    ap.add_argument("--sam2-model", default=DEFAULT_SAM2_MODEL,
-                    help="HF model id (default: facebook/sam2.1-hiera-large)")
+    ap.add_argument("--sam2-model", default=DEFAULT_SAM2_MODEL, help="HF model id (default: facebook/sam2.1-hiera-large)")
     ap.add_argument("--output", default="rvos_sam2_output")
     ap.add_argument("--cache-dir", default=None, help="Override <hf_home>/<task cache dir>")
     ap.add_argument("--video-fps", type=float, default=6.0)

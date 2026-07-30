@@ -85,7 +85,7 @@ def _resolve_video_path(doc) -> str:
     vid = _video_id(doc)
     is_test = bool(doc.get("is_test"))
     # Test Mini videos land under videos/test/, main split at videos root.
-    for prefix in (("test",) if is_test else ("", "test")):
+    for prefix in ("test",) if is_test else ("", "test"):
         candidate = os.path.join(video_cache_dir, prefix, f"{vid}.mp4") if prefix else os.path.join(video_cache_dir, f"{vid}.mp4")
         if os.path.exists(candidate):
             return candidate
@@ -139,7 +139,7 @@ def _extract_answer(response: str) -> str:
     for pattern in ("the answer is", "answer:", "the option is", "final answer:"):
         idx = text.lower().rfind(pattern)
         if idx >= 0:
-            text = text[idx + len(pattern):].strip()
+            text = text[idx + len(pattern) :].strip()
             break
     m = re.search(r"\(([A-J])\)", text)
     if m:
@@ -203,6 +203,7 @@ def mmou_process_results_scored(doc, results):
 
 def _write_submission(results, filename: str, args) -> str:
     import datetime
+
     from lmms_eval.tasks._task_utils import file_utils
 
     stem, _, ext = filename.rpartition(".")
@@ -236,10 +237,7 @@ def _log_breakdown(results):
 
 def mmou_aggregate_submission(results, args):
     path = _write_submission(results, "mmou_submission.json", args)
-    eval_logger.info(
-        f"MMOU submission saved to {path} ({len(results)} predictions). "
-        "Upload to https://huggingface.co/spaces/nvidia/MMOU-Eval for scoring."
-    )
+    eval_logger.info(f"MMOU submission saved to {path} ({len(results)} predictions). " "Upload to https://huggingface.co/spaces/nvidia/MMOU-Eval for scoring.")
     _log_breakdown(results)
     return len(results)
 

@@ -1153,6 +1153,7 @@ def mdpbench_process_results(doc, results):
         pred_mix.extend(unmatched_table_pred)
 
     from func_timeout import FunctionTimedOut, func_timeout
+
     from lmms_eval.tasks.mdpbench.match import match_gt2pred_simple
     from lmms_eval.tasks.mdpbench.match_quick import match_gt2pred_quick
 

@@ -16,12 +16,13 @@ import evaluate
 import Levenshtein
 import numpy as np
 from Levenshtein import distance as Levenshtein_distance
+from scipy.optimize import linear_sum_assignment
+
 from lmms_eval.tasks.mdpbench.match import (
     compute_edit_distance_matrix_new,
     get_gt_pred_lines,
     get_pred_category_type,
 )
-from scipy.optimize import linear_sum_assignment
 
 # ARRAY_RE = re.compile(
 #     r'\\begin\{array\}\{[^}]*\}(.*?)\\end\{array\}', re.S

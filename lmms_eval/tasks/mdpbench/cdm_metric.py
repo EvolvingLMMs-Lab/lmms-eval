@@ -11,13 +11,14 @@ import shutil
 from functools import lru_cache
 
 import numpy as np
+from PIL import Image, ImageDraw
+from skimage.measure import ransac
+
 from lmms_eval.tasks.mdpbench.cdm.modules.latex2bbox_color import latex2bbox_color
 from lmms_eval.tasks.mdpbench.cdm.modules.visual_matcher import (
     HungarianMatcher,
     SimpleAffineTransform,
 )
-from PIL import Image, ImageDraw
-from skimage.measure import ransac
 
 eval_logger = logging.getLogger("lmms-eval")
 

@@ -101,11 +101,7 @@ def sis_bench_process_results(doc, results):
 
 def _aggregate_accuracy(results, dimension=None, task_type=None):
     """Compute question-weighted accuracy, matching the official SIS-Bench scorer."""
-    selected = [
-        result
-        for result in results
-        if (dimension is None or result["dimension"] == dimension) and (task_type is None or result["task_type"] == task_type)
-    ]
+    selected = [result for result in results if (dimension is None or result["dimension"] == dimension) and (task_type is None or result["task_type"] == task_type)]
     if not selected:
         return 0.0
     accuracy = 100.0 * sum(result["score"] for result in selected) / len(selected)
