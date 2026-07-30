@@ -1,0 +1,35 @@
+task: multi_crit_reasoning
+test_split: reasoning
+include: _default_template_yaml
+
+metric_list:
+  - metric: overall
+    aggregation: !function utils.multi_crit_aggregate_overall
+    higher_is_better: true
+  - metric: grounding
+    aggregation: !function utils.multi_crit_aggregate_grounding
+    higher_is_better: true
+  - metric: logic
+    aggregation: !function utils.multi_crit_aggregate_logic
+    higher_is_better: true
+  - metric: hallucination
+    aggregation: !function utils.multi_crit_aggregate_hallucination
+    higher_is_better: true
+  - metric: exploration
+    aggregation: !function utils.multi_crit_aggregate_exploration
+    higher_is_better: true
+  - metric: efficiency
+    aggregation: !function utils.multi_crit_aggregate_efficiency
+    higher_is_better: true
+  - metric: macro_avg
+    aggregation: !function utils.multi_crit_aggregate_macro_avg
+    higher_is_better: true
+  - metric: pluralistic_acc
+    aggregation: !function utils.multi_crit_aggregate_pluralistic_acc
+    higher_is_better: true
+  - metric: tradeoff_sensitivity
+    aggregation: !function utils.multi_crit_aggregate_tradeoff_sensitivity
+    higher_is_better: true
+  - metric: conflict_matching
+    aggregation: !function utils.multi_crit_aggregate_conflict_matching
+    higher_is_better: true

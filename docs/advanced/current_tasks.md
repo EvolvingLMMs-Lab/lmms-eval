@@ -570,6 +570,9 @@ python -m lmms_eval --tasks list_with_num
 - [EMMA](https://github.com/EMMA-Bench/EMMA) (emma)
 - [MindCube](https://mindcube.github.io/) (mindcube)
 - [Mix Evals](https://github.com/mix-evals/mix-evals) (mix_evals)
+- [Multi-Crit](https://github.com/tyxiong23/Multi-Crit) (multi_crit)
+  - Multi-Crit Open-ended (multi_crit_open_ended)
+  - Multi-Crit Reasoning (multi_crit_reasoning)
 - [Multimodal RewardBench](https://huggingface.co/datasets/allenai/reward-bench) (multimodal_rewardbench)
 - [Omni-Bench](https://omni-bench.github.io/) (omni_bench)
 - [PhyX](https://phyx-bench.github.io/) (phyx) - Physics grounded reasoning
