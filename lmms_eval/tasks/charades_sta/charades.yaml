@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/charades_sta
+dataset_path: lmms-eval/charades_sta
 dataset_kwargs:
   token: True
   cache_dir: charades_sta

@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/ScienceQA
+dataset_path: lmms-lab-encoder/ScienceQA
 dataset_name: ScienceQA-IMG
 task: "scienceqa_img"
 dataset_kwargs:

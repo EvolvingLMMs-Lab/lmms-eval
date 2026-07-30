@@ -63,9 +63,9 @@ export HF_HOME=/path/to/your/hf-cache   # used by both vLLM and lmms-eval
 
 # 1) Make sure source-corpus videos are cached under $HF_HOME
 #    (skip any corpus you have already downloaded)
-python -c "from datasets import load_dataset; load_dataset('lmms-lab/LVBench')"
+python -c "from datasets import load_dataset; load_dataset('lmms-eval/LVBench')"
 python -c "from datasets import load_dataset; load_dataset('sy1998/MLVU_dev')"
-python -c "from datasets import load_dataset; load_dataset('lmms-lab/Video-MME')"
+python -c "from datasets import load_dataset; load_dataset('lmms-eval/Video-MME')"
 
 # 2) Serve Qwen3.5-9B (Qwen3_5ForConditionalGeneration)
 #    --allowed-local-media-path must cover wherever the videos live.

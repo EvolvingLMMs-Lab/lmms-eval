@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/SciBench_Math
+dataset_path: lmms-lab-encoder/SciBench_Math
 dataset_kwargs:
   token: True
 test_split: train

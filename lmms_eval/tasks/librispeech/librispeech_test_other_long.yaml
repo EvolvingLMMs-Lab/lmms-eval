@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/Librispeech-concat
+dataset_path: lmms-lab-audio/Librispeech-concat
 task : "librispeech_test_other_long"
 test_split: test_other
 process_results: !function utils.librispeech_long_process_result

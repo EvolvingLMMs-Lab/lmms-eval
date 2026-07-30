@@ -114,4 +114,4 @@ if __name__ == "__main__":
     data = load_dataset(
         "/path/to/lmms-eval/lmms_eval/tasks/ai2d/upload_ai2d.py",
     )
-    data.push_to_hub("lmms-lab/ai2d", private=True)
+    data.push_to_hub("lmms-lab-encoder/ai2d", private=True)

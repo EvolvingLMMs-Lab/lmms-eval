@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/Omni_Bench_fix
+dataset_path: lmms-lab-audio/Omni_Bench_fix
 test_split: train
 output_type: generate_until
 

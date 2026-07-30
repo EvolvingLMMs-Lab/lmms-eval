@@ -1,5 +1,5 @@
 task: "vqav2_val_lite"
-dataset_path: lmms-lab/LMMs-Eval-Lite
+dataset_path: lmms-lab-encoder/LMMs-Eval-Lite
 dataset_name: vqav2_val
 dataset_kwargs:
   token: True

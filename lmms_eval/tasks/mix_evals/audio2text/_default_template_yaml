@@ -1,6 +1,6 @@
 dataset_kwargs:
   token: true
-dataset_path: lmms-lab/MixEval-X-audio2text
+dataset_path: lmms-lab-audio/MixEval-X-audio2text
 lmms_eval_specific_kwargs:
   default:
     post_prompt: ""

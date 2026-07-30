@@ -61,9 +61,9 @@ def _candidate_paths(corpus: str, vid: str) -> list[str]:
 
 
 _DOWNLOAD_HINT = {
-    "LVBench": "python -c \"from datasets import load_dataset; load_dataset('lmms-lab/LVBench')\"",
+    "LVBench": "python -c \"from datasets import load_dataset; load_dataset('lmms-eval/LVBench')\"",
     "MLVU": "python -c \"from datasets import load_dataset; load_dataset('sy1998/MLVU_dev')\"",
-    "VideoMME": "python -c \"from datasets import load_dataset; load_dataset('lmms-lab/Video-MME')\"",
+    "VideoMME": "python -c \"from datasets import load_dataset; load_dataset('lmms-eval/Video-MME')\"",
 }
 
 

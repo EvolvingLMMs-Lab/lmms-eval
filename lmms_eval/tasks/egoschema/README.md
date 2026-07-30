@@ -26,7 +26,7 @@ On a no-egress cluster this submission step (and the upstream Hub data-files loo
 
 #### Offline cache note
 
-`datasets.load_dataset("lmms-lab/egoschema", "Subset")` resolves data files via the Hub even under `HF_HUB_OFFLINE=1`, which fails with `ConnectionError` on a no-egress node *unless the Arrow cache for the `Subset` config has already been built* under `$HF_DATASETS_CACHE` (e.g. `…/datasets/lmms-lab___egoschema/Subset/`). Build it once on a networked host (login node) before the offline run; the videos must also be unzipped under `$HF_HOME/egoschema/videos/`.
+`datasets.load_dataset("lmms-eval/egoschema", "Subset")` resolves data files via the Hub even under `HF_HUB_OFFLINE=1`, which fails with `ConnectionError` on a no-egress node *unless the Arrow cache for the `Subset` config has already been built* under `$HF_DATASETS_CACHE` (e.g. `…/datasets/lmms-lab___egoschema/Subset/`). Build it once on a networked host (login node) before the offline run; the videos must also be unzipped under `$HF_HOME/egoschema/videos/`.
 
 # Tasks
 

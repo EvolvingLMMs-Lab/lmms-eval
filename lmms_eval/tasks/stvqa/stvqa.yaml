@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/ST-VQA
+dataset_path: lmms-lab-encoder/ST-VQA
 task: "stvqa"
 test_split: test
 output_type: generate_until

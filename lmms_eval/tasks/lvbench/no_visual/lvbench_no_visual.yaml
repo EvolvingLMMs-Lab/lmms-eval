@@ -1,7 +1,7 @@
 # LVBench No Visual Setting
 # Test model ability to answer without video content
 
-dataset_path: lmms-lab/LVBench
+dataset_path: lmms-eval/LVBench
 dataset_kwargs:
   token: True
   cache_dir: lvbench

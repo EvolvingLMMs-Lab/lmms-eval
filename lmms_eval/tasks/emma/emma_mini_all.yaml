@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/EMMA-mini
+dataset_path: lmms-lab-encoder/EMMA-mini
 dataset_name: All # Options available are: "All" for all data, "Chemistry" for chemistry only, "Physics" for physics only, "Coding" for code only and "Math" for math only
 dataset_kwargs:
   token: True
