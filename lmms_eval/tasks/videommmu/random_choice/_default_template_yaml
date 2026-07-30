@@ -1,5 +1,5 @@
 # VideoMMMU Random Choice - Default Template
-dataset_path: lmms-lab/VideoMMMU
+dataset_path: lmms-eval/VideoMMMU
 dataset_kwargs:
   token: True
   video: True

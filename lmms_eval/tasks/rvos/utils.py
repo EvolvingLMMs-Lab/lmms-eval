@@ -119,10 +119,10 @@ def rvos_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
 _COORD_REGEX = re.compile(r'coords\s*=\s*[\'"]([^\'"]*)(?:[\'"]|$)')
 # Match one segment "time obj_id x y [obj_id x y ...]" separated by any of ;, \t, , : (and leading start).
 # Trailing/leading spaces around the delimiter are tolerated.
-_FRAME_REGEX = re.compile(r'(?:^|[\t:,;])\s*([0-9]+(?:\.[0-9]+)?)\s+([0-9.\s]+?)(?=[\t:,;]|$)')
+_FRAME_REGEX = re.compile(r"(?:^|[\t:,;])\s*([0-9]+(?:\.[0-9]+)?)\s+([0-9.\s]+?)(?=[\t:,;]|$)")
 # obj_id / x / y can appear as either ints or floats (e.g. "0.0"). x/y coordinates are
 # in a 0..1000 normalized frame, so cap the integer portion at 4 digits.
-_POINTS_REGEX = re.compile(r'([0-9]+)(?:\.[0-9]+)?\s+([0-9]{1,4})(?:\.[0-9]+)?\s+([0-9]{1,4})(?:\.[0-9]+)?')
+_POINTS_REGEX = re.compile(r"([0-9]+)(?:\.[0-9]+)?\s+([0-9]{1,4})(?:\.[0-9]+)?\s+([0-9]{1,4})(?:\.[0-9]+)?")
 
 
 def parse_xml_tracks(text: str, width: int, height: int, video_fps: float) -> List[Dict[str, Any]]:
@@ -229,8 +229,7 @@ def _load_gt_masks(doc: Dict[str, Any]) -> Dict[str, List[Any]]:
     return out
 
 
-def _load_masks_at_frame(gt_masks: Dict[str, List[Any]], frame_idx: int, height: int, width: int,
-                         return_dict: bool = False):
+def _load_masks_at_frame(gt_masks: Dict[str, List[Any]], frame_idx: int, height: int, width: int, return_dict: bool = False):
     empty = np.zeros((height, width), dtype=bool)
     masks: List[np.ndarray] = []
     masks_by_id: Dict[str, np.ndarray] = {}
@@ -448,10 +447,7 @@ def rvos_process_results(doc, results):
         # Normalize GT points dict-of-obj shape
         for entry in gt_tracks:
             if isinstance(entry.get("points"), list):
-                entry["points"] = {
-                    str(p["id"]): {"point": p["point"], "occluded": p.get("occluded", False)}
-                    for p in entry["points"]
-                }
+                entry["points"] = {str(p["id"]): {"point": p["point"], "occluded": p.get("occluded", False)} for p in entry["points"]}
     except Exception:
         gt_tracks = []
     try:
@@ -496,6 +492,7 @@ def rvos_process_results(doc, results):
 
 def _dump_submission(records: List[Dict[str, Any]], args) -> str:
     import datetime
+
     from lmms_eval.tasks._task_utils import file_utils
 
     task = records[0]["id"].split("_track_")[0] if records else "rvos"

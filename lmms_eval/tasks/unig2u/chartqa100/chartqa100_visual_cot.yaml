@@ -52,7 +52,7 @@ lmms_eval_specific_kwargs:
 metadata:
   version: 1.0
   description: "ChartQA 100-sample with Visual CoT"
-  original_dataset: "lmms-lab/ChartQA"
+  original_dataset: "lmms-lab-encoder/ChartQA"
   num_samples: 100
   seed: 42
   prompt_type: visual_cot

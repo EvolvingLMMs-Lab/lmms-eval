@@ -147,10 +147,7 @@ def videoevalpro_mcq_aggregate_results(results):
         category2score["overall"]["answered"] += 1
         category2score["overall"]["correct"] += int(result["correct"])
 
-    return {
-        task_type: score["correct"] / score["answered"] if score["answered"] else 0.0
-        for task_type, score in category2score.items()
-    }
+    return {task_type: score["correct"] / score["answered"] if score["answered"] else 0.0 for task_type, score in category2score.items()}
 
 
 def videoevalpro_process_results(doc, results):

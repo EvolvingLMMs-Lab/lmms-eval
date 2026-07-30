@@ -228,10 +228,7 @@ class LFM2_5_VL(lmms):
                 continue
 
             # Apply chat template to get text prompts for all samples
-            batch_texts = [
-                self.processor.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
-                for msgs in batch_hf_messages
-            ]
+            batch_texts = [self.processor.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True) for msgs in batch_hf_messages]
 
             # Filter out samples with no image
             valid_texts = [batch_texts[i] for i in valid_indices if batch_images[i] is not None]

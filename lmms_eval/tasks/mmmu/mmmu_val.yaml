@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/MMMU
+dataset_path: lmms-lab-encoder/MMMU
 task: "mmmu_val"
 tag:
   - public_eval_qwen3_5_family

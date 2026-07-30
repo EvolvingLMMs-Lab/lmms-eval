@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/voicebench
+dataset_path: lmms-lab-audio/voicebench
 dataset_kwargs:
   token: True
 doc_to_target: "target_text"

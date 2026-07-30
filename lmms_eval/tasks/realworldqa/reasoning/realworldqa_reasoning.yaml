@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/RealWorldQA
+dataset_path: lmms-lab-encoder/RealWorldQA
 dataset_kwargs:
   token: True
 task: "realworldqa_reasoning"

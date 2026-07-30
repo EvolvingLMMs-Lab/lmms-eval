@@ -6,7 +6,7 @@ V*-Bench is a visual question-answering benchmark designed to evaluate multimoda
 
 ## Dataset Details
 
-- **Dataset**: `lmms-lab/vstar-bench`
+- **Dataset**: `lmms-lab-encoder/vstar-bench`
 - **Size**: 191 test samples
 - **Format**: Multiple-choice questions with 4 options (A, B, C, D)
 - **Modalities**: Image + Text
@@ -81,4 +81,4 @@ vstar_bench/
 
 ## References
 
-- Dataset: https://huggingface.co/datasets/lmms-lab/vstar-bench
+- Dataset: https://huggingface.co/datasets/lmms-lab-encoder/vstar-bench

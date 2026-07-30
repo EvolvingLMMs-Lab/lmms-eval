@@ -9,8 +9,7 @@ import datasets
 import numpy as np
 from PIL import Image
 
-from lmms_eval.tasks._task_utils.default_template_yaml import \
-    load_default_template_yaml
+from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
 from lmms_eval.tasks._task_utils.point_format import parse_point2d
 from lmms_eval.utils import eval_logger
 

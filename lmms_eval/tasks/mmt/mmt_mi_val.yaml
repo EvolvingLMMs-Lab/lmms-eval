@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/MMT_MI-Benchmark
+dataset_path: lmms-lab-encoder/MMT_MI-Benchmark
 dataset_kwargs:
   token: True
 task: "mmt_mi_val"

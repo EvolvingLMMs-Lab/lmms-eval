@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/LLaVA-NeXT-Interleave-Bench
+dataset_path: lmms-lab-encoder/LLaVA-NeXT-Interleave-Bench
 dataset_name: multi_view_in_domain
 dataset_kwargs:
   token: True

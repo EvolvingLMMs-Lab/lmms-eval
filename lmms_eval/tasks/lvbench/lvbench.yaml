@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/LVBench
+dataset_path: lmms-eval/LVBench
 dataset_kwargs:
   token: True
   cache_dir: lvbench

@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/CVRR-ES
+dataset_path: lmms-eval/CVRR-ES
 dataset_kwargs:
   token: True
   video: True

@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/StepEval-Audio-Paralinguistic
+dataset_path: lmms-lab-audio/StepEval-Audio-Paralinguistic
 dataset_kwargs:
   token: True
 doc_to_target: !function utils.doc_to_target
