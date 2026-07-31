@@ -47,11 +47,12 @@ def run_episode(
     request_metadata = dict(request_metadata or {})
     steps: list[EpisodeStep] = []
     history: list[dict[str, Any]] = []
+    action_spec = env.action_spec()
 
     try:
         state = env.reset(doc, seed=seed)
         while not state.terminal and len(steps) < max_steps:
-            ctx = ParserContext(state=state, agent_id=agent_id, step_idx=state.step_idx, history=list(history), metadata={"max_steps": max_steps})
+            ctx = ParserContext(state=state, agent_id=agent_id, step_idx=state.step_idx, history=list(history), metadata={"max_steps": max_steps, "doc": doc, "action_spec": action_spec})
             request = observation_parser.parse(state, ctx)
             if not isinstance(request, AgentInput):
                 raise TypeError(f"observation parser must return AgentInput, got {type(request).__name__}")

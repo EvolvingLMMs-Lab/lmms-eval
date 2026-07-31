@@ -16,11 +16,15 @@ from lmms_eval.agentic.episode import run_episode
 from lmms_eval.agentic.parsers import (
     ActionNameParser,
     ActionParser,
+    FreeTextActionParser,
     IdentityModelOutputParser,
     ModelOutputParser,
     ObservationParser,
     ParserContext,
     QwenModelOutputParser,
+    SchemaActionParser,
+    TemplateObservationParser,
+    build_action_parser,
 )
 from lmms_eval.agentic.runner import run_generate_until_game
 from lmms_eval.agentic.servers import (
@@ -29,6 +33,8 @@ from lmms_eval.agentic.servers import (
     OpenAIModelServer,
 )
 from lmms_eval.agentic.types import (
+    ActionDef,
+    ActionSpec,
     AgentInput,
     AgentOutput,
     ContentBlock,
@@ -42,8 +48,10 @@ from lmms_eval.agentic.types import (
 
 __all__ = [
     "REGISTRY",
+    "ActionDef",
     "ActionNameParser",
     "ActionParser",
+    "ActionSpec",
     "AgentInput",
     "AgentOutput",
     "ContentBlock",
@@ -52,6 +60,7 @@ __all__ = [
     "EpisodeResult",
     "EpisodeStep",
     "FixedActionModelServer",
+    "FreeTextActionParser",
     "GameAction",
     "IdentityModelOutputParser",
     "ModelOutputParser",
@@ -61,7 +70,10 @@ __all__ = [
     "ParsedAction",
     "ParserContext",
     "QwenModelOutputParser",
+    "SchemaActionParser",
     "StepResult",
+    "TemplateObservationParser",
+    "build_action_parser",
     "call_with_accepted_kwargs",
     "import_from_path",
     "resolve",

@@ -19,6 +19,9 @@ from importlib import import_module
 from typing import Any
 
 REGISTRY: dict[str, dict[str, str]] = {
+    "env_manager": {
+        "minigrid": "lmms_eval.agentic.envs.minigrid:MiniGridEnvManager",
+    },
     "model_server": {
         "openai": "lmms_eval.agentic.servers:OpenAIModelServer",
         "debug": "lmms_eval.agentic.servers:FixedActionModelServer",
@@ -27,9 +30,13 @@ REGISTRY: dict[str, dict[str, str]] = {
         "identity": "lmms_eval.agentic.parsers:IdentityModelOutputParser",
         "qwen": "lmms_eval.agentic.parsers:QwenModelOutputParser",
     },
-    "observation_parser": {},
+    "observation_parser": {
+        "template": "lmms_eval.agentic.parsers:TemplateObservationParser",
+    },
     "action_parser": {
         "action_name": "lmms_eval.agentic.parsers:ActionNameParser",
+        "schema": "lmms_eval.agentic.parsers:SchemaActionParser",
+        "free_text": "lmms_eval.agentic.parsers:FreeTextActionParser",
     },
 }
 

@@ -410,6 +410,12 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         help="Number of generate_until_game rollouts run concurrently (default 1).",
     )
     parser.add_argument(
+        "--agentic_episode_retries",
+        type=int,
+        default=None,
+        help="Extra attempts per generate_until_game episode when the environment or backend raises; after the last attempt the episode is recorded as failed with metric env_error=1 instead of aborting the run (default 0).",
+    )
+    parser.add_argument(
         "--force_simple",
         action="store_true",
         help="Force the evaluation to use the simple mode of the models",

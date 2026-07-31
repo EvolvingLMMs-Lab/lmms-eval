@@ -90,6 +90,68 @@ class ParsedAction:
 
 
 @dataclass(slots=True)
+class ActionDef:
+    """One action an environment accepts.
+
+    ``schema`` is a JSON-Schema-shaped ``{"properties": {...}, "required": [...]}``
+    mapping for parameterized actions; ``None`` means the action takes no
+    arguments.
+    """
+
+    name: str
+    description: str | None = None
+    schema: dict[str, Any] | None = None
+    aliases: list[str] = field(default_factory=list)
+
+    def render(self) -> str:
+        signature = self.name
+        properties = (self.schema or {}).get("properties") or {}
+        if properties:
+            rendered_params = ", ".join(f"{key}: {value.get('type', 'any')}" if isinstance(value, dict) else str(key) for key, value in properties.items())
+            signature = f"{self.name}({rendered_params})"
+        return f"{signature}: {self.description}" if self.description else signature
+
+
+@dataclass(slots=True)
+class ActionSpec:
+    """Environment-declared action space (``EnvManager.action_spec()``).
+
+    ``kind`` selects the default action parser and prompt rendering:
+    ``discrete`` (pick one action name), ``parameterized`` (action name plus
+    JSON arguments), or ``free_text`` (the whole model reply is the command
+    and the environment validates it).
+    """
+
+    kind: str = "discrete"
+    actions: list[ActionDef] = field(default_factory=list)
+    submit_actions: list[str] = field(default_factory=list)
+    prompt_hint: str | None = None
+
+    def action_names(self) -> list[str]:
+        return [action.name for action in self.actions]
+
+    def alias_map(self) -> dict[str, str]:
+        return {alias: action.name for action in self.actions for alias in action.aliases}
+
+    def get(self, name: str) -> ActionDef | None:
+        wanted = name.strip().upper()
+        for action in self.actions:
+            if action.name.upper() == wanted:
+                return action
+        return None
+
+    def render_prompt(self) -> str:
+        """Standard text for the ``{actions}`` prompt placeholder."""
+
+        lines = [f"- {action.render()}" for action in self.actions]
+        if self.prompt_hint:
+            lines.append(self.prompt_hint)
+        elif self.kind == "free_text" and not lines:
+            lines.append("Respond with a single short text command.")
+        return "\n".join(lines)
+
+
+@dataclass(slots=True)
 class StepResult:
     """Environment response to one action."""
 
