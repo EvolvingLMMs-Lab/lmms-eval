@@ -3,6 +3,10 @@ dataset_name: default
 task: "vizdoom"
 test_split: test
 output_type: generate_until_game
+# The response is an episode JSON trace, not a model answer.  Applying the
+# evaluator's default reasoning-tag stripping here would corrupt any embedded
+# Qwen ``</think>`` text before ``process_results`` reads the metrics.
+reasoning_tags: none
 doc_to_visual: !function utils.vizdoom_doc_to_visual
 doc_to_text: !function utils.vizdoom_doc_to_text
 doc_to_target: !function utils.vizdoom_doc_to_target
@@ -34,5 +38,5 @@ lmms_eval_specific_kwargs:
     pre_prompt: ""
     post_prompt: ""
 metadata:
-  version: 0.1
+  version: 0.2
   description: "ViZDoom game loop with video frame history (human-view parity observations)"
