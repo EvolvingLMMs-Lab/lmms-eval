@@ -1,7 +1,5 @@
-dataset_path: json
-dataset_kwargs:
-  data_files:
-    test: lmms_eval/tasks/vizdoom_agentic/data/vizdoom.jsonl
+dataset_path: pufanyi/ViZDoom
+dataset_name: default
 task: "vizdoom"
 test_split: test
 output_type: generate_until_game
