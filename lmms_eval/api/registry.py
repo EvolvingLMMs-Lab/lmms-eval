@@ -85,6 +85,7 @@ DEFAULT_METRIC_REGISTRY = {
     "generate_until": ["exact_match"],
     "generate_until_multi_round": ["exact_match"],
     "generate_until_agentic": ["exact_match"],
+    "generate_until_game": ["exact_match"],
 }
 
 

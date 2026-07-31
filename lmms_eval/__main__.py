@@ -380,6 +380,36 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         help="Controls agentic trace logging level. 'basic' logs compact final trace payload, 'full' logs per-round input/output/state snapshots.",
     )
     parser.add_argument(
+        "--agentic_model_server",
+        type=str,
+        default=None,
+        help="Model server for generate_until_game: a built-in name (openai, debug) or an import path. Defaults to 'openai'.",
+    )
+    parser.add_argument(
+        "--agentic_model_server_args",
+        type=str,
+        default="",
+        help="Comma-separated args for --agentic_model_server, e.g. model=Qwen/Qwen3.5-9B,base_url=http://127.0.0.1:8000/v1.",
+    )
+    parser.add_argument(
+        "--agentic_output_parser",
+        type=str,
+        default=None,
+        help="Model-output parser for generate_until_game: a built-in name (identity, qwen) or an import path. Defaults to 'identity'.",
+    )
+    parser.add_argument(
+        "--agentic_output_parser_args",
+        type=str,
+        default="",
+        help="Comma-separated args for --agentic_output_parser.",
+    )
+    parser.add_argument(
+        "--agentic_max_parallel_rollouts",
+        type=int,
+        default=None,
+        help="Number of generate_until_game rollouts run concurrently (default 1).",
+    )
+    parser.add_argument(
         "--force_simple",
         action="store_true",
         help="Force the evaluation to use the simple mode of the models",

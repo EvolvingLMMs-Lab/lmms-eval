@@ -226,7 +226,7 @@ def exact_match_hf_evaluate(
 @register_metric(
     metric="exact_match",
     higher_is_better=True,
-    output_type="generate_until",
+    output_type=["generate_until", "generate_until_game"],
     aggregation="mean",
 )
 def exact_match_fn(**kwargs):
@@ -343,6 +343,7 @@ def mean_stderr(arr):
         "multiple_choice",
         "generate_until",
         "generate_until_multi_round",
+        "generate_until_game",
     ],
     aggregation="bypass",
 )

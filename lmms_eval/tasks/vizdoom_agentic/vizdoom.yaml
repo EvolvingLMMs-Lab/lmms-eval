@@ -1,0 +1,40 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vizdoom_agentic/data/vizdoom.jsonl
+task: "vizdoom"
+test_split: test
+output_type: generate_until_game
+doc_to_visual: !function utils.vizdoom_doc_to_visual
+doc_to_text: !function utils.vizdoom_doc_to_text
+doc_to_target: !function utils.vizdoom_doc_to_target
+# Task-side components. Model-side serving is a CLI choice:
+#   --agentic_model_server openai --agentic_model_server_args model=...,base_url=...
+game_env: !function utils.vizdoom_env_manager
+observation_parser: !function utils.vizdoom_observation_parser
+action_parser: !function utils.vizdoom_action_parser
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+  max_game_steps: 64
+process_results: !function utils.vizdoom_process_results
+metric_list:
+  - metric: vizdoom_success
+    aggregation: !function utils.vizdoom_aggregate_mean
+    higher_is_better: true
+  - metric: vizdoom_steps
+    aggregation: !function utils.vizdoom_aggregate_mean
+    higher_is_better: false
+  - metric: vizdoom_invalid_actions
+    aggregation: !function utils.vizdoom_aggregate_mean
+    higher_is_better: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  version: 0.1
+  description: "ViZDoom game loop with video frame history (human-view parity observations)"
