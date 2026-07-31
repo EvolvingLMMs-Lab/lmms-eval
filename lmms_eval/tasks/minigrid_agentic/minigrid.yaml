@@ -1,7 +1,6 @@
-dataset_path: json
-dataset_kwargs:
-  data_files:
-    test: lmms_eval/tasks/minigrid_agentic/data/minigrid.jsonl
+# Docs-from-code: the "dataset" is a scenario list defined in utils.py, so
+# there is no tracked data file and no hub dependency.
+dataset_path: !function utils.minigrid_dataset
 task: "minigrid"
 test_split: test
 output_type: generate_until_game

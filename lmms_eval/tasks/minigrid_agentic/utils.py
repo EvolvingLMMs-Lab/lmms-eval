@@ -1,11 +1,26 @@
 """MiniGrid task glue: docs in, metrics out.
 
 The environment side lives entirely behind ``game_env: minigrid`` in the YAML
-(registry env + default parsers), so this module only maps dataset rows to
-prompts and episode JSON to task metrics.
+(registry env + default parsers), so this module only defines the scenario
+list and maps episode JSON to task metrics. Scenarios are docs-from-code
+(``dataset_path: !function utils.minigrid_dataset``): for env-loop tasks the
+"dataset" is a handful of (env_id, seed, instruction) configs, which belong in
+code, not in a tracked data file or a hub dataset.
 """
 
 import json
+
+_SCENARIOS = [
+    {"env_id": "MiniGrid-Empty-6x6-v0", "seed": 1, "instruction": "You control the red agent in a grid world. Reach the green goal square."},
+    {"env_id": "MiniGrid-Empty-8x8-v0", "seed": 7, "instruction": "You control the red agent in a grid world. Reach the green goal square."},
+    {"env_id": "MiniGrid-DoorKey-6x6-v0", "seed": 3, "instruction": "You control the red agent in a grid world. Pick up the key, open the locked door, then reach the green goal square."},
+]
+
+
+def minigrid_dataset():
+    import datasets
+
+    return datasets.DatasetDict({"test": datasets.Dataset.from_list(_SCENARIOS)})
 
 
 def minigrid_doc_to_visual(doc):

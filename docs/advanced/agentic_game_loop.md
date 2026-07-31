@@ -70,6 +70,7 @@ Both task-side parsers are optional. When the YAML omits them the loop falls bac
 
 ```yaml
 output_type: generate_until_game
+dataset_path: !function utils.minigrid_dataset   # docs-from-code, see below
 game_env: minigrid                # registry name; dict form takes kwargs:
                                   # game_env: {name: minigrid, max_episode_steps: 100}
 generation_kwargs:
@@ -78,6 +79,8 @@ process_results: !function utils.minigrid_process_results
 ```
 
 `lmms_eval/tasks/minigrid_agentic/` is the reference: zero component code in the task directory. Dataset rows select the scenario (doc-as-scenario): `env_id`, `seed`, and `max_episode_steps` in a doc override the manager defaults per episode.
+
+For env-loop tasks the "dataset" is usually a handful of scenario configs, not real data, so `dataset_path` also accepts `!function`: a factory in `utils.py` returning a `datasets.DatasetDict` (e.g. `datasets.DatasetDict({"test": datasets.Dataset.from_list(SCENARIOS)})`). That keeps scenario lists in code — no tracked data file, no hub dependency.
 
 Two conventions make the defaults work:
 

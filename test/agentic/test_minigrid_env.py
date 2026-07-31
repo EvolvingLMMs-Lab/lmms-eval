@@ -165,6 +165,15 @@ def test_runner_end_to_end_with_registry_env_and_default_parsers(fake_gym):
     assert [step["action"]["type"] for step in payload["steps"]] == ["FORWARD", "FORWARD"]
 
 
+def test_minigrid_dataset_factory_builds_scenarios():
+    from lmms_eval.tasks.minigrid_agentic import utils as task_utils
+
+    dataset = task_utils.minigrid_dataset()
+
+    assert dataset["test"].num_rows == 3
+    assert set(dataset["test"].column_names) >= {"env_id", "seed", "instruction"}
+
+
 def test_task_process_results_maps_episode_and_error_payloads():
     from lmms_eval.tasks.minigrid_agentic import utils as task_utils
 

@@ -1,3 +1,0 @@
-{"env_id": "MiniGrid-Empty-6x6-v0", "seed": 1, "instruction": "You control the red agent in a grid world. Reach the green goal square."}
-{"env_id": "MiniGrid-Empty-8x8-v0", "seed": 7, "instruction": "You control the red agent in a grid world. Reach the green goal square."}
-{"env_id": "MiniGrid-DoorKey-6x6-v0", "seed": 3, "instruction": "You control the red agent in a grid world. Pick up the key, open the locked door, then reach the green goal square."}
