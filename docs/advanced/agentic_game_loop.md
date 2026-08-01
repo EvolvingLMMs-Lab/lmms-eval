@@ -27,14 +27,15 @@ task YAML (environment side)          CLI (model side)
               └────────────────────────────────────────────────────┘
 ```
 
-Everything lives in `lmms_eval/agentic/` (one module per concept):
+The framework lives in `lmms_eval/agentic/`, with extensible component
+families split into packages:
 
 | Module | Contents |
 |---|---|
 | `types.py` | Dataclass vocabulary: `ContentBlock`, `AgentInput/Output`, `EnvState`, `GameAction`, `ParsedAction`, `StepResult`, `EpisodeStep/Result` |
 | `env.py` | `EnvManager` ABC (`reset` / `step` / `get_state` / `close`) |
-| `parsers.py` | Typed parser ABCs + generic parsers (`identity`, `qwen`, `action_name`) |
-| `servers.py` | `ModelServer` ABC + `openai` (HTTP) + `debug` (fixed action) |
+| `parsers/` | Typed parser ABCs plus focused action and model-output parser modules |
+| `servers/` | `ModelServer` ABC plus one module per backend (`openai`, `debug`) |
 | `episode.py` | `run_episode()` — the rollout loop, a plain function |
 | `components.py` | Spec resolution: registry names, import paths, callables, dict specs |
 | `runner.py` | `run_generate_until_game()` — Instances → thread pool → JSON responses |
@@ -116,7 +117,7 @@ With `--output_path`, each episode writes `<output_path>/agentic_artifacts/<task
 ## Extending
 
 - **New environment**: subclass `EnvManager` next to your task, expose a factory in `utils.py`, point `game_env` at it.
-- **New parsers**: subclass the typed ABCs (`ObservationParser` must return `AgentInput`; non-text payloads go inside `ContentBlock`s, e.g. `type="tensor"`).
-- **New model server**: subclass `ModelServer` (thread-safe `generate`), pass its import path to `--agentic_model_server`.
+- **New parser**: add a focused module under `lmms_eval/agentic/parsers/` for reusable behavior, or keep task-specific parsing beside the task. `ObservationParser` must return `AgentInput`; non-text payloads travel inside typed `ContentBlock`s such as `type="tensor"`.
+- **New model server**: add a module under `lmms_eval/agentic/servers/`, subclass the thread-safe `ModelServer`, re-export it when it is public, and pass its import path or registry name to `--agentic_model_server`.
 
 Known limits, by design of this first iteration: single-agent loops only, no response-cache integration for rollouts, and no Ray/RL serving hooks (a follow-up can add a `ray` server behind the same `ModelServer` boundary).

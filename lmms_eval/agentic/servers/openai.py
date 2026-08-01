@@ -1,11 +1,4 @@
-"""Model inference boundary for the agentic game loop.
-
-A ``ModelServer`` turns one ``AgentInput`` into one ``AgentOutput``. The
-runner drives many rollouts from a thread pool and calls ``generate`` from
-several threads at once, so implementations must be thread-safe. Rollout
-concurrency is governed by a single knob (``--agentic_max_parallel_rollouts``);
-``max_concurrent_requests`` is an optional server-side cap on top of it.
-"""
+"""OpenAI-compatible model server for the agentic game loop."""
 
 from __future__ import annotations
 
@@ -13,10 +6,10 @@ import base64
 import json
 import mimetypes
 import os
-from abc import ABC, abstractmethod
 from threading import BoundedSemaphore
 from typing import Any
 
+from lmms_eval.agentic.servers.base import ModelServer
 from lmms_eval.agentic.types import AgentInput, AgentOutput, ContentBlock
 from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
@@ -24,31 +17,6 @@ from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 # Loop-level keys that may leak into generation_kwargs from task YAML.
 _AGENTIC_ONLY_KEYS = {"max_agentic_steps", "max_game_steps", "game_seed", "multiturn", "history_turns"}
 _GENERATION_KEYS_TO_DROP = {"do_sample", "num_beams"}
-
-
-class ModelServer(ABC):
-    """One-request-in, one-response-out inference boundary."""
-
-    @abstractmethod
-    def generate(self, request: AgentInput) -> AgentOutput:
-        raise NotImplementedError
-
-
-class FixedActionModelServer(ModelServer):
-    """Debug server that ignores the observation and always emits a fixed action.
-
-    Lets the whole loop (env -> observation parser -> server -> action parser
-    -> env.step) run end-to-end without a VLM backend:
-    ``--agentic_model_server debug --agentic_model_server_args action=ATTACK``.
-    """
-
-    def __init__(self, action: str = "ATTACK") -> None:
-        self.action = str(action).strip()
-
-    def generate(self, request: AgentInput) -> AgentOutput:
-        if not isinstance(request, AgentInput):
-            raise TypeError(f"FixedActionModelServer requires AgentInput requests, got {type(request).__name__}")
-        return AgentOutput(content=[ContentBlock.text(self.action)], metadata={"debug": True, "fixed_action": self.action})
 
 
 class OpenAIModelServer(ModelServer):
