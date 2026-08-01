@@ -8,15 +8,13 @@ import pytest
 from lmms_eval.agentic.runner import run_generate_until_game
 from lmms_eval.api.instance import Instance
 
-from .conftest import ScriptedEnv, TextObservationParser, UppercaseActionParser
+from .conftest import ScriptedEnv, text_observation_parser, uppercase_action_parser
 
 
 def _cli_args(**overrides):
     defaults = {
         "agentic_model_server": "debug",
         "agentic_model_server_args": "action=attack",
-        "agentic_output_parser": None,
-        "agentic_output_parser_args": "",
         "agentic_max_parallel_rollouts": None,
         "output_path": None,
     }
@@ -30,8 +28,7 @@ def _game_instance(doc_id=0, episode_len=2, max_game_steps=8, task="game", split
         {"max_new_tokens": 16, "max_game_steps": max_game_steps},
         lambda doc: [],
         lambda doc=None, lmms_eval_specific_kwargs=None: ScriptedEnv(episode_len=episode_len),
-        lambda doc=None, lmms_eval_specific_kwargs=None: TextObservationParser(),
-        lambda doc=None, lmms_eval_specific_kwargs=None: UppercaseActionParser(),
+        {"default": {"observation": text_observation_parser, "action": uppercase_action_parser}},
         {"pre_prompt": ""},
         doc_id,
         task,
@@ -86,7 +83,7 @@ def test_runner_rejects_wrong_arity():
     lm = _lm({0: {"instruction": "win"}})
     bad = Instance(request_type="generate_until_game", arguments=("ctx", {}, None), idx=0, metadata={"task": "game", "doc_id": 0, "repeats": 1})
 
-    with pytest.raises(ValueError, match="10-element"):
+    with pytest.raises(ValueError, match="9-element"):
         run_generate_until_game(lm, [bad], cli_args=_cli_args())
 
 

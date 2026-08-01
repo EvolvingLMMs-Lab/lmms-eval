@@ -5,21 +5,21 @@
 ## Architecture
 
 ```
-task YAML (environment side)          CLI (model side)
+task YAML                              CLI (model side)
   game_env ────────────┐                --agentic_model_server(+_args)
-  observation_parser ──┤                --agentic_output_parser(+_args)
-  action_parser ───────┤                --agentic_max_parallel_rollouts
+  model_specific_      │                --agentic_max_parallel_rollouts
+    parsers ───────────┤
                        ▼                          ▼
               ┌─────────────────── run_episode ───────────────────┐
               │                                                    │
    env.reset(doc) → EnvState                                       │
         │                                                          │
         ▼            per step                                      │
-   ObservationParser ──▶ AgentInput ──▶ ModelServer.generate       │
+   observation pipeline ▶ AgentInput ─▶ ModelServer.generate       │
         ▲                                     │                    │
-        │                              ModelOutputParser           │
+        │                              action pipeline             │
         │                                     │                    │
-   env.step(action) ◀── ParsedAction ◀── ActionParser              │
+   env.step(action) ◀────────────── ParsedAction                   │
         │                                                          │
         ▼                                                          │
    EpisodeResult ─▶ JSON response ─▶ process_results               │
@@ -34,24 +34,37 @@ families split into packages:
 |---|---|
 | `types.py` | Dataclass vocabulary: `ContentBlock`, `AgentInput/Output`, `EnvState`, `GameAction`, `ParsedAction`, `StepResult`, `EpisodeStep/Result` |
 | `env.py` | `EnvManager` ABC (`reset` / `step` / `get_state` / `close`) |
-| `parsers/` | Typed parser ABCs plus focused action and model-output parser modules |
+| `pipelines.py` | Select model-specific task pipelines and compose `Any -> Any` functions |
 | `servers/` | `ModelServer` ABC plus one module per backend (`openai`, `debug`) |
 | `episode.py` | `run_episode()` — the rollout loop, a plain function |
 | `components.py` | Spec resolution: registry names, import paths, callables, dict specs |
 | `runner.py` | `run_generate_until_game()` — Instances → thread pool → JSON responses |
 | `trace.py` / `artifacts.py` | Episode → JSON payload / summary.md, actions.jsonl, rollout.mp4 |
 
-Task-specific components (the ViZDoom environment and its parsers) live with their task under `lmms_eval/tasks/vizdoom_agentic/`, not in the framework.
+Every parser implementation lives with its task (for example,
+`lmms_eval/tasks/vizdoom_agentic/parsers.py`), not in the framework. A parser
+is an ordinary `(value, ParserContext) -> value` function. Pipelines may
+therefore carry text, images, tensors, latents, structured actions, or any
+other representation; the framework only validates the final `AgentInput`
+and `ParsedAction` values at the model-server and environment boundaries.
 
 ## Task contract (YAML)
 
-The task owns the environment side. Component fields accept a callable (`!function`), an import path string, or a `{name: ..., kwargs...}` dict:
+The task owns its environment and parser behavior. `model_specific_parsers`
+has a `default` entry and may override either pipeline with an exact model name
+or a case-insensitive glob. A pipeline is one function or a list of functions:
 
 ```yaml
 output_type: generate_until_game
 game_env: !function utils.vizdoom_env_manager            # -> EnvManager
-observation_parser: !function utils.vizdoom_observation_parser  # EnvState -> AgentInput
-action_parser: !function utils.vizdoom_action_parser     # AgentOutput -> ParsedAction
+model_specific_parsers:
+  default:
+    observation: !function parsers.vizdoom_observation_parser
+    action: !function parsers.vizdoom_action_parser
+  "*Qwen*":
+    action:
+      - !function parsers.vizdoom_qwen_output_parser
+      - !function parsers.vizdoom_action_parser
 generation_kwargs:
   max_new_tokens: 64
   temperature: 0
@@ -62,7 +75,13 @@ generation_kwargs:
 process_results: !function utils.vizdoom_process_results
 ```
 
-Factories are called with `doc` and `lmms_eval_specific_kwargs` (signature-filtered), so a factory can specialize per document.
+The model identity comes from the selected `ModelServer`; for the OpenAI
+server it is the `model=...` value in `--agentic_model_server_args`. Exact
+keys take precedence over glob keys, and a selected entry is merged over
+`default`, so the Qwen entry above only needs to replace the action pipeline.
+`ParserContext` exposes the current state, request, raw output, history,
+document metadata, and selected model name without restricting pipeline value
+types.
 
 `process_results` receives one JSON string per episode:
 
@@ -85,14 +104,12 @@ The CLI owns serving. One model server is built per run and shared by all rollou
 python -m lmms_eval --tasks vizdoom --model dummy \
   --agentic_model_server openai \
   --agentic_model_server_args model=Qwen/Qwen3.5-9B,base_url=http://127.0.0.1:8000/v1 \
-  --agentic_output_parser qwen \
   --agentic_max_parallel_rollouts 8 \
   --output_path ./logs/
 ```
 
 - `--agentic_model_server`: `openai`, `debug`, or an import path (`my_pkg.servers:MyServer`).
 - `--agentic_model_server_args`: comma `k=v` pairs; JSON values allowed (`chat_template_kwargs={"enable_thinking":false}`). `openai` accepts `model`, `base_url`, `api_key`, `timeout`, `default_max_tokens`, `max_concurrent_requests`, `enable_thinking`.
-- `--agentic_output_parser`: model-side output normalization (`identity` default, `qwen` strips `<think>` and extracts tool calls).
 - `--agentic_max_parallel_rollouts`: the single concurrency knob. Each rollout thread has at most one in-flight request, so endpoint concurrency equals this value; OpenAI-compatible servers batch concurrent requests server-side. Set `max_concurrent_requests` on the server only to cap a weak endpoint below the rollout count.
 
 ### No-backend smoke test
@@ -117,7 +134,7 @@ With `--output_path`, each episode writes `<output_path>/agentic_artifacts/<task
 ## Extending
 
 - **New environment**: subclass `EnvManager` next to your task, expose a factory in `utils.py`, point `game_env` at it.
-- **New parser**: add a focused module under `lmms_eval/agentic/parsers/` for reusable behavior, or keep task-specific parsing beside the task. `ObservationParser` must return `AgentInput`; non-text payloads travel inside typed `ContentBlock`s such as `type="tensor"`.
+- **New parser**: add an `Any -> Any` function beside the task and reference it from `model_specific_parsers`. Use a list when normalization and action decoding are separate steps. The observation pipeline must end at `AgentInput`; the action pipeline must end at `ParsedAction`. Non-text payloads can travel through arbitrary intermediate values or typed `ContentBlock`s such as `type="tensor"`.
 - **New model server**: add a module under `lmms_eval/agentic/servers/`, subclass the thread-safe `ModelServer`, re-export it when it is public, and pass its import path or registry name to `--agentic_model_server`.
 
 Known limits, by design of this first iteration: single-agent loops only, no response-cache integration for rollouts, and no Ray/RL serving hooks (a follow-up can add a `ray` server behind the same `ModelServer` boundary).

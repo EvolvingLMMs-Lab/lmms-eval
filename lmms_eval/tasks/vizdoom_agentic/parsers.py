@@ -1,8 +1,4 @@
-"""VizDoom observation and action parsers (task-side components).
-
-Referenced from vizdoom.yaml via `!function utils.vizdoom_observation_parser`
-and `!function utils.vizdoom_action_parser`.
-"""
+"""Task-local ``Any -> Any`` parser functions for ViZDoom rollouts."""
 
 from __future__ import annotations
 
@@ -17,8 +13,8 @@ from lmms_eval.agentic import (
     EnvState,
     GameAction,
     ParsedAction,
+    ParserContext,
 )
-from lmms_eval.agentic.parsers import ActionParser, ObservationParser, ParserContext
 from lmms_eval.imports import optional_import
 
 _VIZDOOM_BUFFER_KEYS = {
@@ -32,8 +28,8 @@ _VIZDOOM_BUFFER_KEYS = {
 }
 
 
-class VizDoomObservationParser(ObservationParser):
-    """Convert VizDoom state into chat-friendly text, video, image, and state blocks."""
+class _VizDoomObservationFormatter:
+    """Implementation helper behind :func:`vizdoom_observation_parser`."""
 
     def __init__(
         self,
@@ -218,8 +214,8 @@ _ACTION_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
 _FUNCTION_CALL_RE = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\((.*?)\)", re.DOTALL)
 
 
-class VizDoomActionParser(ActionParser):
-    """Parse skill/tool-call/text output into VizDoom button actions."""
+class _VizDoomActionDecoder:
+    """Implementation helper behind :func:`vizdoom_action_parser`."""
 
     def __init__(
         self,
@@ -467,3 +463,63 @@ def _tics_data(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _tics_metadata(payload: dict[str, Any]) -> dict[str, Any]:
     return _tics_data(payload)
+
+
+_OBSERVATION_FORMATTER = _VizDoomObservationFormatter(human_view=True, video=True, image_buffers=["screen"])
+
+
+def vizdoom_observation_parser(value: Any, context: ParserContext) -> Any:
+    """Convert a ViZDoom ``EnvState`` into the model-facing request value."""
+
+    return _OBSERVATION_FORMATTER.parse(value, context)
+
+
+def vizdoom_qwen_output_parser(value: Any, context: ParserContext) -> Any:
+    """Normalize Qwen reasoning/tool-call wrappers before action decoding."""
+
+    del context
+    if not isinstance(value, AgentOutput):
+        raise TypeError(f"vizdoom_qwen_output_parser requires AgentOutput, got {type(value).__name__}")
+    text = value.first_text() or ""
+    normalized_text = _strip_thinking(text)
+    metadata = dict(value.metadata)
+    metadata["raw_text"] = text
+    metadata["normalized_text"] = normalized_text
+    metadata["tool_calls"] = [*_metadata_tool_calls(metadata), *_extract_tool_calls(text)]
+
+    content = []
+    replaced_text = False
+    for block in value.content:
+        if not replaced_text and block.type == "text" and isinstance(block.data, str):
+            block_metadata = dict(block.metadata)
+            block_metadata["raw_text"] = block.data
+            content.append(ContentBlock.text(normalized_text, **block_metadata))
+            replaced_text = True
+        else:
+            content.append(block)
+    if not replaced_text:
+        content.append(ContentBlock.text(normalized_text))
+    return AgentOutput(content=content, metadata=metadata)
+
+
+def vizdoom_action_parser(value: Any, context: ParserContext) -> Any:
+    """Convert a model value into a ViZDoom ``ParsedAction``."""
+
+    observation = context.state.observation if context.state is not None else None
+    buttons = observation.get("available_buttons") if isinstance(observation, dict) else None
+    return _VizDoomActionDecoder(buttons=buttons).parse(value, context)
+
+
+def _strip_thinking(text: str) -> str:
+    candidate = text.strip()
+    if "</think>" in candidate:
+        after_thinking = candidate.rsplit("</think>", 1)[-1].strip()
+        if after_thinking:
+            return after_thinking
+        return re.sub(r"</?think>", "", candidate, flags=re.IGNORECASE).strip()
+    return candidate
+
+
+def _metadata_tool_calls(metadata: dict[str, Any]) -> list[dict[str, Any]]:
+    tool_calls = metadata.get("tool_calls")
+    return list(tool_calls) if isinstance(tool_calls, list) else []

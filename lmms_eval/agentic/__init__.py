@@ -13,15 +13,7 @@ from lmms_eval.agentic.components import (
 )
 from lmms_eval.agentic.env import EnvManager
 from lmms_eval.agentic.episode import run_episode
-from lmms_eval.agentic.parsers import (
-    ActionNameParser,
-    ActionParser,
-    IdentityModelOutputParser,
-    ModelOutputParser,
-    ObservationParser,
-    ParserContext,
-    QwenModelOutputParser,
-)
+from lmms_eval.agentic.pipelines import apply_parser_pipeline, select_parser_pipelines
 from lmms_eval.agentic.runner import run_generate_until_game
 from lmms_eval.agentic.servers import (
     FixedActionModelServer,
@@ -37,13 +29,13 @@ from lmms_eval.agentic.types import (
     EpisodeStep,
     GameAction,
     ParsedAction,
+    Parser,
+    ParserContext,
     StepResult,
 )
 
 __all__ = [
     "REGISTRY",
-    "ActionNameParser",
-    "ActionParser",
     "AgentInput",
     "AgentOutput",
     "ContentBlock",
@@ -53,18 +45,17 @@ __all__ = [
     "EpisodeStep",
     "FixedActionModelServer",
     "GameAction",
-    "IdentityModelOutputParser",
-    "ModelOutputParser",
     "ModelServer",
-    "ObservationParser",
     "OpenAIModelServer",
+    "Parser",
     "ParsedAction",
     "ParserContext",
-    "QwenModelOutputParser",
     "StepResult",
+    "apply_parser_pipeline",
     "call_with_accepted_kwargs",
     "import_from_path",
     "resolve",
     "run_episode",
     "run_generate_until_game",
+    "select_parser_pipelines",
 ]

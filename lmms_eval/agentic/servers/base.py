@@ -14,6 +14,12 @@ class ModelServer(ABC):
     must be thread-safe.
     """
 
+    def get_model_name(self) -> str | None:
+        """Model identity used by task ``model_specific_parsers`` selection."""
+
+        model = getattr(self, "model", None)
+        return str(model) if model is not None else None
+
     @abstractmethod
     def generate(self, request: AgentInput) -> AgentOutput:
         raise NotImplementedError

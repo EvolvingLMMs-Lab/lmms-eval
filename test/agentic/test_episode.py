@@ -4,20 +4,18 @@ import pytest
 
 from lmms_eval.agentic import (
     FixedActionModelServer,
-    IdentityModelOutputParser,
+    ParserContext,
     run_episode,
 )
-from lmms_eval.agentic.parsers import ObservationParser, ParserContext
 
-from .conftest import ScriptedEnv, TextObservationParser, UppercaseActionParser
+from .conftest import ScriptedEnv, text_observation_parser, uppercase_action_parser
 
 
 def _run(env, *, model_server=None, **kwargs):
     return run_episode(
         env=env,
-        observation_parser=kwargs.pop("observation_parser", TextObservationParser()),
-        model_output_parser=IdentityModelOutputParser(),
-        action_parser=UppercaseActionParser(),
+        observation_pipeline=kwargs.pop("observation_pipeline", text_observation_parser),
+        action_pipeline=kwargs.pop("action_pipeline", uppercase_action_parser),
         model_server=model_server or FixedActionModelServer(action="attack"),
         doc={"instruction": "win"},
         **kwargs,
@@ -83,22 +81,38 @@ def test_episode_records_parse_error_as_parse_error_action():
 
 
 def test_episode_closes_env_when_a_component_raises():
-    class ExplodingParser(ObservationParser):
-        def parse(self, state, ctx: ParserContext):
-            raise RuntimeError("boom")
+    def exploding_parser(value, context: ParserContext):
+        del value, context
+        raise RuntimeError("boom")
 
     env = ScriptedEnv(episode_len=3)
     with pytest.raises(RuntimeError, match="boom"):
-        _run(env, observation_parser=ExplodingParser())
+        _run(env, observation_pipeline=exploding_parser)
 
     assert env.closed is True
 
 
 def test_episode_rejects_non_agent_input_observation():
-    class WrongTypeParser(ObservationParser):
-        def parse(self, state, ctx: ParserContext):
-            return "not an AgentInput"
+    def wrong_type_parser(value, context: ParserContext):
+        del value, context
+        return "not an AgentInput"
 
     env = ScriptedEnv(episode_len=3)
     with pytest.raises(TypeError, match="AgentInput"):
-        _run(env, observation_parser=WrongTypeParser())
+        _run(env, observation_pipeline=wrong_type_parser)
+
+
+def test_episode_runs_any_to_any_action_pipeline_in_order():
+    def unwrap_text(value, context):
+        del context
+        return value.first_text()
+
+    def text_to_action(value, context):
+        from lmms_eval.agentic import GameAction, ParsedAction
+
+        return ParsedAction(action=GameAction(type=value.upper(), agent_id=context.agent_id))
+
+    env = ScriptedEnv(episode_len=1)
+    result = _run(env, action_pipeline=[unwrap_text, text_to_action], model_name="Qwen/Qwen3.6-27B")
+
+    assert result.steps[0].parsed_action.action.type == "ATTACK"

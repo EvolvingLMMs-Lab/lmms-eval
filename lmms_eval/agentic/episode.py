@@ -10,12 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from lmms_eval.agentic.env import EnvManager
-from lmms_eval.agentic.parsers import (
-    ActionParser,
-    ModelOutputParser,
-    ObservationParser,
-    ParserContext,
-)
+from lmms_eval.agentic.pipelines import apply_parser_pipeline
 from lmms_eval.agentic.servers import ModelServer
 from lmms_eval.agentic.types import (
     AgentInput,
@@ -24,17 +19,19 @@ from lmms_eval.agentic.types import (
     EpisodeResult,
     EpisodeStep,
     GameAction,
+    ParsedAction,
+    ParserContext,
 )
 
 
 def run_episode(
     *,
     env: EnvManager,
-    observation_parser: ObservationParser,
-    model_output_parser: ModelOutputParser,
-    action_parser: ActionParser,
+    observation_pipeline: Any,
+    action_pipeline: Any,
     model_server: ModelServer,
     doc: Any,
+    model_name: str | None = None,
     max_steps: int = 32,
     seed: int | None = None,
     multiturn: bool = False,
@@ -51,10 +48,17 @@ def run_episode(
     try:
         state = env.reset(doc, seed=seed)
         while not state.terminal and len(steps) < max_steps:
-            ctx = ParserContext(state=state, agent_id=agent_id, step_idx=state.step_idx, history=list(history), metadata={"max_steps": max_steps})
-            request = observation_parser.parse(state, ctx)
+            ctx = ParserContext(
+                state=state,
+                agent_id=agent_id,
+                step_idx=state.step_idx,
+                model_name=model_name,
+                history=list(history),
+                metadata={"max_steps": max_steps, "doc": doc},
+            )
+            request = apply_parser_pipeline(state, observation_pipeline, ctx)
             if not isinstance(request, AgentInput):
-                raise TypeError(f"observation parser must return AgentInput, got {type(request).__name__}")
+                raise TypeError(f"observation parser pipeline must return AgentInput, got {type(request).__name__}")
             request.generation_kwargs = {**generation_kwargs, **request.generation_kwargs}
             request.metadata = {**request_metadata, **request.metadata}
             if multiturn:
@@ -64,14 +68,17 @@ def run_episode(
                     request.metadata["conversation_history_turns"] = len(visible_history) // 2
 
             raw_output = model_server.generate(request)
+            if not isinstance(raw_output, AgentOutput):
+                raise TypeError(f"model server must return AgentOutput, got {type(raw_output).__name__}")
             ctx.request = request
             ctx.raw_output = raw_output
-            output = model_output_parser.parse(raw_output, ctx)
-            parsed = action_parser.parse(output, ctx)
+            parsed = apply_parser_pipeline(raw_output, action_pipeline, ctx)
+            if not isinstance(parsed, ParsedAction):
+                raise TypeError(f"action parser pipeline must return ParsedAction, got {type(parsed).__name__}")
             action = parsed.action if parsed.action is not None else GameAction(type="parse_error", data=parsed.error, agent_id=agent_id)
             result = env.step(action)
 
-            steps.append(EpisodeStep(state=state, request=request, raw_output=raw_output, output=output, parsed_action=parsed, result=result))
+            steps.append(EpisodeStep(state=state, request=request, raw_output=raw_output, output=raw_output, parsed_action=parsed, result=result))
             if multiturn:
                 history.extend(_history_turns_for(request, raw_output, state=state, agent_id=agent_id))
             state = result.state

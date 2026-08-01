@@ -10,11 +10,17 @@ reasoning_tags: none
 doc_to_visual: !function utils.vizdoom_doc_to_visual
 doc_to_text: !function utils.vizdoom_doc_to_text
 doc_to_target: !function utils.vizdoom_doc_to_target
-# Task-side components. Model-side serving is a CLI choice:
+# Task-side environment and parsers. Model-side serving is a CLI choice:
 #   --agentic_model_server openai --agentic_model_server_args model=...,base_url=...
 game_env: !function utils.vizdoom_env_manager
-observation_parser: !function utils.vizdoom_observation_parser
-action_parser: !function utils.vizdoom_action_parser
+model_specific_parsers:
+  default:
+    observation: !function parsers.vizdoom_observation_parser
+    action: !function parsers.vizdoom_action_parser
+  "*Qwen*":
+    action:
+      - !function parsers.vizdoom_qwen_output_parser
+      - !function parsers.vizdoom_action_parser
 generation_kwargs:
   max_new_tokens: 64
   temperature: 0

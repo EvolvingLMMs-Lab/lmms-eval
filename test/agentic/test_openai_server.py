@@ -46,6 +46,12 @@ def test_generate_maps_generation_kwargs_to_openai_params():
         assert leaked not in call
 
 
+def test_server_reports_model_name_for_task_parser_selection():
+    server, _ = _server()
+
+    assert server.get_model_name() == "test-model"
+
+
 def test_generate_builds_multimodal_user_message():
     server, completions = _server()
     request = AgentInput(content=[ContentBlock.text("look"), ContentBlock(type="image", data="https://example.com/frame.png")])

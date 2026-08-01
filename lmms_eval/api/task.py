@@ -129,8 +129,7 @@ class TaskConfig(dict):
     doc_to_choice: Union[Callable, str, dict, list] = None
     doc_to_messages: Callable = None
     game_env: Union[Callable, str, dict] = None
-    observation_parser: Union[Callable, str, dict] = None
-    action_parser: Union[Callable, str, dict] = None
+    model_specific_parsers: dict = None
     process_results: Union[Callable, str] = None
     use_prompt: str = None
     description: str = ""
@@ -1592,8 +1591,7 @@ class ConfigurableTask(Task):
             copy.deepcopy(self.config.generation_kwargs),
             self.doc_to_visual,
             self.config.game_env,
-            self.config.observation_parser,
-            self.config.action_parser,
+            self.config.model_specific_parsers,
             self.lmms_eval_specific_kwargs,
             doc_id,
             self.config.task,
