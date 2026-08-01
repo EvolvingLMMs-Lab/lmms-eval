@@ -26,18 +26,6 @@ REGISTRY: dict[str, dict[str, str]] = {
         "openai": "lmms_eval.agentic.servers.openai:OpenAIModelServer",
         "debug": "lmms_eval.agentic.servers.debug:FixedActionModelServer",
     },
-    "model_output_parser": {
-        "identity": "lmms_eval.agentic.parsers.model_output:IdentityModelOutputParser",
-        "qwen": "lmms_eval.agentic.parsers.model_output:QwenModelOutputParser",
-    },
-    "observation_parser": {
-        "template": "lmms_eval.agentic.parsers.observation:TemplateObservationParser",
-    },
-    "action_parser": {
-        "action_name": "lmms_eval.agentic.parsers.actions:ActionNameParser",
-        "schema": "lmms_eval.agentic.parsers.actions:SchemaActionParser",
-        "free_text": "lmms_eval.agentic.parsers.actions:FreeTextActionParser",
-    },
 }
 
 

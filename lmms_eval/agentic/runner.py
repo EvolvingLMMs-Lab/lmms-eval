@@ -2,12 +2,10 @@
 
 Component ownership is split once, in one place:
 
-- task YAML owns the environment side: ``game_env``, ``observation_parser``,
-  ``action_parser`` (per-instance, from ``Instance.args``); the parsers may be
-  omitted, in which case the loop uses ``TemplateObservationParser`` and an
-  action parser built from ``env.action_spec()``;
-- the CLI owns the model side: ``--agentic_model_server(_args)`` and
-  ``--agentic_output_parser(_args)`` (one shared server per run);
+- task YAML owns ``game_env`` and ``model_specific_parsers``.  Parser
+  pipelines are task-local ``Any -> Any`` functions selected using the model
+  identity reported by the server;
+- the CLI owns ``--agentic_model_server(_args)`` (one shared server per run);
 - loop options ride in ``generation_kwargs``: ``max_game_steps``,
   ``game_seed``, ``multiturn``, ``history_turns``.
 
@@ -30,13 +28,7 @@ from lmms_eval.agentic.artifacts import write_episode_artifacts
 from lmms_eval.agentic.components import resolve
 from lmms_eval.agentic.env import EnvManager
 from lmms_eval.agentic.episode import run_episode
-from lmms_eval.agentic.parsers import (
-    ActionParser,
-    ModelOutputParser,
-    ObservationParser,
-    TemplateObservationParser,
-    build_action_parser,
-)
+from lmms_eval.agentic.pipelines import select_parser_pipelines
 from lmms_eval.agentic.servers import ModelServer
 from lmms_eval.agentic.trace import episode_to_json
 from lmms_eval.agentic.types import EnvState, EpisodeResult
@@ -50,41 +42,29 @@ def run_generate_until_game(lm: Any, requests: list[Instance], response_cache: A
     max_parallel = max(1, int(getattr(cli_args, "agentic_max_parallel_rollouts", None) or 1))
     episode_retries = max(0, int(getattr(cli_args, "agentic_episode_retries", None) or 0))
     model_server = resolve("model_server", _cli_spec(cli_args, "agentic_model_server", default="openai"), expected=ModelServer)
-    model_output_parser = resolve("model_output_parser", _cli_spec(cli_args, "agentic_output_parser", default="identity"), expected=ModelOutputParser)
+    model_name = model_server.get_model_name()
 
     plans = [_EpisodePlan.from_instance(req, lm) for req in requests]
 
-    def build_components(plan: "_EpisodePlan") -> tuple[EnvManager, ObservationParser, ActionParser]:
+    def build_components(plan: "_EpisodePlan") -> tuple[EnvManager, dict[str, Any]]:
         """Resolve per-episode components. Errors here are task wiring bugs and fail the run loudly."""
 
         context = {"doc": plan.doc, "lmms_eval_specific_kwargs": plan.lmms_eval_specific_kwargs}
-        env = resolve("env_manager", plan.game_env_spec, expected=EnvManager, **context)
-        try:
-            if plan.observation_parser_spec is None:
-                observation_parser: ObservationParser = TemplateObservationParser()
-            else:
-                observation_parser = resolve("observation_parser", plan.observation_parser_spec, expected=ObservationParser, **context)
-            if plan.action_parser_spec is None:
-                action_parser: ActionParser = build_action_parser(env.action_spec())
-            else:
-                action_parser = resolve("action_parser", plan.action_parser_spec, expected=ActionParser, **context)
-        except BaseException:
-            env.close()
-            raise
-        return env, observation_parser, action_parser
+        parser_pipelines = select_parser_pipelines(plan.model_specific_parsers, model_name)
+        return resolve("env_manager", plan.game_env_spec, expected=EnvManager, **context), parser_pipelines
 
     def run_one(plan: "_EpisodePlan") -> str:
         attempts = episode_retries + 1
         for attempt in range(1, attempts + 1):
-            env, observation_parser, action_parser = build_components(plan)
+            env, parser_pipelines = build_components(plan)
             try:
                 episode = run_episode(
                     env=env,
-                    observation_parser=observation_parser,
-                    model_output_parser=model_output_parser,
-                    action_parser=action_parser,
+                    observation_pipeline=parser_pipelines["observation"],
+                    action_pipeline=parser_pipelines["action"],
                     model_server=model_server,
                     doc=plan.doc,
+                    model_name=model_name,
                     max_steps=plan.max_steps,
                     seed=plan.seed,
                     multiturn=plan.multiturn,
@@ -129,8 +109,7 @@ class _EpisodePlan:
     multiturn: bool
     history_turns: int | None
     game_env_spec: Any
-    observation_parser_spec: Any
-    action_parser_spec: Any
+    model_specific_parsers: Any
     lmms_eval_specific_kwargs: dict[str, Any] | None
     doc_id: int
     task_name: str
@@ -138,9 +117,9 @@ class _EpisodePlan:
 
     @classmethod
     def from_instance(cls, req: Instance, lm: Any) -> "_EpisodePlan":
-        if len(req.args) != 10:
-            raise ValueError(f"generate_until_game expects 10-element Instance.args (see ConfigurableTask.construct_requests), got {len(req.args)}")
-        _ctx, generation_kwargs, _doc_to_visual, game_env, observation_parser, action_parser, lmms_eval_specific_kwargs, doc_id, task_name, split = req.args
+        if len(req.args) != 9:
+            raise ValueError(f"generate_until_game expects 9-element Instance.args (see ConfigurableTask.construct_requests), got {len(req.args)}")
+        _ctx, generation_kwargs, _doc_to_visual, game_env, model_specific_parsers, lmms_eval_specific_kwargs, doc_id, task_name, split = req.args
 
         gen_kwargs = dict(generation_kwargs or {})
         max_steps = int(gen_kwargs.pop("max_game_steps", gen_kwargs.pop("max_agentic_steps", 32)))
@@ -155,8 +134,7 @@ class _EpisodePlan:
             multiturn=multiturn,
             history_turns=history_turns,
             game_env_spec=game_env,
-            observation_parser_spec=observation_parser,
-            action_parser_spec=action_parser,
+            model_specific_parsers=model_specific_parsers,
             lmms_eval_specific_kwargs=lmms_eval_specific_kwargs,
             doc_id=int(doc_id),
             task_name=str(task_name),

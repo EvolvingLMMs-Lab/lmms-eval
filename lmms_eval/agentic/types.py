@@ -8,7 +8,7 @@ standard library, so every other module can import them freely.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Callable
 
 
 @dataclass(slots=True)
@@ -56,6 +56,28 @@ class AgentOutput:
             if block.type == "text" and isinstance(block.data, str):
                 return block.data
         return None
+
+
+@dataclass(slots=True)
+class ParserContext:
+    """Rollout context offered to task-local parser functions.
+
+    Parser functions deliberately use an ``Any -> Any`` contract.  The
+    context carries optional side-channel state without constraining the
+    values flowing through a parser pipeline.
+    """
+
+    state: "EnvState | None" = None
+    agent_id: str | None = None
+    step_idx: int | None = None
+    model_name: str | None = None
+    request: AgentInput | None = None
+    raw_output: AgentOutput | None = None
+    history: list[Any] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+Parser = Callable[[Any, ParserContext], Any]
 
 
 @dataclass(slots=True)
@@ -116,10 +138,10 @@ class ActionDef:
 class ActionSpec:
     """Environment-declared action space (``EnvManager.action_spec()``).
 
-    ``kind`` selects the default action parser and prompt rendering:
+    ``kind`` describes the interaction convention for task-local parsers:
     ``discrete`` (pick one action name), ``parameterized`` (action name plus
-    JSON arguments), or ``free_text`` (the whole model reply is the command
-    and the environment validates it).
+    arguments), or ``free_text`` (the whole model reply is the command and the
+    environment validates it). The framework never selects a parser from it.
     """
 
     kind: str = "discrete"

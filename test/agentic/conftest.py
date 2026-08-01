@@ -14,9 +14,9 @@ from lmms_eval.agentic import (
     EnvState,
     GameAction,
     ParsedAction,
+    ParserContext,
     StepResult,
 )
-from lmms_eval.agentic.parsers import ActionParser, ObservationParser, ParserContext
 
 
 class ScriptedEnv(EnvManager):
@@ -56,23 +56,24 @@ class ScriptedEnv(EnvManager):
         self.closed = True
 
 
-class TextObservationParser(ObservationParser):
-    def parse(self, state: EnvState, ctx: ParserContext) -> AgentInput:
-        return AgentInput(content=[ContentBlock.text(str(state.observation["text"]))])
+def text_observation_parser(value: Any, context: ParserContext) -> Any:
+    del context
+    state = value
+    return AgentInput(content=[ContentBlock.text(str(state.observation["text"]))])
 
 
-class UppercaseActionParser(ActionParser):
-    def parse(self, output: AgentOutput, ctx: ParserContext) -> ParsedAction:
-        text = (output.first_text() or "").strip()
-        if not text:
-            return ParsedAction(error="empty output")
-        return ParsedAction(action=GameAction(type=text.upper(), agent_id=ctx.agent_id))
+def uppercase_action_parser(value: Any, context: ParserContext) -> Any:
+    output = value
+    text = (output.first_text() or "").strip()
+    if not text:
+        return ParsedAction(error="empty output")
+    return ParsedAction(action=GameAction(type=text.upper(), agent_id=context.agent_id))
 
 
 @pytest.fixture
 def scripted_components():
     return {
         "env": ScriptedEnv(episode_len=3),
-        "observation_parser": TextObservationParser(),
-        "action_parser": UppercaseActionParser(),
+        "observation_pipeline": text_observation_parser,
+        "action_pipeline": uppercase_action_parser,
     }

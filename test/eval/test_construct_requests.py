@@ -10,10 +10,10 @@ The documented contract (from AGENTS.md):
   ConfigurableTask loglikelihood:        (ctx, doc_to_target, doc_to_visual, doc_id, task, split) — 6 elements
   ConfigurableTask generate_until_multi_round: (ctx, gen_kwargs, doc_to_visual, doc_to_text, doc_id, task, split) — 7 elements
   ConfigurableTask generate_until_agentic:     (ctx, gen_kwargs, doc_to_visual, doc_to_text, doc_id, task, split) — 7 elements
-  ConfigurableTask generate_until_game:        (ctx, gen_kwargs, doc_to_visual, game_env, observation_parser, action_parser, lmms_eval_specific_kwargs, doc_id, task, split) — 10 elements
+  ConfigurableTask generate_until_game:        (ctx, gen_kwargs, doc_to_visual, game_env, model_specific_parsers, lmms_eval_specific_kwargs, doc_id, task, split) — 9 elements
   ConfigurableMessagesTask generate_until:     (ctx, doc_to_messages, gen_kwargs, doc_id, task, split) — 6 elements
   ConfigurableMessagesTask generate_until_agentic: (ctx, gen_kwargs, doc_to_visual, doc_to_text, doc_id, task, split) — 7 elements
-  ConfigurableMessagesTask generate_until_game: same 10-element shape as ConfigurableTask (shared _game_arguments helper)
+  ConfigurableMessagesTask generate_until_game: same 9-element shape as ConfigurableTask (shared _game_arguments helper)
 """
 
 import copy
@@ -289,12 +289,12 @@ def _dummy_game_env(doc=None, lmms_eval_specific_kwargs=None):
     return "env"
 
 
-def _dummy_observation_parser(doc=None, lmms_eval_specific_kwargs=None):
-    return "observation_parser"
+def _dummy_observation_parser(value, context):
+    return value
 
 
-def _dummy_action_parser(doc=None, lmms_eval_specific_kwargs=None):
-    return "action_parser"
+def _dummy_action_parser(value, context):
+    return value
 
 
 def _game_args(doc_id=0, task="game", split="test"):
@@ -305,8 +305,7 @@ def _game_args(doc_id=0, task="game", split="test"):
         gk,
         _dummy_doc_to_visual,
         _dummy_game_env,
-        _dummy_observation_parser,
-        _dummy_action_parser,
+        {"default": {"observation": _dummy_observation_parser, "action": _dummy_action_parser}},
         {"pre_prompt": "", "post_prompt": ""},
         doc_id,
         task,
@@ -314,25 +313,25 @@ def _game_args(doc_id=0, task="game", split="test"):
     )
 
 
-def test_configurable_task_game_tuple_length_is_10():
-    """ConfigurableTask generate_until_game produces a 10-element tuple."""
+def test_configurable_task_game_tuple_length_is_9():
+    """ConfigurableTask generate_until_game produces a 9-element tuple."""
     inst = _make_instance("generate_until_game", _game_args())
 
-    assert len(inst.args) == 10
+    assert len(inst.args) == 9
 
 
 def test_configurable_task_game_unpack_order():
     """ConfigurableTask generate_until_game unpacks in the runner's order."""
     inst = _make_instance("generate_until_game", _game_args(doc_id=12, task="vizdoom"), doc_id=12, task="vizdoom")
 
-    ctx, gen_kwargs, doc_to_visual, game_env, observation_parser, action_parser, lmms_eval_specific_kwargs, doc_id, task, split = inst.args
+    ctx, gen_kwargs, doc_to_visual, game_env, model_specific_parsers, lmms_eval_specific_kwargs, doc_id, task, split = inst.args
 
     assert ctx == "game_prompt"
     assert gen_kwargs["max_game_steps"] == 6
     assert callable(doc_to_visual)
     assert callable(game_env)
-    assert callable(observation_parser)
-    assert callable(action_parser)
+    assert callable(model_specific_parsers["default"]["observation"])
+    assert callable(model_specific_parsers["default"]["action"])
     assert lmms_eval_specific_kwargs == {"pre_prompt": "", "post_prompt": ""}
     assert doc_id == 12
     assert task == "vizdoom"

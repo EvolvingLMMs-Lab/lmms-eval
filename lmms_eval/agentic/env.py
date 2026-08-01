@@ -33,10 +33,10 @@ class EnvManager(ABC):
         """Declare the action space, when the environment can.
 
         Must be cheap and side-effect free; the loop may call it more than
-        once per episode. Returning a spec lets the loop build a default
-        action parser and render ``{actions}`` in observation templates.
-        ``None`` (the default) means the task supplies its own action parser
-        and prompt text.
+        once per episode. Task-local parser functions can use the declaration
+        both to render action help and to validate model output. ``None`` (the
+        default) means the task parser owns those details without a shared
+        declaration.
         """
 
         return None

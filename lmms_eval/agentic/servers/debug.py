@@ -12,6 +12,9 @@ class FixedActionModelServer(ModelServer):
     def __init__(self, action: str = "ATTACK") -> None:
         self.action = str(action).strip()
 
+    def get_model_name(self) -> str:
+        return "debug"
+
     def generate(self, request: AgentInput) -> AgentOutput:
         if not isinstance(request, AgentInput):
             raise TypeError(f"FixedActionModelServer requires AgentInput requests, got {type(request).__name__}")

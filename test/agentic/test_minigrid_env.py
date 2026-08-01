@@ -15,6 +15,10 @@ from lmms_eval.agentic.components import resolve
 from lmms_eval.agentic.runner import run_generate_until_game
 from lmms_eval.api.instance import Instance
 from lmms_eval.tasks.minigrid_agentic.env import MiniGridEnvManager
+from lmms_eval.tasks.minigrid_agentic.parsers import (
+    minigrid_action_parser,
+    minigrid_observation_parser,
+)
 
 
 class _FakeSimEnv:
@@ -132,7 +136,7 @@ def test_registry_builds_minigrid_without_simulator_installed():
     assert isinstance(manager, MiniGridEnvManager)
 
 
-def test_runner_end_to_end_with_registry_env_and_default_parsers(fake_gym):
+def test_runner_end_to_end_with_registry_env_and_task_parsers(fake_gym):
     doc = {"env_id": "MiniGrid-Empty-6x6-v0", "seed": 1, "instruction": "Reach the goal."}
     lm = SimpleNamespace(task_dict={"minigrid": {"test": {0: doc}}})
     arguments = (
@@ -140,8 +144,7 @@ def test_runner_end_to_end_with_registry_env_and_default_parsers(fake_gym):
         {"max_new_tokens": 16, "max_game_steps": 8},
         lambda doc: [],
         "minigrid",  # registry name straight from YAML
-        None,  # observation_parser omitted -> TemplateObservationParser
-        None,  # action_parser omitted -> built from env.action_spec()
+        {"default": {"observation": minigrid_observation_parser, "action": minigrid_action_parser}},
         {"pre_prompt": ""},
         0,
         "minigrid",
@@ -151,8 +154,6 @@ def test_runner_end_to_end_with_registry_env_and_default_parsers(fake_gym):
     cli_args = SimpleNamespace(
         agentic_model_server="debug",
         agentic_model_server_args="action=FORWARD",
-        agentic_output_parser=None,
-        agentic_output_parser_args="",
         agentic_max_parallel_rollouts=None,
         agentic_episode_retries=None,
         output_path=None,

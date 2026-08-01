@@ -2,11 +2,14 @@
 
 The environment declares its action space via ``action_spec()``, emits the
 reserved observation keys (``text`` / ``images`` / ``variables``), and keeps
-simulator imports inside ``reset``. The task therefore needs no parser code:
+simulator imports inside ``reset``. Parser functions remain task-local:
 
     output_type: generate_until_game
     game_env: minigrid
-    # observation_parser / action_parser omitted -> loop defaults
+    model_specific_parsers:
+      default:
+        observation: !function parsers.minigrid_observation_parser
+        action: !function parsers.minigrid_action_parser
 
 Dataset rows select the scenario (doc-as-scenario): ``env_id``, ``seed``, and
 ``max_episode_steps`` in the doc override the manager's defaults per episode.

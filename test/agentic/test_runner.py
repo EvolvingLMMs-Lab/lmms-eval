@@ -5,19 +5,16 @@ from types import SimpleNamespace
 
 import pytest
 
-from lmms_eval.agentic import ActionDef, ActionSpec
 from lmms_eval.agentic.runner import run_generate_until_game
 from lmms_eval.api.instance import Instance
 
-from .conftest import ScriptedEnv, TextObservationParser, UppercaseActionParser
+from .conftest import ScriptedEnv, text_observation_parser, uppercase_action_parser
 
 
 def _cli_args(**overrides):
     defaults = {
         "agentic_model_server": "debug",
         "agentic_model_server_args": "action=attack",
-        "agentic_output_parser": None,
-        "agentic_output_parser_args": "",
         "agentic_max_parallel_rollouts": None,
         "agentic_episode_retries": None,
         "output_path": None,
@@ -32,8 +29,7 @@ def _game_instance(doc_id=0, episode_len=2, max_game_steps=8, task="game", split
         {"max_new_tokens": 16, "max_game_steps": max_game_steps},
         lambda doc: [],
         lambda doc=None, lmms_eval_specific_kwargs=None: ScriptedEnv(episode_len=episode_len),
-        lambda doc=None, lmms_eval_specific_kwargs=None: TextObservationParser(),
-        lambda doc=None, lmms_eval_specific_kwargs=None: UppercaseActionParser(),
+        {"default": {"observation": text_observation_parser, "action": uppercase_action_parser}},
         {"pre_prompt": ""},
         doc_id,
         task,
@@ -88,7 +84,7 @@ def test_runner_rejects_wrong_arity():
     lm = _lm({0: {"instruction": "win"}})
     bad = Instance(request_type="generate_until_game", arguments=("ctx", {}, None), idx=0, metadata={"task": "game", "doc_id": 0, "repeats": 1})
 
-    with pytest.raises(ValueError, match="10-element"):
+    with pytest.raises(ValueError, match="9-element"):
         run_generate_until_game(lm, [bad], cli_args=_cli_args())
 
 
@@ -109,15 +105,8 @@ def test_runner_pops_loop_keys_from_generation_kwargs():
 
 
 # ---------------------------------------------------------------------------
-# Default parsers from env.action_spec() + episode error semantics
+# Required task parser pipelines + episode error semantics
 # ---------------------------------------------------------------------------
-
-
-class SpecEnv(ScriptedEnv):
-    """ScriptedEnv that declares its action space."""
-
-    def action_spec(self):
-        return ActionSpec(kind="discrete", actions=[ActionDef(name="ATTACK"), ActionDef(name="NOOP")])
 
 
 class CrashingEnv(ScriptedEnv):
@@ -125,14 +114,13 @@ class CrashingEnv(ScriptedEnv):
         raise RuntimeError("simulator exploded")
 
 
-def _instance_with(env_factory, observation_parser, action_parser, doc_id=0, max_game_steps=8):
+def _instance_with(env_factory, model_specific_parsers=None, doc_id=0, max_game_steps=8):
     arguments = (
         "prompt",
         {"max_new_tokens": 16, "max_game_steps": max_game_steps},
         lambda doc: [],
         env_factory,
-        observation_parser,
-        action_parser,
+        model_specific_parsers,
         {"pre_prompt": ""},
         doc_id,
         "game",
@@ -141,22 +129,11 @@ def _instance_with(env_factory, observation_parser, action_parser, doc_id=0, max
     return Instance(request_type="generate_until_game", arguments=arguments, idx=0, metadata={"task": "game", "doc_id": doc_id, "repeats": 1})
 
 
-def test_runner_defaults_parsers_from_env_action_spec():
+def test_runner_fails_loud_when_model_specific_parsers_are_missing():
     lm = _lm({0: {"instruction": "win"}})
-    inst = _instance_with(lambda doc=None, lmms_eval_specific_kwargs=None: SpecEnv(episode_len=2), None, None)
+    inst = _instance_with(lambda doc=None, lmms_eval_specific_kwargs=None: ScriptedEnv(episode_len=2))
 
-    [resp] = run_generate_until_game(lm, [inst], cli_args=_cli_args())
-
-    payload = json.loads(resp)
-    assert payload["success"] is True
-    assert [step["action"]["type"] for step in payload["steps"]] == ["ATTACK", "ATTACK"]
-
-
-def test_runner_fails_loud_when_action_parser_and_spec_are_both_missing():
-    lm = _lm({0: {"instruction": "win"}})
-    inst = _instance_with(lambda doc=None, lmms_eval_specific_kwargs=None: ScriptedEnv(episode_len=2), None, None)
-
-    with pytest.raises(ValueError, match="action_spec"):
+    with pytest.raises(TypeError, match="model_specific_parsers"):
         run_generate_until_game(lm, [inst], cli_args=_cli_args())
 
 
@@ -164,8 +141,7 @@ def test_runner_records_env_error_instead_of_raising():
     lm = _lm({0: {"instruction": "win"}})
     inst = _instance_with(
         lambda doc=None, lmms_eval_specific_kwargs=None: CrashingEnv(episode_len=2),
-        lambda doc=None, lmms_eval_specific_kwargs=None: TextObservationParser(),
-        lambda doc=None, lmms_eval_specific_kwargs=None: UppercaseActionParser(),
+        {"default": {"observation": text_observation_parser, "action": uppercase_action_parser}},
     )
 
     [resp] = run_generate_until_game(lm, [inst], cli_args=_cli_args())
@@ -190,8 +166,7 @@ def test_runner_retries_flaky_episodes():
 
     inst = _instance_with(
         flaky_factory,
-        lambda doc=None, lmms_eval_specific_kwargs=None: TextObservationParser(),
-        lambda doc=None, lmms_eval_specific_kwargs=None: UppercaseActionParser(),
+        {"default": {"observation": text_observation_parser, "action": uppercase_action_parser}},
     )
 
     [resp] = run_generate_until_game(lm, [inst], cli_args=_cli_args(agentic_episode_retries=1))

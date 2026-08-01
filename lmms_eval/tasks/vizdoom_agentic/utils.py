@@ -67,18 +67,6 @@ def vizdoom_env_manager(doc=None, lmms_eval_specific_kwargs=None):
     )
 
 
-def vizdoom_observation_parser(doc=None, lmms_eval_specific_kwargs=None):
-    del doc, lmms_eval_specific_kwargs
-    # Human-view parity: the model only gets what a human sees on screen
-    # (first-person frame history as video + on-screen HUD), no oracle state.
-    return _sibling_module("parsers").VizDoomObservationParser(human_view=True, video=True, image_buffers=["screen"])
-
-
-def vizdoom_action_parser(doc=None, lmms_eval_specific_kwargs=None):
-    del doc, lmms_eval_specific_kwargs
-    return _sibling_module("parsers").VizDoomActionParser()
-
-
 @lru_cache(maxsize=None)
 def _sibling_module(name):
     module_path = Path(__file__).resolve().with_name(f"{name}.py")
