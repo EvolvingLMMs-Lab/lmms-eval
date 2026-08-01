@@ -27,21 +27,24 @@ task YAML (environment side)          CLI (model side)
               └────────────────────────────────────────────────────┘
 ```
 
-Everything lives in `lmms_eval/agentic/` (one module per concept):
+The framework lives in `lmms_eval/agentic/`, with extensible component
+families split into packages:
 
 | Module | Contents |
 |---|---|
 | `types.py` | Dataclass vocabulary: `ContentBlock`, `AgentInput/Output`, `EnvState`, `GameAction`, `ParsedAction`, `StepResult`, `EpisodeStep/Result`, `ActionDef`, `ActionSpec` |
 | `env.py` | `EnvManager` ABC (`reset` / `step` / `get_state` / `action_spec` / `close`) |
-| `envs/` | Reusable environments, one module each, referenced by registry name (`minigrid`) |
-| `parsers.py` | Typed parser ABCs + generic parsers (`identity`, `qwen`, `action_name`, `schema`, `free_text`, `template`) |
-| `servers.py` | `ModelServer` ABC + `openai` (HTTP) + `debug` (fixed action) |
+| `parsers/` | Typed parser ABCs plus focused action, observation, and model-output parser modules |
+| `servers/` | `ModelServer` ABC plus one module per backend (`openai`, `debug`) |
 | `episode.py` | `run_episode()` — the rollout loop, a plain function |
 | `components.py` | Spec resolution: registry names, import paths, callables, dict specs |
 | `runner.py` | `run_generate_until_game()` — Instances → thread pool → JSON responses |
 | `trace.py` / `artifacts.py` | Episode → JSON payload / summary.md, actions.jsonl, rollout.mp4 |
 
-Environments come in two flavors: reusable ones live in `lmms_eval/agentic/envs/` behind a registry name, while bespoke single-task ones (the ViZDoom environment and its parsers) live with their task under `lmms_eval/tasks/vizdoom_agentic/`. Either way the simulator import happens inside `reset`, never at module import time.
+Concrete environments live with their task under `lmms_eval/tasks/<task>/env.py`,
+even when they also have a registry short name. This keeps simulator-specific
+code out of the framework package. Simulator imports happen inside `reset`,
+never at module import time.
 
 ## Task contract (YAML)
 
@@ -70,7 +73,10 @@ Both task-side parsers are optional. When the YAML omits them the loop falls bac
 
 ```yaml
 output_type: generate_until_game
-dataset_path: !function utils.minigrid_dataset   # docs-from-code, see below
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/minigrid_agentic/data/minigrid.jsonl
 game_env: minigrid                # registry name; dict form takes kwargs:
                                   # game_env: {name: minigrid, max_episode_steps: 100}
 generation_kwargs:
@@ -78,9 +84,12 @@ generation_kwargs:
 process_results: !function utils.minigrid_process_results
 ```
 
-`lmms_eval/tasks/minigrid_agentic/` is the reference: zero component code in the task directory. Dataset rows select the scenario (doc-as-scenario): `env_id`, `seed`, and `max_episode_steps` in a doc override the manager defaults per episode.
-
-For env-loop tasks the "dataset" is usually a handful of scenario configs, not real data, so `dataset_path` also accepts `!function`: a factory in `utils.py` returning a `datasets.DatasetDict` (e.g. `datasets.DatasetDict({"test": datasets.Dataset.from_list(SCENARIOS)})`). That keeps scenario lists in code — no tracked data file, no hub dependency.
+`lmms_eval/tasks/minigrid_agentic/` is the reference: the environment stays
+task-local, while the generic parsers mean there is no task-specific parser
+code. Dataset rows select the scenario (doc-as-scenario): `env_id`, `seed`,
+and `max_episode_steps` in a doc override the manager defaults per episode.
+Small scenario sets may use a tracked JSONL as above; established benchmarks
+should use their canonical Hugging Face dataset.
 
 Two conventions make the defaults work:
 
@@ -144,9 +153,8 @@ With `--output_path`, each episode writes `<output_path>/agentic_artifacts/<task
 
 ## Extending
 
-- **New shared environment**: add one module under `lmms_eval/agentic/envs/` — subclass `EnvManager`, declare `action_spec()`, emit reserved observation keys, keep simulator imports inside `reset` — and register its import path in `components.REGISTRY["env_manager"]`. The bar to hit (see `envs/minigrid.py`): a new task should be the YAML, a dataset, and `process_results`, with zero parser code.
-- **Bespoke environment**: subclass `EnvManager` next to your task, expose a factory in `utils.py`, point `game_env: !function utils.<factory>` at it (the ViZDoom pattern, for envs with task-specific prompting or action semantics).
-- **New parsers**: subclass the typed ABCs (`ObservationParser` must return `AgentInput`; non-text payloads go inside `ContentBlock`s, e.g. `type="tensor"`).
-- **New model server**: subclass `ModelServer` (thread-safe `generate`), pass its import path to `--agentic_model_server`.
+- **New environment**: add `env.py` next to the task, subclass `EnvManager`, keep simulator imports inside `reset`, and expose it through a task factory or an optional registry short name. MiniGrid demonstrates `action_spec()` plus reserved observation keys; ViZDoom demonstrates task-specific parsers.
+- **New parser**: add a focused module under `lmms_eval/agentic/parsers/` for reusable behavior, or keep task-specific parsing beside the task. `ObservationParser` must return `AgentInput`; non-text payloads travel inside typed `ContentBlock`s such as `type="tensor"`.
+- **New model server**: add a module under `lmms_eval/agentic/servers/`, subclass the thread-safe `ModelServer`, re-export it when it is public, and pass its import path or registry name to `--agentic_model_server`.
 
 Known limits, by design: single-agent loops only, no response-cache integration for rollouts, no Ray/RL serving hooks, and in-process environments only — a remote env server (reset/step/close over HTTP for browser farms or emulator hosts) is deliberately deferred until the first heavy environment lands; the `EnvManager` boundary already fits a thin HTTP client.

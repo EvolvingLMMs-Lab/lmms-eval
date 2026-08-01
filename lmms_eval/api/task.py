@@ -165,9 +165,7 @@ class TaskConfig(dict):
     auto_strip_thinking: bool = False
 
     def __post_init__(self) -> None:
-        # dataset_path may be a callable (docs-from-code, `!function`); only
-        # strings are candidates for the local-path handling below.
-        if isinstance(self.dataset_path, str) and self.dataset_path and os.path.exists(os.path.dirname(self.dataset_path)):
+        if self.dataset_path and os.path.exists(os.path.dirname(self.dataset_path)):
             pass
 
             # self.dataset_path = inspect.getfile(import_module(self.dataset_path))
@@ -967,16 +965,6 @@ class ConfigurableTask(Task):
 
     @retry(stop=(stop_after_attempt(5) | stop_after_delay(60)), wait=wait_fixed(2))
     def download(self, dataset_kwargs=None) -> None:
-        # Docs-from-code: `dataset_path: !function utils.<factory>` builds the
-        # split dict in Python. Made for env-loop tasks whose "dataset" is a
-        # small scenario list that does not warrant a hub dataset or a tracked
-        # data file. The shared post-processing below (process_docs,
-        # dataset_no_image) still applies.
-        if callable(self.DATASET_PATH):
-            self.dataset = self.DATASET_PATH(**(dataset_kwargs or {}))
-            if not isinstance(self.dataset, (datasets.DatasetDict, datasets.IterableDatasetDict)):
-                raise TypeError(f"dataset_path factory {getattr(self.DATASET_PATH, '__name__', self.DATASET_PATH)!r} must return a datasets.DatasetDict, got {type(self.dataset).__name__}")
-            dataset_kwargs = None  # consumed by the factory; skip the loader machinery below
         # If the dataset is a video dataset,
         # Recursively search whether their is a zip and unzip it to the huggingface home
         download_config = DownloadConfig()
@@ -1160,9 +1148,7 @@ class ConfigurableTask(Task):
             if "create_link" in dataset_kwargs:
                 dataset_kwargs.pop("create_link")
 
-        if callable(self.DATASET_PATH):
-            pass  # dataset already built by the factory above
-        elif dataset_kwargs is not None and "load_from_disk" in dataset_kwargs and dataset_kwargs["load_from_disk"]:
+        if dataset_kwargs is not None and "load_from_disk" in dataset_kwargs and dataset_kwargs["load_from_disk"]:
             # using local task in offline environment, need to process the online dataset into local format via
             # `ds = load_datasets("lmms-lab/MMMU")`
             self.dataset = datasets.load_from_disk(dataset_path=self.DATASET_PATH)

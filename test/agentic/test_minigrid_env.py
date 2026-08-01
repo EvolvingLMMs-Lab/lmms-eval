@@ -5,15 +5,16 @@ from __future__ import annotations
 import json
 import sys
 import types
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 from lmms_eval.agentic import EnvManager, GameAction
 from lmms_eval.agentic.components import resolve
-from lmms_eval.agentic.envs.minigrid import MiniGridEnvManager
 from lmms_eval.agentic.runner import run_generate_until_game
 from lmms_eval.api.instance import Instance
+from lmms_eval.tasks.minigrid_agentic.env import MiniGridEnvManager
 
 
 class _FakeSimEnv:
@@ -165,13 +166,12 @@ def test_runner_end_to_end_with_registry_env_and_default_parsers(fake_gym):
     assert [step["action"]["type"] for step in payload["steps"]] == ["FORWARD", "FORWARD"]
 
 
-def test_minigrid_dataset_factory_builds_scenarios():
-    from lmms_eval.tasks.minigrid_agentic import utils as task_utils
+def test_minigrid_jsonl_builds_scenarios():
+    data_path = Path(__file__).parents[2] / "lmms_eval/tasks/minigrid_agentic/data/minigrid.jsonl"
+    scenarios = [json.loads(line) for line in data_path.read_text().splitlines()]
 
-    dataset = task_utils.minigrid_dataset()
-
-    assert dataset["test"].num_rows == 3
-    assert set(dataset["test"].column_names) >= {"env_id", "seed", "instruction"}
+    assert len(scenarios) == 3
+    assert all(set(scenario) >= {"env_id", "seed", "instruction"} for scenario in scenarios)
 
 
 def test_task_process_results_maps_episode_and_error_payloads():

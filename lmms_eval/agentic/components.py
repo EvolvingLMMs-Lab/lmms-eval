@@ -20,23 +20,23 @@ from typing import Any
 
 REGISTRY: dict[str, dict[str, str]] = {
     "env_manager": {
-        "minigrid": "lmms_eval.agentic.envs.minigrid:MiniGridEnvManager",
+        "minigrid": "lmms_eval.tasks.minigrid_agentic.env:MiniGridEnvManager",
     },
     "model_server": {
-        "openai": "lmms_eval.agentic.servers:OpenAIModelServer",
-        "debug": "lmms_eval.agentic.servers:FixedActionModelServer",
+        "openai": "lmms_eval.agentic.servers.openai:OpenAIModelServer",
+        "debug": "lmms_eval.agentic.servers.debug:FixedActionModelServer",
     },
     "model_output_parser": {
-        "identity": "lmms_eval.agentic.parsers:IdentityModelOutputParser",
-        "qwen": "lmms_eval.agentic.parsers:QwenModelOutputParser",
+        "identity": "lmms_eval.agentic.parsers.model_output:IdentityModelOutputParser",
+        "qwen": "lmms_eval.agentic.parsers.model_output:QwenModelOutputParser",
     },
     "observation_parser": {
-        "template": "lmms_eval.agentic.parsers:TemplateObservationParser",
+        "template": "lmms_eval.agentic.parsers.observation:TemplateObservationParser",
     },
     "action_parser": {
-        "action_name": "lmms_eval.agentic.parsers:ActionNameParser",
-        "schema": "lmms_eval.agentic.parsers:SchemaActionParser",
-        "free_text": "lmms_eval.agentic.parsers:FreeTextActionParser",
+        "action_name": "lmms_eval.agentic.parsers.actions:ActionNameParser",
+        "schema": "lmms_eval.agentic.parsers.actions:SchemaActionParser",
+        "free_text": "lmms_eval.agentic.parsers.actions:FreeTextActionParser",
     },
 }
 

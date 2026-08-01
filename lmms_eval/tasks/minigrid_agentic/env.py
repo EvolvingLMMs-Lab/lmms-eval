@@ -1,9 +1,8 @@
-"""MiniGrid environment for the agentic game loop.
+"""Task-local MiniGrid environment for the agentic game loop.
 
-The registry's first shared environment and the reference for how small a new
-one should be: declare the action space via ``action_spec()``, emit reserved
-observation keys (``text`` / ``images`` / ``variables``), and keep simulator
-imports inside ``reset``. A task then needs no parser code at all:
+The environment declares its action space via ``action_spec()``, emits the
+reserved observation keys (``text`` / ``images`` / ``variables``), and keeps
+simulator imports inside ``reset``. The task therefore needs no parser code:
 
     output_type: generate_until_game
     game_env: minigrid

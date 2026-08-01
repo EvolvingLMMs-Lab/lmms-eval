@@ -1,118 +1,19 @@
-"""Parser stages of the agentic game loop.
-
-Three typed roles connect environment and model:
-
-- ``ObservationParser``:  ``EnvState``  -> ``AgentInput``  (task-side, YAML)
-- ``ModelOutputParser``:  ``AgentOutput`` -> ``AgentOutput`` (model-side, CLI)
-- ``ActionParser``:       ``AgentOutput`` -> ``ParsedAction`` (task-side, YAML)
-
-Non-text payloads (tensors, latents) travel inside ``ContentBlock``s, not by
-loosening these signatures. Task-specific parsers live next to their task;
-this module only ships the generic ones.
-
-A task YAML may omit both task-side parsers: the loop then falls back to
-``TemplateObservationParser`` (which reads the reserved observation keys
-``text`` / ``images`` / ``video`` / ``variables`` / ``actions``) and to
-``build_action_parser(env.action_spec())``.
-"""
+"""Generic action parsers built from an environment's ``ActionSpec``."""
 
 from __future__ import annotations
 
 import json
 import re
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 from typing import Any
 
+from lmms_eval.agentic.parsers.base import ActionParser, ParserContext
 from lmms_eval.agentic.types import (
     ActionDef,
     ActionSpec,
-    AgentInput,
     AgentOutput,
-    ContentBlock,
-    EnvState,
     GameAction,
     ParsedAction,
 )
-
-
-@dataclass(slots=True)
-class ParserContext:
-    """Side-channel rollout state passed to every parser call."""
-
-    state: EnvState | None = None
-    agent_id: str | None = None
-    step_idx: int | None = None
-    request: AgentInput | None = None
-    raw_output: AgentOutput | None = None
-    history: list[Any] = field(default_factory=list)
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-
-class ObservationParser(ABC):
-    """Environment state -> model request."""
-
-    @abstractmethod
-    def parse(self, state: EnvState, ctx: ParserContext) -> AgentInput:
-        raise NotImplementedError
-
-
-class ModelOutputParser(ABC):
-    """Raw model output -> normalized model output."""
-
-    @abstractmethod
-    def parse(self, output: AgentOutput, ctx: ParserContext) -> AgentOutput:
-        raise NotImplementedError
-
-
-class ActionParser(ABC):
-    """Normalized model output -> environment action."""
-
-    @abstractmethod
-    def parse(self, output: AgentOutput, ctx: ParserContext) -> ParsedAction:
-        raise NotImplementedError
-
-
-class IdentityModelOutputParser(ModelOutputParser):
-    """Pass model output through unchanged."""
-
-    def parse(self, output: AgentOutput, ctx: ParserContext) -> AgentOutput:
-        del ctx
-        return output
-
-
-class QwenModelOutputParser(ModelOutputParser):
-    """Normalize common Qwen chat outputs before task action parsing."""
-
-    def __init__(self, strip_thinking: bool = True, extract_tool_calls: bool = True) -> None:
-        self.strip_thinking = strip_thinking
-        self.extract_tool_calls = extract_tool_calls
-
-    def parse(self, output: AgentOutput, ctx: ParserContext) -> AgentOutput:
-        del ctx
-        if not isinstance(output, AgentOutput):
-            raise TypeError(f"QwenModelOutputParser requires AgentOutput, got {type(output).__name__}")
-        text = output.first_text() or ""
-        normalized_text = _strip_thinking(text) if self.strip_thinking else text
-        metadata = dict(output.metadata)
-        metadata["raw_text"] = text
-        metadata["normalized_text"] = normalized_text
-        if self.extract_tool_calls:
-            metadata["tool_calls"] = [*_metadata_tool_calls(metadata), *_extract_qwen_tool_calls(text)]
-
-        content = []
-        replaced_text = False
-        for block in output.content:
-            if not replaced_text and block.type == "text" and isinstance(block.data, str):
-                block_metadata = dict(block.metadata)
-                block_metadata["raw_text"] = block.data
-                content.append(ContentBlock.text(normalized_text, **block_metadata))
-                replaced_text = True
-            else:
-                content.append(block)
-        if not replaced_text:
-            content.append(ContentBlock.text(normalized_text))
-        return AgentOutput(content=content, metadata=metadata)
 
 
 class ActionNameParser(ActionParser):
@@ -300,90 +201,6 @@ def build_action_parser(spec: ActionSpec | None) -> ActionParser:
     raise ValueError(f"Unknown ActionSpec.kind {spec.kind!r}; expected discrete, parameterized, or free_text.")
 
 
-class TemplateObservationParser(ObservationParser):
-    """Render reserved observation keys into an ``AgentInput`` with no task code.
-
-    Reserved keys in a dict ``EnvState.observation``: ``text`` (str),
-    ``images`` (list of frames), ``video`` (list of frames for one clip),
-    ``variables`` (dict), ``actions`` (pre-rendered action text overriding the
-    env's ``action_spec()``). Placeholders available in ``template``:
-    ``{instruction}`` ``{text}`` ``{variables}`` ``{actions}`` ``{directive}``
-    ``{step_idx}`` ``{max_steps}``. Without ``template``, empty sections are
-    dropped instead of rendering blank lines.
-    """
-
-    _DEFAULT_SECTIONS = ("{instruction}", "{text}", "Variables: {variables}", "{step_line}", "Available actions:\n{actions}", "{directive}")
-    _DIRECTIVES = {
-        "discrete": "Respond with only the action name.",
-        "parameterized": 'Respond with a single JSON object: {"action": <name>, ...arguments}.',
-        "free_text": "Respond with a single short text command.",
-    }
-
-    def __init__(self, template: str | None = None, include_images: bool | str = True, include_video: bool | str = True, max_images: int | None = None) -> None:
-        self.template = template
-        self.include_images = _as_flag(include_images)
-        self.include_video = _as_flag(include_video)
-        self.max_images = int(max_images) if max_images is not None else None
-
-    def parse(self, state: EnvState, ctx: ParserContext) -> AgentInput:
-        if not isinstance(state, EnvState):
-            raise TypeError(f"TemplateObservationParser requires EnvState, got {type(state).__name__}")
-        observation = state.observation if isinstance(state.observation, dict) else {"text": "" if state.observation is None else str(state.observation)}
-        fields = self._fields(observation, state, ctx)
-
-        content = [ContentBlock.text(self._render(fields))]
-        if self.include_video:
-            frames = observation.get("video")
-            if _has_frames(frames):
-                content.append(ContentBlock(type="video", data=list(frames), metadata={"source": "video"}))
-        if self.include_images:
-            images = observation.get("images")
-            if _has_frames(images):
-                images = list(images)
-                if self.max_images is not None:
-                    images = images[-self.max_images :]
-                content.extend(ContentBlock(type="image", data=image, metadata={"source": "images"}) for image in images)
-
-        return AgentInput(content=content, metadata={"env_id": state.env_id, "step_idx": state.step_idx, "agent_id": ctx.agent_id})
-
-    def _fields(self, observation: dict[str, Any], state: EnvState, ctx: ParserContext) -> dict[str, str]:
-        doc = ctx.metadata.get("doc")
-        spec = ctx.metadata.get("action_spec")
-        variables = observation.get("variables")
-        actions = observation.get("actions")
-        if not isinstance(actions, str):
-            actions = spec.render_prompt() if isinstance(spec, ActionSpec) else ""
-        max_steps = ctx.metadata.get("max_steps")
-        step_line = f"Step {state.step_idx} of {max_steps}." if max_steps is not None else f"Step {state.step_idx}."
-        return {
-            "instruction": str(doc.get("instruction") or "") if isinstance(doc, dict) else "",
-            "text": str(observation.get("text") or ""),
-            "variables": json.dumps(variables, ensure_ascii=False, sort_keys=True, default=str) if isinstance(variables, dict) and variables else "",
-            "actions": actions,
-            "directive": self._DIRECTIVES.get(spec.kind, "") if isinstance(spec, ActionSpec) and actions else "",
-            "step_idx": str(state.step_idx),
-            "max_steps": "" if max_steps is None else str(max_steps),
-            "step_line": step_line,
-        }
-
-    def _render(self, fields: dict[str, str]) -> str:
-        if self.template is not None:
-            rendered = self.template.format_map(_DefaultEmpty(fields))
-            return re.sub(r"\n{3,}", "\n\n", rendered).strip()
-        sections = []
-        for section in self._DEFAULT_SECTIONS:
-            placeholders = re.findall(r"\{(\w+)\}", section)
-            if all(not fields.get(name) for name in placeholders):
-                continue
-            sections.append(section.format_map(_DefaultEmpty(fields)))
-        return "\n\n".join(sections).strip()
-
-
-class _DefaultEmpty(dict):
-    def __missing__(self, key: str) -> str:
-        return ""
-
-
 def _as_action_def(value: Any) -> ActionDef:
     if isinstance(value, ActionDef):
         return value
@@ -423,45 +240,6 @@ def _matches_json_type(value: Any, expected: str) -> bool:
     if expected in {"number", "integer"} and isinstance(value, bool):
         return False
     return isinstance(value, python_type)
-
-
-def _has_frames(value: Any) -> bool:
-    if value is None:
-        return False
-    length = getattr(value, "__len__", None)
-    return bool(len(value)) if callable(length) else True
-
-
-def _as_flag(value: bool | str) -> bool:
-    if isinstance(value, bool):
-        return value
-    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
-
-
-def _strip_thinking(text: str) -> str:
-    candidate = text.strip()
-    if "</think>" in candidate:
-        after_thinking = candidate.rsplit("</think>", 1)[-1].strip()
-        if after_thinking:
-            return after_thinking
-        # Some thinking-mode responses stop right after the closing marker.
-        # Keep the reasoning text so action parsers can still recover a name.
-        return re.sub(r"</?think>", "", candidate, flags=re.IGNORECASE).strip()
-    return candidate
-
-
-def _extract_qwen_tool_calls(text: str) -> list[dict[str, Any]]:
-    tool_calls = []
-    for match in re.finditer(r"<tool_call>(.*?)</tool_call>", text, flags=re.DOTALL | re.IGNORECASE):
-        payload = match.group(1)
-        function_match = re.search(r"<function=([^>\s]+)>(.*?)</function>", payload, flags=re.DOTALL | re.IGNORECASE)
-        if function_match is None:
-            continue
-        params = {}
-        for param_match in re.finditer(r"<parameter=([^>\s]+)>\s*(.*?)\s*</parameter>", function_match.group(2), flags=re.DOTALL | re.IGNORECASE):
-            params[param_match.group(1)] = param_match.group(2).strip()
-        tool_calls.append({"name": function_match.group(1), "arguments": params})
-    return tool_calls
 
 
 def _metadata_tool_calls(metadata: dict[str, Any]) -> list[dict[str, Any]]:

@@ -11,11 +11,10 @@ from lmms_eval.agentic.types import ActionSpec, EnvState, GameAction, StepResult
 class EnvManager(ABC):
     """Gym-style environment lifecycle owned by one rollout.
 
-    Reusable environments live in ``lmms_eval/agentic/envs/`` and are
-    referenced from the task YAML by registry name (``game_env: minigrid``);
-    bespoke ones live next to their task (see
-    ``lmms_eval/tasks/vizdoom_agentic/env.py``) and are referenced via
-    ``game_env: !function utils.<factory>``.
+    Concrete environments live next to their task (for example
+    ``tasks/minigrid_agentic/env.py`` and ``tasks/vizdoom_agentic/env.py``).
+    A task may reference one through a registry short name
+    (``game_env: minigrid``) or a task-local factory.
     """
 
     @abstractmethod

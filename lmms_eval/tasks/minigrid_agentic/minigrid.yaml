@@ -1,6 +1,7 @@
-# Docs-from-code: the "dataset" is a scenario list defined in utils.py, so
-# there is no tracked data file and no hub dependency.
-dataset_path: !function utils.minigrid_dataset
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/minigrid_agentic/data/minigrid.jsonl
 task: "minigrid"
 test_split: test
 output_type: generate_until_game
@@ -39,5 +40,5 @@ lmms_eval_specific_kwargs:
     pre_prompt: ""
     post_prompt: ""
 metadata:
-  version: 0.1
-  description: "MiniGrid game loop driven entirely by the generic env interface (registry env + default parsers, no task-local component code)"
+  version: 0.2
+  description: "MiniGrid game loop driven by a task-local environment and the generic parser interface"
