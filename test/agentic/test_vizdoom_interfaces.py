@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from lmms_eval.agentic import AgentInput, AgentOutput, ContentBlock, EnvState
 from lmms_eval.agentic.parsers import ParserContext
 from lmms_eval.tasks.vizdoom_agentic import utils as vizdoom_utils
@@ -57,8 +59,28 @@ def test_env_manager_factory_builds_without_vizdoom_installed():
 
     assert manager.config["screen_resolution"] == "RES_320X240"
     assert manager.config["available_buttons"] == ["MOVE_LEFT", "MOVE_RIGHT", "ATTACK"]
-    assert manager.frame_history == 12
-    assert manager.tics_per_action == 12
+    assert manager.frame_history == 5
+    assert manager.tics_per_action == 5
+
+
+def test_process_results_reads_episode_metrics_with_embedded_qwen_thinking():
+    payload = {
+        "success": False,
+        "metrics": {
+            "vizdoom_success": 0.0,
+            "vizdoom_steps": 25.0,
+            "vizdoom_invalid_actions": 1.0,
+        },
+        "steps": [{"raw_model_output": "aim, then fire</think>"}],
+    }
+
+    metrics = vizdoom_utils.vizdoom_process_results({}, [json.dumps(payload)])
+
+    assert metrics == {
+        "vizdoom_success": 0.0,
+        "vizdoom_steps": 25.0,
+        "vizdoom_invalid_actions": 1.0,
+    }
 
 
 def test_task_yaml_component_factories_are_wired():

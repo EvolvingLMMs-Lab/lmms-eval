@@ -57,8 +57,10 @@ def vizdoom_env_manager(doc=None, lmms_eval_specific_kwargs=None):
         audio_buffer=False,
         sound_enabled=False,
         window_visible=False,
-        frame_history=12,
-        tics_per_action=12,
+        # Show every simulator tic as one five-frame video segment, then ask
+        # for exactly one new action for the next five tics.
+        frame_history=5,
+        tics_per_action=5,
         capture_action_frames=True,
         emit_action_frames=os.getenv("VIZDOOM_EMIT_ACTION_FRAMES", "0").lower() in {"1", "true", "yes", "on"},
         success_reward_min=1.0,
