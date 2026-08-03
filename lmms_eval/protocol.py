@@ -61,9 +61,15 @@ class ChatMessages(BaseModel):
 
         return images, videos, audios
 
-    def to_hf_messages(self, video_kwargs: Optional[Dict[str, str]] = None):
+    def to_hf_messages(
+        self,
+        video_kwargs: Optional[Dict[str, str]] = None,
+        image_kwargs: Optional[Dict[str, str]] = None,
+    ):
         if video_kwargs is None:
             video_kwargs = {}
+        if image_kwargs is None:
+            image_kwargs = {}
         _num_frames = video_kwargs.get("nframes", 32)  # noqa: F841
         hf_messages = []
         for message in self.messages:
@@ -72,7 +78,7 @@ class ChatMessages(BaseModel):
                 if content.type == "text":
                     hf_message["content"].append({"type": "text", "text": content.text})
                 elif content.type == "image":
-                    hf_message["content"].append({"type": "image", "image": content.url})
+                    hf_message["content"].append({"type": "image", "image": content.url, **image_kwargs})
                 elif content.type == "video":
                     hf_message["content"].append({"type": "video", "video": content.url, **video_kwargs})
                 elif content.type == "audio":
@@ -80,7 +86,7 @@ class ChatMessages(BaseModel):
             hf_messages.append(hf_message)
         return hf_messages
 
-    def to_openai_messages(self, video_kwargs: Optional[Dict[str, str]] = None):
+    def to_openai_messages(self, video_kwargs: Optional[Dict[str, str]] = None, pass_video_url: bool = False):
         if video_kwargs is None:
             video_kwargs = {}
         openai_messages = []
@@ -101,6 +107,15 @@ class ChatMessages(BaseModel):
                         }
                     )
                 elif content.type == "video":
+                    if pass_video_url:
+                        # Forward the video as a URL so the server can decode it (e.g., vLLM's
+                        # media_io_kwargs). Local paths are normalized to file:// so absolute-time
+                        # frame indexing is preserved instead of being lost in client-side decoding.
+                        url = content.url
+                        if not url.startswith(("http://", "https://", "file://", "data:")):
+                            url = f"file://{os.path.abspath(url)}"
+                        openai_message["content"].append({"type": "video_url", "video_url": {"url": url}})
+                        continue
                     if fetch_video is None:
                         raise ImportError("qwen_vl_utils is required for video processing. Please install it with: pip install qwen-vl-utils")
                     video_input = fetch_video({"type": "video", "video": content.url, **video_kwargs})

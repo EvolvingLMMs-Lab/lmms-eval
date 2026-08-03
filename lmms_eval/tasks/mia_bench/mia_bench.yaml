@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/MIA-Bench
+dataset_path: lmms-lab-encoder/MIA-Bench
 dataset_kwargs:
   token: True
 task: "mia_bench"

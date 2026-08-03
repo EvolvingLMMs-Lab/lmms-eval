@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmms_eval"
-version = "0.7.1"
+version = "0.7.2"
 authors = [
     { name = "LMMMs-Lab Evaluation Team", email = "lmms-lab@outlook.com" },
 ]
@@ -105,10 +105,13 @@ metrics = [
     "Levenshtein",
 ]
 gemini = [
-    "google-generativeai",
+    "google-genai>=1.0.0",
 ]
 litellm = [
     "litellm",
+]
+swanlab = [
+    "swanlab",
 ]
 reka = [
     "httpx>=0.23.3",
@@ -155,7 +158,7 @@ all = [
 ]
 
 [tool.setuptools.package-data]
-"lmms_eval" = ["**/*.yaml", "**/*.yml", "**/*.json", "**/*.txt"]
+"lmms_eval" = ["**/*.yaml", "**/*.yml", "**/*.json", "**/*.txt", "tasks/**/*"]
 "lmms_eval.tui.web.dist" = ["**/*"]
 "lmms_eval.tui.web.dist.assets" = ["**/*"]
 

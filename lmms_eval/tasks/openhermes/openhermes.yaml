@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/openhermes_instruction
+dataset_path: lmms-lab-audio/openhermes_instruction
 dataset_kwargs:
   token: True
 

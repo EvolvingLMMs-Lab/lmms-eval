@@ -77,6 +77,9 @@ python -m lmms_eval --tasks list_with_num
 - [SeedBench](https://github.com/AILab-CVC/SEED-Bench) (seedbench)
 - [SeedBench 2](https://github.com/AILab-CVC/SEED-Bench) (seedbench_2)
 - [SeedBench 2 Plus](https://huggingface.co/datasets/AILab-CVC/SEED-Bench-2-plus) (seedbench_2_plus)
+- [SLAKE](https://huggingface.co/datasets/BoKelvin/SLAKE) (slake)
+  - SLAKE English (slake_en)
+  - SLAKE Chinese (slake_zh)
 - [VibeEval](https://github.com/reka-ai/reka-vibe-eval) (vibe_eval)
 - [VisuLogic](https://visulogic-benchmark.github.io/VisuLogic/) (visulogic)
 - [VizWizVQA](https://vizwiz.org/tasks-and-datasets/vqa/) (vizwiz_vqa)
@@ -140,6 +143,12 @@ python -m lmms_eval --tasks list_with_num
   - Benign split (safety_jailbreakbench_benign)
 
 ### Multilingual Benchmarks
+- [Kaleidoscope](https://arxiv.org/abs/2504.07072) (kaleidoscope)
+  - Kaleidoscope multimodal, direct prompting (kaleidoscope_multimodal)
+  - Kaleidoscope text-only, direct prompting (kaleidoscope_text_only)
+  - Kaleidoscope all questions, direct prompting (kaleidoscope_direct)
+  - Kaleidoscope multimodal, zero-shot CoT (kaleidoscope_multimodal_cot)
+  - Kaleidoscope all questions, zero-shot CoT (kaleidoscope_cot)
 - [Multilingual LLaVA Bench](https://huggingface.co/datasets/gagan3012/multilingual-llava-bench)
   - llava_in_the_wild_arabic
   - llava_in_the_wild_bengali
@@ -271,6 +280,8 @@ python -m lmms_eval --tasks list_with_num
 - [EgoPlan](https://github.com/ChenYi99/EgoPlan) (egoplan)
 - [EgoTempo](https://github.com/google-research-datasets/egotempo) (egotempo)
 - [EgoThink](https://github.com/AdaCheng/EgoThink) (egothink)
+- [IntPhys2](https://arxiv.org/abs/2506.09849) (intphys2)
+  - intphys2_debug
 - [MLVU](https://github.com/JUNJIE99/MLVU) (mlvu)
 - [MMT-Bench](https://mmt-bench.github.io/) (mmt)
   - MMT Validation (mmt_val)
@@ -322,7 +333,9 @@ python -m lmms_eval --tasks list_with_num
     - perceptiontest_val_mcppl
 - [PLM VideoBench](https://github.com/PLM-VideoBench/PLM-VideoBench) (plm_videobench)
 - [SciVideoBench](https://scivideobench.github.io/) (scivideobench)
+- [SIS-Bench](https://huggingface.co/datasets/choucsan/SIS-Bench) (sis_bench)
 - [MINERVA](https://arxiv.org/abs/2505.00681) (minerva)
+- [VANTAGE-Bench](https://huggingface.co/datasets/nvidia/PhysicalAI-VANTAGE-Bench) (vantage_vqa) - Physical AI video VQA
 - [Video-ChatGPT](https://github.com/mbzuai-oryx/Video-ChatGPT) (videochatgpt)
   - Video-ChatGPT Generic (videochatgpt_gen)
   - Video-ChatGPT Temporal (videochatgpt_temporal)
@@ -342,6 +355,14 @@ python -m lmms_eval --tasks list_with_num
 
 ### Long Video & Temporal Understanding
 - [Charades-STA](https://github.com/jiyanggao/TALL) (charades_sta)
+- [CG-Bench](https://github.com/CG-Bench/CG-Bench) (cgbench)
+  - Video-only MCQ (cgbench)
+  - Video plus frame-aligned subtitles (cgbench_subtitles)
+  - Both variants (cgbench_all)
+- [CG-AV-Counting](https://av-reasoner.github.io/) (cgav_counting)
+  - Full-video counting (cgav_counting_long): ACC, OBOA, MAE, RMSE
+  - Reference-clip counting (cgav_counting_ref): ACC, OBOA, MAE, RMSE
+  - White-box event/object/attribute clue grounding (cgav_counting_clue): WCS, IFA
 - [FALCON-Bench](https://falcon-bench.github.io/) (FALCONBench) - One-hour-long video understanding
 - [LEMONADE](https://huggingface.co/datasets/amathislab/LEMONADE) (lemonade)
 - [LongTimescope](https://longtimescope.github.io/) (longtimescope)
@@ -522,6 +543,7 @@ python -m lmms_eval --tasks list_with_num
 - [OmniSpatial](https://omnispatial.github.io/) (omnispatial)
 - [Point-Bench](https://pointarena.github.io/) (pointbench)
 - [Where2Place](https://where2place.github.io/) (where2place)
+- [MultihopSpatial](https://huggingface.co/datasets/etri-vilab/MultihopSpatial) (multihopspatial)
 
 ---
 
@@ -548,6 +570,9 @@ python -m lmms_eval --tasks list_with_num
 - [EMMA](https://github.com/EMMA-Bench/EMMA) (emma)
 - [MindCube](https://mindcube.github.io/) (mindcube)
 - [Mix Evals](https://github.com/mix-evals/mix-evals) (mix_evals)
+- [Multi-Crit](https://github.com/tyxiong23/Multi-Crit) (multi_crit)
+  - Multi-Crit Open-ended (multi_crit_open_ended)
+  - Multi-Crit Reasoning (multi_crit_reasoning)
 - [Multimodal RewardBench](https://huggingface.co/datasets/allenai/reward-bench) (multimodal_rewardbench)
 - [Omni-Bench](https://omni-bench.github.io/) (omni_bench)
 - [PhyX](https://phyx-bench.github.io/) (phyx) - Physics grounded reasoning

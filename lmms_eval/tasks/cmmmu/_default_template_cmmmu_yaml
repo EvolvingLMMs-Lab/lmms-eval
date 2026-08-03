@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/CMMMU
+dataset_path: lmms-lab-encoder/CMMMU
 output_type: generate_until
 doc_to_visual: !function utils.cmmmu_doc_to_visual
 doc_to_text: !function utils.cmmmu_doc_to_text

@@ -314,13 +314,14 @@ class LlavaHf(lmms):
             context = contexts[0]
 
             # Some benchmarks like MME do not contain image tokens, so we prepend them to the prompt.
+            # For text-only tasks (e.g. ScienceQA samples with no image), skip token prepending.
             if DEFAULT_IMAGE_TOKEN not in context:
                 if task_type == "image":
-                    image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals)
+                    image_tokens = " ".join([DEFAULT_IMAGE_TOKEN] * len(visuals))
+                    context = f"{image_tokens}\n{context}"
                 elif task_type == "video":
-                    image_tokens = [DEFAULT_VIDEO_TOKEN] * len(visuals)
-                image_tokens = " ".join(image_tokens)
-                context = f"{image_tokens}\n{context}"
+                    image_tokens = " ".join([DEFAULT_VIDEO_TOKEN] * len(visuals))
+                    context = f"{image_tokens}\n{context}"
             # Apply chat template
             messages = [{"role": "user", "content": context}]
             if self.chat_template is not None:
@@ -373,7 +374,7 @@ class LlavaHf(lmms):
                 cont = cont[:, inputs["input_ids"].shape[-1] :]
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
-                cont = ""
+                cont = [[]]
             text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0]
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.debug(f"Generated text for doc ID {doc_id[0]}:\n\n{text_outputs}\n")

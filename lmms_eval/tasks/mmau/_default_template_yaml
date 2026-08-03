@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/mmau
+dataset_path: lmms-lab-audio/mmau
 dataset_kwargs:
   token: True
 doc_to_target: "answer"

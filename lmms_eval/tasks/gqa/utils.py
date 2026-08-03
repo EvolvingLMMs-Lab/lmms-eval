@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 
 def gqa_process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
-    gqa_raw_image_dataset = load_dataset("lmms-lab/GQA", "testdev_balanced_images", split="testdev", token=True)
+    gqa_raw_image_dataset = load_dataset("lmms-lab-encoder/GQA", "testdev_balanced_images", split="testdev", token=True)
     gqa_id2image = {}
     for row in tqdm(gqa_raw_image_dataset, desc="Loading GQA images"):
         gqa_id2image[row["id"]] = row["image"].convert("RGB")

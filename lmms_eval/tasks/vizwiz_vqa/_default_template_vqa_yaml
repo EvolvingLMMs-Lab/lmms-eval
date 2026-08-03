@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/VizWiz-VQA
+dataset_path: lmms-lab-encoder/VizWiz-VQA
 output_type: generate_until
 doc_to_visual: !function utils.vizwiz_vqa_doc_to_visual
 doc_to_text: !function utils.vizwiz_vqa_doc_to_text

@@ -1,0 +1,6 @@
+group: cc_ocr
+task:
+- cc_ocr_multi_scene_ocr
+- cc_ocr_multi_lan_ocr
+- cc_ocr_doc_parsing
+- cc_ocr_kie

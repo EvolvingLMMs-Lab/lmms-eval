@@ -188,7 +188,14 @@ def refcoco_bbox_rec_aggregation_result(results, metric):
         # Compute the specified metric between the ground truth and predicted bounding boxes
         score = scorers[metric](gt_bbox, pred_bbox)
         results_dict[metric].append(score)
-    results_dict[metric] = sum(results_dict[metric]) / len(results_dict[metric])
+    scores = results_dict[metric]
+    if not scores:
+        # No samples for this metric (e.g. when running with --limit); guard against
+        # ZeroDivisionError that would otherwise crash the whole run. Return NaN so an
+        # empty bucket is not conflated with a genuine 0.0 score.
+        eval_logger.warning(f"No samples for metric {metric}; returning NaN")
+        return float("nan")
+    results_dict[metric] = sum(scores) / len(scores)
     print(f"Aggregated {metric} score: {results_dict[metric]}")
     return results_dict[metric]
 

@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/NExTQA
+dataset_path: lmms-eval/NExTQA
 dataset_kwargs:
   token: True
   video: True

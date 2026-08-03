@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/common_voice_15
+dataset_path: lmms-lab-audio/common_voice_15
 dataset_kwargs:
   token: True
 test_split: test

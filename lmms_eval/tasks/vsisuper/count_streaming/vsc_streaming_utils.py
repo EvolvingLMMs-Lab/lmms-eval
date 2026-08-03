@@ -36,9 +36,13 @@ def process_docs_streaming_120mins(dataset: datasets.Dataset) -> datasets.Datase
 
 def _abs_dist_norm(pred, target):
     try:
-        return abs(pred - target) / target
+        pred = float(pred)
+        target = float(target)
+        if target == 0.0:
+            return 0.0 if pred == 0.0 else float("inf")
+        return abs(pred - target) / abs(target)
     except BaseException:
-        return 0.0
+        return float("inf")
 
 
 def _mean_relative_accuracy(pred, target, start=0.5, end=0.95, interval=0.05):
@@ -49,7 +53,11 @@ def _mean_relative_accuracy(pred, target, start=0.5, end=0.95, interval=0.05):
 
 
 def _parse_prediction_list(text):
-    return json.loads(text)
+    try:
+        parsed = json.loads(text)
+    except (TypeError, json.JSONDecodeError):
+        return []
+    return parsed if isinstance(parsed, list) else []
 
 
 def process_results(doc, results):

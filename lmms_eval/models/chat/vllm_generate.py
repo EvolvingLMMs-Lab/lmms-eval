@@ -159,20 +159,23 @@ class VLLMGenerate(VLLMChat):
         sample_token_counts: Optional[TokenCounts] = None
         for batch_requests in batched_requests:
             batched_vllm_inputs = []
+            batched_sampling_params = []
             with ThreadPoolExecutor(max_workers=WORKERS) as executor:
                 futures = [executor.submit(self.make_one_request, request) for request in batch_requests]
                 for future in futures:
                     vllm_inputs, sampling_params = future.result()
                     batched_vllm_inputs.append(vllm_inputs)
+                    batched_sampling_params.append(sampling_params)
 
-            sampling_params = SamplingParams(**sampling_params)
             start_time = time.time()
 
-            def _run_generate(inputs: list[dict]) -> list[str]:
+            def _run_generate(request_items: list[tuple[dict, dict]]) -> list[str]:
+                inputs = [vllm_inputs for vllm_inputs, _ in request_items]
+                sampling_params = [SamplingParams(**params) for _, params in request_items]
                 response = self.client.generate(inputs, sampling_params)
                 return [o.outputs[0].text for o in response]
 
-            response_text = self._run_tp_synced(batched_vllm_inputs, _run_generate)
+            response_text = self._run_tp_synced(list(zip(batched_vllm_inputs, batched_sampling_params)), _run_generate)
             end_time = time.time()
 
             # Calculate timing metrics for batch

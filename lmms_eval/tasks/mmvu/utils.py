@@ -2,13 +2,16 @@ import os
 import re
 import string
 import sys
+import threading
 from pathlib import Path
 from typing import Any, Dict
 
 import yaml
 from loguru import logger as eval_logger
 
-from lmms_eval.llm_judge import ServerConfig, get_server
+from lmms_eval.verifiers import VerificationPipeline
+from lmms_eval.verifiers.extractors import StripReasoningExtractor
+from lmms_eval.verifiers.openai import OpenAIVerifier
 
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface")
 
@@ -25,19 +28,45 @@ with open(Path(__file__).parent / "mmvu_val.yaml", "r") as f:
 cache_name_val = yaml.safe_load("".join(safe_data_val))["dataset_kwargs"]["cache_dir"]
 cache_dir_val = os.path.join(base_cache_dir, cache_name_val)
 
-# Initialize the LLM judge server (lazy initialization)
-_server = None
+# Lazy pipeline singleton for GPT-based open-ended evaluation
+_pipeline = None
+_pipeline_lock = threading.Lock()
 
 
-def get_llm_judge_server() -> Any:
-    """Lazy initialization of LLM judge server"""
-    global _server
-    if _server is None:
-        API_TYPE = os.getenv("API_TYPE", "openai")
-        MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
-        server_config = ServerConfig(model_name=MODEL_VERSION)
-        _server = get_server(server_name=API_TYPE, config=server_config)
-    return _server
+def _get_pipeline() -> VerificationPipeline:
+    """Lazy initialization of verification pipeline for open-ended GPT judge."""
+    global _pipeline
+    if _pipeline is None:
+        with _pipeline_lock:
+            if _pipeline is None:  # double-check
+                API_TYPE = os.getenv("API_TYPE", "openai")
+                MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
+                _pipeline = VerificationPipeline(
+                    extractors=[StripReasoningExtractor()],
+                    verifier=OpenAIVerifier(
+                        model=MODEL_VERSION,
+                        api_type=API_TYPE,
+                        judge_type="binary",
+                        custom_prompt="""You are a strict evaluator assessing answer correctness. You must output 1 for fully correct answers and 0 for any other case.
+
+# Evaluation Rules for Open-Ended Questions
+- The model prediction may contain reasoning, focus on extracting the final answer.
+- Score 1 if the prediction matches the answer semantically, even if in different format.
+- For mathematical notation, treat equivalent forms as correct (e.g., O(n²) = O(n^2), n² = n^2).
+- Score 0 for partially correct answers or answers with extra incorrect information.
+- Ignore minor differences in formatting, capitalization, or spacing.
+- Treat numerical answers as correct if they match within reasonable precision.
+- For questions requiring units, both value and unit must be correct.
+
+Return only "1" or "0" with no additional text or formatting.
+
+Question: {question}
+Correct Answer: {ground_truth}
+Model Prediction: {prediction}""",
+                        response_format="binary",
+                    ),
+                )
+    return _pipeline
 
 
 def mmvu_doc_to_visual_val(doc):
@@ -269,36 +298,13 @@ def evaluate_with_llm_judge(doc: Dict[str, Any], prediction: str) -> tuple[bool,
     # For open-ended questions, if rule-based says it's incorrect, try GPT judge for semantic equivalence
     # This handles cases like "O(n²)" vs "O(n^2)" where rule-based might be too strict
     try:
-        server = get_llm_judge_server()
+        pipeline = _get_pipeline()
         formatted_question = construct_question_prompt(doc)
         answer = doc["answer"]
-
         full_answer = str(answer)
 
-        custom_prompt = """You are a strict evaluator assessing answer correctness. You must output 1 for fully correct answers and 0 for any other case.
-
-# Evaluation Rules for Open-Ended Questions
-- The model prediction may contain reasoning, focus on extracting the final answer.
-- Score 1 if the prediction matches the answer semantically, even if in different format.
-- For mathematical notation, treat equivalent forms as correct (e.g., O(n²) = O(n^2), n² = n^2).
-- Score 0 for partially correct answers or answers with extra incorrect information.
-- Ignore minor differences in formatting, capitalization, or spacing.
-- Treat numerical answers as correct if they match within reasonable precision.
-- For questions requiring units, both value and unit must be correct.
-
-Return only "1" or "0" with no additional text or formatting."""
-
-        result = server.evaluate_binary(question=formatted_question, answer=full_answer, prediction=prediction, output_format="0/1", custom_prompt=custom_prompt)
-
-        if result["success"]:
-            judge_response = result["result"]
-            judge_score = str(judge_response).strip()
-            is_correct = judge_score == "1"
-            return is_correct, "gpt-based"
-        else:
-            eval_logger.error(f"GPT judge evaluation failed: {result.get('raw_response', 'Unknown error')}")
-            # Fall back to rule-based result if GPT fails
-            return rule_correct, "rule-based"
+        result = pipeline(question=formatted_question, prediction=prediction, ground_truth=full_answer)
+        return result.is_correct, "gpt-based"
 
     except Exception as e:
         eval_logger.error(f"Error getting GPT judge response: {e}")

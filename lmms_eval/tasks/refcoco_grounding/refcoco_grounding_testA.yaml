@@ -1,0 +1,7 @@
+include: _default_template_yaml
+
+task: refcoco_grounding_testA
+test_split: testA
+
+metadata:
+  version: 0.0

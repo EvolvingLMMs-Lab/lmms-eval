@@ -1,6 +1,6 @@
 task: "mmbench_en_dev_lite"
 test_split: lite 
-dataset_path: lmms-lab/LMMs-Eval-Lite
+dataset_path: lmms-lab-encoder/LMMs-Eval-Lite
 dataset_name: mmbench_en_dev
 dataset_kwargs:
   token: True

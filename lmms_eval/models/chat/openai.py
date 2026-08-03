@@ -22,6 +22,7 @@ from lmms_eval.models.model_utils.usage_metrics import (
     log_usage,
 )
 from lmms_eval.models.simple.openai import OpenAICompatible as OpenAICompatibleSimple
+from lmms_eval.models.simple.openai import _get_max_new_tokens
 from lmms_eval.protocol import ChatMessages
 
 VideoReader, _ = optional_import("decord", "VideoReader")
@@ -33,6 +34,11 @@ load_dotenv(verbose=True)
 @register_model("openai")
 class OpenAICompatible(OpenAICompatibleSimple):
     is_simple = False
+
+    def __init__(self, *args, pass_video_url: bool = False, enable_thinking_kwarg: object = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pass_video_url = bool(pass_video_url)
+        self.enable_thinking_kwarg = enable_thinking_kwarg
 
     def generate_until(self, requests) -> List[GenerationResult]:
         if not requests:
@@ -177,7 +183,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
             chat_messages_raw = doc_to_messages(self.task_dict[task][split][doc_id])
             chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages_raw})
             request_gen_kwargs = dict(gen_kwargs)
-            max_new_tokens = min(request_gen_kwargs.get("max_new_tokens", 1024), 4096)
+            max_new_tokens = _get_max_new_tokens(request_gen_kwargs)
             temperature = request_gen_kwargs.get("temperature", 0)
 
             if self.video_fps is not None and self.video_fps > 0:
@@ -186,17 +192,26 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 video_kwargs = {"nframes": self.max_frames_num}
 
             payload = {
-                "messages": chat_messages.to_openai_messages(video_kwargs=video_kwargs),
+                "messages": chat_messages.to_openai_messages(video_kwargs=video_kwargs, pass_video_url=self.pass_video_url),
                 "model": self.model_version,
                 "max_tokens": max_new_tokens,
                 "temperature": temperature,
             }
+            extra_body = {}
+            if self.pass_video_url:
+                extra_body["media_io_kwargs"] = {"video": {"num_frames": int(self.max_frames_num)}}
+            if self.enable_thinking_kwarg is not None:
+                ek = self.enable_thinking_kwarg
+                ek_bool = ek.lower() == "true" if isinstance(ek, str) else bool(ek)
+                extra_body["chat_template_kwargs"] = {"enable_thinking": ek_bool}
+            if extra_body:
+                payload["extra_body"] = extra_body
 
             if "o1" in self.model_version or "o3" in self.model_version or "o4" in self.model_version or "gpt-5" in self.model_version:
                 payload.pop("temperature")
                 payload.pop("max_tokens")
                 payload["response_format"] = {"type": "text"}
-                payload["max_completion_tokens"] = 5000
+                payload["max_completion_tokens"] = max_new_tokens
 
             return payload
 

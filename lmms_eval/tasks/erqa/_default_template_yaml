@@ -3,6 +3,7 @@ test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.erqa_doc_to_visual
 doc_to_text: !function utils.erqa_doc_to_text
+doc_to_messages: !function utils.erqa_doc_to_messages
 doc_to_target: "answer"
 
 process_results: !function utils.erqa_process_results

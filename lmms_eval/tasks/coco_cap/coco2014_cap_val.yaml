@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/COCO-Caption
+dataset_path: lmms-lab-encoder/COCO-Caption
 dataset_kwargs:
   token: True
 task: "coco2014_cap_val"

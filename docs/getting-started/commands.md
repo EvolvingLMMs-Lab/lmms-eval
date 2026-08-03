@@ -57,6 +57,8 @@ This mode supports a number of command-line arguments, the details of which can 
 
 * `--wandb_args`:  Tracks logging to Weights and Biases for evaluation runs and includes args passed to `wandb.init`, such as `project` and `job_type`. Full list [here](https://docs.wandb.ai/ref/python/init). e.g., ```--wandb_args project=test-project,name=test-run```
 
+* `--swanlab_args`:  Tracks logging to [SwanLab](https://swanlab.cn) for evaluation runs (a Weights and Biases alternative) and includes args passed to `swanlab.init`, such as `project`, `exp_name`, and `mode`. Requires `pip install swanlab`; authenticate via the `SWANLAB_API_KEY` env var (and optional `SWANLAB_HOST` for a self-hosted instance). e.g., ```--swanlab_args project=lmms-eval,exp_name=test-run```
+
 ## Command Examples
 
 ### Basic Evaluation

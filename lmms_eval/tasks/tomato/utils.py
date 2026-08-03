@@ -10,7 +10,6 @@ import cv2
 import numpy as np
 import yaml
 from loguru import logger as eval_logger
-from openai import AzureOpenAI, OpenAI
 
 random.seed(42)
 
@@ -19,11 +18,15 @@ dir_name = os.path.dirname(os.path.abspath(__file__))
 
 
 SYSTEM_PROMPT = "You are an expert in understanding dynamics of objects."
-NUM_FRAMES = 16
 MAX_ITER = 5
 USE_GPT_PARSER = False  # whether to use gpt parser from TOMATO's source code, else use lmms_eval parser
 
 if USE_GPT_PARSER:
+    from openai import (  # lazy: only needed for the (disabled) GPT parser
+        AzureOpenAI,
+        OpenAI,
+    )
+
     eval_logger.info(f"Using GPT parser for TOMATO task. The max iteration is set to {MAX_ITER}. " "If the response is not a valid answer, it will try to use GPT to parse the response.")
     API_TYPE = os.getenv("API_TYPE", "azure")
     if API_TYPE == "openai":
@@ -48,7 +51,8 @@ if USE_GPT_PARSER:
     else:
         raise ValueError(f"Unsupported API_TYPE: {API_TYPE}. Please set it to 'openai' or 'azure'.")
 
-eval_logger.info(f"Using {NUM_FRAMES} frames for TOMATO task. Please set the max_num_frames=16 in model_args for the result reported in the TOMATO paper: https://arxiv.org/pdf/2410.23266.")
+# Frame count is governed entirely by the model's num_frames (e.g. via
+# --model_args num_frames=N); the task does not impose its own frame budget.
 
 
 """
@@ -69,7 +73,7 @@ python3 -m accelerate.commands.launch \
 with open(Path(__file__).parent / "tomato.yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
-    for i, line in enumerate(raw_data):
+    for line in raw_data:
         # remove function definition since yaml load cannot handle it
         if "!function" not in line:
             safe_data.append(line)
@@ -79,12 +83,11 @@ hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
 cache_dir = os.path.join(hf_home, config["dataset_kwargs"]["cache_dir"])
 
 
-def construct_prompt(question: str, options: list, num_frames: int) -> Tuple:
+def construct_prompt(question: str, options: list) -> Tuple:
     """
     Args:
         question (str): question in the dataset
         options (list): list of options
-        num_frames (int): number of frames extracted from the video
 
     Returns:
         prompt (str): well-constructed prompt
@@ -95,7 +98,7 @@ def construct_prompt(question: str, options: list, num_frames: int) -> Tuple:
     all_choices = [f"{chr(65 + i)}" for i in range(len(options))]
     index2ans = {all_choices[i]: options[i] for i in range(len(options))}
 
-    prompt = f"""You will be provided with {num_frames} separate frames uniformly sampled from a video, the frames are provided in chronological order of the video. Analyze these frames and provide the answer to the question about the video content. Answer the multiple-choice question about the video content. 
+    prompt = f"""You will be provided with frames uniformly sampled from a video, the frames are provided in chronological order of the video. Analyze these frames and provide the answer to the question about the video content. Answer the multiple-choice question about the video content.
 
 You must use these frames to answer the multiple-choice question; do not rely on any externel knowledge or commonsense. 
 
@@ -173,7 +176,7 @@ def tomato_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     """
     Process the document to a prompt for video + audio inputs
     """
-    prompt, all_choices, index2ans = construct_prompt(question=doc["question"], options=doc["options"], num_frames=NUM_FRAMES)
+    prompt, all_choices, index2ans = construct_prompt(question=doc["question"], options=doc["options"])
     return prompt
 
 
@@ -300,7 +303,7 @@ def tomato_process_results(doc, results):
         a dictionary with key: metric name (in this case av_odyssey score), value: metric value
     """
     respone = results[0]
-    _, all_choices, index2ans = construct_prompt(question=doc["question"], options=doc["options"], num_frames=NUM_FRAMES)
+    _, all_choices, index2ans = construct_prompt(question=doc["question"], options=doc["options"])
     optionized_list = [f"{chr(65 + i)}. {option}" for i, option in enumerate(doc["options"])]
     gt = optionized_list[doc["answer"]]
     if USE_GPT_PARSER:
@@ -340,7 +343,6 @@ def tomato_aggregate_results(results):
     num_corrects = 0
     num_total = 0
     for result in results:
-        question_id = result["question_id"]
         score = result["score"]
         reason_type = result["reason_type"]
         demonstration_type = result["demonstration_type"]

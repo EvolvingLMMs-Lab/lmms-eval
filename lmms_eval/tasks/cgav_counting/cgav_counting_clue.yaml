@@ -1,0 +1,13 @@
+task: cgav_counting_clue
+include: _default_template_yaml
+doc_to_visual: !function utils.cgav_doc_to_visual_clue
+doc_to_text: !function utils.cgav_doc_to_text_clue
+doc_to_target: clue
+process_results: !function utils.cgav_process_results_clue
+metric_list:
+  - metric: wcs
+    aggregation: !function utils.aggregate_wcs
+    higher_is_better: true
+  - metric: ifa
+    aggregation: !function utils.aggregate_ifa
+    higher_is_better: true

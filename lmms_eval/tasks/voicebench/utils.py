@@ -1,11 +1,14 @@
 import os
 import random
 import re
+import threading
 
 import numpy as np
 from loguru import logger as eval_logger
 
 from lmms_eval.llm_judge import ServerConfig, get_server
+from lmms_eval.verifiers import VerificationPipeline, VerifyResult
+from lmms_eval.verifiers.openai import OpenAIVerifier
 
 API_TYPE = os.getenv("API_TYPE", "openai")
 # Use JUDGE_MODEL_VERSION instead of MODEL_VERSION
@@ -134,13 +137,7 @@ def voicebench_aggregate_results(results):
     return accuracy
 
 
-# Evaluation method for alpacaeval, commoneval and wildvoice
-def voicebench_process_results_open(doc, results):
-    parsed_preds = []
-    scores = []
-
-    # Open-ended evaluation prompt template
-    meta_prompt_open = """I need your help to evaluate the performance of several models in the speech interaction scenario. The models will receive a speech input from the user, which they need to understand and respond to with a speech output.
+VOICEBENCH_OPEN_JUDGE_PROMPT = """I need your help to evaluate the performance of several models in the speech interaction scenario. The models will receive a speech input from the user, which they need to understand and respond to with a speech output.
 Your task is to rate the model's responses based on the provided user input transcription [Instruction] and the model's output transcription [Response].
 
 Please evaluate the response on a scale of 1 to 5:
@@ -157,6 +154,48 @@ Below are the transcription of user's instruction and models' response:
 After evaluating, please output the score only without anything else.
 You don't need to provide any explanations."""
 
+
+# Previously sent as a system message; now included as a prefix in the user prompt.
+_VOICEBENCH_OPEN_SYSTEM_INSTRUCTION = "You are a helpful assistant who tries to help answer the user's question."
+
+
+def _voicebench_open_prompt_fn(question, prediction, ground_truth, **kwargs):
+    prompt = VOICEBENCH_OPEN_JUDGE_PROMPT.format(prompt=question, response=prediction)
+    return f"{_VOICEBENCH_OPEN_SYSTEM_INSTRUCTION}\n\n{prompt}"
+
+
+def _parse_raw_score(text):
+    """Parse raw 1-5 score without normalization."""
+    numbers = re.findall(r"\d+(?:\.\d+)?", text.strip())
+    score = float(numbers[0]) if numbers else 0.0
+    return VerifyResult(score=score, is_correct=score >= 3.0, raw_output=text)
+
+
+_voicebench_open_pipeline = None
+_voicebench_open_pipeline_lock = threading.Lock()
+
+
+def _get_voicebench_open_pipeline():
+    global _voicebench_open_pipeline
+    if _voicebench_open_pipeline is None:
+        with _voicebench_open_pipeline_lock:
+            if _voicebench_open_pipeline is None:  # double-check
+                _voicebench_open_pipeline = VerificationPipeline(
+                    verifier=OpenAIVerifier(
+                        model=JUDGE_MODEL_VERSION,
+                        custom_prompt=_voicebench_open_prompt_fn,
+                        response_parser=_parse_raw_score,
+                        temperature=0.5,
+                        max_tokens=10,
+                    ),
+                )
+    return _voicebench_open_pipeline
+
+
+# Evaluation method for alpacaeval, commoneval and wildvoice
+def voicebench_process_results_open(doc, results):
+    scores = []
+
     for pred in results:
         prediction = pred.strip() if isinstance(pred, str) else str(pred)
 
@@ -171,34 +210,9 @@ You don't need to provide any explanations."""
 
         instruction_text = get_column_value(doc, ["prompt", "instruction", "question", "query", "source_text", "transcript", "transcription", "audio_text", "text"])
 
-        formatted_prompt = meta_prompt_open.format(prompt=instruction_text, response=prediction)
-
-        try:
-            from lmms_eval.llm_judge.protocol import Request, ServerConfig
-
-            custom_config = ServerConfig(model_name=JUDGE_MODEL_VERSION, temperature=0.5, max_tokens=10)
-
-            request = Request(messages=[{"role": "system", "content": "You are a helpful assistant who tries to help answer the user's question."}, {"role": "user", "content": formatted_prompt}], config=custom_config)
-
-            response = server.evaluate(request)
-
-            if response.success:
-                judge_response = response.content.strip()
-                try:
-                    judge_score = int(judge_response)
-                except ValueError:
-                    eval_logger.error(f"Failed to parse score: {judge_response}")
-                    judge_score = 0.0
-            else:
-                eval_logger.error(f"Judge evaluation failed: {response.content}")
-                judge_score = 0.0
-
-        except Exception as e:
-            eval_logger.error(f"Error getting judge response: {e}")
-            judge_score = 0.0
-
-        scores.append(judge_score)
-        parsed_preds.append(prediction)
+        pipeline = _get_voicebench_open_pipeline()
+        result = pipeline(question=instruction_text, prediction=prediction, ground_truth="")
+        scores.append(result.score)
 
     avg_score = sum(scores) / len(scores) if scores else 0.0
     return {"llm_as_judge_eval": avg_score}

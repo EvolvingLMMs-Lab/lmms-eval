@@ -1,5 +1,6 @@
 import os
-from functools import partial
+import re
+from functools import partial  # noqa: F401  (used inside eval()'d MRA metric strings)
 from pathlib import Path
 
 import datasets
@@ -7,6 +8,40 @@ import numpy as np
 import pandas as pd
 import yaml
 from loguru import logger as eval_logger
+
+_NUMBER_WORDS = {
+    "zero": 0,
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+    "eleven": 11,
+    "twelve": 12,
+    "thirteen": 13,
+    "fourteen": 14,
+    "fifteen": 15,
+    "sixteen": 16,
+    "seventeen": 17,
+    "eighteen": 18,
+    "nineteen": 19,
+    "twenty": 20,
+    "thirty": 30,
+    "forty": 40,
+    "fifty": 50,
+    "sixty": 60,
+    "seventy": 70,
+    "eighty": 80,
+    "ninety": 90,
+    "hundred": 100,
+    "thousand": 1000,
+}
+_NUM_RE = re.compile(r"-?\d+(?:\.\d+)?")
 
 MCA_QUESTION_TYPES = [
     "object_rel_direction_easy",
@@ -37,7 +72,7 @@ base_cache_dir = os.path.expanduser(hf_home)
 with open(Path(__file__).parent / "vsibench.yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
-    for i, line in enumerate(raw_data):
+    for line in raw_data:
         if "!function" not in line:
             safe_data.append(line)
 cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
@@ -110,6 +145,65 @@ def to_float(pred):
     return pred
 
 
+def extract_number(text):
+    """Pull the first numeric value out of a model response.
+
+    Handles bare digits ("3", "3.0"), digits embedded in a sentence
+    ("There are 3 boxes"), and English number words ("three", "Three boxes.",
+    "twenty-one", "three hundred and twenty-one"). Returns None if nothing
+    numeric is found.
+
+    Ordering matters: whichever number token (digit or word) appears first
+    in the string wins. This avoids mis-scoring responses like
+    "one apple, room 2" — the intended count is "one" (1), not the later
+    digit "2".
+    """
+    if text is None:
+        return None
+    s = str(text).strip().lower()
+    if not s:
+        return None
+
+    digit_match = _NUM_RE.search(s)
+    word_run_start = None
+    word_run_tokens = []
+    for m in re.finditer(r"[a-z]+", s):
+        tok = m.group(0)
+        if word_run_start is None:
+            if tok in _NUMBER_WORDS:
+                word_run_start = m.start()
+                word_run_tokens.append(tok)
+        else:
+            if tok == "and":
+                continue
+            if tok in _NUMBER_WORDS:
+                word_run_tokens.append(tok)
+            else:
+                break
+
+    digit_first = digit_match is not None and (word_run_start is None or digit_match.start() < word_run_start)
+    if digit_first:
+        try:
+            return float(digit_match.group(0))
+        except ValueError:
+            pass
+
+    if word_run_start is None:
+        return None
+
+    total, current = 0, 0
+    for tok in word_run_tokens:
+        val = _NUMBER_WORDS[tok]
+        if val == 100:
+            current = max(current, 1) * 100
+        elif val == 1000:
+            total += max(current, 1) * 1000
+            current = 0
+        else:
+            current += val
+    return float(total + current)
+
+
 def vsibench_process_results(doc, results):
     doc["prediction"] = results[0]
     if doc["question_type"] in MCA_QUESTION_TYPES:
@@ -118,7 +212,7 @@ def vsibench_process_results(doc, results):
     elif doc["question_type"] in NA_QUESTION_TYPES:
         for key, value in METRICS_FOR_NA.items():
             try:
-                doc[key] = eval(value)(to_float(fuzzy_matching(doc["prediction"])), to_float(doc["ground_truth"]))
+                doc[key] = eval(value)(extract_number(doc["prediction"]), to_float(doc["ground_truth"]))
             except TypeError:
                 doc[key] = WORST_CASE_FOR_METRICS[key]
     else:

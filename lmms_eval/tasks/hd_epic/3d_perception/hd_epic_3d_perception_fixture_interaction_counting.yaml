@@ -1,0 +1,13 @@
+# HD-EPIC subtask: 3d_perception_fixture_interaction_counting
+# "How many times did I close the item indicated by <BBOX> in TIME?"
+include: ../_hd_epic_base.yaml
+
+task: hd_epic_3d_perception_fixture_interaction_counting
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_3d_perception_fixture_interaction_counting
+
+metadata:
+  version: 1.0
+  task_type: 3d_perception_fixture_interaction_counting
+  description: "\"How many times did I close the item indicated by <BBOX> in TIME?\""

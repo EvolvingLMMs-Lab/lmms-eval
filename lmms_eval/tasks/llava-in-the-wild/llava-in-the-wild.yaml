@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/llava-bench-in-the-wild
+dataset_path: lmms-lab-encoder/llava-bench-in-the-wild
 dataset_kwargs:
   token: True
 task: "llava_in_the_wild"

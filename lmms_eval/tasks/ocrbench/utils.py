@@ -17,6 +17,20 @@ OCRBench_score = {
 }
 
 
+def _fold_fullwidth_ascii(text: str) -> str:
+    """Fold fullwidth ASCII and ideographic space without broader NFKC changes."""
+    folded = []
+    for char in text:
+        codepoint = ord(char)
+        if 0xFF01 <= codepoint <= 0xFF5E:
+            folded.append(chr(codepoint - 0xFEE0))
+        elif codepoint == 0x3000:
+            folded.append(" ")
+        else:
+            folded.append(char)
+    return "".join(folded)
+
+
 def ocrbench_doc_to_visual(doc):
     # Assuming the 'doc' dictionary has a key 'image' with image data
     return [doc["image"].convert("RGB")]
@@ -51,13 +65,13 @@ def ocrbench_process_results(doc, results):
     else:
         if type(gt_ans) == list:
             for j in range(len(gt_ans)):
-                answer = gt_ans[j].lower().strip().replace("\n", " ")
-                predict = pred.lower().strip().replace("\n", " ")
+                answer = _fold_fullwidth_ascii(gt_ans[j]).lower().strip().replace("\n", " ")
+                predict = _fold_fullwidth_ascii(pred).lower().strip().replace("\n", " ")
                 if answer in predict:
                     score = 1
         else:
-            answer = gt_ans.lower().strip().replace("\n", " ")
-            predict = pred.lower().strip().replace("\n", " ")
+            answer = _fold_fullwidth_ascii(gt_ans).lower().strip().replace("\n", " ")
+            predict = _fold_fullwidth_ascii(pred).lower().strip().replace("\n", " ")
             if answer in predict:
                 score = 1
     return {

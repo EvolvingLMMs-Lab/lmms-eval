@@ -17,6 +17,14 @@ logger.add(sys.stdout, level="WARNING", format=log_format)
 
 AVAILABLE_SIMPLE_MODELS = {
     "aero": "Aero",
+    "generation_api": "GenerationApi",
+    "cosmos_wm": "CosmosWorldModel",
+    "wan2_1_t2i": "Wan2_1_T2I",
+    "wan2_1_t2v": "Wan2_1_T2V",
+    "wan2_2": "Wan2_2",
+    "wan2_2_t2v": "Wan2_2_T2V",
+    "ltx_video": "LTXVideo",
+    "magi1_wm": "Magi1WorldModel",
     "aria": "Aria",
     "audio_flamingo_3": "AudioFlamingo3",
     "glm4v": "GLM4V",
@@ -36,7 +44,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "egogpt": "EgoGPT",
     "from_log": "FromLog",
     "fuyu": "Fuyu",
-    "gemini_api": "GeminiAPI",
+    "gemini": "Gemini",
     "gpt4o_audio": "GPT4OAudio",
     "gemma3": "Gemma3",
     "gpt4v": "GPT4V",
@@ -113,6 +121,7 @@ AVAILABLE_SIMPLE_MODELS = {
 }
 
 AVAILABLE_CHAT_TEMPLATE_MODELS = {
+    "gemini": "Gemini",
     "bagel_lmms_engine": "BagelLmmsEngine",
     "fastvideo": "FastVideo",
     "internvl_hf": "InternVLHf",
@@ -122,6 +131,11 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "qwen3_vl": "Qwen3_VL",
     "qwen3_5": "Qwen3_5",
     "qwen2_5_vl": "Qwen2_5_VL",
+    "qwen2_5_omni": "Qwen2_5_Omni",
+    "qwen3_omni": "Qwen3_Omni",
+    "omnivinci": "OmniVinci",
+    "baichuan_omni": "BaichuanOmni",
+    "minicpm_o": "MiniCPM_O",
     "thyme": "Thyme",
     "openai": "OpenAICompatible",
     "vllm": "VLLM",
@@ -135,9 +149,12 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "async_hf_model": "AsyncHFModel",
     "longvila": "LongVila",
     "llava_onevision1_5": "Llava_OneVision1_5",
+    "llava_onevision2": "Llava_OneVision2",
+    "lfm2_5_vl": "LFM2_5_VL",
 }
 
 MODEL_ALIASES: dict[str, tuple[str, ...]] = {
+    "gemini": ("gemini_api",),
     "dummy": ("dummy_video_reader",),
     "openai": ("openai_compatible", "openai_compatible_chat"),
     "async_openai": ("async_openai_compatible_chat", "async_openai_compatible"),

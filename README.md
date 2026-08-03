@@ -41,7 +41,7 @@ For how the pipeline works and the concrete mechanisms behind these principles, 
 
 ## What's New
 
-**v0.7** (Feb 2026) - Operational simplicity and pipeline maturity. 25+ new tasks across 8 domains, 2 new model backends, agentic task evaluation (`generate_until_agentic`), video I/O overhaul with TorchCodec (up to 3.58x faster), Lance-backed video distribution on Hugging Face, safety/red-teaming baselines, efficiency metrics (per-sample token counts, run-level throughput), and streamlined flattened JSONL log output for cleaner post-analysis. [Release notes](docs/releases/lmms-eval-0.7.md) | [Changelog](docs/releases/CHANGELOG.md).
+**v0.7** (Feb 2026) - Operational simplicity and pipeline maturity. 25+ new tasks across 8 domains, 2 new model backends, agentic task evaluation (`generate_until_agentic`), video I/O overhaul with TorchCodec (up to 3.58x faster), safety/red-teaming baselines, efficiency metrics (per-sample token counts, run-level throughput), and streamlined flattened JSONL log output for cleaner post-analysis. [Release notes](docs/releases/lmms-eval-0.7.md) | [Changelog](docs/releases/CHANGELOG.md).
 
 **v0.6** (Feb 2026) - Evaluation as a service. Standalone HTTP eval server, ~7.5x throughput over v0.5, statistically grounded results (CI, paired t-test), 50+ new tasks. [Release notes](docs/releases/lmms-eval-0.6.md) | [Changelog](docs/releases/CHANGELOG.md).
 

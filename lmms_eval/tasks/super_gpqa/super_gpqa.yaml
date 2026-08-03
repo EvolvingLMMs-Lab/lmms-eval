@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/SuperGPQA
+dataset_path: lmms-lab-encoder/SuperGPQA
 dataset_kwargs:
   token: True
 test_split: test

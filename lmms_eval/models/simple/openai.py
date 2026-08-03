@@ -63,6 +63,10 @@ def _normalize_openai_message_content(content) -> str:
     return str(content)
 
 
+def _get_max_new_tokens(gen_kwargs: dict) -> int:
+    return gen_kwargs.get("max_new_tokens", 1024)
+
+
 @register_model("openai")
 class OpenAICompatible(lmms):
     def __init__(
@@ -440,7 +444,7 @@ class OpenAICompatible(lmms):
                         imgs.append(self.encode_image(visual))
 
             request_gen_kwargs = dict(gen_kwargs)
-            max_new_tokens = min(request_gen_kwargs.get("max_new_tokens", 1024), 4096)
+            max_new_tokens = _get_max_new_tokens(request_gen_kwargs)
             temperature = request_gen_kwargs.get("temperature", 0)
 
             payload = {

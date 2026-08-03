@@ -1,0 +1,28 @@
+dataset_path: facebook/minimal_video_pairs
+test_split: mini
+output_type: generate_until
+doc_to_visual: !function utils.mvp_doc_to_visual
+doc_to_text: !function utils.mvp_doc_to_text
+doc_to_target: !function utils.mvp_doc_to_answer
+process_results: !function utils.mvp_process_results
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "You are an expert video understanding AI system. Carefully watch the video and pay attention to the cause and sequence of events, the details and movements of objects, and actions of people. Based on your observations, select the best option that accurately addresses the following question: \n"
+    post_prompt: " \nEven when unsure, always answer with a single letter from A or B, format exactly like: 'Answer: A/B'."
+metric_list:
+  - metric: pair_accuracy
+    aggregation: !function utils.mvp_pair_accuracy_aggregation
+    higher_is_better: true
+  - metric: single_accuracy
+    aggregation: !function utils.mvp_single_accuracy_aggregation
+    higher_is_better: true
+metadata:
+  version: 0.1
+  # Sub-directory under HF_HOME that holds the MVP source videos, one
+  # sub-directory per source (pt, ssv2, language_table, intphys, inflevel,
+  # grasp, clevrer, star, vinoground). Resolved as
+  # os.path.join(expanduser(HF_HOME), video_cache_dir). Videos are NOT
+  # redistributed by facebook/minimal_video_pairs for licensing reasons —
+  # set this up per https://github.com/facebookresearch/minimal_video_pairs.
+  # The MVP_VIDEO_DIR env var, if set, overrides this with an absolute path.
+  video_cache_dir: mvp_mini
