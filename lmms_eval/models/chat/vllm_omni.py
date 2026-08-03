@@ -5,6 +5,7 @@ import copy
 import importlib
 import json
 import os
+import sys
 import time
 import uuid
 import warnings
@@ -41,6 +42,7 @@ soundfile = None
 export_to_video = None
 
 WORKERS = int(os.getenv("WORKERS", "8"))
+_ORIGINAL_TQDM = tqdm
 
 
 def _safe(name: Any, default: str = "x") -> str:
@@ -59,6 +61,95 @@ def _model_slug(model_path: str) -> str:
 
 def _default_output_dir(model_path: str) -> str:
     return os.path.join("./logs/vllm_omni", _model_slug(model_path), _generate_run_id())
+
+
+def _normalize_tqdm_mode(mode: Any) -> str:
+    normalized = str(mode or "rank0").strip().lower().replace("-", "_")
+    if normalized in {"rank", "ranks", "per_rank", "position", "positions"}:
+        return "rank"
+    if normalized in {"rank0", "rank_0", "main", "main_only", "rank0_only"}:
+        return "rank0"
+    if normalized in {"off", "none", "disable", "disabled", "false", "0"}:
+        return "off"
+    if normalized in {"all", "auto", "default", "true", "1"}:
+        return "all"
+    raise ValueError("tqdm_mode must be one of: rank, rank0, off, all")
+
+
+def _configure_tqdm_for_rank(mode: Any, rank: int, local_rank: int, world_size: int) -> str:
+    mode = _normalize_tqdm_mode(mode)
+    if mode == "all":
+        return mode
+
+    position = max(0, int(local_rank))
+    os.environ.setdefault("TQDM_DYNAMIC_NCOLS", "1")
+    if mode == "rank":
+        os.environ["TQDM_DISABLE"] = "1"
+        os.environ["TQDM_POSITION"] = str(position)
+    elif mode == "rank0":
+        os.environ["TQDM_POSITION"] = "0"
+        if world_size > 1 and rank != 0:
+            os.environ["TQDM_DISABLE"] = "1"
+    elif mode == "off":
+        os.environ["TQDM_DISABLE"] = "1"
+
+    global tqdm
+
+    class RankAwareTqdm(_ORIGINAL_TQDM):
+        def __init__(self, *args, **kwargs):
+            allow_rank_total = bool(kwargs.pop("_lmms_eval_rank_total", False))
+            if mode == "off":
+                kwargs["disable"] = True
+            elif mode == "rank0":
+                if world_size > 1 and rank != 0:
+                    kwargs["disable"] = True
+                else:
+                    kwargs.setdefault("position", 0)
+                    kwargs.setdefault("dynamic_ncols", True)
+            elif mode == "rank":
+                if not allow_rank_total:
+                    kwargs["disable"] = True
+                else:
+                    kwargs["disable"] = False
+                    kwargs.setdefault("position", position)
+                    kwargs.setdefault("dynamic_ncols", True)
+                    kwargs.setdefault("leave", position == 0)
+                    desc = kwargs.get("desc")
+                    if desc:
+                        kwargs["desc"] = f"rank {position} {desc}"
+            super().__init__(*args, **kwargs)
+
+    RankAwareTqdm.__name__ = "tqdm"
+    RankAwareTqdm.__qualname__ = "tqdm"
+    RankAwareTqdm._lmms_eval_rank_aware_tqdm = True
+
+    tqdm = RankAwareTqdm
+    try:
+        import tqdm as tqdm_module
+        import tqdm.auto as tqdm_auto
+        import tqdm.std as tqdm_std
+
+        tqdm_module.tqdm = RankAwareTqdm
+        tqdm_auto.tqdm = RankAwareTqdm
+        tqdm_std.tqdm = RankAwareTqdm
+    except Exception:
+        pass
+
+    for module in list(sys.modules.values()):
+        try:
+            module_tqdm = getattr(module, "tqdm", None)
+        except Exception:
+            continue
+        try:
+            is_rank_aware_tqdm = getattr(module_tqdm, "_lmms_eval_rank_aware_tqdm", False)
+        except Exception:
+            is_rank_aware_tqdm = False
+        if module_tqdm is _ORIGINAL_TQDM or is_rank_aware_tqdm:
+            try:
+                setattr(module, "tqdm", RankAwareTqdm)
+            except Exception:
+                pass
+    return mode
 
 
 def _build_diffusion_parallel_config(
@@ -338,20 +429,22 @@ class VLLMOmni(lmms):
         output_modalities: Optional[str | list[str]] = None,
         extract_audio_from_video: bool = True,
         disable_log_stats: bool = False,
+        tqdm_mode: str = "rank0",
         max_new_tokens: int = 4096,
         **kwargs,
     ) -> None:
         super().__init__()
+        self.model = model
+        self._rank = self._int_env("RANK", 0)
+        self._world_size = self._int_env("WORLD_SIZE", 1)
+        self._local_rank = self._int_env("LOCAL_RANK", self._rank)
+        self.tqdm_mode = _configure_tqdm_for_rank(tqdm_mode, self._rank, self._local_rank, self._world_size)
         self._lazy_import_runtime_dependencies()
         if not _has_vllm_omni or Omni is None:
             raise ImportError("vllm-omni is not installed. Please install `vllm-omni` first.")
         if not _has_vllm or SamplingParams is None:
             raise ImportError("vllm is required by vllm_omni.")
 
-        self.model = model
-        self._rank = self._int_env("RANK", 0)
-        self._world_size = self._int_env("WORLD_SIZE", 1)
-        self._local_rank = self._int_env("LOCAL_RANK", self._rank)
         self._device = torch.device(f"cuda:{self._local_rank}" if self._world_size > 1 else ("cuda" if torch.cuda.is_available() else "cpu"))
         if self._world_size > 1 and torch.cuda.is_available():
             torch.cuda.set_device(self._local_rank)
@@ -985,9 +1078,24 @@ class VLLMOmni(lmms):
         )
         return outputs[0], time.time() - start_time
 
+    def _progress_kwargs(self) -> dict[str, Any]:
+        if self.tqdm_mode == "off":
+            return {"disable": True}
+        if self.tqdm_mode == "rank":
+            return {
+                "disable": False,
+                "position": max(0, self._local_rank),
+                "leave": self._local_rank == 0,
+                "dynamic_ncols": True,
+                "_lmms_eval_rank_total": True,
+            }
+        if self.tqdm_mode == "all":
+            return {"disable": False}
+        return {"disable": self._rank != 0, "position": 0, "dynamic_ncols": True}
+
     def generate_until(self, requests) -> List[GenerationResult]:
         res: list[GenerationResult] = []
-        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
+        pbar = tqdm(total=len(requests), desc="Model Responding", **self._progress_kwargs())
         total_elapsed_time = 0.0
         total_tokens = 0
 

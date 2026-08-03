@@ -1,182 +1,104 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 
 cd /mnt/umm/users/pufanyi/workspace/lmms-eval-vllm
 
-MODEL_DIR=${MODEL_DIR:-/mnt/umm/users/pufanyi/workspace/Wan-Trainer/storage/models/Wan2.2-I2V-A14B-Diffusers}
-VBVR_ROOT=${VBVR_ROOT:-/mnt/umm/users/pufanyi/workspace/Wan-Trainer/storage/datasets/VBVR-Bench}
-OUTPUT_ROOT=${OUTPUT_ROOT:-/mnt/umm/users/pufanyi/workspace/Wan-Trainer/storage/eval_out/vbvr_wan22_vllm_omni_local_dp8}
+MODEL="/mnt/umm/users/pufanyi/workspace/Wan-Trainer/storage/models/Wan2.2-I2V-A14B-Diffusers"
+TASKS="vbvr"
+TP=1
+DP=8
+GPUS="0,1,2,3,4,5,6,7"
+GPU_MEMORY_UTILIZATION=0.9
+BATCH_SIZE=1
+NUM_INFERENCE_STEPS=50
+GUIDANCE_SCALE=5.0
+NUM_FRAMES=81
+HEIGHT=384
+WIDTH=384
+FPS=16
+SEED=42
+OUTPUT_PATH="/mnt/umm/users/pufanyi/workspace/Wan-Trainer/storage/eval_out/vbvr_wan22_vllm_omni_external_dp8"
+VBVR_ROOT="/mnt/umm/users/pufanyi/workspace/Wan-Trainer/storage/datasets/VBVR-Bench"
+HF_CACHE="/tmp/lmms_eval_hf_vbvr"
+LIMIT=""
+TQDM_MODE="rank"
 
-SPLIT=${SPLIT:-all}
-LIMIT=${LIMIT:-}
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --model) MODEL="$2"; shift 2 ;;
+    --tasks) TASKS="$2"; shift 2 ;;
+    --tp) TP="$2"; shift 2 ;;
+    --dp) DP="$2"; shift 2 ;;
+    --gpus) GPUS="$2"; shift 2 ;;
+    --batch-size) BATCH_SIZE="$2"; shift 2 ;;
+    --steps) NUM_INFERENCE_STEPS="$2"; shift 2 ;;
+    --guidance-scale) GUIDANCE_SCALE="$2"; shift 2 ;;
+    --num-frames) NUM_FRAMES="$2"; shift 2 ;;
+    --height) HEIGHT="$2"; shift 2 ;;
+    --width) WIDTH="$2"; shift 2 ;;
+    --fps) FPS="$2"; shift 2 ;;
+    --seed) SEED="$2"; shift 2 ;;
+    --output-path) OUTPUT_PATH="$2"; shift 2 ;;
+    --vbvr-root) VBVR_ROOT="$2"; shift 2 ;;
+    --hf-cache) HF_CACHE="$2"; shift 2 ;;
+    --limit) LIMIT="$2"; shift 2 ;;
+    --tqdm-mode) TQDM_MODE="$2"; shift 2 ;;
+    *) echo "Unknown argument: $1" >&2; exit 1 ;;
+  esac
+done
 
-TP=${TP:-1}
-DP=${DP:-}
-GPU_MEM_UTIL=${GPU_MEM_UTIL:-0.9}
-
-NUM_INFERENCE_STEPS=${NUM_INFERENCE_STEPS:-50}
-GUIDANCE_SCALE=${GUIDANCE_SCALE:-5.0}
-NUM_FRAMES=${NUM_FRAMES:-81}
-HEIGHT=${HEIGHT:-384}
-WIDTH=${WIDTH:-384}
-FPS=${FPS:-16}
-SEED=${SEED:-42}
-BOUNDARY_RATIO=${BOUNDARY_RATIO:-}
-FLOW_SHIFT=${FLOW_SHIFT:-}
-
-CACHE_BACKEND=${CACHE_BACKEND:-cache_dit}
-DIFFUSION_BATCH_SIZE=${DIFFUSION_BATCH_SIZE:-}
-REQUEST_BATCH_SIZE=${REQUEST_BATCH_SIZE:-}
-OVERWRITE=${OVERWRITE:-0}
-SKIP_EVAL=${SKIP_EVAL:-0}
-RUN_NAME=${RUN_NAME:-}
-
-VISIBLE_GPUS=${VISIBLE_GPUS:-${CUDA_VISIBLE_DEVICES:-}}
-WORKERS=${WORKERS:-}
-LOG_DIR=${LOG_DIR:-$OUTPUT_ROOT/logs}
-
-if [[ -n "$VISIBLE_GPUS" ]]; then
-  IFS=',' read -r -a GPU_IDS <<<"$VISIBLE_GPUS"
-else
-  mapfile -t GPU_IDS < <(nvidia-smi --query-gpu=index --format=csv,noheader | tr -d ' ')
-fi
-
-GPU_COUNT=${#GPU_IDS[@]}
-
-if (( GPU_COUNT == 0 )); then
-  echo "No visible GPUs found." >&2
+if (( TP > 1 && DP > 1 )); then
+  echo "This script supports external DP or internal TP, but not TP>1 and DP>1 together." >&2
   exit 1
 fi
 
-if [[ -z "$DP" ]]; then
-  DP=$GPU_COUNT
-fi
-
-if [[ -z "$DIFFUSION_BATCH_SIZE" ]]; then
-  DIFFUSION_BATCH_SIZE=$DP
-fi
-
-if [[ -z "$REQUEST_BATCH_SIZE" ]]; then
-  REQUEST_BATCH_SIZE=$DP
-fi
-
-GPUS_PER_WORKER=$((TP * DP))
-
-if (( GPUS_PER_WORKER < 1 )); then
-  echo "Invalid parallelism: TP=$TP DP=$DP" >&2
+IFS=',' read -r -a GPU_IDS <<<"$GPUS"
+EXPECTED_GPUS=$(( DP > 1 ? DP : TP ))
+if (( ${#GPU_IDS[@]} != EXPECTED_GPUS )); then
+  echo "Expected ${EXPECTED_GPUS} GPUs for TP=${TP}, DP=${DP}, got ${#GPU_IDS[@]}: ${GPUS}" >&2
   exit 1
 fi
 
-if [[ -z "$WORKERS" ]]; then
-  WORKERS=$((GPU_COUNT / GPUS_PER_WORKER))
+VIDEO_OUTPUT_DIR="${OUTPUT_PATH}/videos"
+
+export HF_HOME="$HF_CACHE"
+export VBVR_GT_PATH="$VBVR_ROOT"
+export CUDA_VISIBLE_DEVICES="$GPUS"
+export NCCL_BLOCKING_WAIT=1
+export NCCL_TIMEOUT=18000000
+
+INTERNAL_TP="$TP"
+if (( DP > 1 )); then
+  INTERNAL_TP=1
 fi
 
-if (( WORKERS < 1 )); then
-  echo "No worker can be launched with GPU_COUNT=$GPU_COUNT and GPUS_PER_WORKER=$GPUS_PER_WORKER." >&2
-  exit 1
-fi
+MODEL_ARGS="model=${MODEL},tensor_parallel_size=${INTERNAL_TP},data_parallel_size=1,gpu_memory_utilization=${GPU_MEMORY_UTILIZATION}"
+MODEL_ARGS="${MODEL_ARGS},output_dir=${VIDEO_OUTPUT_DIR},output_modalities=video,cache_backend=cache_dit"
+MODEL_ARGS="${MODEL_ARGS},num_inference_steps=${NUM_INFERENCE_STEPS},guidance_scale=${GUIDANCE_SCALE},num_frames=${NUM_FRAMES},height=${HEIGHT},width=${WIDTH},fps=${FPS},seed=${SEED}"
+MODEL_ARGS="${MODEL_ARGS},tqdm_mode=${TQDM_MODE}"
 
-MAX_WORKERS=$((GPU_COUNT / GPUS_PER_WORKER))
-if (( WORKERS > MAX_WORKERS )); then
-  echo "WORKERS=$WORKERS exceeds the available GPU groups ($MAX_WORKERS)." >&2
-  exit 1
-fi
-
-mkdir -p "$OUTPUT_ROOT" "$LOG_DIR"
-
-COMMON_ARGS=(
-  --model "$MODEL_DIR"
-  --vbvr-root "$VBVR_ROOT"
-  --output-root "$OUTPUT_ROOT"
-  --split "$SPLIT"
-  --tensor-parallel-size "$TP"
-  --data-parallel-size "$DP"
-  --gpu-memory-utilization "$GPU_MEM_UTIL"
-  --cache-backend "$CACHE_BACKEND"
-  --diffusion-batch-size "$DIFFUSION_BATCH_SIZE"
-  --request-batch-size "$REQUEST_BATCH_SIZE"
-  --num-inference-steps "$NUM_INFERENCE_STEPS"
-  --guidance-scale "$GUIDANCE_SCALE"
-  --num-frames "$NUM_FRAMES"
-  --height "$HEIGHT"
-  --width "$WIDTH"
-  --fps "$FPS"
-  --seed "$SEED"
+EVAL_ARGS=(
+  eval
+  --model vllm_omni
+  --model_args "$MODEL_ARGS"
+  --tasks "$TASKS"
+  --batch_size "$BATCH_SIZE"
+  --log_samples
+  --output_path "$OUTPUT_PATH"
 )
 
 if [[ -n "$LIMIT" ]]; then
-  COMMON_ARGS+=(--limit "$LIMIT")
+  EVAL_ARGS+=(--limit "$LIMIT")
 fi
 
-if [[ -n "$FLOW_SHIFT" ]]; then
-  COMMON_ARGS+=(--flow-shift "$FLOW_SHIFT")
+if (( DP > 1 )); then
+  CMD=(.venv/bin/torchrun --standalone --nproc_per_node "$DP" -m lmms_eval "${EVAL_ARGS[@]}")
+else
+  CMD=(.venv/bin/python -m lmms_eval "${EVAL_ARGS[@]}")
 fi
 
-if [[ -n "$BOUNDARY_RATIO" ]]; then
-  COMMON_ARGS+=(--boundary-ratio "$BOUNDARY_RATIO")
-fi
+echo "Running vLLM-Omni local eval: external DP=${DP}, internal TP=${INTERNAL_TP}, GPUs=${GPUS}, size=${WIDTH}x${HEIGHT}, tqdm=${TQDM_MODE}"
+printf '%q ' "${CMD[@]}"
+echo ""
 
-if [[ "$OVERWRITE" == "1" ]]; then
-  COMMON_ARGS+=(--overwrite)
-fi
-
-if [[ -n "$RUN_NAME" ]]; then
-  COMMON_ARGS+=(--run-name "$RUN_NAME")
-fi
-
-PIDS=()
-
-cleanup_children() {
-  for pid in "${PIDS[@]:-}"; do
-    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-      kill "$pid" 2>/dev/null || true
-    fi
-  done
-}
-
-trap cleanup_children INT TERM
-
-for ((worker_idx = 0; worker_idx < WORKERS; worker_idx++)); do
-  start=$((worker_idx * GPUS_PER_WORKER))
-  worker_gpus=("${GPU_IDS[@]:start:GPUS_PER_WORKER}")
-  if (( ${#worker_gpus[@]} != GPUS_PER_WORKER )); then
-    echo "Worker $worker_idx expected $GPUS_PER_WORKER GPUs but found ${#worker_gpus[@]}." >&2
-    cleanup_children
-    exit 1
-  fi
-
-  worker_visible_gpus=$(IFS=','; echo "${worker_gpus[*]}")
-  worker_log="$LOG_DIR/worker_${worker_idx}.log"
-
-  echo "Launching worker $worker_idx/$((WORKERS - 1)) on GPUs [$worker_visible_gpus] -> $worker_log"
-  CUDA_VISIBLE_DEVICES="$worker_visible_gpus" \
-    .venv/bin/python tools/run_vllm_omni_vbvr_local_parallel.py \
-    "${COMMON_ARGS[@]}" \
-    --shard-id "$worker_idx" \
-    --num-shards "$WORKERS" \
-    --skip-eval \
-    >"$worker_log" 2>&1 &
-
-  PIDS+=($!)
-done
-
-worker_failed=0
-for pid in "${PIDS[@]}"; do
-  if ! wait "$pid"; then
-    worker_failed=1
-  fi
-done
-
-if (( worker_failed != 0 )); then
-  echo "One or more generation workers failed. Check $LOG_DIR." >&2
-  exit 1
-fi
-
-if [[ "$SKIP_EVAL" == "1" ]]; then
-  exit 0
-fi
-
-echo "All generation workers finished. Running final evaluation."
-.venv/bin/python tools/run_vllm_omni_vbvr_local_parallel.py \
-  "${COMMON_ARGS[@]}" \
-  --skip-generate
+"${CMD[@]}"
