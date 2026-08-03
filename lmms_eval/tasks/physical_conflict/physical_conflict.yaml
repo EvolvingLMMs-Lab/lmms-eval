@@ -1,0 +1,74 @@
+dataset_path: physical_conflict
+class: !function utils.PhysicalConflictTask
+task: physical_conflict
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.physical_conflict_doc_to_visual
+doc_to_text: !function utils.physical_conflict_doc_to_text
+doc_to_target: !function utils.physical_conflict_doc_to_target
+process_docs: !function utils.physical_conflict_process_docs
+process_results: !function utils.physical_conflict_process_results
+metric_list:
+  - metric: Binary_Accuracy
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: true
+  - metric: Numeric_Accuracy_at_0_5s
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: true
+  - metric: Numeric_MAE
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: false
+  - metric: Numeric_Parse_Error_Rate
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: false
+  - metric: MCQ_Accuracy
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: true
+  - metric: MultiSelect_Exact_Match
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: true
+  - metric: MultiSelect_Precision
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: true
+  - metric: MultiSelect_Recall
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: true
+  - metric: Overall_Accuracy
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: true
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  do_sample: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    binary_post_prompt: "Answer with only Yes or No."
+    mcq_post_prompt: "Answer with only the option letter."
+    multiselect_post_prompt: "Answer with only all applicable option letters, without spaces (for example, AC)."
+    numeric_post_prompt: "Answer with only a single number in seconds."
+dataset_kwargs:
+  video: true
+  numeric_tolerance: 0.5
+  lineage: official
+  strict: true
+  require_sidecar: true
+  expected_sample_count: 1000
+  required_question_categories:
+    - physical_conflict_existence
+    - first_conflict_start
+    - first_conflict_duration
+    - conflict_quarters
+    - max_conflict_quarter
+    - nonoverlap_total_duration
+metadata:
+  version: 0.2
+  reference_task: vstat
+  default_lineage: official
+  official_base_sha256: c03c15148084754865cc472efdcd1a7617e985988f0bd48d39a7b43bb3bc6ff9
+  human_reviewed_base_sha256: 55eab72049367d3670fef0651c2c0b340465e88a7e3361bd42166f4bf7da363c
+  qa_path_env: PHYSICAL_CONFLICT_QA_PATH
+  sidecar_path_env: PHYSICAL_CONFLICT_SIDECAR_PATH
+  split_path_env: PHYSICAL_CONFLICT_SPLIT_PATH
+  video_root_env: PHYSICAL_CONFLICT_VIDEO_ROOT
+  allow_partial_env: PHYSICAL_CONFLICT_ALLOW_PARTIAL
