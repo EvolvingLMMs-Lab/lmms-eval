@@ -19,6 +19,12 @@ process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vi
 if not _has_qwen_vl:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
+_VIDEO_EXTENSIONS = (".mp4", ".avi", ".mov", ".mkv", ".webm", ".mpeg", ".mpg")
+
+
+def _is_video_path(value) -> bool:
+    return isinstance(value, str) and value.lower().endswith(_VIDEO_EXTENSIONS)
+
 
 def _resolve_model_class(pretrained: str, is_moe: bool):
     """Auto-detect and return the appropriate HF model class for a Qwen3 variant.
@@ -304,7 +310,7 @@ class Qwen3_VL(lmms):
             processed_visuals = []
             if visual_list[i] is not None:
                 for visual in visual_list[i]:
-                    if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):
+                    if _is_video_path(visual):
                         processed_visuals.append(
                             {
                                 "type": "video",
