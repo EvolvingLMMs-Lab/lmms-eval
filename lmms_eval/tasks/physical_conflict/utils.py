@@ -1,14 +1,9 @@
-"""Physical-conflict video benchmark helpers.
+"""lmms-eval adapter for GoodVision Task C atomic v1.
 
-The task follows VSTAT's local-data ``ConfigurableTask`` pattern while adding
-the answer types required by the Numaira benchmark: binary, floating-point
-numeric, single-choice, and multi-select questions.
-
-The public QA JSONL is the source of temporal questions. A strict full run
-requires an evaluation sidecar supplying canonical question types, option
-mappings, and tolerances. An optional split JSONL supplies explicit video-level
-conflict labels for the binary question. Empty ``annotation.events`` is
-deliberately never interpreted as a negative label.
+The authoritative Task C main JSONL is self-contained.  This adapter validates
+the frozen release before selecting the test split, exposes only the approved
+model-input fields, and keeps answers and raw media paths in trusted host-only
+indexes.
 """
 
 from __future__ import annotations
@@ -17,7 +12,7 @@ import hashlib
 import json
 import math
 import os
-import re
+from collections import Counter
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -26,60 +21,132 @@ from datasets import Dataset, DatasetDict
 from loguru import logger as eval_logger
 
 from lmms_eval.api.task import ConfigurableTask
-from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+from lmms_eval.tasks.physical_conflict import runtime as _runtime
 
-_CHOICE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-_DEFAULT_NUMERIC_TOLERANCE = 0.5
-_LINEAGE_BASE_SHA256 = {
-    "official": "c03c15148084754865cc472efdcd1a7617e985988f0bd48d39a7b43bb3bc6ff9",
-    "human_reviewed": "55eab72049367d3670fef0651c2c0b340465e88a7e3361bd42166f4bf7da363c",
-}
-_REQUIRED_QUESTION_CATEGORIES = {
-    "physical_conflict_existence",
-    "first_conflict_start",
-    "first_conflict_duration",
-    "conflict_quarters",
-    "max_conflict_quarter",
-    "nonoverlap_total_duration",
-}
-_NUMBER_PATTERN = re.compile(r"[-+]?(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?")
-_OPTION_PATTERN = re.compile(
-    r"(?:^|\n)\s*([A-Z])[.)：:]\s*(.*?)(?=(?:\n\s*[A-Z][.)：:]\s*)|\Z)",
-    flags=re.DOTALL,
+GENERATOR_VERSION = "task_c_atomic_v1"
+MODEL_INPUT_FIELDS = (
+    "qa_id",
+    "sample_id",
+    "question_type",
+    "question",
+    "answer_type",
+    "options",
+    "unit",
+)
+FORBIDDEN_MODEL_INPUT_FIELDS = frozenset(
+    {
+        "answer",
+        "target_value",
+        "tolerance",
+        "evidence",
+        "annotation",
+        "video_path",
+    }
 )
 
-_annotation_root: Path | None = None
+QUESTION_ORDER = (
+    "first_conflict_start_time",
+    "first_conflict_duration",
+    "conflict_quarter_coverage",
+    "max_conflict_duration_quarter",
+    "total_non_overlapping_conflict_duration",
+    "conflict_presence",
+)
+QUESTION_TYPES = frozenset(QUESTION_ORDER)
+NUMERIC_QUESTION_TYPES = frozenset(
+    {
+        "first_conflict_start_time",
+        "first_conflict_duration",
+        "total_non_overlapping_conflict_duration",
+    }
+)
+TEMPORAL_QUESTION_TYPES = QUESTION_TYPES - {"conflict_presence"}
+TEMPORAL_ELIGIBLE_DATASETS = frozenset({"ntu_cctv_fights"})
+FROZEN_DATASETS = frozenset(
+    {
+        "ntu_cctv_fights",
+        "rwf2000",
+        "surveillance_camera_fight",
+        "ubi_fights",
+    }
+)
+
+EXPECTED_FULL_SAMPLE_COUNT = 1000
+EXPECTED_FULL_QUESTION_COUNT = 2215
+EXPECTED_FULL_TYPE_COUNTS = {
+    "first_conflict_start_time": 250,
+    "first_conflict_duration": 250,
+    "conflict_quarter_coverage": 250,
+    "max_conflict_duration_quarter": 215,
+    "total_non_overlapping_conflict_duration": 250,
+    "conflict_presence": 1000,
+}
+EXPECTED_TEST_SAMPLE_COUNT = 149
+EXPECTED_TEST_QUESTION_COUNT = 334
+EXPECTED_TEST_TYPE_COUNTS = {
+    "first_conflict_start_time": 38,
+    "first_conflict_duration": 38,
+    "conflict_quarter_coverage": 38,
+    "max_conflict_duration_quarter": 33,
+    "total_non_overlapping_conflict_duration": 38,
+    "conflict_presence": 149,
+}
+
+DEFAULT_MAIN_SHA256 = "2b61dc61229956181afec533fcd0e351ae3310bcee96fd0c6c2f35ece65c7879"
+DEFAULT_SIDECAR_SHA256 = "5c93dab8eaa74a1bf1a1eb99fabc7eb296e0be381f8c198cae70d444ca066131"
+DEFAULT_TEST_SPLIT_SHA256 = "46ebbaa4cbe39eaaed6990c6368951674d5038b9a544c1c01c40374f81da318b"
+
+_OPTION_IDS = ("A", "B", "C", "D")
+_QUESTION_ORDER_INDEX = {question_type: index for index, question_type in enumerate(QUESTION_ORDER)}
+_LEGAL_RELEASE_SEQUENCES = frozenset(
+    {
+        ("conflict_presence",),
+        (
+            "first_conflict_start_time",
+            "first_conflict_duration",
+            "conflict_quarter_coverage",
+            "total_non_overlapping_conflict_duration",
+            "conflict_presence",
+        ),
+        QUESTION_ORDER,
+    }
+)
 
 _SETUP_HINT = (
-    "Set PHYSICAL_CONFLICT_QA_PATH to the QA JSON/JSONL (or provide "
-    "dataset_kwargs.data_files), PHYSICAL_CONFLICT_VIDEO_ROOT to the video "
-    "directory, PHYSICAL_CONFLICT_SIDECAR_PATH to the evaluation "
-    "sidecar, and PHYSICAL_CONFLICT_SPLIT_PATH to the optional split JSONL "
-    "containing explicit conflict/non-conflict labels. Full evaluation also "
-    "requires a regenerated Task C bundle aligned to the configured Task B lineage."
+    "Set PHYSICAL_CONFLICT_QA_PATH to GoodVision's "
+    "clean_samples_1000_human_reviewed_with_qa.jsonl, "
+    "PHYSICAL_CONFLICT_SIDECAR_PATH to task_c_qa_evaluation_items_v1.jsonl, "
+    "PHYSICAL_CONFLICT_SPLIT_PATH to splits/test.jsonl, and "
+    "PHYSICAL_CONFLICT_VIDEO_ROOT to the frozen video directory."
 )
 
-_TYPE_ALIASES = {
-    "binary": "binary",
-    "boolean": "binary",
-    "bool": "binary",
-    "yes_no": "binary",
-    "yesno": "binary",
-    "existence": "binary",
-    "presence": "binary",
-    "numeric": "numeric",
-    "number": "numeric",
-    "float": "numeric",
-    "integer": "numeric",
-    "single_select": "mcq",
-    "single_choice": "mcq",
-    "multiple_choice": "mcq",
-    "mcq": "mcq",
-    "multi_select": "multi_select",
-    "multiple_select": "multi_select",
-    "multiple_selection": "multi_select",
-    "multi_choice": "multi_select",
-}
+
+class _Target:
+    __slots__ = (
+        "answer",
+        "answer_type",
+        "option_text",
+        "question_type",
+        "target_value",
+        "tolerance",
+    )
+
+    def __init__(
+        self,
+        *,
+        question_type: str,
+        answer_type: str,
+        option_text: dict[str, str],
+        answer: frozenset[str],
+        target_value: float | None,
+        tolerance: float | None,
+    ) -> None:
+        self.question_type = question_type
+        self.answer_type = answer_type
+        self.option_text = option_text
+        self.answer = answer
+        self.target_value = target_value
+        self.tolerance = tolerance
 
 
 def _resolve_path(path: str | os.PathLike[str]) -> Path:
@@ -87,20 +154,28 @@ def _resolve_path(path: str | os.PathLike[str]) -> Path:
     return expanded if expanded.is_absolute() else Path.cwd() / expanded
 
 
-def _configured_path(
-    env_name: str,
-    dataset_kwargs: dict[str, Any],
-    *config_keys: str,
-) -> Path | None:
+def _configured_path(env_name: str, dataset_kwargs: dict[str, Any], *config_keys: str) -> Path | None:
     override = os.environ.get(env_name)
     if override:
         return _resolve_path(override)
-
     for key in config_keys:
         value = dataset_kwargs.get(key)
         if value:
             return _resolve_path(value)
     return None
+
+
+def _qa_path_from_config(dataset_kwargs: dict[str, Any]) -> Path | None:
+    path = _configured_path("PHYSICAL_CONFLICT_QA_PATH", dataset_kwargs, "qa_file", "qa_path")
+    if path is not None:
+        return path
+    data_files = dataset_kwargs.get("data_files")
+    if isinstance(data_files, dict):
+        value = data_files.get("test") or data_files.get("qa")
+        if value is None and data_files:
+            value = next(iter(data_files.values()))
+        return _resolve_path(value) if value else None
+    return _resolve_path(data_files) if data_files else None
 
 
 def _as_bool(value: Any, *, default: bool = False) -> bool:
@@ -116,686 +191,259 @@ def _as_bool(value: Any, *, default: bool = False) -> bool:
     raise ValueError(f"Expected a boolean value, got {value!r}.")
 
 
-def _lineage_name(dataset_kwargs: dict[str, Any]) -> str:
-    value = os.environ.get("PHYSICAL_CONFLICT_LINEAGE") or dataset_kwargs.get("lineage") or "official"
-    normalized = re.sub(r"[^a-z0-9]+", "_", str(value or "").casefold()).strip("_")
-    aliases = {
-        "official": "official",
-        "official_canonical": "official",
-        "human": "human_reviewed",
-        "human_reviewed": "human_reviewed",
-        "human_reviewed_v3": "human_reviewed",
-    }
-    if normalized not in aliases:
-        choices = ", ".join(sorted(_LINEAGE_BASE_SHA256))
-        raise ValueError(f"PHYSICAL_CONFLICT_LINEAGE must select one of: {choices}.")
-    return aliases[normalized]
+def _read_jsonl(path: Path, *, artifact_name: str) -> list[dict[str, Any]]:
+    if not path.exists():
+        raise FileNotFoundError(f"Missing {artifact_name}: {path}\n{_SETUP_HINT}")
+    records: list[dict[str, Any]] = []
+    with path.open("r", encoding="utf-8-sig") as handle:
+        for line_number, raw_line in enumerate(handle, start=1):
+            if not raw_line.strip():
+                continue
+            try:
+                value = json.loads(raw_line)
+            except json.JSONDecodeError as error:
+                raise ValueError(f"{artifact_name} line {line_number} is invalid JSON: {error.msg}") from error
+            if not isinstance(value, dict):
+                raise TypeError(f"{artifact_name} line {line_number} must contain an object.")
+            records.append(value)
+    return records
 
 
-def _canonical_base_sha256(samples: Iterable[dict[str, Any]]) -> str:
-    """Hash the Task B source after replacing Task C's only mutable field."""
-
+def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
-    for sample in samples:
-        canonical = dict(sample)
-        canonical["qa_pairs"] = []
-        line = json.dumps(canonical, ensure_ascii=False, separators=(",", ":")) + "\n"
-        digest.update(line.encode("utf-8"))
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
     return digest.hexdigest()
 
 
-def _validate_lineage(
-    samples: list[dict[str, Any]],
-    *,
-    lineage: str,
-    expected_sha256: str,
-    expected_sample_count: int,
-) -> str:
-    if len(samples) != expected_sample_count:
-        raise ValueError(f"Task C QA contains {len(samples)} samples; the {lineage} Task B lineage " f"requires {expected_sample_count}.")
-
-    sample_ids = [_sample_id(sample) for sample in samples]
-    video_paths = [str(sample.get("video_path", "")) for sample in samples]
-    if any(not value for value in sample_ids) or len(set(sample_ids)) != len(sample_ids):
-        raise ValueError("Task C QA sample IDs must be non-empty and unique.")
-    if any(not value for value in video_paths) or len(set(video_paths)) != len(video_paths):
-        raise ValueError("Task C QA video paths must be non-empty and unique.")
-
-    actual_sha256 = _canonical_base_sha256(samples)
-    if actual_sha256 != expected_sha256:
-        raise ValueError(
-            f"Task C QA is not aligned to the configured {lineage} Task B lineage: " f"expected base SHA-256 {expected_sha256}, got {actual_sha256}. " "Regenerate the QA main file and sidecar from the selected current canonical."
-        )
-    return actual_sha256
+def _validate_hash(path: Path, expected: str, *, artifact_name: str) -> str:
+    observed = _sha256(path)
+    if observed != expected:
+        raise ValueError(f"{artifact_name} SHA-256 mismatch: expected {expected}, got {observed}.")
+    return observed
 
 
-def _qa_path_from_config(dataset_kwargs: dict[str, Any]) -> Path | None:
-    path = _configured_path(
-        "PHYSICAL_CONFLICT_QA_PATH",
-        dataset_kwargs,
-        "qa_file",
-        "qa_path",
-    )
-    if path is not None:
-        return path
-
-    data_files = dataset_kwargs.get("data_files")
-    if isinstance(data_files, dict):
-        value = data_files.get("test") or data_files.get("qa")
-        if value is None and data_files:
-            value = next(iter(data_files.values()))
-        return _resolve_path(value) if value else None
-    return _resolve_path(data_files) if data_files else None
+def _source_dataset(video_path: str, *, context: str) -> str:
+    basename = video_path.replace("\\", "/").rsplit("/", 1)[-1]
+    parts = basename.split("__", 2)
+    if len(parts) != 3 or not parts[0].isdigit() or parts[1] not in FROZEN_DATASETS:
+        raise ValueError(f"{context}.video_path does not contain a frozen dataset identifier.")
+    return parts[1]
 
 
-def _records_from_json_payload(payload: Any) -> list[dict[str, Any]]:
-    if isinstance(payload, list):
-        return [item for item in payload if isinstance(item, dict)]
-    if not isinstance(payload, dict):
-        raise TypeError("Physical-conflict JSON must contain objects or a list of objects.")
-
-    for key in ("data", "items", "samples", "records"):
-        value = payload.get(key)
-        if isinstance(value, list):
-            return [item for item in value if isinstance(item, dict)]
-
-    if payload and all(isinstance(value, dict) for value in payload.values()):
-        return [dict(value) for value in payload.values()]
-    return [payload]
-
-
-def _read_records(path: Path) -> list[dict[str, Any]]:
-    if not path.exists():
-        raise FileNotFoundError(f"Missing physical-conflict annotation file: {path}\n{_SETUP_HINT}")
-
-    if path.suffix.lower() == ".jsonl":
-        records: list[dict[str, Any]] = []
-        with path.open("r", encoding="utf-8-sig") as handle:
-            for line_number, line in enumerate(handle, start=1):
-                if not line.strip():
-                    continue
-                value = json.loads(line)
-                if not isinstance(value, dict):
-                    raise TypeError(f"{path}:{line_number} must contain a JSON object.")
-                records.append(value)
-        return records
-
-    with path.open("r", encoding="utf-8-sig") as handle:
-        return _records_from_json_payload(json.load(handle))
+def _parse_options(raw_options: Any, *, question_type: str, context: str) -> tuple[list[dict[str, str]], dict[str, str]]:
+    if not isinstance(raw_options, list) or not raw_options:
+        raise ValueError(f"{context}.options must be a nonempty array.")
+    options: list[dict[str, str]] = []
+    option_text: dict[str, str] = {}
+    for index, option in enumerate(raw_options):
+        if not isinstance(option, dict) or set(option) != {"id", "text"}:
+            raise ValueError(f"{context}.options[{index}] must contain exactly id and text.")
+        option_id = option["id"]
+        text = option["text"]
+        if not isinstance(option_id, str) or option_id not in _OPTION_IDS:
+            raise ValueError(f"{context}.options[{index}].id must be A-D.")
+        if not isinstance(text, str) or not text.strip() or text != text.strip():
+            raise ValueError(f"{context}.options[{index}].text must be a nonempty unpadded string.")
+        if option_id in option_text:
+            raise ValueError(f"{context} contains duplicate option id {option_id}.")
+        options.append({"id": option_id, "text": text})
+        option_text[option_id] = text
+    expected_ids = _OPTION_IDS[:2] if question_type == "conflict_presence" else _OPTION_IDS
+    if tuple(option_text) != expected_ids:
+        raise ValueError(f"{context}.options must use ordered ids {list(expected_ids)}.")
+    return options, option_text
 
 
-def _first(mapping: dict[str, Any], *keys: str, default: Any = None) -> Any:
-    for key in keys:
-        if key in mapping and mapping[key] is not None:
-            return mapping[key]
-    return default
+def _parse_answer(raw_answer: Any, *, answer_type: str, option_text: dict[str, str], context: str) -> frozenset[str]:
+    if answer_type == "single_choice":
+        if not isinstance(raw_answer, str) or raw_answer not in option_text:
+            raise ValueError(f"{context}.answer must be one exact option id.")
+        return frozenset({raw_answer})
+    if answer_type != "multiple_choice":
+        raise ValueError(f"{context}.answer_type must be single_choice or multiple_choice.")
+    if not isinstance(raw_answer, list) or not raw_answer:
+        raise ValueError(f"{context}.answer must be a nonempty option-id array.")
+    if any(not isinstance(value, str) or value not in option_text for value in raw_answer):
+        raise ValueError(f"{context}.answer contains an unknown option id.")
+    if len(set(raw_answer)) != len(raw_answer):
+        raise ValueError(f"{context}.answer contains duplicate option ids.")
+    return frozenset(raw_answer)
 
 
-def _sample_id(record: dict[str, Any]) -> str:
-    return str(_first(record, "sample_id", "video_id", "id", default=""))
+def _number(value: Any, *, context: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{context} must be numeric.")
+    result = float(value)
+    if not math.isfinite(result) or result < 0:
+        raise ValueError(f"{context} must be finite and nonnegative.")
+    return result
 
 
-def _qa_pairs(record: dict[str, Any]) -> list[dict[str, Any]]:
-    value = record.get("qa_pairs", [])
-    if value in (None, []):
-        return []
-    if isinstance(value, dict):
-        return [value]
-    if isinstance(value, list) and all(isinstance(item, dict) for item in value):
-        return value
-    raise ValueError(f"Sample {_sample_id(record)!r} has invalid qa_pairs; expected an object or list.")
-
-
-def _sidecar_indexes(
-    records: Iterable[dict[str, Any]],
-) -> tuple[
-    dict[str, dict[str, Any]],
-    dict[tuple[str, str, int], dict[str, Any]],
-    dict[tuple[str, int], dict[str, Any]],
-]:
-    by_item: dict[str, dict[str, Any]] = {}
-    by_full_key: dict[tuple[str, str, int], dict[str, Any]] = {}
-    by_qa_key: dict[tuple[str, int], dict[str, Any]] = {}
-
-    for item in records:
-        item_id = str(item.get("item_id", ""))
-        qa_id = str(item.get("qa_id", ""))
-        sample_id = _sample_id(item)
-        try:
-            question_index = int(_first(item, "question_index", "index", default=0))
-        except (TypeError, ValueError):
-            question_index = 0
-        if not item_id and not qa_id:
-            raise ValueError("Every sidecar item must contain item_id or qa_id.")
-        if item_id in by_item:
-            raise ValueError(f"Duplicate sidecar item_id: {item_id!r}.")
-        if qa_id and (qa_id, question_index) in by_qa_key:
-            raise ValueError(f"Duplicate sidecar qa_id/question_index: {qa_id!r}/{question_index}.")
-        if sample_id and qa_id and (sample_id, qa_id, question_index) in by_full_key:
-            raise ValueError(f"Duplicate sidecar sample_id/qa_id/question_index: " f"{sample_id!r}/{qa_id!r}/{question_index}.")
-        if item_id:
-            by_item[item_id] = item
-        if qa_id:
-            by_qa_key[(qa_id, question_index)] = item
-            if sample_id:
-                by_full_key[(sample_id, qa_id, question_index)] = item
-    return by_item, by_full_key, by_qa_key
-
-
-def _find_sidecar_item(
-    indexes: tuple[
-        dict[str, dict[str, Any]],
-        dict[tuple[str, str, int], dict[str, Any]],
-        dict[tuple[str, int], dict[str, Any]],
-    ],
-    sample_id: str,
-    qa_id: str,
-    question_index: int,
-) -> dict[str, Any] | None:
-    by_item, by_full_key, by_qa_key = indexes
-    generated_item_id = f"{qa_id}:{question_index}"
-    matches = [
-        candidate
-        for candidate in (
-            by_item.get(generated_item_id),
-            by_full_key.get((sample_id, qa_id, question_index)),
-            by_qa_key.get((qa_id, question_index)),
-        )
-        if candidate is not None
-    ]
-    unique_matches = {id(candidate): candidate for candidate in matches}
-    if len(unique_matches) > 1:
-        raise ValueError(f"Ambiguous sidecar join for {generated_item_id!r}.")
-    return next(iter(unique_matches.values()), None)
-
-
-def _main_qa_identities(
+def _project_main_samples(
     samples: Iterable[dict[str, Any]],
-) -> tuple[
-    dict[str, tuple[str, str, int]],
-    dict[tuple[str, str, int], tuple[str, str, int]],
-    dict[tuple[str, int], tuple[str, str, int]],
-]:
-    by_item: dict[str, tuple[str, str, int]] = {}
-    by_full_key: dict[tuple[str, str, int], tuple[str, str, int]] = {}
-    by_qa_key: dict[tuple[str, int], tuple[str, str, int]] = {}
+    *,
+    enforce_release_contract: bool,
+) -> tuple[list[dict[str, Any]], dict[str, _Target], dict[str, str], list[dict[str, Any]]]:
+    model_inputs: list[dict[str, Any]] = []
+    targets: dict[str, _Target] = {}
+    media_index: dict[str, str] = {}
+    expected_sidecar: list[dict[str, Any]] = []
+    sample_sequences: dict[str, tuple[str, ...]] = {}
+    sample_sources: dict[str, str] = {}
+    type_counts: Counter[str] = Counter()
+    records = list(samples)
 
-    for sample in samples:
-        sample_id = _sample_id(sample)
-        for pair_index, pair in enumerate(_qa_pairs(sample)):
-            qa_id = str(pair.get("qa_id") or f"{sample_id}_qa_{pair_index + 1:03d}")
-            questions = pair.get("questions")
-            if isinstance(questions, str):
-                questions = [questions]
-            if not isinstance(questions, list):
-                raise TypeError(f"QA pair {qa_id!r} must contain a questions list.")
-            for question_index in range(len(questions)):
-                identity = (sample_id, qa_id, question_index)
-                item_id = f"{qa_id}:{question_index}"
-                if item_id in by_item or (qa_id, question_index) in by_qa_key:
-                    raise ValueError(f"Duplicate main QA identity: {item_id!r}.")
-                by_item[item_id] = identity
-                by_full_key[identity] = identity
-                by_qa_key[(qa_id, question_index)] = identity
-    return by_item, by_full_key, by_qa_key
+    for line_number, sample in enumerate(records, start=1):
+        context = f"main line {line_number}"
+        sample_id = sample.get("id")
+        video_path = sample.get("video_path")
+        if not isinstance(sample_id, str) or not sample_id or sample_id != sample_id.strip():
+            raise ValueError(f"{context}.id must be a nonempty unpadded string.")
+        if sample_id in media_index:
+            raise ValueError(f"Duplicate main sample id {sample_id!r}.")
+        if not isinstance(video_path, str) or not video_path or video_path != video_path.strip():
+            raise ValueError(f"{context}.video_path must be a nonempty unpadded string.")
+        media_index[sample_id] = video_path
+        sample_sources[sample_id] = _source_dataset(video_path, context=context)
+        qa_pairs = sample.get("qa_pairs")
+        if not isinstance(qa_pairs, list):
+            raise TypeError(f"{context}.qa_pairs must be an array.")
 
+        sequence: list[str] = []
+        previous_order = -1
+        for qa_index, qa in enumerate(qa_pairs):
+            qa_context = f"{context}.qa_pairs[{qa_index}]"
+            if not isinstance(qa, dict):
+                raise TypeError(f"{qa_context} must be an object.")
+            required = {"qa_id", "question_type", "question", "answer_type", "options", "answer", "evidence", "generator_version"}
+            missing = required - qa.keys()
+            if missing:
+                raise ValueError(f"{qa_context} is missing {sorted(missing)}.")
+            qa_id = qa["qa_id"]
+            question_type = qa["question_type"]
+            question = qa["question"]
+            answer_type = qa["answer_type"]
+            if not isinstance(question_type, str) or question_type not in QUESTION_TYPES:
+                raise ValueError(f"{qa_context}.question_type is not part of Task C atomic v1.")
+            if qa_id != f"{sample_id}__{question_type}":
+                raise ValueError(f"{qa_context}.qa_id does not match sample_id and question_type.")
+            if qa_id in targets:
+                raise ValueError(f"Duplicate main qa_id {qa_id!r}.")
+            if not isinstance(question, str) or not question.strip() or question != question.strip():
+                raise ValueError(f"{qa_context}.question must be a nonempty unpadded string.")
+            expected_answer_type = "multiple_choice" if question_type == "conflict_quarter_coverage" else "single_choice"
+            if answer_type != expected_answer_type:
+                raise ValueError(f"{qa_context}.answer_type must be {expected_answer_type!r}.")
+            if qa["generator_version"] != GENERATOR_VERSION:
+                raise ValueError(f"{qa_context}.generator_version must be {GENERATOR_VERSION!r}.")
+            if not isinstance(qa["evidence"], list) or not qa["evidence"]:
+                raise ValueError(f"{qa_context}.evidence must be a nonempty array.")
 
-def _validate_sidecar_identities(
-    sidecar_records: Iterable[dict[str, Any]],
-    samples: Iterable[dict[str, Any]],
-) -> None:
-    expected_by_item, expected_by_full_key, expected_by_qa_key = _main_qa_identities(samples)
+            order = _QUESTION_ORDER_INDEX[question_type]
+            if order <= previous_order:
+                raise ValueError(f"{context}.qa_pairs violates the frozen question order.")
+            previous_order = order
+            sequence.append(question_type)
 
-    for item in sidecar_records:
-        item_id = str(item.get("item_id", ""))
-        qa_id = str(item.get("qa_id", ""))
-        sample_id = _sample_id(item)
-        has_explicit_index = "question_index" in item or "index" in item
-        try:
-            question_index = int(_first(item, "question_index", "index", default=0))
-        except (TypeError, ValueError):
-            question_index = 0
+            options, option_text = _parse_options(qa["options"], question_type=question_type, context=qa_context)
+            answer = _parse_answer(qa["answer"], answer_type=answer_type, option_text=option_text, context=qa_context)
+            target_value: float | None = None
+            tolerance: float | None = None
+            unit: str | None = None
+            if question_type in NUMERIC_QUESTION_TYPES:
+                target_value = _number(qa.get("target_value"), context=f"{qa_context}.target_value")
+                tolerance = _number(qa.get("tolerance"), context=f"{qa_context}.tolerance")
+                unit = qa.get("unit")
+                if unit != "seconds" or tolerance != 0.5:
+                    raise ValueError(f"{qa_context} must use unit='seconds' and tolerance=0.5.")
+            elif {"target_value", "tolerance", "unit"} & qa.keys():
+                raise ValueError(f"{qa_context} is nonnumeric and must omit numeric target fields.")
 
-        candidates = {
-            identity
-            for identity in (
-                expected_by_item.get(item_id),
-                expected_by_full_key.get((sample_id, qa_id, question_index)),
-                expected_by_qa_key.get((qa_id, question_index)),
+            model_input = {
+                "qa_id": qa_id,
+                "sample_id": sample_id,
+                "question_type": question_type,
+                "question": question,
+                "answer_type": answer_type,
+                "options": options,
+                "unit": unit,
+            }
+            if tuple(model_input) != MODEL_INPUT_FIELDS or FORBIDDEN_MODEL_INPUT_FIELDS & model_input.keys():
+                raise AssertionError("Internal model-input projection violated the Task C allowlist.")
+            model_inputs.append(model_input)
+            targets[qa_id] = _Target(
+                question_type=question_type,
+                answer_type=answer_type,
+                option_text=option_text,
+                answer=answer,
+                target_value=target_value,
+                tolerance=tolerance,
             )
-            if identity is not None
-        }
-        if not candidates:
-            label = item_id or f"{qa_id}:{question_index}"
-            raise ValueError(f"Unmatched sidecar item {label!r}; no corresponding main QA item exists.")
-        if len(candidates) > 1:
-            label = item_id or f"{qa_id}:{question_index}"
-            raise ValueError(f"Sidecar item {label!r} identifies multiple main QA items.")
+            expected_sidecar.append({"item_id": qa_id, "sample_id": sample_id, "video_path": video_path, **qa})
+            type_counts[question_type] += 1
 
-        expected_sample_id, expected_qa_id, expected_index = next(iter(candidates))
-        expected_item_id = f"{expected_qa_id}:{expected_index}"
-        if item_id and item_id != expected_item_id:
-            raise ValueError(f"Sidecar item_id {item_id!r} does not match {expected_item_id!r}.")
-        if qa_id and qa_id != expected_qa_id:
-            raise ValueError(f"Sidecar qa_id {qa_id!r} does not match {expected_qa_id!r}.")
-        if sample_id and sample_id != expected_sample_id:
-            raise ValueError(f"Sidecar sample_id {sample_id!r} does not match {expected_sample_id!r}.")
-        if has_explicit_index and question_index != expected_index:
-            raise ValueError(f"Sidecar question_index {question_index} does not match {expected_index} " f"for {expected_qa_id!r}.")
+        sample_sequences[sample_id] = tuple(sequence)
 
+    if enforce_release_contract:
+        if len(records) != EXPECTED_FULL_SAMPLE_COUNT:
+            raise ValueError(f"Task C release must contain {EXPECTED_FULL_SAMPLE_COUNT} samples; observed {len(records)}.")
+        if len(model_inputs) != EXPECTED_FULL_QUESTION_COUNT:
+            raise ValueError(f"Task C release must contain {EXPECTED_FULL_QUESTION_COUNT} questions; observed {len(model_inputs)}.")
+        if dict(type_counts) != EXPECTED_FULL_TYPE_COUNTS:
+            raise ValueError(f"Task C release question counts mismatch: {dict(type_counts)}.")
+        for sample_id, sequence in sample_sequences.items():
+            if sequence not in _LEGAL_RELEASE_SEQUENCES:
+                raise ValueError(f"Sample {sample_id} has an illegal Task C question sequence: {list(sequence)}.")
+            source = sample_sources[sample_id]
+            has_temporal = any(question_type in TEMPORAL_QUESTION_TYPES for question_type in sequence)
+            if (source in TEMPORAL_ELIGIBLE_DATASETS) != has_temporal:
+                raise ValueError(f"Sample {sample_id} violates the NTU-only temporal policy.")
 
-def _extract_choices(value: Any, question: str = "") -> list[str]:
-    if isinstance(value, dict):
-        ordered_keys = sorted(
-            value,
-            key=lambda key: _CHOICE_LETTERS.index(str(key).upper()) if str(key).upper() in _CHOICE_LETTERS else len(_CHOICE_LETTERS),
-        )
-        return [str(value[key]).strip() for key in ordered_keys]
-
-    if isinstance(value, list):
-        choices: list[str] = []
-        for item in value:
-            if isinstance(item, dict):
-                choices.append(str(_first(item, "text", "value", "option", "label", default="")).strip())
-            else:
-                choices.append(str(item).strip())
-        return choices
-
-    matches = _OPTION_PATTERN.findall(question)
-    return [text.strip() for _, text in matches]
+    return model_inputs, targets, media_index, expected_sidecar
 
 
-def _choice_label(value: Any, choices: list[str]) -> str:
-    text = str(value).strip()
-    upper = text.upper()
-    if len(upper) == 1 and upper in _CHOICE_LETTERS:
-        return upper
-    for index, choice in enumerate(choices):
-        if text.casefold() == choice.casefold():
-            return _CHOICE_LETTERS[index]
-    return upper
+def _validate_sidecar(records: list[dict[str, Any]], expected: list[dict[str, Any]]) -> None:
+    if records != expected:
+        if len(records) != len(expected):
+            raise ValueError(f"Task C sidecar has {len(records)} rows; expected {len(expected)}.")
+        for index, (observed, wanted) in enumerate(zip(records, expected)):
+            if observed != wanted:
+                raise ValueError(f"Task C sidecar row {index + 1} is not the exact derivative of the main artifact.")
+        raise ValueError("Task C sidecar is not the exact derivative of the main artifact.")
 
 
-def _normalize_binary_value(value: Any) -> str | None:
-    if isinstance(value, dict):
-        value = _first(value, "name", "label", "value", "id")
-    if isinstance(value, bool):
-        return "yes" if value else "no"
-    if isinstance(value, (int, float)) and value in (0, 1):
-        return "yes" if int(value) == 1 else "no"
-    if value is None:
-        return None
-
-    normalized = re.sub(r"[^a-z0-9]+", "_", str(value).strip().casefold()).strip("_")
-    negative = {"0", "false", "no", "negative", "non_conflict", "nonconflict", "non_fight", "nonfight", "normal"}
-    positive = {"1", "true", "yes", "positive", "conflict", "physical_conflict", "fight", "fighting"}
-    if normalized in negative:
-        return "no"
-    if normalized in positive:
-        return "yes"
-    return None
+def _split_sample_ids(records: Iterable[dict[str, Any]], *, valid_sample_ids: set[str], enforce_release_contract: bool) -> set[str]:
+    sample_ids: list[str] = []
+    for line_number, record in enumerate(records, start=1):
+        sample_id = record.get("id")
+        if not isinstance(sample_id, str) or not sample_id:
+            raise ValueError(f"split line {line_number}.id must be a nonempty string.")
+        sample_ids.append(sample_id)
+    if len(set(sample_ids)) != len(sample_ids):
+        raise ValueError("Task C split contains duplicate sample ids.")
+    unknown = set(sample_ids) - valid_sample_ids
+    if unknown:
+        raise ValueError(f"Task C split contains unknown sample ids: {sorted(unknown)[:5]}.")
+    if enforce_release_contract and len(sample_ids) != EXPECTED_TEST_SAMPLE_COUNT:
+        raise ValueError(f"Task C test split must contain {EXPECTED_TEST_SAMPLE_COUNT} samples; observed {len(sample_ids)}.")
+    return set(sample_ids)
 
 
-def _type_from_text(value: Any) -> str | None:
-    if value is None:
-        return None
-    normalized = re.sub(r"[^a-z0-9]+", "_", str(value).casefold()).strip("_")
-    if normalized in _TYPE_ALIASES:
-        return _TYPE_ALIASES[normalized]
-    if "quarter" in normalized:
-        if any(token in normalized for token in ("which", "present", "presence", "contain", "overlap", "multi")):
-            return "multi_select"
-        return "mcq"
-    if any(token in normalized for token in ("exist", "presence", "whether", "yes_no")):
-        return "binary"
-    if any(token in normalized for token in ("start", "duration", "time", "total", "numeric")):
-        return "numeric"
-    return None
-
-
-def _infer_answer_type(
-    question: str,
-    target: Any,
-    choices: list[str],
-    explicit_types: Iterable[Any],
-) -> str:
-    for value in explicit_types:
-        normalized = _type_from_text(value)
-        if normalized:
-            return normalized
-
-    question_lower = question.casefold()
-    if any(phrase in question_lower for phrase in ("是否存在", "有无冲突", "any physical conflict")):
-        return "binary"
-    if "quarter" in question_lower:
-        if any(token in question_lower for token in ("most", "maximum", "longest", "哪个")):
-            return "mcq"
-        if any(token in question_lower for token in ("which quarters", "哪些", "all that")):
-            return "multi_select"
-    if isinstance(target, list):
-        return "multi_select"
-    if isinstance(target, (int, float)) and not isinstance(target, bool):
-        return "numeric"
-    if _normalize_binary_value(target) is not None:
-        return "binary"
-    compact_target = re.sub(r"[^A-Za-z]", "", str(target)).upper()
-    if len(compact_target) > 1 and set(compact_target) <= set(_CHOICE_LETTERS[: max(4, len(choices))]):
-        return "multi_select"
-    if choices:
-        return "mcq"
-    try:
-        float(str(target).replace(",", ""))
-        return "numeric"
-    except ValueError:
-        return "mcq"
-
-
-def _question_category(question: str, explicit_type: Any = None) -> str:
-    explicit = re.sub(r"[^a-z0-9]+", "_", str(explicit_type or "").casefold()).strip("_")
-    question_text = str(question).casefold()
-    combined = f"{explicit} {question_text}"
-
-    if "quarter" in combined:
-        if any(token in combined for token in ("max", "most", "longest", "最多", "哪个")):
-            return "max_conflict_quarter"
-        return "conflict_quarters"
-    if any(token in combined for token in ("nonoverlap", "non_overlap", "non-overlap", "union_duration", "总时长")):
-        return "nonoverlap_total_duration"
-    if "total" in combined and "duration" in combined:
-        return "nonoverlap_total_duration"
-    if any(token in combined for token in ("first", "第一段")) and any(token in combined for token in ("start", "begin", "何时开始")):
-        return "first_conflict_start"
-    if any(token in combined for token in ("first", "第一段")) and any(token in combined for token in ("duration", "how long", "last", "持续多久")):
-        return "first_conflict_duration"
-    if any(token in combined for token in ("exist", "whether", "any physical conflict", "是否存在", "有无冲突")):
-        return "physical_conflict_existence"
-    return "unknown"
-
-
-def _numeric_target(value: Any) -> float:
-    if isinstance(value, bool):
-        raise TypeError("Boolean values cannot be used as numeric temporal answers.")
-    if isinstance(value, (int, float)):
-        target = float(value)
-        if math.isfinite(target):
-            return target
-        raise ValueError(f"Numeric target must be finite, got {value!r}.")
-    matches = _NUMBER_PATTERN.findall(str(value))
-    if not matches:
-        raise ValueError(f"Cannot parse numeric target from {value!r}.")
-    target = float(matches[-1].replace(",", ""))
-    if not math.isfinite(target):
-        raise ValueError(f"Numeric target must be finite, got {value!r}.")
-    return target
-
-
-def _multi_select_target(value: Any, choices: list[str]) -> str:
-    allowed = set(_CHOICE_LETTERS[: max(4, len(choices))])
-    if isinstance(value, list):
-        values = value
-    else:
-        text = str(value).strip()
-        compact = re.sub(r"[^A-Za-z]", "", text).upper()
-        if compact and set(compact) <= allowed:
-            values = list(compact)
-        else:
-            values = re.findall(r"\b([A-Z])\b", text.upper())
-            if not values:
-                values = [text]
-    labels: set[str] = set()
-    for item in values:
-        label = _choice_label(item, choices)
-        if len(label) > 1 and set(label) <= allowed:
-            labels.update(label)
-        elif len(label) == 1 and label in allowed:
-            labels.add(label)
-    if not labels:
-        raise ValueError(f"Cannot parse multi-select target from {value!r}.")
-    return "".join(sorted(labels, key=_CHOICE_LETTERS.index))
-
-
-def _normalize_target(
-    target: Any,
-    *,
-    answer_type: str,
-    choices: list[str],
-    item_id: str,
-) -> tuple[str, float | None]:
-    if answer_type == "numeric":
-        target_value = _numeric_target(target)
-        return format(target_value, ".15g"), target_value
-
-    if answer_type == "binary":
-        binary_target = _normalize_binary_value(target)
-        if binary_target is None and choices:
-            label = _choice_label(target, choices)
-            if label in _CHOICE_LETTERS[: len(choices)]:
-                binary_target = _normalize_binary_value(choices[_CHOICE_LETTERS.index(label)])
-        if binary_target is None:
-            raise ValueError(f"Cannot parse binary target from {target!r} for {item_id}.")
-        return binary_target, None
-
-    if answer_type == "multi_select":
-        return _multi_select_target(target, choices), None
-
-    return _choice_label(target, choices), None
-
-
-def _normalize_atomic_row(
-    *,
-    sample: dict[str, Any],
-    question: str,
-    target: Any,
-    qa_id: str,
-    question_index: int,
-    metadata: dict[str, Any],
-    default_tolerance: float,
-) -> dict[str, Any]:
-    sample_id = _sample_id(sample) or _sample_id(metadata)
-    item_id = str(metadata.get("item_id") or f"{qa_id}:{question_index}")
-    source_question = str(question).strip()
-    sidecar_question = metadata.get("question")
-    if sidecar_question is not None and str(sidecar_question).strip() != source_question:
-        raise ValueError(f"Main QA/sidecar question mismatch for {item_id!r}: " f"{source_question!r} != {str(sidecar_question).strip()!r}.")
-    question = str(sidecar_question or source_question).strip()
-    metadata_target = _first(metadata, "canonical_answer", "correct_answer", "ground_truth", "target", "answer")
-
-    raw_choices = _first(metadata, "option_mapping", "options", "choices")
-    choices = _extract_choices(raw_choices, question)
-    answer_type = _infer_answer_type(
-        question,
-        target,
-        choices,
-        (
-            metadata.get("answer_type"),
-            metadata.get("question_type"),
-            metadata.get("task_type"),
-        ),
-    )
-    if answer_type not in {"numeric", "binary", "multi_select"}:
-        answer_type = "mcq"
-
-    answer_text, target_value = _normalize_target(
-        target,
-        answer_type=answer_type,
-        choices=choices,
-        item_id=item_id,
-    )
-    if metadata_target is not None:
-        sidecar_answer, sidecar_target_value = _normalize_target(
-            metadata_target,
-            answer_type=answer_type,
-            choices=choices,
-            item_id=item_id,
-        )
-        if sidecar_answer != answer_text or sidecar_target_value != target_value:
-            raise ValueError(f"Main QA/sidecar answer mismatch for {item_id!r}: " f"{answer_text!r} != {sidecar_answer!r}.")
-
-    tolerance = _first(metadata, "tolerance_sec", "tolerance", "absolute_tolerance", default=default_tolerance)
-    try:
-        tolerance_value = float(tolerance)
-    except (TypeError, ValueError):
-        tolerance_value = default_tolerance
-
-    question_type = str(_first(metadata, "question_type", "task_type", default=answer_type))
-    video_time = _first(sample, "video_time_sec", default=_first(metadata, "video_time_sec"))
-    try:
-        video_time_sec = float(video_time) if video_time is not None else None
-    except (TypeError, ValueError):
-        video_time_sec = None
-
-    return {
-        "item_id": item_id,
-        "sample_id": sample_id,
-        "video_path": str(_first(sample, "video_path", default=_first(metadata, "video_path", default=""))),
-        "question": question,
-        "answer_type": answer_type,
-        "answer_text": answer_text,
-        "target_value": target_value,
-        "choices": choices,
-        "tolerance": tolerance_value,
-        "question_type": question_type,
-        "question_category": _question_category(question, question_type),
-        "video_time_sec": video_time_sec,
-    }
-
-
-def _explicit_label(record: dict[str, Any]) -> str | None:
-    for key in ("label", "conflict_label", "physical_conflict", "has_physical_conflict"):
-        if key in record:
-            normalized = _normalize_binary_value(record[key])
-            if normalized is not None:
-                return normalized
-    return None
-
-
-def _atomic_rows(
-    samples: list[dict[str, Any]],
-    split_records: list[dict[str, Any]],
-    sidecar_records: list[dict[str, Any]],
-    default_tolerance: float,
-    *,
-    require_sidecar: bool = False,
-) -> list[dict[str, Any]]:
-    all_samples = list(samples)
-    indexes = _sidecar_indexes(sidecar_records)
-    if require_sidecar:
-        _validate_sidecar_identities(sidecar_records, all_samples)
-
-    split_by_id = {_sample_id(record): record for record in split_records if _sample_id(record)}
-    if split_by_id:
-        samples = [sample for sample in samples if _sample_id(sample) in split_by_id]
-
-    sample_by_id = {_sample_id(sample): sample for sample in samples if _sample_id(sample)}
-    for sample_id, split_record in split_by_id.items():
-        if sample_id not in sample_by_id:
-            samples.append(split_record)
-            sample_by_id[sample_id] = split_record
-
-    rows: list[dict[str, Any]] = []
-    binary_samples: set[str] = set()
-
-    for sample in samples:
-        sample_id = _sample_id(sample)
-        for pair_index, pair in enumerate(_qa_pairs(sample)):
-            qa_id = str(pair.get("qa_id") or f"{sample_id}_qa_{pair_index + 1:03d}")
-            questions = pair.get("questions")
-            answers = pair.get("answer", pair.get("answers"))
-            if isinstance(questions, str):
-                questions = [questions]
-            if not isinstance(questions, list):
-                raise TypeError(f"QA pair {qa_id!r} must contain a questions list.")
-            if not isinstance(answers, list):
-                answers = [answers]
-            if len(questions) != len(answers):
-                raise ValueError(f"QA pair {qa_id!r} has {len(questions)} questions but {len(answers)} answers.")
-
-            for question_index, (question, target) in enumerate(zip(questions, answers)):
-                expected_item_id = f"{qa_id}:{question_index}"
-                sidecar_item = _find_sidecar_item(indexes, sample_id, qa_id, question_index)
-                if sidecar_item is None and require_sidecar:
-                    raise ValueError(f"Missing sidecar item for main QA item {expected_item_id!r}.")
-                if sidecar_item is not None:
-                    sidecar_item_id = str(sidecar_item.get("item_id", ""))
-                    sidecar_qa_id = str(sidecar_item.get("qa_id", ""))
-                    sidecar_sample_id = _sample_id(sidecar_item)
-                    try:
-                        sidecar_index = int(_first(sidecar_item, "question_index", "index", default=0))
-                    except (TypeError, ValueError):
-                        sidecar_index = 0
-                    if sidecar_item_id and sidecar_item_id != expected_item_id:
-                        raise ValueError(f"Sidecar item_id {sidecar_item_id!r} does not match main QA item " f"{expected_item_id!r}.")
-                    if sidecar_qa_id and sidecar_qa_id != qa_id:
-                        raise ValueError(f"Sidecar qa_id {sidecar_qa_id!r} does not match {qa_id!r}.")
-                    if sidecar_sample_id and sidecar_sample_id != sample_id:
-                        raise ValueError(f"Sidecar sample_id {sidecar_sample_id!r} does not match {sample_id!r}.")
-                    if ("question_index" in sidecar_item or "index" in sidecar_item) and sidecar_index != question_index:
-                        raise ValueError(f"Sidecar question_index {sidecar_index} does not match {question_index} " f"for {qa_id!r}.")
-
-                metadata = {key: value for key, value in pair.items() if key not in {"questions", "answer", "answers"}}
-                if sidecar_item is not None:
-                    metadata.update(sidecar_item)
-                row = _normalize_atomic_row(
-                    sample=sample,
-                    question=str(question),
-                    target=target,
-                    qa_id=qa_id,
-                    question_index=question_index,
-                    metadata=metadata,
-                    default_tolerance=default_tolerance,
-                )
-                rows.append(row)
-                if row["answer_type"] == "binary":
-                    binary_samples.add(sample_id)
-
-    for sample in samples:
-        sample_id = _sample_id(sample)
-        split_record = split_by_id.get(sample_id, {})
-        label = _explicit_label(split_record) or _explicit_label(sample)
-        if label is None or sample_id in binary_samples:
-            continue
-        merged_sample = dict(sample)
-        for key, value in split_record.items():
-            merged_sample.setdefault(key, value)
-        rows.append(
-            _normalize_atomic_row(
-                sample=merged_sample,
-                question="Does this video contain any physical conflict?",
-                target=label,
-                qa_id=f"{sample_id}_physical_conflict_exists",
-                question_index=0,
-                metadata={"question_type": "physical_conflict_existence", "answer_type": "binary"},
-                default_tolerance=default_tolerance,
-            )
-        )
-
+def _project_test_rows(model_inputs: list[dict[str, Any]], split_sample_ids: set[str], *, enforce_release_contract: bool) -> list[dict[str, Any]]:
+    rows = [row for row in model_inputs if not split_sample_ids or row["sample_id"] in split_sample_ids]
+    if enforce_release_contract:
+        counts = Counter(row["question_type"] for row in rows)
+        if len(rows) != EXPECTED_TEST_QUESTION_COUNT:
+            raise ValueError(f"Task C test split must project to {EXPECTED_TEST_QUESTION_COUNT} questions; observed {len(rows)}.")
+        if dict(counts) != EXPECTED_TEST_TYPE_COUNTS:
+            raise ValueError(f"Task C test split question counts mismatch: {dict(counts)}.")
     return rows
 
 
-def _validate_required_categories(
-    rows: Iterable[dict[str, Any]],
-    required_categories: Iterable[str],
-) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    for row in rows:
-        category = str(row.get("question_category", "unknown"))
-        counts[category] = counts.get(category, 0) + 1
-
-    required = {str(category) for category in required_categories}
-    missing = sorted(required - counts.keys())
-    if missing:
-        present = ", ".join(f"{key}={value}" for key, value in sorted(counts.items())) or "none"
-        raise ValueError(
-            "The configured full physical_conflict task is incomplete. Missing required "
-            f"question categories: {', '.join(missing)}. Present: {present}. "
-            "Use a regenerated six-category Task C bundle, or set "
-            "PHYSICAL_CONFLICT_ALLOW_PARTIAL=1 only for local smoke tests."
-        )
-    return counts
-
-
 class PhysicalConflictTask(ConfigurableTask):
-    """Load Numaira physical-conflict QA and flatten it to atomic questions."""
+    """Load the frozen Task C release and expose its safe test projection."""
 
     def __init__(self, *args, config: dict[str, Any] | None = None, **kwargs) -> None:
         if config is not None:
@@ -804,93 +452,83 @@ class PhysicalConflictTask(ConfigurableTask):
         super().__init__(*args, config=config, **kwargs)
 
     def download(self, dataset_kwargs: dict[str, Any] | None = None) -> None:
-        global _annotation_root
-
         kwargs = dict(dataset_kwargs or {})
         qa_path = _qa_path_from_config(kwargs)
-        split_path = _configured_path(
-            "PHYSICAL_CONFLICT_SPLIT_PATH",
-            kwargs,
-            "split_file",
-            "label_file",
-        )
-        sidecar_path = _configured_path(
-            "PHYSICAL_CONFLICT_SIDECAR_PATH",
-            kwargs,
-            "sidecar_file",
-            "evaluation_file",
-        )
+        sidecar_path = _configured_path("PHYSICAL_CONFLICT_SIDECAR_PATH", kwargs, "sidecar_file", "evaluation_file")
+        split_path = _configured_path("PHYSICAL_CONFLICT_SPLIT_PATH", kwargs, "split_file")
+        video_root = _configured_path("PHYSICAL_CONFLICT_VIDEO_ROOT", kwargs, "video_root")
         allow_partial = _as_bool(os.environ.get("PHYSICAL_CONFLICT_ALLOW_PARTIAL"), default=False)
         strict = _as_bool(kwargs.get("strict"), default=True) and not allow_partial
         require_sidecar = _as_bool(kwargs.get("require_sidecar"), default=strict) and not allow_partial
 
-        if qa_path is None and split_path is None:
-            raise FileNotFoundError(f"No physical-conflict QA or split file was configured.\n{_SETUP_HINT}")
-        if strict and qa_path is None:
-            raise FileNotFoundError(f"Full physical_conflict evaluation requires a QA main file.\n{_SETUP_HINT}")
+        if qa_path is None:
+            raise FileNotFoundError(f"Physical-conflict evaluation requires a Task C main JSONL.\n{_SETUP_HINT}")
+        if strict and split_path is None:
+            raise FileNotFoundError(f"Strict physical-conflict evaluation requires the frozen test split.\n{_SETUP_HINT}")
         if require_sidecar and sidecar_path is None:
-            raise FileNotFoundError(f"Full physical_conflict evaluation requires a QA sidecar file.\n{_SETUP_HINT}")
+            raise FileNotFoundError(f"Strict physical-conflict evaluation requires the compatibility sidecar.\n{_SETUP_HINT}")
 
-        samples = _read_records(qa_path) if qa_path is not None else []
-        split_records = _read_records(split_path) if split_path is not None else []
-        sidecar_records = _read_records(sidecar_path) if sidecar_path is not None else []
-        lineage = _lineage_name(kwargs)
-        lineage_sha256: str | None = None
+        main_sha: str | None = None
+        sidecar_sha: str | None = None
+        split_sha: str | None = None
         if strict:
-            expected_sha256 = str(os.environ.get("PHYSICAL_CONFLICT_CANONICAL_SHA256") or kwargs.get("canonical_base_sha256") or _LINEAGE_BASE_SHA256[lineage])
-            expected_sample_count = int(kwargs.get("expected_sample_count", 1000))
-            lineage_sha256 = _validate_lineage(
-                samples,
-                lineage=lineage,
-                expected_sha256=expected_sha256,
-                expected_sample_count=expected_sample_count,
+            main_sha = _validate_hash(
+                qa_path,
+                str(os.environ.get("PHYSICAL_CONFLICT_MAIN_SHA256") or kwargs.get("expected_main_sha256") or DEFAULT_MAIN_SHA256),
+                artifact_name="Task C main",
             )
+            assert split_path is not None
+            split_sha = _validate_hash(
+                split_path,
+                str(os.environ.get("PHYSICAL_CONFLICT_TEST_SPLIT_SHA256") or kwargs.get("expected_test_split_sha256") or DEFAULT_TEST_SPLIT_SHA256),
+                artifact_name="Task C test split",
+            )
+            if require_sidecar:
+                assert sidecar_path is not None
+                sidecar_sha = _validate_hash(
+                    sidecar_path,
+                    str(os.environ.get("PHYSICAL_CONFLICT_SIDECAR_SHA256") or kwargs.get("expected_sidecar_sha256") or DEFAULT_SIDECAR_SHA256),
+                    artifact_name="Task C sidecar",
+                )
 
-        tolerance = float(kwargs.get("numeric_tolerance", _DEFAULT_NUMERIC_TOLERANCE))
-        rows = _atomic_rows(
-            samples,
-            split_records,
-            sidecar_records,
-            tolerance,
-            require_sidecar=require_sidecar,
-        )
-        if not rows:
-            raise ValueError("The configured files produced no evaluation questions. The main QA file must contain " "qa_pairs, or the split file must contain explicit labels.")
-        category_counts: dict[str, int] = {}
-        if strict:
-            required_categories = kwargs.get("required_question_categories") or _REQUIRED_QUESTION_CATEGORIES
-            category_counts = _validate_required_categories(rows, required_categories)
+        samples = _read_jsonl(qa_path, artifact_name="Task C main")
+        model_inputs, targets, media_index, expected_sidecar = _project_main_samples(samples, enforce_release_contract=strict)
+        if sidecar_path is not None:
+            sidecar = _read_jsonl(sidecar_path, artifact_name="Task C sidecar")
+            _validate_sidecar(sidecar, expected_sidecar)
+        split_records = _read_jsonl(split_path, artifact_name="Task C test split") if split_path is not None else []
+        split_ids = _split_sample_ids(split_records, valid_sample_ids=set(media_index), enforce_release_contract=strict) if split_records else set()
+        rows = _project_test_rows(model_inputs, split_ids, enforce_release_contract=strict)
+        selected_qa_ids = {row["qa_id"] for row in rows}
+        selected_sample_ids = {row["sample_id"] for row in rows}
 
-        _annotation_root = qa_path.parent if qa_path is not None else split_path.parent
+        _runtime.annotation_root = qa_path.parent
+        _runtime.video_root = video_root
+        _runtime.targets = {qa_id: target for qa_id, target in targets.items() if qa_id in selected_qa_ids}
+        _runtime.media_index = {sample_id: path for sample_id, path in media_index.items() if sample_id in selected_sample_ids}
+
         split = self.config.test_split
         self.dataset = DatasetDict({split: Dataset.from_list(rows)})
         if self.config.process_docs is not None:
             self.dataset[split] = self.config.process_docs(self.dataset[split])
         self.dataset_no_image = self.dataset.copy()
-        eval_logger.info(
-            f"Loaded physical-conflict annotations ({len(rows)} atomic questions; "
-            f"lineage={lineage}, lineage_sha256={lineage_sha256}, strict={strict}, "
-            f"categories={category_counts}; QA={qa_path}, split={split_path}, "
-            f"sidecar={sidecar_path})."
-        )
+        eval_logger.info("Loaded GoodVision Task C atomic v1 " f"({len(selected_sample_ids)} samples, {len(rows)} questions, strict={strict}, " f"main_sha256={main_sha}, sidecar_sha256={sidecar_sha}, split_sha256={split_sha}).")
 
 
 def physical_conflict_process_docs(dataset: Dataset) -> Dataset:
-    """Keep the hook explicit to mirror the VSTAT reference task."""
-
     return dataset
 
 
 def _candidate_video_roots() -> list[Path]:
     roots: list[Path] = []
+    if _runtime.video_root is not None:
+        roots.append(_runtime.video_root)
     for env_name in ("PHYSICAL_CONFLICT_VIDEO_ROOT", "PHYSICAL_CONFLICT_DATA_ROOT"):
         value = os.environ.get(env_name)
         if value:
             roots.append(_resolve_path(value))
-    if _annotation_root is not None:
-        roots.append(_annotation_root)
-    roots.extend((Path.cwd(), Path(__file__).resolve().parents[3] / "data" / "physical_conflict"))
-
+    if _runtime.annotation_root is not None:
+        roots.append(_runtime.annotation_root)
     deduped: list[Path] = []
     seen: set[str] = set()
     for root in roots:
@@ -901,148 +539,125 @@ def _candidate_video_roots() -> list[Path]:
     return deduped
 
 
-def _resolve_video_path(video_path: str) -> Path:
-    path = Path(video_path).expanduser()
-    if path.is_absolute():
-        return path
-    for root in _candidate_video_roots():
-        candidate = root / path
+def _resolve_video_path(sample_id: str) -> Path:
+    if sample_id not in _runtime.media_index:
+        raise KeyError(f"No trusted media mapping exists for sample {sample_id!r}.")
+    raw_path = Path(_runtime.media_index[sample_id]).expanduser()
+    if raw_path.is_absolute():
+        return raw_path
+    roots = _candidate_video_roots()
+    for root in roots:
+        candidate = root / raw_path
         if candidate.exists():
             return candidate
-    roots = _candidate_video_roots()
-    return (roots[0] if roots else Path.cwd()) / path
+    return (roots[0] if roots else Path.cwd()) / raw_path
+
+
+def _opaque_media_alias(path: Path, sample_id: str) -> Path:
+    alias_root_value = os.environ.get("PHYSICAL_CONFLICT_OPAQUE_MEDIA_ROOT")
+    if not alias_root_value:
+        return path
+    alias_root = _resolve_path(alias_root_value)
+    alias_root.mkdir(parents=True, exist_ok=True)
+    alias_path = alias_root / f"{sample_id}{path.suffix.lower()}"
+    target = path.resolve()
+    if alias_path.is_symlink():
+        if alias_path.resolve() != target:
+            raise ValueError(f"Opaque media alias {alias_path} points to the wrong target.")
+    elif alias_path.exists():
+        raise ValueError(f"Opaque media alias path already exists and is not a symlink: {alias_path}.")
+    else:
+        try:
+            alias_path.symlink_to(target)
+        except FileExistsError:
+            if not alias_path.is_symlink() or alias_path.resolve() != target:
+                raise
+    return alias_path
 
 
 def physical_conflict_doc_to_visual(doc: dict[str, Any]) -> list[str]:
-    path = _resolve_video_path(str(doc["video_path"]))
+    sample_id = str(doc["sample_id"])
+    path = _resolve_video_path(sample_id)
     if not path.exists():
-        raise FileNotFoundError(f"Missing physical-conflict video: {path}\n{_SETUP_HINT}")
-    return [str(path)]
+        raise FileNotFoundError(f"Missing physical-conflict video for {sample_id}: {path}\n{_SETUP_HINT}")
+    return [str(_opaque_media_alias(path, sample_id))]
 
 
-def physical_conflict_doc_to_text(
-    doc: dict[str, Any],
-    lmms_eval_specific_kwargs: dict[str, Any] | None = None,
-) -> str:
+def physical_conflict_doc_to_text(doc: dict[str, Any], lmms_eval_specific_kwargs: dict[str, Any] | None = None) -> str:
     kwargs = lmms_eval_specific_kwargs or {}
     pre_prompt = str(kwargs.get("pre_prompt", ""))
-    body = f"Watch the full video carefully before answering.\n\nQuestion: {doc['question']}"
-    answer_type = str(doc["answer_type"])
-    choices = list(doc.get("choices") or [])
-
-    if answer_type == "numeric":
-        post_prompt = kwargs.get("numeric_post_prompt", "Answer with only a single number in seconds.")
-    elif answer_type == "multi_select":
-        post_prompt = kwargs.get("multiselect_post_prompt", "Answer with only all applicable option letters.")
-    elif answer_type == "binary" and not choices:
-        post_prompt = kwargs.get("binary_post_prompt", "Answer with only Yes or No.")
+    option_lines = "\n".join(f"{option['id']}. {option['text']}" for option in doc["options"])
+    body = f"Watch the full video carefully before answering.\n\nQuestion: {doc['question']}\n\nOptions:\n{option_lines}"
+    if doc["answer_type"] == "multiple_choice":
+        post_prompt = kwargs.get("multiple_choice_post_prompt", 'Return only a JSON array of every applicable option ID, for example ["A","C"].')
     else:
-        post_prompt = kwargs.get("mcq_post_prompt", "Answer with only the option letter.")
+        post_prompt = kwargs.get("single_choice_post_prompt", "Answer with only one option ID.")
     return f"{pre_prompt}{body}\n\n{post_prompt}".strip()
 
 
+def _target_for_doc(doc: dict[str, Any]) -> _Target:
+    qa_id = str(doc["qa_id"])
+    if qa_id not in _runtime.targets:
+        raise KeyError(f"No trusted answer exists for QA {qa_id!r}.")
+    return _runtime.targets[qa_id]
+
+
 def physical_conflict_doc_to_target(doc: dict[str, Any]) -> str:
-    return str(doc["answer_text"])
+    target = _target_for_doc(doc)
+    ordered = sorted(target.answer, key=_OPTION_IDS.index)
+    return ordered[0] if target.answer_type == "single_choice" else json.dumps(ordered, separators=(",", ":"))
 
 
-def _extract_last_number(text: str) -> float | None:
-    matches = _NUMBER_PATTERN.findall(str(text))
-    if not matches:
-        return None
-    value = float(matches[-1].replace(",", ""))
-    return value if math.isfinite(value) else None
-
-
-def _numeric_parse_error_penalty(doc: dict[str, Any], target_value: float, tolerance: float) -> float:
-    """Return a deterministic finite MAE penalty for an unparseable answer."""
-
-    candidates = [1.0, abs(target_value), 2 * max(tolerance, 0.0)]
+def physical_conflict_normalize_prediction(doc: dict[str, Any], raw_prediction: str) -> str | list[str] | None:
+    target = _target_for_doc(doc)
+    text = str(raw_prediction).strip()
+    if target.answer_type == "single_choice":
+        return text if text in target.option_text else None
     try:
-        video_time_sec = float(doc.get("video_time_sec"))
-    except (TypeError, ValueError):
-        video_time_sec = 0.0
-    if math.isfinite(video_time_sec) and video_time_sec > 0:
-        candidates.append(video_time_sec)
-    return max(candidates)
-
-
-def _parse_binary_prediction(prediction: str, choices: list[str]) -> str | None:
-    if choices:
-        allowed = list(_CHOICE_LETTERS[: len(choices)])
-        label = extract_mcq_answer(prediction, choices=allowed)
-        if label in allowed:
-            normalized = _normalize_binary_value(choices[allowed.index(label)])
-            if normalized is not None:
-                return normalized
-    direct = _normalize_binary_value(prediction)
-    if direct is not None:
-        return direct
-    lowered = str(prediction).casefold()
-    if re.search(r"\b(?:no|false)\b", lowered):
-        return "no"
-    if re.search(r"\b(?:yes|true)\b", lowered):
-        return "yes"
-    return None
-
-
-def _parse_multi_select_prediction(prediction: str, num_choices: int) -> set[str]:
-    allowed = set(_CHOICE_LETTERS[: max(4, num_choices)])
-    upper = str(prediction).upper().strip()
-    compact_matches = re.findall(r"(?<![A-Z])([A-Z]{1,8})(?![A-Z])", upper)
-    for match in reversed(compact_matches):
-        if len(match) > 1 and set(match) <= allowed:
-            return set(match)
-    return {match for match in re.findall(r"\b([A-Z])\b", upper) if match in allowed}
-
-
-def _parse_mcq_prediction(prediction: str, choices: list[str]) -> str | None:
-    allowed = list(_CHOICE_LETTERS[: max(4, len(choices))])
-    return extract_mcq_answer(prediction, choices=allowed) or None
+        value = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(value, list) or not value or len(set(value)) != len(value):
+        return None
+    if any(not isinstance(option_id, str) or option_id not in target.option_text for option_id in value):
+        return None
+    return sorted(value, key=_OPTION_IDS.index)
 
 
 def physical_conflict_process_results(doc: dict[str, Any], results: list[str]) -> dict[str, float]:
-    prediction = str(results[0]).strip() if results else ""
-    answer_type = str(doc["answer_type"])
-    target = str(doc["answer_text"])
-    choices = list(doc.get("choices") or [])
+    target = _target_for_doc(doc)
+    prediction = physical_conflict_normalize_prediction(doc, results[0] if results else "")
+    predicted_set = frozenset({prediction}) if isinstance(prediction, str) else frozenset(prediction or [])
+    exact = float(prediction is not None and predicted_set == target.answer)
+    metrics: dict[str, float] = {"Overall_Exact_Accuracy": exact}
 
-    if answer_type == "numeric":
-        parsed = _extract_last_number(prediction)
-        target_value = float(doc["target_value"])
-        tolerance = float(doc.get("tolerance", _DEFAULT_NUMERIC_TOLERANCE))
-        parse_error = float(parsed is None)
-        absolute_error = abs(parsed - target_value) if parsed is not None else _numeric_parse_error_penalty(doc, target_value, tolerance)
-        accuracy = float(absolute_error <= tolerance)
-        return {
-            "Numeric_Accuracy_at_0_5s": accuracy,
-            "Numeric_MAE": absolute_error,
-            "Numeric_Parse_Error_Rate": parse_error,
-            "Overall_Accuracy": accuracy,
-        }
+    if target.answer_type == "multiple_choice":
+        intersection = predicted_set & target.answer
+        precision = len(intersection) / len(predicted_set) if predicted_set else 0.0
+        recall = len(intersection) / len(target.answer) if target.answer else float(not predicted_set)
+        metrics.update(
+            {
+                "MultipleChoice_Exact_Set_Accuracy": exact,
+                "MultipleChoice_Macro_Precision": precision,
+                "MultipleChoice_Macro_Recall": recall,
+            }
+        )
+        return metrics
 
-    if answer_type == "binary":
-        parsed = _parse_binary_prediction(prediction, choices)
-        accuracy = float(parsed == target.casefold())
-        return {"Binary_Accuracy": accuracy, "Overall_Accuracy": accuracy}
-
-    if answer_type == "multi_select":
-        predicted = _parse_multi_select_prediction(prediction, len(choices))
-        expected = set(target)
-        intersection = predicted & expected
-        precision = len(intersection) / len(predicted) if predicted else 0.0
-        recall = len(intersection) / len(expected) if expected else float(not predicted)
-        exact = float(predicted == expected)
-        return {
-            "MultiSelect_Exact_Match": exact,
-            "MultiSelect_Precision": precision,
-            "MultiSelect_Recall": recall,
-            "Overall_Accuracy": exact,
-        }
-
-    parsed = _parse_mcq_prediction(prediction, choices)
-    accuracy = float(parsed is not None and parsed.upper() == target.upper())
-    return {"MCQ_Accuracy": accuracy, "Overall_Accuracy": accuracy}
+    metrics["SingleChoice_Accuracy"] = exact
+    if target.question_type == "conflict_presence":
+        metrics["Binary_Accuracy"] = exact
+    if target.question_type in NUMERIC_QUESTION_TYPES:
+        within_tolerance = 0.0
+        if isinstance(prediction, str):
+            selected_value = float(target.option_text[prediction])
+            assert target.target_value is not None and target.tolerance is not None
+            absolute_error = abs(selected_value - target.target_value)
+            metrics["Numeric_Option_MAE"] = absolute_error
+            within_tolerance = float(absolute_error <= target.tolerance)
+        metrics["Numeric_Accuracy_at_0_5s"] = within_tolerance
+    return metrics
 
 
-def physical_conflict_aggregate_mean(results: list[float]) -> float:
-    return sum(float(result) for result in results) / len(results) if results else 0.0
+def physical_conflict_aggregate_mean(values: list[float]) -> float:
+    return sum(values) / len(values) if values else 0.0
