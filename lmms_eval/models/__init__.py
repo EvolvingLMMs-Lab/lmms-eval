@@ -122,6 +122,7 @@ AVAILABLE_SIMPLE_MODELS = {
 
 AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "gemini": "Gemini",
+    "aero_realtime_vllm": "AeroRealtimeVLLM",
     "bagel_lmms_engine": "BagelLmmsEngine",
     "fastvideo": "FastVideo",
     "internvl_hf": "InternVLHf",
