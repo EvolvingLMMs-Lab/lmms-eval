@@ -1,0 +1,48 @@
+dataset_path: pufanyi/ViZDoom
+dataset_name: default
+task: "vizdoom"
+test_split: test
+output_type: generate_until_game
+# The response is an episode JSON trace, not a model answer.  Applying the
+# evaluator's default reasoning-tag stripping here would corrupt any embedded
+# Qwen ``</think>`` text before ``process_results`` reads the metrics.
+reasoning_tags: none
+doc_to_visual: !function utils.vizdoom_doc_to_visual
+doc_to_text: !function utils.vizdoom_doc_to_text
+doc_to_target: !function utils.vizdoom_doc_to_target
+# Task-side environment and parsers. Model-side serving is a CLI choice:
+#   --agentic_model_server openai --agentic_model_server_args model=...,base_url=...
+game_env: !function utils.vizdoom_env_manager
+model_specific_parsers:
+  default:
+    observation: !function parsers.vizdoom_observation_parser
+    action: !function parsers.vizdoom_action_parser
+  "*Qwen*":
+    action:
+      - !function parsers.vizdoom_qwen_output_parser
+      - !function parsers.vizdoom_action_parser
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+  max_game_steps: 64
+process_results: !function utils.vizdoom_process_results
+metric_list:
+  - metric: vizdoom_success
+    aggregation: !function utils.vizdoom_aggregate_mean
+    higher_is_better: true
+  - metric: vizdoom_steps
+    aggregation: !function utils.vizdoom_aggregate_mean
+    higher_is_better: false
+  - metric: vizdoom_invalid_actions
+    aggregation: !function utils.vizdoom_aggregate_mean
+    higher_is_better: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  version: 0.2
+  description: "ViZDoom game loop with video frame history (human-view parity observations)"
