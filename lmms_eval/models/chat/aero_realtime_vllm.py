@@ -18,13 +18,13 @@ Differences vs. ``aero_realtime_chat`` (HuggingFace):
 - Multiple requests in a batch are run concurrently with ``asyncio.gather``;
   the vLLM-Omni engine schedules them via continuous batching.
 
-CLI registration: ``aero_realtime_vllm_chat``.
+CLI registration: ``aero_realtime_vllm`` (legacy alias:
+``aero_realtime_vllm_chat``).
 """
 
 from __future__ import annotations
 
 import asyncio
-import os
 import time
 import uuid
 from dataclasses import dataclass
@@ -55,7 +55,6 @@ try:
     from vllm.renderers.inputs.preprocess import parse_model_prompt
     from vllm.sampling_params import RequestOutputKind, SamplingParams
     from vllm.tokenizers import cached_tokenizer_from_config
-
     from vllm_omni.entrypoints.async_omni import AsyncOmni
     from vllm_omni.inputs.data import OmniTokensPrompt
     from vllm_omni.model_executor.models.aero_realtime.aero_realtime import (
@@ -183,6 +182,29 @@ def _load_video_sample(
     return RealtimeSample(audio=audio, video=video, video_metadata=metadata, sample_fps=sample_fps)
 
 
+def _normalize_video_content(content) -> tuple[str, float | None, float | None]:
+    """Normalize protocol-native and legacy range-bearing video content."""
+    video = content.url
+    start_time = content.start_time
+    end_time = content.end_time
+    if isinstance(video, dict):
+        start_time = start_time if start_time is not None else video.get("video_start", video.get("start_time"))
+        end_time = end_time if end_time is not None else video.get("video_end", video.get("end_time"))
+        video = video.get("url") or video.get("path") or video.get("video")
+    if not isinstance(video, str):
+        raise TypeError(f"AeroRealtimeVLLM requires a video path or URL, got {video!r}")
+    return video, start_time, end_time
+
+
+def _truncate_at_until(text: str, until) -> str:
+    if isinstance(until, str):
+        until = [until]
+    stops = [stop for stop in (until or []) if stop]
+    positions = [text.find(stop) for stop in stops]
+    positions = [position for position in positions if position >= 0]
+    return text[: min(positions)] if positions else text
+
+
 # ---------------------------------------------------------------------------
 # Chunk generator
 # ---------------------------------------------------------------------------
@@ -211,7 +233,8 @@ def _frame_time(metadata, frame_idx: int, sample_fps: float) -> float:
     frames_indices = list(_meta(metadata, "frames_indices", []))
     if frame_idx < len(frames_indices):
         fps = _meta(metadata, "fps", None) or sample_fps or 1.0
-        return float(frames_indices[frame_idx]) / float(fps)
+        first_frame = frames_indices[0] if frames_indices else 0
+        return float(frames_indices[frame_idx] - first_frame) / float(fps)
     return float(frame_idx) / float(sample_fps or 1.0)
 
 
@@ -231,6 +254,7 @@ def _iter_realtime_chunks(
     frame_times = [_frame_time(sample.video_metadata, i, sample.sample_fps) for i in range(num_frames)]
 
     text_emitted = False
+    fallback_question_chunk = False
     next_frame = 0
     audio = sample.audio
 
@@ -266,11 +290,12 @@ def _iter_realtime_chunks(
         t0 = num_audio_chunks * (samples_per_chunk / SAMPLE_RATE)
         yield {"audio": silence, "timestamp": t0, "text": ask_text}
         text_emitted = True
+        fallback_question_chunk = True
 
     # Decode-phase silence padding.
     silence = np.zeros(samples_per_chunk, dtype=np.float32)
     for j in range(extra_silence_chunks):
-        t0 = (num_audio_chunks + j + (0 if text_emitted else 1)) * (samples_per_chunk / SAMPLE_RATE)
+        t0 = (num_audio_chunks + int(fallback_question_chunk) + j) * (samples_per_chunk / SAMPLE_RATE)
         yield {"audio": silence, "timestamp": t0}
 
 
@@ -279,7 +304,7 @@ def _iter_realtime_chunks(
 # ---------------------------------------------------------------------------
 
 
-@register_model("aero_realtime_vllm_chat")
+@register_model("aero_realtime_vllm", "aero_realtime_vllm_chat")
 class AeroRealtimeVLLM(lmms):
     is_simple = False
 
@@ -452,9 +477,7 @@ class AeroRealtimeVLLM(lmms):
         for message in chat.messages:
             for content in message.content:
                 if content.type == "video" and video_path is None:
-                    video_path = content.url
-                    start_time = content.start_time
-                    end_time = content.end_time
+                    video_path, start_time, end_time = _normalize_video_content(content)
                 elif content.type == "text" and message.role == "user":
                     text_parts.append(content.text)
         if video_path is None:
@@ -715,6 +738,7 @@ class AeroRealtimeVLLM(lmms):
                 pass
 
         text = self._tokenizer.decode(collected, skip_special_tokens=True)
+        text = _truncate_at_until(text, merged.get("until"))
         eval_logger.info(f"[aero_rt_vllm/{request_id[-8:]}] done text={text!r}")
         return text, len(collected)
 

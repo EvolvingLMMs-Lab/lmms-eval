@@ -153,6 +153,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
 }
 
 MODEL_ALIASES: dict[str, tuple[str, ...]] = {
+    "aero_realtime_vllm": ("aero_realtime_vllm_chat",),
     "gemini": ("gemini_api",),
     "dummy": ("dummy_video_reader",),
     "openai": ("openai_compatible", "openai_compatible_chat"),
