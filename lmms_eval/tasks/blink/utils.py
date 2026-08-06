@@ -1,4 +1,5 @@
 import re
+import string
 from typing import Any, Dict, List, Optional
 
 from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
@@ -46,6 +47,54 @@ def blink_doc_to_visual(doc: dict) -> list:
         if image is not None:
             image_list.append(image.convert("RGB"))
     return image_list
+
+
+def _format_neo_ov_content(images: list, prompt: str) -> list:
+    if len(images) == 1:
+        return [{"type": "image", "url": images[0]}, {"type": "text", "text": prompt}]
+
+    content = []
+    for idx, image in enumerate(images, start=1):
+        content.append({"type": "text", "text": f"Image-{idx}: "})
+        content.append({"type": "image", "url": image})
+    content.append({"type": "text", "text": prompt})
+    return content
+
+
+def _blink_neo_ov_prompt(doc: dict[str, Any]) -> str:
+    prompt = doc.get("prompt")
+    if prompt:
+        prompt = prompt.replace("<image>", "").strip()
+        return prompt + "\nAnswer with the option's letter from the given choices directly."
+
+    question = doc["question"].replace("<image>", "").strip()
+    hint = doc.get("hint")
+    if hint is not None and hint == hint:
+        question = f"{hint}\n{question}"
+
+    choices = doc.get("choices", [])
+    for idx, item in enumerate(choices):
+        question += f"\n{string.ascii_uppercase[idx]}. {item}"
+
+    if choices:
+        question += "\nAnswer with the option's letter from the given choices directly."
+    else:
+        question += "\nAnswer the question directly."
+    return question
+
+
+def blink_doc_to_messages(doc: dict[str, Any], lmms_eval_specific_kwargs: Optional[dict[str, Any]] = None) -> list:
+    lmms_eval_specific_kwargs = lmms_eval_specific_kwargs or {}
+    images = blink_doc_to_visual(doc)
+
+    if lmms_eval_specific_kwargs.get("prompt_format") == "neo_ov":
+        prompt = _blink_neo_ov_prompt(doc)
+        return [{"role": "user", "content": _format_neo_ov_content(images, prompt)}]
+
+    prompt = blink_doc_to_text(doc, lmms_eval_specific_kwargs)
+    content = [{"type": "image", "url": image} for image in images]
+    content.append({"type": "text", "text": prompt})
+    return [{"role": "user", "content": content}]
 
 
 def blink_process_results(doc: Dict, result: List[str]) -> Dict[str, Dict]:

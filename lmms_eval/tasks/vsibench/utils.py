@@ -79,9 +79,7 @@ cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
 
 
 def vsibench_doc_to_visual(doc):
-    cache_dir = os.path.join(base_cache_dir, cache_name)
-    video_path = doc["dataset"] + "/" + doc["scene_name"] + ".mp4"
-    video_path = os.path.join(cache_dir, video_path)
+    video_path = _vsibench_video_path(doc)
     if os.path.exists(video_path):
         video_path = video_path
     else:
@@ -89,7 +87,49 @@ def vsibench_doc_to_visual(doc):
     return [video_path]
 
 
+def _get_specific_kwarg(lmms_eval_specific_kwargs, key, default=None):
+    if not lmms_eval_specific_kwargs:
+        return default
+    if key in lmms_eval_specific_kwargs:
+        return lmms_eval_specific_kwargs[key]
+    nested_default = lmms_eval_specific_kwargs.get("default", {})
+    return nested_default.get(key, default) if isinstance(nested_default, dict) else default
+
+
+def _vsibench_video_path(doc):
+    cache_dir = os.path.join(base_cache_dir, cache_name)
+    video_path = doc["dataset"] + "/" + doc["scene_name"] + ".mp4"
+    return os.path.join(cache_dir, video_path)
+
+
+def sample_vsibench_video_frames(doc, lmms_eval_specific_kwargs=None):
+    from decord import VideoReader, cpu
+    from PIL import Image
+
+    video_path = _vsibench_video_path(doc)
+    if not os.path.exists(video_path):
+        raise FileExistsError(f"video path:{video_path} does not exist.")
+
+    num_frames = int(_get_specific_kwarg(lmms_eval_specific_kwargs, "num_frames", 32))
+    vr = VideoReader(video_path, ctx=cpu(0))
+    total_frames = len(vr)
+    num_frames = min(num_frames, total_frames)
+    indices = np.linspace(0, total_frames - 1, num_frames, dtype=int)
+    frames = vr.get_batch(indices).asnumpy()
+    return [Image.fromarray(frame) for frame in frames]
+
+
+def format_vsibench_neo_ov_video_content(frames, prompt):
+    content = []
+    for idx, frame in enumerate(frames, start=1):
+        content.append({"type": "text", "text": f"Frame-{idx}: "})
+        content.append({"type": "image", "url": frame})
+    content.append({"type": "text", "text": prompt})
+    return content
+
+
 def vsibench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    lmms_eval_specific_kwargs = lmms_eval_specific_kwargs or {}
     question = doc["question"]
 
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "") or "These are frames of a video."
@@ -103,6 +143,19 @@ def vsibench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         return "\n".join([pre_prompt, question, options, post_prompt])
     else:
         raise ValueError(f"Unknown question type: {doc['question_type']}")
+
+
+def vsibench_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    lmms_eval_specific_kwargs = lmms_eval_specific_kwargs or {}
+    prompt = vsibench_doc_to_text(doc, lmms_eval_specific_kwargs)
+
+    if lmms_eval_specific_kwargs.get("prompt_format") == "neo_ov":
+        frames = sample_vsibench_video_frames(doc, lmms_eval_specific_kwargs)
+        content = format_vsibench_neo_ov_video_content(frames, prompt)
+    else:
+        content = [{"type": "video", "url": video_path} for video_path in vsibench_doc_to_visual(doc)]
+        content.append({"type": "text", "text": prompt})
+    return [{"role": "user", "content": content}]
 
 
 def process_docs(dataset: datasets.Dataset) -> datasets.Dataset:

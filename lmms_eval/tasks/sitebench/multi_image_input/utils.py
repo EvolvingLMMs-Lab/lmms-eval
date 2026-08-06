@@ -7,6 +7,8 @@ from PIL import Image
 
 from lmms_eval.tasks.sitebench.utils import (
     UpperLetters,
+    _format_neo_ov_video_content,
+    _get_specific_kwarg,
     aggregate_3d_information_understanding_acc,
     aggregate_3d_information_understanding_caa,
     aggregate_counting_and_existence_acc,
@@ -46,10 +48,7 @@ def spatial_doc_to_visual_video_as_images(doc, lmms_eval_specific_kwargs=None):
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Video path: {video_path} does not exist.")
 
-    # Get number of frames from lmms_eval_specific_kwargs or default to 32
-    num_frames = 32
-    if lmms_eval_specific_kwargs:
-        num_frames = lmms_eval_specific_kwargs.get("default", {}).get("num_frames", 32)
+    num_frames = int(_get_specific_kwarg(lmms_eval_specific_kwargs, "num_frames", 32))
 
     # Load video and sample frames uniformly
     vr = VideoReader(video_path, ctx=cpu(0))
@@ -81,6 +80,9 @@ def spatial_doc_to_messages_video_as_images(doc, lmms_eval_specific_kwargs=None)
     """
     question = spatial_doc_to_text_video(doc, lmms_eval_specific_kwargs)
     visuals = spatial_doc_to_visual_video_as_images(doc, lmms_eval_specific_kwargs)
+
+    if lmms_eval_specific_kwargs and lmms_eval_specific_kwargs.get("prompt_format") == "neo_ov":
+        return [{"role": "user", "content": _format_neo_ov_video_content(visuals, question)}]
 
     # Build content as a list with all images first, then text
     content = []
