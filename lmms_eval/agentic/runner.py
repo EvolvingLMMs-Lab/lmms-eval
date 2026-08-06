@@ -8,6 +8,10 @@ Component ownership is split once, in one place:
 - the CLI owns ``--agentic_model_server(_args)`` (one shared server per run);
 - loop options ride in ``generation_kwargs``: ``max_game_steps``,
   ``game_seed``, ``multiturn``, ``history_turns``.
+
+A raising episode never kills the run: after ``--agentic_episode_retries``
+extra attempts it is recorded as a failed ``EpisodeResult`` with metric
+``env_error=1.0`` and the error in ``metadata``.
 """
 
 from __future__ import annotations
@@ -17,6 +21,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any
 
+from loguru import logger as eval_logger
 from tqdm import tqdm
 
 from lmms_eval.agentic.artifacts import write_episode_artifacts
@@ -26,6 +31,7 @@ from lmms_eval.agentic.episode import run_episode
 from lmms_eval.agentic.pipelines import select_parser_pipelines
 from lmms_eval.agentic.servers import ModelServer
 from lmms_eval.agentic.trace import episode_to_json
+from lmms_eval.agentic.types import EnvState, EpisodeResult
 from lmms_eval.api.instance import Instance
 from lmms_eval.utils import simple_parse_args_string
 
@@ -34,32 +40,46 @@ def run_generate_until_game(lm: Any, requests: list[Instance], response_cache: A
     del response_cache  # rollouts are env-coupled and not response-cacheable
     output_path = getattr(cli_args, "output_path", None) if cli_args is not None else None
     max_parallel = max(1, int(getattr(cli_args, "agentic_max_parallel_rollouts", None) or 1))
+    episode_retries = max(0, int(getattr(cli_args, "agentic_episode_retries", None) or 0))
     model_server = resolve("model_server", _cli_spec(cli_args, "agentic_model_server", default="openai"), expected=ModelServer)
     model_name = model_server.get_model_name()
 
     plans = [_EpisodePlan.from_instance(req, lm) for req in requests]
 
-    def run_one(plan: "_EpisodePlan") -> str:
+    def build_components(plan: "_EpisodePlan") -> tuple[EnvManager, dict[str, Any]]:
+        """Resolve per-episode components. Errors here are task wiring bugs and fail the run loudly."""
+
         context = {"doc": plan.doc, "lmms_eval_specific_kwargs": plan.lmms_eval_specific_kwargs}
         parser_pipelines = select_parser_pipelines(plan.model_specific_parsers, model_name)
-        episode = run_episode(
-            env=resolve("env_manager", plan.game_env_spec, expected=EnvManager, **context),
-            observation_pipeline=parser_pipelines["observation"],
-            action_pipeline=parser_pipelines["action"],
-            model_server=model_server,
-            doc=plan.doc,
-            model_name=model_name,
-            max_steps=plan.max_steps,
-            seed=plan.seed,
-            multiturn=plan.multiturn,
-            history_turns=plan.history_turns,
-            generation_kwargs=plan.generation_kwargs,
-            request_metadata={"lmms_eval": {"doc_id": plan.doc_id, "task_name": plan.task_name, "split": plan.split}},
-        )
-        artifacts = write_episode_artifacts(episode, output_path=output_path, task_name=plan.task_name, doc_id=plan.doc_id)
-        if artifacts:
-            episode.metadata = {**episode.metadata, "artifacts": artifacts}
-        return episode_to_json(episode)
+        return resolve("env_manager", plan.game_env_spec, expected=EnvManager, **context), parser_pipelines
+
+    def run_one(plan: "_EpisodePlan") -> str:
+        attempts = episode_retries + 1
+        for attempt in range(1, attempts + 1):
+            env, parser_pipelines = build_components(plan)
+            try:
+                episode = run_episode(
+                    env=env,
+                    observation_pipeline=parser_pipelines["observation"],
+                    action_pipeline=parser_pipelines["action"],
+                    model_server=model_server,
+                    doc=plan.doc,
+                    model_name=model_name,
+                    max_steps=plan.max_steps,
+                    seed=plan.seed,
+                    multiturn=plan.multiturn,
+                    history_turns=plan.history_turns,
+                    generation_kwargs=plan.generation_kwargs,
+                    request_metadata={"lmms_eval": {"doc_id": plan.doc_id, "task_name": plan.task_name, "split": plan.split}},
+                )
+                artifacts = write_episode_artifacts(episode, output_path=output_path, task_name=plan.task_name, doc_id=plan.doc_id)
+                if artifacts:
+                    episode.metadata = {**episode.metadata, "artifacts": artifacts}
+                return episode_to_json(episode)
+            except Exception as exc:  # noqa: BLE001 - envs and backends raise arbitrary types
+                error = exc
+                eval_logger.warning(f"[agentic] episode failed (task={plan.task_name} doc={plan.doc_id} attempt {attempt}/{attempts}): {exc!r}")
+        return episode_to_json(_error_episode(plan, error, attempts))
 
     progress = tqdm(total=len(plans), desc="Agentic rollouts", disable=not plans)
     try:
@@ -120,6 +140,19 @@ class _EpisodePlan:
             task_name=str(task_name),
             split=str(split),
         )
+
+
+def _error_episode(plan: "_EpisodePlan", error: Exception, attempts: int) -> EpisodeResult:
+    """Failed rollout stand-in so one broken episode never kills the run."""
+
+    final_state = EnvState(env_id=plan.task_name, step_idx=0, observation=None, terminal=True, metadata={"error": repr(error)})
+    return EpisodeResult(
+        final_state=final_state,
+        steps=[],
+        success=False,
+        metrics={"env_error": 1.0},
+        metadata={"error": repr(error), "error_type": type(error).__name__, "attempts": attempts, "max_steps": plan.max_steps},
+    )
 
 
 def _cli_spec(cli_args: Any, name_attr: str, *, default: str) -> Any:

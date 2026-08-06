@@ -48,6 +48,10 @@ span.log
 
 # Data and models (large / local-only)
 data/
+# ...but keep the small MiniGrid scenario list under version control
+!lmms_eval/tasks/minigrid_agentic/data/
+lmms_eval/tasks/minigrid_agentic/data/*
+!lmms_eval/tasks/minigrid_agentic/data/minigrid.jsonl
 # ViZDoom runtime config droppings
 _vizdoom.ini
 pretrained/

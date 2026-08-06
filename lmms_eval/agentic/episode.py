@@ -44,6 +44,7 @@ def run_episode(
     request_metadata = dict(request_metadata or {})
     steps: list[EpisodeStep] = []
     history: list[dict[str, Any]] = []
+    action_spec = env.action_spec()
 
     try:
         state = env.reset(doc, seed=seed)
@@ -54,7 +55,7 @@ def run_episode(
                 step_idx=state.step_idx,
                 model_name=model_name,
                 history=list(history),
-                metadata={"max_steps": max_steps, "doc": doc},
+                metadata={"max_steps": max_steps, "doc": doc, "action_spec": action_spec},
             )
             request = apply_parser_pipeline(state, observation_pipeline, ctx)
             if not isinstance(request, AgentInput):

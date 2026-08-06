@@ -19,6 +19,9 @@ from importlib import import_module
 from typing import Any
 
 REGISTRY: dict[str, dict[str, str]] = {
+    "env_manager": {
+        "minigrid": "lmms_eval.tasks.minigrid_agentic.env:MiniGridEnvManager",
+    },
     "model_server": {
         "openai": "lmms_eval.agentic.servers.openai:OpenAIModelServer",
         "debug": "lmms_eval.agentic.servers.debug:FixedActionModelServer",
