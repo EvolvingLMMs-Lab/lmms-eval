@@ -1,0 +1,65 @@
+dataset_path: physical_conflict
+class: !function utils.PhysicalConflictTask
+task: physical_conflict
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.physical_conflict_doc_to_visual
+doc_to_text: !function utils.physical_conflict_doc_to_text
+doc_to_target: !function utils.physical_conflict_doc_to_target
+process_docs: !function utils.physical_conflict_process_docs
+process_results: !function utils.physical_conflict_process_results
+metric_list:
+  - metric: Overall_Exact_Accuracy
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: true
+  - metric: SingleChoice_Accuracy
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: true
+  - metric: Binary_Accuracy
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: true
+  - metric: MultipleChoice_Exact_Set_Accuracy
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: true
+  - metric: MultipleChoice_Macro_Precision
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: true
+  - metric: MultipleChoice_Macro_Recall
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: true
+  - metric: Numeric_Accuracy_at_0_5s
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: true
+  - metric: Numeric_Option_MAE
+    aggregation: !function utils.physical_conflict_aggregate_mean
+    higher_is_better: false
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  do_sample: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    single_choice_post_prompt: "Answer with only one option ID."
+    multiple_choice_post_prompt: 'Return only a JSON array of every applicable option ID, for example ["A","C"].'
+dataset_kwargs:
+  video: true
+  strict: true
+  require_sidecar: true
+  expected_main_sha256: 2b61dc61229956181afec533fcd0e351ae3310bcee96fd0c6c2f35ece65c7879
+  expected_sidecar_sha256: 5c93dab8eaa74a1bf1a1eb99fabc7eb296e0be381f8c198cae70d444ca066131
+  expected_test_split_sha256: 46ebbaa4cbe39eaaed6990c6368951674d5038b9a544c1c01c40374f81da318b
+metadata:
+  version: 1.0
+  reference_task: vstat
+  task_c_contract: atomic_v1
+  full_sample_count: 1000
+  full_question_count: 2215
+  test_sample_count: 149
+  test_question_count: 334
+  temporal_eligible_dataset: ntu_cctv_fights
+  qa_path_env: PHYSICAL_CONFLICT_QA_PATH
+  sidecar_path_env: PHYSICAL_CONFLICT_SIDECAR_PATH
+  split_path_env: PHYSICAL_CONFLICT_SPLIT_PATH
+  video_root_env: PHYSICAL_CONFLICT_VIDEO_ROOT
+  opaque_media_root_env: PHYSICAL_CONFLICT_OPAQUE_MEDIA_ROOT
