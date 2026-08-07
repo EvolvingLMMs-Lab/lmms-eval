@@ -141,6 +141,8 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "thyme": "Thyme",
     "openai": "OpenAICompatible",
     "vllm": "VLLM",
+    "vllm_omni_api": "VLLMOmniAPI",
+    "vllm_omni": "VLLMOmni",
     "vllm_generate": "VLLMGenerate",
     "sglang": "Sglang",
     "huggingface": "Huggingface",
@@ -161,6 +163,8 @@ MODEL_ALIASES: dict[str, tuple[str, ...]] = {
     "async_openai": ("async_openai_compatible_chat", "async_openai_compatible"),
     "async_hf_model": ("async_hf",),
     "litellm": ("litellm_chat", "litellm_compatible"),
+    "vllm_omni_api": ("vllm-omni-api", "vllm_omni_client"),
+    "vllm_omni": ("vllm-omni",),
 }
 
 
