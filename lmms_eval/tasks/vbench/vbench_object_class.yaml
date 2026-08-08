@@ -1,0 +1,6 @@
+task: vbench_object_class
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vbench/data/object_class.jsonl
+test_split: test
+include: _default_template_yaml

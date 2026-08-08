@@ -1,0 +1,6 @@
+task: vbench_motion_smoothness
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vbench/data/motion_smoothness.jsonl
+test_split: test
+include: _default_template_yaml

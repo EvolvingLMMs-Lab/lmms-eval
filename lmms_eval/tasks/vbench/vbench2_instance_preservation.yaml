@@ -1,0 +1,6 @@
+task: vbench2_instance_preservation
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vbench/data/instance_preservation.jsonl
+test_split: test
+include: _default_template_yaml

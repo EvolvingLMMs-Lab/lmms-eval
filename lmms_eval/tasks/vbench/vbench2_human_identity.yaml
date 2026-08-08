@@ -1,0 +1,6 @@
+task: vbench2_human_identity
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vbench/data/human_identity.jsonl
+test_split: test
+include: _default_template_yaml

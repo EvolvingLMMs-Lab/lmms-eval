@@ -1,0 +1,20 @@
+group: vbench2
+task:
+  - vbench2_camera_motion
+  - vbench2_complex_landscape
+  - vbench2_complex_plot
+  - vbench2_composition
+  - vbench2_diversity
+  - vbench2_dynamic_attribute
+  - vbench2_dynamic_spatial_relationship
+  - vbench2_human_anatomy
+  - vbench2_human_clothes
+  - vbench2_human_identity
+  - vbench2_human_interaction
+  - vbench2_instance_preservation
+  - vbench2_material
+  - vbench2_mechanics
+  - vbench2_motion_order_understanding
+  - vbench2_motion_rationality
+  - vbench2_multi-view_consistency
+  - vbench2_thermotics

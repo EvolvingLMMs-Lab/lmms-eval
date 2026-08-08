@@ -1,0 +1,6 @@
+task: vbench2_camera_motion
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vbench/data/camera_motion.jsonl
+test_split: test
+include: _default_template_yaml
