@@ -350,11 +350,28 @@ class VLLM(lmms):
         return top_p
 
     def _build_sampling_params_dict(self, gen_kwargs: dict[str, Any]) -> dict[str, Any]:
-        return {
+        n = gen_kwargs.get("n")
+        if n is not None and (isinstance(n, bool) or not isinstance(n, int) or n != 1):
+            raise ValueError("generation parameter n must be the integer 1 because the vLLM backends consume exactly one output")
+
+        params = {
             "max_tokens": gen_kwargs["max_new_tokens"],
             "temperature": gen_kwargs["temperature"],
             "top_p": self._normalize_top_p_for_vllm(gen_kwargs["top_p"]),
         }
+        optional_params = (
+            "n",
+            "seed",
+            "top_k",
+            "min_p",
+            "repetition_penalty",
+            "presence_penalty",
+            "frequency_penalty",
+        )
+        for key in optional_params:
+            if gen_kwargs.get(key) is not None:
+                params[key] = gen_kwargs[key]
+        return params
 
     def _run_tp_synced(
         self,
