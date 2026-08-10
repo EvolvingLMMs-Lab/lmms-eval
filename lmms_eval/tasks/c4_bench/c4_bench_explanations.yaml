@@ -1,0 +1,8 @@
+group: c4_bench_explanations
+group_alias: C4 Bench Explanations
+task:
+  - c4_bench_e0
+  - c4_bench_e1
+aggregate_metric_list:
+  - metric: c4_json_valid
+    weight_by_size: true
