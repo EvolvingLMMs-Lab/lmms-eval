@@ -659,6 +659,7 @@ python -m lmms_eval --tasks list_with_num
 | `vila` | VILA | Image, Video |
 | `vita` | VITA | Multimodal |
 | `vora` | VoRA | Multimodal |
+| `vqtoken` | VQToken | Centroid VQToken on LLaVA-OneVision (Image, Video) |
 | `whisper` | Whisper | Audio |
 | `whisper_vllm` | WhisperVllm | Audio |
 | `xcomposer2_4KHD` | XComposer2_4KHD | High-resolution Image |

@@ -113,6 +113,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "vita": "VITA",
     "vllm": "VLLM",
     "vora": "VoRA",
+    "vqtoken": "VQToken",
     "whisper_vllm": "WhisperVllm",
     "whisper": "Whisper",
     "whisper_tt": "WhisperTT",
