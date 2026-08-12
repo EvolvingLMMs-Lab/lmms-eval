@@ -1802,7 +1802,14 @@ class ConfigurableMessagesTask(ConfigurableTask):
     def _auto_doc_to_messages(self, doc, *, round_idx=None, previous_output=None, previous_round_info=None):
         if round_idx is None:
             visuals = self.doc_to_visual(doc) or []
-            text = self.doc_to_text(doc)
+            if self.config.doc_to_visual is None:
+                # Text-only tasks: the chat user turn must carry the full task context
+                # (description + few-shot examples + current question), matching the ctx
+                # built by build_all_requests and the simple adapters (lm-eval-harness
+                # semantics). Multimodal tasks keep using only doc_to_text(doc).
+                text = self.fewshot_context(doc, 0 if self.config.num_fewshot is None else self.config.num_fewshot)
+            else:
+                text = self.doc_to_text(doc)
             return self._build_user_turn(visuals, text)
 
         # Multi-round: delegate to doc_to_text using the framework's per-round protocol.
