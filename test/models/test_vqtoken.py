@@ -22,16 +22,18 @@ from lmms_eval.models import get_model  # noqa: E402
 from lmms_eval.models.simple.llava_onevision import Llava_OneVision  # noqa: E402
 from lmms_eval.models.simple.vqtoken import (  # noqa: E402
     VQToken,
+    _require_released_attention_weights,
     _require_vqtoken_runtime,
+    _validate_attention_frame_budget,
     _validate_cluster_config,
 )
 
 
 @pytest.mark.parametrize("method", ["fixed", "elbow", "silhouette"])
-def test_vqtoken_passes_public_centroid_config(method: str) -> None:
+def test_vqtoken_passes_released_attention_config(method: str) -> None:
     runtime = SimpleNamespace(
         VQTOKEN_CAPABILITIES={
-            "modes": ("centroids",),
+            "modes": ("centroids", "attention"),
             "selection_methods": ("fixed", "elbow", "silhouette"),
         }
     )
@@ -39,14 +41,14 @@ def test_vqtoken_passes_public_centroid_config(method: str) -> None:
         patch("lmms_eval.models.simple.vqtoken.optional_import", return_value=(runtime, True)),
         patch.object(Llava_OneVision, "__init__", return_value=None) as parent_init,
     ):
-        model = VQToken(vqtoken_selection_method=method, vqtoken_min_clusters=12, vqtoken_max_clusters=32)
+        model = VQToken(max_frames_num=8, vqtoken_selection_method=method, vqtoken_min_clusters=12, vqtoken_max_clusters=32)
 
     kwargs = parent_init.call_args.kwargs
     assert kwargs["pretrained"] == "haichaozhang/VQ-Token-llava-ov-0.5b"
     assert kwargs["model_name"] == "llava_qwen"
     assert model._get_model_overwrite_config() == {
         "use_vqtoken": True,
-        "vqtoken_mode": "centroids",
+        "vqtoken_mode": "attention",
         "vqtoken_selection_method": method,
         "vqtoken_min_clusters": 12,
         "vqtoken_max_clusters": 32,
@@ -69,8 +71,13 @@ def test_vqtoken_runtime_is_lazy_and_actionable() -> None:
             _require_vqtoken_runtime()
 
 
-def test_vqtoken_rejects_runtime_without_centroid_capability() -> None:
-    runtime = SimpleNamespace(VQTOKEN_CAPABILITIES={"modes": (), "selection_methods": ()})
+def test_vqtoken_rejects_runtime_without_attention_capability() -> None:
+    runtime = SimpleNamespace(
+        VQTOKEN_CAPABILITIES={
+            "modes": ("centroids",),
+            "selection_methods": ("fixed", "elbow", "silhouette"),
+        }
+    )
     with patch("lmms_eval.models.simple.vqtoken.optional_import", return_value=(runtime, True)):
         with pytest.raises(ImportError, match="too old"):
             _require_vqtoken_runtime()
@@ -78,6 +85,23 @@ def test_vqtoken_rejects_runtime_without_centroid_capability() -> None:
 
 def test_fixed_selection_uses_max_clusters_as_k() -> None:
     _validate_cluster_config("fixed", 12, 8)
+
+
+@pytest.mark.parametrize(
+    ("method", "min_clusters", "max_clusters", "max_frames_num"),
+    [("fixed", 12, 32, 33), ("elbow", 12, 32, 13), ("silhouette", 12, 32, 13)],
+)
+def test_vqtoken_rejects_frame_budget_larger_than_guaranteed_k(method: str, min_clusters: int, max_clusters: int, max_frames_num: int) -> None:
+    with pytest.raises(ValueError, match="max_frames_num <= selected K"):
+        _validate_attention_frame_budget(method, min_clusters, max_clusters, max_frames_num)
+
+
+@pytest.mark.parametrize(
+    ("method", "min_clusters", "max_clusters", "max_frames_num"),
+    [("fixed", 12, 32, 32), ("elbow", 12, 32, 12), ("silhouette", 24, 32, 8)],
+)
+def test_vqtoken_accepts_frame_budget_not_larger_than_guaranteed_k(method: str, min_clusters: int, max_clusters: int, max_frames_num: int) -> None:
+    _validate_attention_frame_budget(method, min_clusters, max_clusters, max_frames_num)
 
 
 def test_vqtoken_resolves_through_v2_registry() -> None:
@@ -89,30 +113,42 @@ def test_vqtoken_rejects_multiple_video_placeholders() -> None:
         VQToken(token_strategy="multiple")
 
 
-def test_vqtoken_defaults_unknown_checkpoint_to_external_vision() -> None:
+def test_vqtoken_rejects_base_checkpoint_without_learned_attention() -> None:
+    pretrained = "lmms-lab/llava-onevision-qwen2-0.5b-ov"
+    attention_detector = MagicMock(return_value=False)
     runtime = SimpleNamespace(
         VQTOKEN_CAPABILITIES={
-            "modes": ("centroids",),
+            "modes": ("centroids", "attention"),
             "selection_methods": ("fixed", "elbow", "silhouette"),
-        }
+        },
+        has_released_vq_attention_weights=attention_detector,
     )
-    with (
-        patch("lmms_eval.models.simple.vqtoken.optional_import", return_value=(runtime, True)),
-        patch.object(Llava_OneVision, "__init__", return_value=None),
-    ):
-        model = VQToken(pretrained="local/custom-checkpoint")
+    with patch("lmms_eval.models.simple.vqtoken.optional_import", return_value=(runtime, True)):
+        with pytest.raises(ValueError, match="complete learned cross_attention weights"):
+            VQToken(pretrained=pretrained)
 
-    assert model._get_model_overwrite_config()["use_embedded_vision"] is False
+    attention_detector.assert_called_once_with(pretrained)
+
+
+def test_released_hub_checkpoint_does_not_require_local_header_inspection() -> None:
+    detector = MagicMock(return_value=False)
+    runtime = SimpleNamespace(has_released_vq_attention_weights=detector)
+
+    _require_released_attention_weights("haichaozhang/VQ-Token-llava-ov-0.5b/", runtime)
+
+    detector.assert_not_called()
 
 
 def test_vqtoken_detects_embedded_vision_in_local_checkpoint() -> None:
-    detector = MagicMock(return_value=True)
+    attention_detector = MagicMock(return_value=True)
+    vision_detector = MagicMock(return_value=True)
     runtime = SimpleNamespace(
         VQTOKEN_CAPABILITIES={
-            "modes": ("centroids",),
+            "modes": ("centroids", "attention"),
             "selection_methods": ("fixed", "elbow", "silhouette"),
         },
-        has_embedded_vision_weights=detector,
+        has_released_vq_attention_weights=attention_detector,
+        has_embedded_vision_weights=vision_detector,
     )
     with (
         patch("lmms_eval.models.simple.vqtoken.optional_import", return_value=(runtime, True)),
@@ -120,14 +156,15 @@ def test_vqtoken_detects_embedded_vision_in_local_checkpoint() -> None:
     ):
         model = VQToken(pretrained="local/checkpoint")
 
-    detector.assert_called_once_with("local/checkpoint")
+    attention_detector.assert_called_once_with("local/checkpoint")
+    vision_detector.assert_called_once_with("local/checkpoint")
     assert model._get_model_overwrite_config()["use_embedded_vision"] is True
 
 
 def test_parent_loader_merges_only_subclass_overrides() -> None:
     runtime = SimpleNamespace(
         VQTOKEN_CAPABILITIES={
-            "modes": ("centroids",),
+            "modes": ("centroids", "attention"),
             "selection_methods": ("fixed", "elbow", "silhouette"),
         }
     )
@@ -155,7 +192,7 @@ def test_parent_loader_merges_only_subclass_overrides() -> None:
         "mm_spatial_pool_stride": 2,
         "mm_spatial_pool_mode": "bilinear",
         "use_vqtoken": True,
-        "vqtoken_mode": "centroids",
+        "vqtoken_mode": "attention",
         "vqtoken_selection_method": "fixed",
         "vqtoken_min_clusters": 12,
         "vqtoken_max_clusters": 32,
