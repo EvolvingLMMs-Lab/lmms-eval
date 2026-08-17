@@ -88,8 +88,8 @@ SAMPLE_RATE = 16000
 
 @dataclass
 class RealtimeSample:
-    audio: np.ndarray            # mono float32 @ 16 kHz
-    video: np.ndarray            # (T, H, W, 3) uint8
+    audio: np.ndarray  # mono float32 @ 16 kHz
+    video: np.ndarray  # (T, H, W, 3) uint8
     video_metadata: object
     sample_fps: float
 
@@ -339,10 +339,7 @@ class AeroRealtimeVLLM(lmms):
         # vs. ``aero_realtime_chat`` which is strict, to match how other vLLM
         # wrappers behave.
         if AsyncOmni is None or AeroRealtimeForConditionalGeneration is None:
-            raise ImportError(
-                "vllm-omni is required for aero_realtime_vllm_chat. "
-                "Install vllm-omni and ensure it is importable."
-            )
+            raise ImportError("vllm-omni is required for aero_realtime_vllm_chat. " "Install vllm-omni and ensure it is importable.")
         if fetch_video is None:
             raise ImportError("qwen_vl_utils is required (`pip install qwen-vl-utils`)")
         if librosa is None:
@@ -370,9 +367,7 @@ class AeroRealtimeVLLM(lmms):
             omni_kwargs["stage_init_timeout"] = int(stage_init_timeout)
         if tensor_parallel_size is not None:
             omni_kwargs["tensor_parallel_size"] = tensor_parallel_size
-            omni_kwargs["stage_0_devices"] = stage_0_devices or ",".join(
-                str(i) for i in range(tensor_parallel_size)
-            )
+            omni_kwargs["stage_0_devices"] = stage_0_devices or ",".join(str(i) for i in range(tensor_parallel_size))
         elif stage_0_devices is not None:
             omni_kwargs["stage_0_devices"] = stage_0_devices
         if limit_mm_per_prompt:
@@ -386,6 +381,7 @@ class AeroRealtimeVLLM(lmms):
                     mm_limits[k.strip()] = int(v)
             else:
                 import json as _json
+
                 mm_limits = {k: int(v) for k, v in _json.loads(limit_mm_per_prompt).items()}
             omni_kwargs["limit_mm_per_prompt"] = mm_limits
 
@@ -394,6 +390,7 @@ class AeroRealtimeVLLM(lmms):
         overrides: dict[str, dict] = {}
         if stage_overrides:
             import json as _json
+
             overrides = _json.loads(stage_overrides)
         if enforce_eager is not None:
             overrides.setdefault("0", {})["enforce_eager"] = bool(enforce_eager)
@@ -466,9 +463,7 @@ class AeroRealtimeVLLM(lmms):
 
     # --------------------------- request -> sample ------------------------------
 
-    def _extract_video_and_text(
-        self, chat: ChatMessages
-    ) -> Tuple[str, str, Optional[float], Optional[float]]:
+    def _extract_video_and_text(self, chat: ChatMessages) -> Tuple[str, str, Optional[float], Optional[float]]:
         """Pull (first_video_path, concatenated_user_text, start_time, end_time) out of ChatMessages."""
         video_path: Optional[str] = None
         start_time: Optional[float] = None
@@ -505,9 +500,7 @@ class AeroRealtimeVLLM(lmms):
         live in the fused prefill, matching training); tail is only the
         decode-phase silence chunks."""
         all_chunks = list(chunks)
-        text_idx = next(
-            (i for i, c in enumerate(all_chunks) if c.get("text")), len(all_chunks)
-        )
+        text_idx = next((i for i, c in enumerate(all_chunks) if c.get("text")), len(all_chunks))
         return all_chunks[: text_idx + 1], all_chunks[text_idx + 1 :]
 
     def _fuse_prompts(self, prompts):
@@ -544,11 +537,7 @@ class AeroRealtimeVLLM(lmms):
         def flush_audio_buffer():
             if not pending_audio:
                 return
-            merged = (
-                pending_audio[0]
-                if len(pending_audio) == 1
-                else np.concatenate(pending_audio).astype(np.float32, copy=False)
-            )
+            merged = pending_audio[0] if len(pending_audio) == 1 else np.concatenate(pending_audio).astype(np.float32, copy=False)
             audios.append(merged)
             pids.append(audio_pad_id)
             ts_ids.extend(pending_ts_ids)
@@ -569,11 +558,7 @@ class AeroRealtimeVLLM(lmms):
             # A "pure audio" chunk: only audio_pad token(s) in the delta,
             # no video item, no extra prompt scaffolding.
             non_audio_pad_ids = [tid for tid in prompt_ids if tid != audio_pad_id]
-            is_pure_audio = (
-                audio_item is not None
-                and video_item is None
-                and not non_audio_pad_ids
-            )
+            is_pure_audio = audio_item is not None and video_item is None and not non_audio_pad_ids
 
             if is_pure_audio:
                 pending_audio.append(np.asarray(audio_item))
@@ -663,15 +648,11 @@ class AeroRealtimeVLLM(lmms):
                 for c in _iter_realtime_chunks(sample, **chunk_kwargs):
                     yield c
 
-            async for p in AeroRealtimeForConditionalGeneration.buffer_realtime_omni(
-                chunk_iter(), input_stream, self.model_config
-            ):
+            async for p in AeroRealtimeForConditionalGeneration.buffer_realtime_omni(chunk_iter(), input_stream, self.model_config):
                 yield await self._render_streaming_input(p)
 
         async def streaming_gen_prefill_decode():
-            prefill_chunks, tail_chunks = self._split_chunks(
-                _iter_realtime_chunks(sample, **chunk_kwargs)
-            )
+            prefill_chunks, tail_chunks = self._split_chunks(_iter_realtime_chunks(sample, **chunk_kwargs))
             shared_state = AeroRealtimeStreamState()
 
             # Phase 1 — fuse pre-question chunks into one prefill (every
@@ -682,9 +663,7 @@ class AeroRealtimeVLLM(lmms):
 
             prefill_q: asyncio.Queue[list[int]] = asyncio.Queue()
             prefill_prompts = []
-            async for p in AeroRealtimeForConditionalGeneration.buffer_realtime_omni(
-                pre_iter(), prefill_q, self.model_config, state=shared_state
-            ):
+            async for p in AeroRealtimeForConditionalGeneration.buffer_realtime_omni(pre_iter(), prefill_q, self.model_config, state=shared_state):
                 prefill_q.put_nowait([])
                 prefill_prompts.append(p)
             fused = self._fuse_prompts(prefill_prompts)
@@ -696,16 +675,10 @@ class AeroRealtimeVLLM(lmms):
                 for c in tail_chunks:
                     yield c
 
-            async for p in AeroRealtimeForConditionalGeneration.buffer_realtime_omni(
-                tail_iter(), input_stream, self.model_config, state=shared_state
-            ):
+            async for p in AeroRealtimeForConditionalGeneration.buffer_realtime_omni(tail_iter(), input_stream, self.model_config, state=shared_state):
                 yield await self._render_streaming_input(p)
 
-        streaming_gen = (
-            streaming_gen_prefill_decode
-            if self.mode == "prefill_decode"
-            else streaming_gen_pure
-        )
+        streaming_gen = streaming_gen_prefill_decode if self.mode == "prefill_decode" else streaming_gen_pure
 
         request_id = f"aero-rt-vllm-{uuid.uuid4()}"
         collected: list[int] = []
@@ -766,9 +739,7 @@ class AeroRealtimeVLLM(lmms):
                     chats_and_gens.append((chat, dict(gen_kwargs or {})))
 
                 t0 = time.time()
-                batch_results = await asyncio.gather(
-                    *[self._generate_one(c, g) for c, g in chats_and_gens]
-                )
+                batch_results = await asyncio.gather(*[self._generate_one(c, g) for c, g in chats_and_gens])
                 totals["elapsed"] += time.time() - t0
 
                 for i, (text, ntok) in enumerate(batch_results):
