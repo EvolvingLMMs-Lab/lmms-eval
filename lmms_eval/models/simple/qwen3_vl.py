@@ -1,3 +1,4 @@
+import decord
 import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Tuple, Union
@@ -311,11 +312,17 @@ class Qwen3_VL(lmms):
             if visual_list[i] is not None:
                 for visual in visual_list[i]:
                     if _is_video_path(visual):
+                        # Cap nframes to actual video frame count to avoid ValueError
+                        # when video has fewer frames than max_num_frames
+                        per_video_kwargs = {**video_kwargs}
+                        if "nframes" in per_video_kwargs:
+                              vr = decord.VideoReader(visual)
+                              per_video_kwargs["nframes"] = min(per_video_kwargs["nframes"], len(vr))
                         processed_visuals.append(
                             {
                                 "type": "video",
                                 "video": visual,
-                                **video_kwargs,
+                                **per_video_kwargs,
                             }
                         )
                     elif isinstance(visual, Image.Image):
