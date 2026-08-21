@@ -1,0 +1,6 @@
+group: mmr_v_all
+task:
+  - mmr_v
+  - mmr_v_cot
+metadata:
+  version: 1.0
