@@ -283,6 +283,10 @@ python -m lmms_eval --tasks list_with_num
 - [IntPhys2](https://arxiv.org/abs/2506.09849) (intphys2)
   - intphys2_debug
 - [MLVU](https://github.com/JUNJIE99/MLVU) (mlvu)
+- [MMR-V](https://huggingface.co/datasets/JokerJan/MMR-VBench) (mmr_v)
+  - Direct answer (mmr_v)
+  - Chain-of-thought (mmr_v_cot)
+  - Both variants (mmr_v_all)
 - [MMT-Bench](https://mmt-bench.github.io/) (mmt)
   - MMT Validation (mmt_val)
   - MMT Test (mmt_test)
@@ -336,6 +340,7 @@ python -m lmms_eval --tasks list_with_num
 - [SIS-Bench](https://huggingface.co/datasets/choucsan/SIS-Bench) (sis_bench)
 - [MINERVA](https://arxiv.org/abs/2505.00681) (minerva)
 - [VANTAGE-Bench](https://huggingface.co/datasets/nvidia/PhysicalAI-VANTAGE-Bench) (vantage_vqa) - Physical AI video VQA
+- [VCRBench](https://huggingface.co/datasets/pritamqu/VCRBench) (vcrbench) - Causal step ordering over procedural video ([code](https://github.com/pritamqu/VCRBench))
 - [Video-ChatGPT](https://github.com/mbzuai-oryx/Video-ChatGPT) (videochatgpt)
   - Video-ChatGPT Generic (videochatgpt_gen)
   - Video-ChatGPT Temporal (videochatgpt_temporal)
@@ -385,6 +390,10 @@ python -m lmms_eval --tasks list_with_num
   - temporalbench_long_qa
   - temporalbench_short_caption
 - [Timescope](https://github.com/Timescope/Timescope) (timescope)
+- [VRBench](https://huggingface.co/datasets/OpenGVLab/VRBench) (vrbench) - Multi-step reasoning over long narrative video ([code](https://github.com/OpenGVLab/VRBench))
+  - Multiple-choice outcome QA (vrbench_mcq)
+  - LLM-judged reasoning process (vrbench_process)
+  - Both variants (vrbench)
 
 ### Video Captioning & Description
 - [Vatex](https://eric-xw.github.io/vatex-website/index.html) (vatex)
