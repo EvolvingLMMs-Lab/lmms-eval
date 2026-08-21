@@ -7,6 +7,8 @@ import pytest
 
 from lmms_eval.tasks import TaskManager
 from lmms_eval.tasks.vcrbench import utils as vcrbench_utils
+
+
 @pytest.fixture(autouse=True)
 def _isolate_media_env(monkeypatch, tmp_path):
     """Stop the media resolver from finding a developer's real video cache.
