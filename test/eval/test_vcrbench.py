@@ -7,6 +7,18 @@ import pytest
 
 from lmms_eval.tasks import TaskManager
 from lmms_eval.tasks.vcrbench import utils as vcrbench_utils
+@pytest.fixture(autouse=True)
+def _isolate_media_env(monkeypatch, tmp_path):
+    """Stop the media resolver from finding a developer's real video cache.
+
+    media_resolver falls through VCRBENCH_ROOT -> LMMS_EVAL_MEDIA_ROOT -> HF_HOME.
+    A shell that exports any of those makes the FileNotFoundError tests resolve a
+    real file and silently stop testing anything. Clear them for every test and
+    point HF_HOME at an empty tmp dir.
+    """
+    for var in ("VCRBENCH_ROOT", "VCRBENCH_VIDEO_DIR", "LMMS_EVAL_MEDIA_ROOT"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("HF_HOME", str(tmp_path / "_empty_hf_home"))
 
 
 def _doc(ground_truth: Sequence[int] = (2, 0, 3, 1), goal: str = "make a pizza", qid: int = 7) -> dict[str, Any]:

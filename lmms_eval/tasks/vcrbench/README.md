@@ -36,6 +36,15 @@ before the official cascade runs.
 The official random baseline is 7.95 `avg_accuracy` / 24.26 `avg_step_accuracy`. A model that
 scores near those numbers is not reading the title cards.
 
+> **The frame budget is load-bearing on this benchmark.** Each video concatenates the
+> shuffled clips, and the clip index appears *only* as a burnt-in "Clip N" title card at the
+> head of every clip. Those cards are on screen briefly, so a sparse sample can miss them
+> entirely and the task becomes unanswerable for a reason unrelated to reasoning. Measured
+> with Qwen3-VL-8B-Instruct: 32 uniformly sampled frames scores **below** the paper's random
+> baseline (7.95 exact / 24.26 step), while 64 frames scores 44.0 exact / 56.1 step on a
+> 50-item sample. Use the paper's setting, or at least 64 frames, and always report the frame
+> budget alongside the score.
+
 The paper evaluates Qwen2.5-VL with `fps=1`, `max_pixels=360*420` (151200) and
 `max_new_tokens=512`; pass the frame and pixel settings through the model arguments, for
 example `--model_args ...,max_pixels=151200,fps=1`.
