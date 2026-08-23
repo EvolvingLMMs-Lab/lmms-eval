@@ -20,6 +20,7 @@ jobs:
       HF_DATASETS_OFFLINE: "1"
       TRANSFORMERS_OFFLINE: "1"
       WANDB_MODE: disabled
+      OPENAI_API_KEY: lmms-eval-ci-placeholder
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
