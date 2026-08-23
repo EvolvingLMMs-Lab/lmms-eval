@@ -1,5 +1,6 @@
 """Compatibility tests for model-registry startup and legacy projections."""
 
+import asyncio
 import hashlib
 import json
 import subprocess
@@ -9,12 +10,71 @@ from types import SimpleNamespace
 import pytest
 
 from lmms_eval import models
+from lmms_eval.api import registry as legacy_registry
+from lmms_eval.api.model import lmms
+from lmms_eval.cli import models_cmd, wizard
+from lmms_eval.entrypoints import http_server
 from lmms_eval.models.registry_v2 import ModelRegistryV2
+from lmms_eval.tui import discovery as tui_discovery
 
 
 def _resolution_tuple(registry, model_name, *, force_simple=False):
     resolved = registry.resolve(model_name, force_simple=force_simple)
     return resolved.model_id, resolved.model_type, resolved.class_path
+
+
+def test_legacy_decorator_lookup_preserves_registered_model(monkeypatch):
+    model_name = "compat_decorated"
+    monkeypatch.setitem(legacy_registry.MODEL_REGISTRY, model_name, lmms)
+    del legacy_registry.MODEL_REGISTRY[model_name]
+
+    @legacy_registry.register_model(model_name)
+    class CompatDecorated(lmms):
+        pass
+
+    assert legacy_registry.get_model(model_name) is CompatDecorated
+
+
+def test_legacy_decorator_lookup_falls_back_to_v2(monkeypatch):
+    sentinel = object()
+
+    def get_model_v2(model_name):
+        assert model_name == "compat_external"
+        return sentinel
+
+    monkeypatch.setattr(models, "get_model", get_model_v2)
+
+    assert legacy_registry.get_model("compat_external") is sentinel
+
+
+def test_frontend_discovery_uses_v2_manifests(monkeypatch):
+    registry = ModelRegistryV2()
+    registry.register_manifests(
+        (
+            models.ModelManifest("chat_plugin", chat_class_path="plugin.Chat"),
+            models.ModelManifest(
+                "dual_plugin",
+                simple_class_path="plugin.DualSimple",
+                chat_class_path="plugin.DualChat",
+                aliases=("dual_alias",),
+            ),
+            models.ModelManifest("simple_plugin", simple_class_path="plugin.Simple"),
+        ),
+    )
+    monkeypatch.setattr(models, "MODEL_REGISTRY_V2", registry)
+
+    assert models_cmd._model_rows() == [
+        ("chat_plugin", "chat", ()),
+        ("dual_plugin", "chat+simple", ("dual_alias",)),
+        ("simple_plugin", "simple", ()),
+    ]
+    assert wizard._model_choices() == [
+        ("chat_plugin", "chat"),
+        ("dual_plugin", "chat+simple"),
+        ("simple_plugin", "simple"),
+    ]
+    assert asyncio.run(http_server.list_available_models()) == {"models": ["chat_plugin", "dual_plugin", "simple_plugin"]}
+    assert dict(tui_discovery.discover_models())["dual_plugin"] == "dual_plugin (dual_alias)"
 
 
 def test_builtin_manifests_preserve_all_model_resolutions():
