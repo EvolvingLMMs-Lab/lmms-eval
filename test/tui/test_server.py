@@ -59,13 +59,15 @@ def test_cors_allows_only_configured_origin():
     assert "access-control-allow-origin" not in denied.headers
 
 
-def test_preview_and_start_reject_request_environment_text():
-    payload = {
-        "model": "dummy",
-        "tasks": ["mme"],
-        "env_setup": "source .venv/bin/activate; touch /tmp/pwned",
-        "env_vars": "OPENAI_API_KEY=$(cat ~/.ssh/id_rsa)",
-    }
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("env_setup", "source .venv/bin/activate; touch /tmp/pwned"),
+        ("env_vars", "OPENAI_API_KEY=$(cat ~/.ssh/id_rsa)"),
+    ],
+)
+def test_preview_and_start_reject_request_environment_text(field, value):
+    payload = {"model": "dummy", "tasks": ["mme"], field: value}
 
     for endpoint in ("/eval/preview", "/eval/start", "/eval/export-yaml"):
         response = _request("POST", endpoint, json=payload)
@@ -88,7 +90,10 @@ def test_preview_quotes_hostile_values_without_shell_prefix():
     assert "source " not in preview
     assert "export " not in preview
     assert "'demo; touch /tmp/model'" in preview
+    assert "'token=$(touch /tmp/args)'" in preview
+    assert "'mme; touch /tmp/task,task with spaces'" in preview
     assert "'../logs; touch /tmp/path'" in preview
+    assert "'cuda:0; touch /tmp/device'" in preview
 
 
 def test_stream_launches_hostile_values_as_structured_argv(monkeypatch):
@@ -100,12 +105,16 @@ def test_stream_launches_hostile_values_as_structured_argv(monkeypatch):
         device="cuda:0; touch /tmp/device",
     )
     job_id = "structured-argv-test"
-    server._jobs[job_id] = {
-        "status": "starting",
-        "argv": server._build_eval_argv(request),
-        "process": None,
-        "request": request,
-    }
+    monkeypatch.setitem(
+        server._jobs,
+        job_id,
+        {
+            "status": "starting",
+            "argv": server._build_eval_argv(request),
+            "process": None,
+            "request": request,
+        },
+    )
     captured: dict[str, object] = {}
 
     class FakeProcess:
@@ -132,7 +141,32 @@ def test_stream_launches_hostile_values_as_structured_argv(monkeypatch):
     events = asyncio.run(consume())
 
     assert any('"type": "done"' in event for event in events)
-    assert captured["argv"] == tuple(server._build_eval_argv(request))
+    assert captured["argv"] == (
+        "python",
+        "-m",
+        "lmms_eval",
+        "--model",
+        "demo; touch /tmp/model",
+        "--model_args",
+        "token=$(touch /tmp/args)",
+        "--tasks",
+        "mme; touch /tmp/task,task with spaces",
+        "--batch_size",
+        "1",
+        "--limit",
+        "10",
+        "--output_path",
+        "../logs; touch /tmp/path",
+        "--log_samples",
+        "--verbosity",
+        "INFO",
+        "--device",
+        "cuda:0; touch /tmp/device",
+    )
+    assert "sh" not in captured["argv"]
+    assert "bash" not in captured["argv"]
+    assert "zsh" not in captured["argv"]
+    assert "-c" not in captured["argv"]
     assert captured["kwargs"] == {
         "stdout": server.asyncio.subprocess.PIPE,
         "stderr": server.asyncio.subprocess.STDOUT,
