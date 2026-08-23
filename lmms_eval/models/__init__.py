@@ -4,18 +4,23 @@ import importlib
 import os
 import sys
 import warnings
+from collections.abc import Callable, Mapping
 from typing import Literal
 
 from loguru import logger
 
-from lmms_eval.models.registry_v2 import ModelManifest, ModelRegistryV2
+from lmms_eval.models.registry_v2 import (
+    ModelManifest,
+    ModelRegistryV2,
+    PluginLoadFailure,
+)
 
 logger.remove()
 log_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | " "<level>{level: <8}</level> | " "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - " "<level>{message}</level>"
 logger.add(sys.stdout, level="WARNING", format=log_format)
 
 
-AVAILABLE_SIMPLE_MODELS = {
+_BUILTIN_SIMPLE_MODELS = {
     "aero": "Aero",
     "generation_api": "GenerationApi",
     "cosmos_wm": "CosmosWorldModel",
@@ -120,7 +125,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "xcomposer2d5": "XComposer2D5",
 }
 
-AVAILABLE_CHAT_TEMPLATE_MODELS = {
+_BUILTIN_CHAT_TEMPLATE_MODELS = {
     "gemini": "Gemini",
     "aero_realtime_vllm": "AeroRealtimeVLLM",
     "bagel_lmms_engine": "BagelLmmsEngine",
@@ -153,7 +158,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "lfm2_5_vl": "LFM2_5_VL",
 }
 
-MODEL_ALIASES: dict[str, tuple[str, ...]] = {
+_BUILTIN_MODEL_ALIASES: dict[str, tuple[str, ...]] = {
     "aero_realtime_vllm": ("aero_realtime_vllm_chat",),
     "gemini": ("gemini_api",),
     "dummy": ("dummy_video_reader",),
@@ -176,13 +181,13 @@ def _build_class_path(
 
 def _build_builtin_manifests() -> list[ModelManifest]:
     model_ids = sorted(
-        set(AVAILABLE_SIMPLE_MODELS) | set(AVAILABLE_CHAT_TEMPLATE_MODELS),
+        set(_BUILTIN_SIMPLE_MODELS) | set(_BUILTIN_CHAT_TEMPLATE_MODELS),
     )
     manifests: list[ModelManifest] = []
     for model_id in model_ids:
-        simple_class = AVAILABLE_SIMPLE_MODELS.get(model_id)
-        chat_class = AVAILABLE_CHAT_TEMPLATE_MODELS.get(model_id)
-        aliases = MODEL_ALIASES.get(model_id, ())
+        simple_class = _BUILTIN_SIMPLE_MODELS.get(model_id)
+        chat_class = _BUILTIN_CHAT_TEMPLATE_MODELS.get(model_id)
+        aliases = _BUILTIN_MODEL_ALIASES.get(model_id, ())
         manifests.append(
             ModelManifest(
                 model_id=model_id,
@@ -194,40 +199,48 @@ def _build_builtin_manifests() -> list[ModelManifest]:
     return manifests
 
 
-def _merge_legacy_plugin_models(registry: ModelRegistryV2) -> None:
-    plugins = os.environ.get("LMMS_EVAL_PLUGINS")
-    if not plugins:
-        return
-
-    warnings.warn(
-        "LMMS_EVAL_PLUGINS is deprecated. Prefer Python entry-points group " "'lmms_eval.models' for plugin model registration.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    for plugin in plugins.split(","):
-        module = importlib.import_module(f"{plugin}.models")
-        for model_name, model_class in getattr(module, "AVAILABLE_MODELS").items():
-            class_path = f"{plugin}.models.{model_name}.{model_class}"
-            AVAILABLE_SIMPLE_MODELS[model_name] = class_path
-            registry.register_manifest(
-                ModelManifest(
-                    model_id=model_name,
-                    simple_class_path=class_path,
+def _load_legacy_plugin_models(registry: ModelRegistryV2, plugins: str | None) -> tuple[PluginLoadFailure, ...]:
+    failures: list[PluginLoadFailure] = []
+    for plugin in (item.strip() for item in (plugins or "").split(",")):
+        if not plugin:
+            continue
+        try:
+            module = importlib.import_module(f"{plugin}.models")
+            available_models = getattr(module, "AVAILABLE_MODELS")
+            if not isinstance(available_models, Mapping):
+                raise TypeError("AVAILABLE_MODELS must be a mapping")
+            entries = tuple(available_models.items())
+            if any(not isinstance(value, str) or not value.strip() for pair in entries for value in pair):
+                raise TypeError("AVAILABLE_MODELS must contain non-empty string pairs")
+            registry.register_manifests(
+                (
+                    ModelManifest(
+                        model_id=model_name,
+                        simple_class_path=f"{plugin}.models.{model_name}.{model_class}",
+                    )
+                    for model_name, model_class in entries
                 ),
                 overwrite=True,
             )
+        except Exception as exc:
+            failures.append(PluginLoadFailure(f"legacy:{plugin}", type(exc).__name__, str(exc)))
+    return tuple(failures)
 
 
 def _initialize_model_registry() -> ModelRegistryV2:
     registry = ModelRegistryV2()
-    for manifest in _build_builtin_manifests():
-        registry.register_manifest(manifest)
+    registry.register_manifests(_build_builtin_manifests())
 
-    _merge_legacy_plugin_models(registry)
-    try:
-        registry.load_entrypoint_manifests(overwrite=True)
-    except Exception as exc:  # pragma: no cover
-        logger.warning(f"Failed to load model entry-point manifests: {exc}")
+    plugins = os.environ.get("LMMS_EVAL_PLUGINS")
+    if plugins:
+        warnings.warn(
+            "LMMS_EVAL_PLUGINS is deprecated. Prefer Python entry-points group " "'lmms_eval.models' for plugin model registration.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+    failures = (*_load_legacy_plugin_models(registry, plugins), *registry.load_entrypoint_manifests(overwrite=True))
+    for failure in failures:
+        logger.warning(f"Failed to load model plugin {failure.source}: {failure.error_type}: {failure.message}")
 
     return registry
 
@@ -235,17 +248,62 @@ def _initialize_model_registry() -> ModelRegistryV2:
 MODEL_REGISTRY_V2 = _initialize_model_registry()
 
 
-def _build_available_models_preferred() -> dict[str, str]:
-    model_map: dict[str, str] = {}
-    for model_id in MODEL_REGISTRY_V2.list_canonical_model_ids():
-        manifest = MODEL_REGISTRY_V2.get_manifest(model_id)
-        class_path = manifest.chat_class_path or manifest.simple_class_path
-        if class_path:
-            model_map[model_id] = class_path.rsplit(".", 1)[-1]
-    return model_map
+class _RegistryView(Mapping[str, object]):
+    def __init__(
+        self,
+        registry: ModelRegistryV2,
+        project: Callable[[list[ModelManifest]], dict[str, object]],
+    ) -> None:
+        self._registry = registry
+        self._project = project
+
+    def _snapshot(self) -> dict[str, object]:
+        return self._project(self._registry.list_manifests())
+
+    def __getitem__(self, key: str) -> object:
+        return self._snapshot()[key]
+
+    def __iter__(self):
+        return iter(self._snapshot())
+
+    def __len__(self) -> int:
+        return len(self._snapshot())
 
 
-AVAILABLE_MODELS = _build_available_models_preferred()
+def _build_legacy_views(registry: ModelRegistryV2):
+    def project_lane(
+        manifests: list[ModelManifest],
+        model_type: Literal["simple", "chat"],
+    ) -> dict[str, object]:
+        projected: dict[str, object] = {}
+        for manifest in manifests:
+            class_path = getattr(manifest, f"{model_type}_class_path")
+            if class_path is None:
+                continue
+            prefix = f"lmms_eval.models.{model_type}.{manifest.model_id}."
+            projected[manifest.model_id] = class_path.rsplit(".", 1)[-1] if class_path.startswith(prefix) else class_path
+        return projected
+
+    def project_aliases(manifests: list[ModelManifest]) -> dict[str, object]:
+        projected: dict[str, object] = {}
+        for manifest in manifests:
+            aliases = tuple(alias for alias in manifest.aliases if registry.resolve(alias).model_id == manifest.model_id)
+            if aliases:
+                projected[manifest.model_id] = aliases
+        return projected
+
+    def project_preferred(manifests: list[ModelManifest]) -> dict[str, object]:
+        return {manifest.model_id: (manifest.chat_class_path or manifest.simple_class_path).rsplit(".", 1)[-1] for manifest in manifests}
+
+    return (
+        _RegistryView(registry, lambda manifests: project_lane(manifests, "simple")),
+        _RegistryView(registry, lambda manifests: project_lane(manifests, "chat")),
+        _RegistryView(registry, project_aliases),
+        _RegistryView(registry, project_preferred),
+    )
+
+
+AVAILABLE_SIMPLE_MODELS, AVAILABLE_CHAT_TEMPLATE_MODELS, MODEL_ALIASES, AVAILABLE_MODELS = _build_legacy_views(MODEL_REGISTRY_V2)
 
 
 def list_available_models(include_aliases: bool = False) -> list[str]:
