@@ -1,6 +1,5 @@
 ---
 name: lmms-eval-guide
-version: v0.7
 description: Guides AI coding agents through the lmms-eval codebase - a unified evaluation framework for Large Multimodal Models (LMMs). Use when integrating new models, adding evaluation tasks/benchmarks, running YAML config-driven evaluations, orchestrating non-blocking training-time evaluation via the HTTP eval server, or navigating the evaluation pipeline architecture.
 ---
 
@@ -76,7 +75,7 @@ lmms_eval/
 │   ├── reasoning.py         # strip_reasoning_tags(), parse_reasoning_tags_config()
 │   └── registry.py          # @register_model, @register_task decorators
 ├── models/
-│   ├── __init__.py           # AVAILABLE_SIMPLE_MODELS, AVAILABLE_CHAT_TEMPLATE_MODELS, MODEL_ALIASES
+│   ├── __init__.py           # Private built-in declarations + read-only compatibility views
 │   ├── registry_v2.py        # ModelManifest, ModelRegistryV2 - resolution prefers chat over simple
 │   ├── chat/                 # Chat models (14+, RECOMMENDED for new models)
 │   │   ├── async_openai.py   # OpenAI-compatible API (message_format parameter)
@@ -122,11 +121,12 @@ oai_messages = messages.to_openai_messages()  # for OpenAI API
 
 ## Model Registration
 
-Models register in `models/__init__.py` via two dicts mapping `model_id -> ClassName`:
-- `AVAILABLE_CHAT_TEMPLATE_MODELS` - chat models in `models/chat/`
-- `AVAILABLE_SIMPLE_MODELS` - simple models in `models/simple/`
+In-tree models use private bootstrap declarations in `models/__init__.py`:
+- `_BUILTIN_CHAT_TEMPLATE_MODELS` - chat models in `models/chat/`
+- `_BUILTIN_SIMPLE_MODELS` - simple models in `models/simple/`
+- `_BUILTIN_MODEL_ALIASES` - backward-compatible names
 
-`MODEL_ALIASES` provides backward-compatible name mappings. Registry prefers chat over simple when both exist.
+External packages should expose a `ModelManifest` through the `lmms_eval.models` entry-point group. Registration runs at startup. `AVAILABLE_SIMPLE_MODELS`, `AVAILABLE_CHAT_TEMPLATE_MODELS`, `MODEL_ALIASES`, and `AVAILABLE_MODELS` are read-only compatibility views. Registry resolution prefers chat over simple when both exist.
 
 ## Reference Routing Matrix
 
