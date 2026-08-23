@@ -1,5 +1,7 @@
 import json
+import os
 import re
+from pathlib import Path
 from types import MappingProxyType, SimpleNamespace
 
 import pytest
@@ -119,6 +121,27 @@ def test_to_record_returns_deeply_detached_snapshot(recorder_factory, tmp_path):
     assert (second["legacy_invocation"]["arguments"]["nested"], second["repetition"]["suite_id"]) == ({"value": "stable"}, "suite")
     assert (second["counters"]["nested"], second["resources"]["nested"]) == ({"value": "stable"}, {"values": [1]})
     assert json.loads(recorder.write_json(tmp_path / "snapshot.json").read_text()) == second
+
+
+@pytest.mark.parametrize("stage", ["fsync", "replace"])
+def test_write_json_failure_preserves_target_and_cleans_temp(monkeypatch, recorder_factory, tmp_path, stage):
+    target = tmp_path / "baseline.json"
+    target.write_bytes(b"existing")
+    recorder = recorder_factory(finished=True)
+
+    def fail(*args):
+        if stage == "replace":
+            source, destination = map(Path, args)
+            assert source.parent == target.parent
+            assert json.loads(source.read_text()) == recorder.to_record()
+            assert destination == target
+        raise OSError(f"{stage} failed")
+
+    monkeypatch.setattr(os, stage, fail)
+    with pytest.raises(OSError, match=f"{stage} failed"):
+        recorder.write_json(target)
+    assert target.read_bytes() == b"existing"
+    assert set(tmp_path.iterdir()) == {target}
 
 
 @pytest.mark.parametrize("phase", [("future", "worker", 1, False), ("model_load", "invalid", 1, False), *(("model_load", "worker", value, False) for value in (True, -1, 2**53)), ("model_load", "worker", 1, 0)])
