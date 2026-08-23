@@ -49,3 +49,4 @@ jobs:
           test/performance/test_legacy_redaction.py
           test/performance/test_legacy_invocation.py
           test/performance/test_provenance.py
+          test/performance/test_baseline_recorder.py
