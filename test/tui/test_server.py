@@ -32,7 +32,21 @@ def test_default_tui_origins_are_exact_local_origins(monkeypatch):
     )
 
 
-@pytest.mark.parametrize("value", ["*", "https://tui.example/path", "https://user:pass@tui.example"])
+@pytest.mark.parametrize(
+    "value",
+    [
+        "*",
+        "https://tui.example/path",
+        "https://user:pass@tui.example",
+        "https://*.example.com",
+        "https://tui .example",
+        "https://tui.example?",
+        "https://tui.example#",
+        "https://:",
+        "https://tui.example:not-a-port",
+        "https://tui.example:65536",
+    ],
+)
 def test_invalid_tui_origin_override_fails_closed(monkeypatch, value):
     monkeypatch.setenv("LMMS_EVAL_TUI_ALLOWED_ORIGINS", value)
 

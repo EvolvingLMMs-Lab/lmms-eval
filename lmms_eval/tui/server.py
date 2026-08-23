@@ -53,8 +53,21 @@ def _allowed_tui_origins() -> tuple[str, ...]:
     if not origins:
         raise RuntimeError("LMMS_EVAL_TUI_ALLOWED_ORIGINS must contain at least one exact origin")
     for origin in origins:
-        parsed = urlsplit(origin)
-        if origin == "*" or parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.username is not None or parsed.password is not None or parsed.path or parsed.query or parsed.fragment:
+        try:
+            parsed = urlsplit(origin)
+            hostname = parsed.hostname
+            parsed.port
+        except ValueError as exc:
+            raise RuntimeError("LMMS_EVAL_TUI_ALLOWED_ORIGINS must contain exact http(s) origins") from exc
+        if (
+            parsed.scheme not in {"http", "https"}
+            or not hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or "*" in parsed.netloc
+            or any(character.isspace() for character in parsed.netloc)
+            or origin != f"{parsed.scheme}://{parsed.netloc}"
+        ):
             raise RuntimeError("LMMS_EVAL_TUI_ALLOWED_ORIGINS must contain exact http(s) origins")
     return origins
 
