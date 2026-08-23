@@ -44,7 +44,7 @@ uv run uvicorn lmms_eval.tui.server:app --host 0.0.0.0 --port 8000
 ### Custom Port
 
 ```bash
-LMMS_SERVER_PORT=3000 uv run lmms-eval-ui
+LMMS_SERVER_PORT=3000 LMMS_EVAL_TUI_ALLOWED_ORIGINS=http://localhost:3000 uv run lmms-eval-ui
 ```
 
 ## Security configuration
