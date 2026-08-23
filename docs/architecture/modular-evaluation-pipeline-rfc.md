@@ -417,7 +417,7 @@ Appendix A is normative. If explanatory prose elsewhere conflicts with this appe
 
 The words MUST, MUST NOT, REQUIRED, OPTIONAL, and MAY have their usual normative meanings.
 
-`string` means valid Unicode encoded as UTF-8 for serialization, with no lone surrogate. `integer` means a signed 64-bit JSON integer. `number` means a finite IEEE 754 binary64 value. NaN, positive or negative infinity, and negative zero are forbidden. `json_value` means null, boolean, integer, number, string, an array of `json_value`, or an object with string keys and `json_value` values.
+`string` means valid Unicode encoded as UTF-8 for serialization, with no lone surrogate. `integer` means a JSON integer in the inclusive IEEE 754 safe-integer range `-9007199254740991` through `9007199254740991`. Larger integral identifiers and counts MUST be encoded as strings under a versioned field contract. `number` means a finite IEEE 754 binary64 value. NaN, positive or negative infinity, and negative zero are forbidden. `json_value` means null, boolean, integer, number, string, an array of `json_value`, or an object with string keys and `json_value` values.
 
 A REQUIRED field is always present and never null unless its row explicitly includes null. An OPTIONAL field is omitted when unavailable. Structural null is forbidden. Absence and null are distinct: absence means the contract field does not apply or was not supplied, while null is data and is permitted only inside the explicitly open maps `intent.model.arguments`, `intent.generation.arguments`, `extensions`, `metrics`, `groups`, performance counters and resources, and `task_records[*].sanitized_version`.
 
