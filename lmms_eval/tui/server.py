@@ -23,9 +23,9 @@ from typing import Any
 from urllib.parse import quote, unquote, urlsplit
 
 import yaml
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -72,13 +72,26 @@ def _allowed_tui_origins() -> tuple[str, ...]:
     return origins
 
 
+_ALLOWED_TUI_ORIGINS = _allowed_tui_origins()
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=list(_allowed_tui_origins()),
+    allow_origins=list(_ALLOWED_TUI_ORIGINS),
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
+
+
+@app.middleware("http")
+async def reject_disallowed_origin(request: Request, call_next):
+    origin = request.headers.get("origin")
+    is_preflight = request.method == "OPTIONS" and "access-control-request-method" in request.headers
+    if origin is not None and origin not in _ALLOWED_TUI_ORIGINS and not is_preflight:
+        return JSONResponse(status_code=403, content={"detail": "Origin not allowed"})
+    return await call_next(request)
+
 
 # In-memory job storage
 _jobs: dict[str, dict[str, Any]] = {}
