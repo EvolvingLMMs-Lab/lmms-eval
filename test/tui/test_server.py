@@ -142,7 +142,7 @@ def test_stream_launches_hostile_values_as_structured_argv(monkeypatch):
 
     assert any('"type": "done"' in event for event in events)
     assert captured["argv"] == (
-        "python",
+        server.sys.executable,
         "-m",
         "lmms_eval",
         "--model",
