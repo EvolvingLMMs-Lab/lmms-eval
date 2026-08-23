@@ -55,6 +55,7 @@ dependencies = [
     "zstandard",
     "pillow",
     "pyyaml",
+    "rfc8785==0.1.4",
     "sympy",
     "latex2sympy2",
     "mpmath",
