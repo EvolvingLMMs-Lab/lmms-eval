@@ -4,6 +4,7 @@ import importlib.util
 import pathlib
 import sys
 import unittest
+from unittest.mock import patch
 
 _REGISTRY_PATH = pathlib.Path(__file__).resolve().parents[2] / "lmms_eval" / "models" / "registry_v2.py"
 _SPEC = importlib.util.spec_from_file_location("registry_v2_for_tests", _REGISTRY_PATH)
@@ -15,6 +16,30 @@ _SPEC.loader.exec_module(_MODULE)
 
 ModelManifest = _MODULE.ModelManifest
 ModelRegistryV2 = _MODULE.ModelRegistryV2
+
+
+class _FakeEntryPoint:
+    def __init__(self, name, value, payload=None, error=None):
+        self.name = name
+        self.value = value
+        self.payload = payload
+        self.error = error
+
+    def load(self):
+        if self.error:
+            raise self.error
+        return self.payload
+
+
+class _BrokenIterable:
+    def __iter__(self):
+        raise RuntimeError("iteration failed")
+
+
+class _BrokenSortEntryPoint:
+    @property
+    def name(self):
+        raise RuntimeError("sort key failed")
 
 
 class TestModelRegistryV2(unittest.TestCase):
@@ -62,6 +87,181 @@ class TestModelRegistryV2(unittest.TestCase):
         resolved = registry.resolve("api_chat")
         self.assertEqual(resolved.model_id, "api")
         self.assertEqual(resolved.requested_name, "api_chat")
+
+    def test_alias_conflict_does_not_partially_register_model(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(
+            ModelManifest("owner", simple_class_path="pkg.Owner", aliases=("shared",)),
+        )
+
+        with self.assertRaisesRegex(ValueError, "shared"):
+            registry.register_manifest(
+                ModelManifest("contender", simple_class_path="pkg.Contender", aliases=("shared",)),
+            )
+
+        self.assertEqual(registry.list_canonical_model_ids(), ["owner"])
+        self.assertEqual(registry.resolve("shared").model_id, "owner")
+
+    def test_same_id_fills_missing_lane_and_deduplicates_alias(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(
+            ModelManifest("dual", simple_class_path="pkg.Simple", aliases=("dual_api",)),
+        )
+        registry.register_manifest(
+            ModelManifest("dual", chat_class_path="pkg.Chat", aliases=("dual_api",)),
+        )
+
+        self.assertEqual(
+            registry.get_manifest("dual"),
+            ModelManifest("dual", "pkg.Simple", "pkg.Chat", ("dual_api",)),
+        )
+
+    def test_conflicting_path_preserves_original(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(ModelManifest("demo", simple_class_path="pkg.Original"))
+
+        with self.assertRaisesRegex(ValueError, "Conflicting simple_class_path"):
+            registry.register_manifest(ModelManifest("demo", simple_class_path="pkg.Replacement"))
+
+        self.assertEqual(registry.resolve("demo").class_path, "pkg.Original")
+
+    def test_list_manifests_returns_canonical_entries_without_importing_paths(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(ModelManifest("zeta", chat_class_path="missing.module.Zeta"))
+        registry.register_manifest(ModelManifest("alpha", simple_class_path="missing.module.Alpha"))
+
+        self.assertEqual(
+            registry.list_manifests(),
+            [
+                ModelManifest("alpha", simple_class_path="missing.module.Alpha"),
+                ModelManifest("zeta", chat_class_path="missing.module.Zeta"),
+            ],
+        )
+
+    def test_overwrite_transfers_alias_and_removes_stale_owner(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(ModelManifest("original", simple_class_path="pkg.Original", aliases=("shared",)))
+
+        registry.register_manifest(ModelManifest("replacement", simple_class_path="pkg.Replacement", aliases=("shared",)), overwrite=True)
+
+        self.assertEqual(registry.resolve("original").model_id, "original")
+        self.assertEqual(registry.resolve("replacement").model_id, "replacement")
+        self.assertEqual(registry.resolve("shared").model_id, "replacement")
+        self.assertEqual(registry.get_manifest("original").aliases, ())
+
+    def test_overwrite_canonical_id_takes_ownership_from_old_alias(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(ModelManifest("original", simple_class_path="pkg.Original", aliases=("replacement",)))
+
+        registry.register_manifest(ModelManifest("replacement", simple_class_path="pkg.Replacement"), overwrite=True)
+
+        self.assertEqual(registry.resolve("original").model_id, "original")
+        self.assertEqual(registry.resolve("replacement").model_id, "replacement")
+        self.assertEqual(registry.get_manifest("original").aliases, ())
+
+    def test_overwrite_alias_cannot_shadow_another_canonical_id(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(ModelManifest("protected", simple_class_path="pkg.Protected"))
+
+        with self.assertRaisesRegex(ValueError, "canonical model id"):
+            registry.register_manifests(
+                (
+                    ModelManifest("innocent", simple_class_path="pkg.Innocent"),
+                    ModelManifest("contender", simple_class_path="pkg.Contender", aliases=("protected",)),
+                ),
+                overwrite=True,
+            )
+
+        self.assertEqual(registry.resolve("protected").model_id, "protected")
+        with self.assertRaisesRegex(ValueError, "innocent"):
+            registry.resolve("innocent")
+        with self.assertRaisesRegex(ValueError, "contender"):
+            registry.resolve("contender")
+
+
+class TestEntryPointRegistration(unittest.TestCase):
+    def _assert_discovery_failure(self, registry, failures, message):
+        self.assertEqual(
+            [(failure.source, failure.error_type, failure.message) for failure in failures],
+            [("entrypoints:lmms_eval.models", "RuntimeError", message)],
+        )
+        self.assertEqual(registry.resolve("builtin").class_path, "pkg.Builtin")
+
+    def test_entry_point_enumeration_failure_is_reported(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(ModelManifest("builtin", simple_class_path="pkg.Builtin"))
+
+        with patch.object(_MODULE, "entry_points", side_effect=RuntimeError("enumeration failed")):
+            failures = registry.load_entrypoint_manifests()
+
+        self._assert_discovery_failure(registry, failures, "enumeration failed")
+
+    def test_entry_point_selection_iteration_failure_is_reported(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(ModelManifest("builtin", simple_class_path="pkg.Builtin"))
+        registry._select_entry_points = lambda group: _BrokenIterable()
+
+        failures = registry.load_entrypoint_manifests()
+
+        self._assert_discovery_failure(registry, failures, "iteration failed")
+
+    def test_entry_point_sort_key_failure_is_reported(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(ModelManifest("builtin", simple_class_path="pkg.Builtin"))
+        registry._select_entry_points = lambda group: [_BrokenSortEntryPoint()]
+
+        failures = registry.load_entrypoint_manifests()
+
+        self._assert_discovery_failure(registry, failures, "sort key failed")
+
+    def test_entry_point_failure_is_reported_and_later_plugin_loads(self):
+        registry = ModelRegistryV2()
+        registry._select_entry_points = lambda group: [
+            _FakeEntryPoint("broken", "broken:models", error=RuntimeError("boom")),
+            _FakeEntryPoint(
+                "healthy",
+                "healthy:models",
+                ModelManifest("external", chat_class_path="healthy.Chat"),
+            ),
+        ]
+
+        failures = registry.load_entrypoint_manifests()
+
+        self.assertEqual(
+            [(failure.source, failure.error_type, failure.message) for failure in failures],
+            [("broken (broken:models)", "RuntimeError", "boom")],
+        )
+        self.assertEqual(registry.resolve("external").class_path, "healthy.Chat")
+
+    def test_entry_point_batch_rollback_preserves_existing_and_loads_later_plugin(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(ModelManifest("existing", simple_class_path="pkg.Original"))
+        registry._select_entry_points = lambda group: [
+            _FakeEntryPoint(
+                "conflicting",
+                "conflicting:models",
+                (
+                    ModelManifest("rolled_back", simple_class_path="pkg.RolledBack"),
+                    ModelManifest("existing", simple_class_path="pkg.Conflict"),
+                ),
+            ),
+            _FakeEntryPoint(
+                "healthy",
+                "healthy:models",
+                ModelManifest("healthy", simple_class_path="pkg.Healthy"),
+            ),
+        ]
+
+        failures = registry.load_entrypoint_manifests()
+
+        self.assertEqual(
+            [(failure.source, failure.error_type) for failure in failures],
+            [("conflicting (conflicting:models)", "ValueError")],
+        )
+        self.assertEqual(registry.resolve("existing").class_path, "pkg.Original")
+        with self.assertRaisesRegex(ValueError, "rolled_back"):
+            registry.resolve("rolled_back")
+        self.assertEqual(registry.resolve("healthy").class_path, "pkg.Healthy")
 
 
 class TestRepresentativeManifestSemantics(unittest.TestCase):
