@@ -73,6 +73,22 @@ def test_cors_allows_only_configured_origin():
     assert "access-control-allow-origin" not in denied.headers
 
 
+def test_disallowed_origin_cannot_stop_job(monkeypatch):
+    job_id = "disallowed-origin-stop"
+    job = {"status": "running", "process": None}
+    monkeypatch.setitem(server._jobs, job_id, job)
+
+    response = _request(
+        "POST",
+        f"/eval/{job_id}/stop",
+        headers={"Origin": "https://attacker.invalid"},
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Origin not allowed"}
+    assert "stopped" not in job
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [
