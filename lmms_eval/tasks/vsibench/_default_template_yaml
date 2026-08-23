@@ -4,6 +4,7 @@ output_type: generate_until
 process_docs: !function utils.process_docs
 doc_to_visual: !function utils.vsibench_doc_to_visual
 doc_to_text: !function utils.vsibench_doc_to_text
+doc_to_messages: !function utils.vsibench_doc_to_messages
 doc_to_target: "ground_truth"
 generation_kwargs:
   max_new_tokens: 16
@@ -54,5 +55,24 @@ lmms_eval_specific_kwargs:
     pre_prompt: ""
     mca_post_prompt: "Answer with the option's letter from the given choices directly."
     na_post_prompt: "Do not response anything other than a single number!"
+  neo_ov:
+    pre_prompt: "These are frames of a video."
+    mca_post_prompt: "Answer with the option's letter from the given choices directly."
+    na_post_prompt: "Answer briefly and directly in one float number."
+    prompt_format: neo_ov
+    num_frames: 32
+
+model_specific_generation_kwargs:
+  neo_ov:
+    patch_size: 16
+    min_pixels: 691200
+    max_pixels: 691200
+    downsample_ratio: 0.5
+    system_prompt: ""
+    max_new_tokens: 4096
+    temperature: null
+    top_p: null
+    num_beams: null
+    repetition_penalty: null
 metadata:
   - version: 0.0

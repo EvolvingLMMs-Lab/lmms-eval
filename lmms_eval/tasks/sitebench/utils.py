@@ -128,27 +128,93 @@ def spatial_doc_to_text_image(doc, lmmseval_specific_kwargs=None):
     return prompt
 
 
-def spatial_doc_to_text_video(doc, lmmseval_specific_kwargs=None):
+def _format_neo_ov_content(images, prompt):
+    if len(images) == 1:
+        return [{"type": "image", "url": images[0]}, {"type": "text", "text": prompt}]
+
+    content = []
+    for idx, image in enumerate(images, start=1):
+        content.append({"type": "text", "text": f"Image-{idx}: "})
+        content.append({"type": "image", "url": image})
+    content.append({"type": "text", "text": prompt})
+    return content
+
+
+def _get_specific_kwarg(lmms_eval_specific_kwargs, key, default=None):
+    if not lmms_eval_specific_kwargs:
+        return default
+    if key in lmms_eval_specific_kwargs:
+        return lmms_eval_specific_kwargs[key]
+    nested_default = lmms_eval_specific_kwargs.get("default", {})
+    return nested_default.get(key, default) if isinstance(nested_default, dict) else default
+
+
+def _sitebench_image_neo_ov_prompt(doc):
+    question = doc["question"].strip()
+    options = doc["options"]
+    option_text = "\n".join(f"{UpperLetters[i]}: {options[i]}" for i in range(len(options)))
+
+    raw_prompt = ""
+    if "<image>" not in question and "<image>" not in option_text:
+        raw_prompt += "<image>" * len(doc["visual"]) + "\n"
+
+    raw_prompt += "Question: " + question + "\n"
+    raw_prompt += "Options:\n" + option_text + "\n"
+    raw_prompt += "Give me the answer letter directly. The best answer is:"
+
+    parts = raw_prompt.split("<image>")
+    prompt = ""
+    image_idx = 1
+    for part_idx, part in enumerate(parts):
+        text = part.strip()
+        if text:
+            prompt += text
+        if part_idx != len(parts) - 1 and image_idx <= len(doc["visual"]):
+            prompt += f"<Image-{image_idx}>"
+            image_idx += 1
+
+    images_to_remove = "".join(f"<Image-{idx + 1}>" for idx in range(len(doc["visual"])))
+    return prompt.replace(images_to_remove, "")
+
+
+def sitebench_video_prompt(doc, lmmseval_specific_kwargs=None):
     pre_prompt = "Select the best answer to the following multiple-choice question based on the video. Respond with only the letter of the correct option."
 
     question = doc["question"].strip()
     options = doc["options"]
     option_text = "\n".join(f"{UpperLetters[i]}: {options[i]}" for i in range(len(options)))
+    post_prompt = _get_specific_kwarg(lmmseval_specific_kwargs, "post_prompt", "Give me the answer letter directly. The best answer is:")
 
-    prompt = pre_prompt + "\n"
+    return f"{pre_prompt}\nQuestion: {question}\nOptions:\n{option_text}\n{post_prompt}"
 
-    # check the pre_prompt
-    if lmmseval_specific_kwargs:
-        prompt += lmmseval_specific_kwargs.get("default", {}).get("pre_prompt", "")
 
-    prompt += "Question: " + question + "\n"
-    prompt += "Options:\n" + option_text + "\n"
+def _sitebench_video_frames(doc, lmms_eval_specific_kwargs=None):
+    from decord import VideoReader, cpu
 
-    # Append post prompt if provided
-    if lmmseval_specific_kwargs:
-        prompt += lmmseval_specific_kwargs.get("default", {}).get("post_prompt", "")
+    video_path = os.path.join(cache_dir, doc["visual"][0])
+    if not os.path.exists(video_path):
+        raise FileNotFoundError(f"Video path: {video_path} does not exist.")
 
-    return prompt
+    num_frames = int(_get_specific_kwarg(lmms_eval_specific_kwargs, "num_frames", 32))
+    vr = VideoReader(video_path, ctx=cpu(0))
+    total_frames = len(vr)
+    num_frames = min(num_frames, total_frames)
+    indices = np.linspace(0, total_frames - 1, num_frames, dtype=int)
+    frames = vr.get_batch(indices).asnumpy()
+    return [Image.fromarray(frame) for frame in frames]
+
+
+def _format_neo_ov_video_content(frames, prompt):
+    content = []
+    for idx, frame in enumerate(frames, start=1):
+        content.append({"type": "text", "text": f"Frame-{idx}: "})
+        content.append({"type": "image", "url": frame})
+    content.append({"type": "text", "text": prompt})
+    return content
+
+
+def spatial_doc_to_text_video(doc, lmmseval_specific_kwargs=None):
+    return sitebench_video_prompt(doc, lmmseval_specific_kwargs)
 
 
 def spatial_doc_to_messages_image(doc, lmms_eval_specific_kwargs=None):
@@ -161,6 +227,11 @@ def spatial_doc_to_messages_image(doc, lmms_eval_specific_kwargs=None):
         If 'interleave_visuals' is set to False in the 'default' section,
         the function will generate non-interleaved messages.
     """
+    if lmms_eval_specific_kwargs and lmms_eval_specific_kwargs.get("prompt_format") == "neo_ov":
+        question = _sitebench_image_neo_ov_prompt(doc)
+        visuals = spatial_doc_to_visual_image(doc)
+        return [{"role": "user", "content": _format_neo_ov_content(visuals, question)}]
+
     if lmms_eval_specific_kwargs and lmms_eval_specific_kwargs.get("default", {}).get("interleave_visuals", True) is False:
         # Fallback to non-interleaved format - content must be a list for ChatMessages
         question = spatial_doc_to_text_image(doc, lmms_eval_specific_kwargs)
@@ -204,6 +275,11 @@ def spatial_doc_to_messages_video(doc, lmms_eval_specific_kwargs=None):
     Builds video-text messages for chat-based models.
     """
     question = spatial_doc_to_text_video(doc, lmms_eval_specific_kwargs)
+
+    if lmms_eval_specific_kwargs and lmms_eval_specific_kwargs.get("prompt_format") == "neo_ov":
+        frames = _sitebench_video_frames(doc, lmms_eval_specific_kwargs)
+        return [{"role": "user", "content": _format_neo_ov_video_content(frames, question)}]
+
     visuals = spatial_doc_to_visual_video(doc)
 
     # Video uses a simpler format - video first, then the question text

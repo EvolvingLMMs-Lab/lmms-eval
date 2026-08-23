@@ -1,5 +1,6 @@
 import logging
 import re
+import string
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -56,6 +57,45 @@ def embspatial_doc_to_text(doc: dict[str, Any], lmms_eval_specific_kwargs: Optio
 
 def embspatial_doc_to_visual(doc: dict) -> list:
     return [doc["image"].convert("RGB")]
+
+
+def _format_neo_ov_content(images: list, prompt: str) -> list:
+    if len(images) == 1:
+        return [{"type": "image", "url": images[0]}, {"type": "text", "text": prompt}]
+
+    content = []
+    for idx, image in enumerate(images, start=1):
+        content.append({"type": "text", "text": f"Image-{idx}: "})
+        content.append({"type": "image", "url": image})
+    content.append({"type": "text", "text": prompt})
+    return content
+
+
+def _embspatial_neo_ov_prompt(doc: dict[str, Any]) -> str:
+    question = doc["question"].replace("<image>", "").strip()
+    hint = doc.get("hint")
+    if hint is not None and hint == hint:
+        question = f"{hint}\n{question}"
+
+    options = doc["answer_options"]
+    for idx, item in enumerate(options):
+        question += f"\n{string.ascii_uppercase[idx]}. {item}"
+
+    return question + "\nAnswer with the option's letter from the given choices directly."
+
+
+def embspatial_doc_to_messages(doc: dict[str, Any], lmms_eval_specific_kwargs: Optional[dict[str, Any]] = None) -> list:
+    lmms_eval_specific_kwargs = lmms_eval_specific_kwargs or {}
+    images = embspatial_doc_to_visual(doc)
+
+    if lmms_eval_specific_kwargs.get("prompt_format") == "neo_ov":
+        prompt = _embspatial_neo_ov_prompt(doc)
+        return [{"role": "user", "content": _format_neo_ov_content(images, prompt)}]
+
+    prompt = embspatial_doc_to_text(doc, lmms_eval_specific_kwargs)
+    content = [{"type": "image", "url": image} for image in images]
+    content.append({"type": "text", "text": prompt})
+    return [{"role": "user", "content": content}]
 
 
 DATA_SOURCES = ["ai2thor", "mp3d", "scannet"]

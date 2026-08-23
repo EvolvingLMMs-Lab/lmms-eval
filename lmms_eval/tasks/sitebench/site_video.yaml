@@ -66,5 +66,23 @@ lmms_eval_specific_kwargs:
     post_prompt: "Give me the answer letter directly. The best answer is:"
   gemini_api:
     pre_prompt: "<video>"
+  neo_ov:
+    pre_prompt: ""
+    post_prompt: "Give me the answer letter directly. The best answer is:"
+    prompt_format: neo_ov
+    num_frames: 32
+
+model_specific_generation_kwargs:
+  neo_ov:
+    patch_size: 16
+    min_pixels: 691200
+    max_pixels: 691200
+    downsample_ratio: 0.5
+    system_prompt: ""
+    max_new_tokens: 4096
+    temperature: null
+    top_p: null
+    num_beams: null
+    repetition_penalty: null
 metadata:
   - version: 0.0

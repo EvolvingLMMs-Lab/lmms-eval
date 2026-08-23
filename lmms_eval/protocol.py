@@ -27,6 +27,8 @@ class ChatImageContent(BaseModel):
 class ChatVideoContent(BaseModel):
     type: Literal["video"] = "video"
     url: Any
+    start_time: Optional[float] = None
+    end_time: Optional[float] = None
 
 
 class ChatAudioContent(BaseModel):
@@ -80,7 +82,12 @@ class ChatMessages(BaseModel):
                 elif content.type == "image":
                     hf_message["content"].append({"type": "image", "image": content.url, **image_kwargs})
                 elif content.type == "video":
-                    hf_message["content"].append({"type": "video", "video": content.url, **video_kwargs})
+                    video_item = {"type": "video", "video": content.url, **video_kwargs}
+                    if content.start_time is not None:
+                        video_item["video_start"] = content.start_time
+                    if content.end_time is not None:
+                        video_item["video_end"] = content.end_time
+                    hf_message["content"].append(video_item)
                 elif content.type == "audio":
                     hf_message["content"].append({"type": "audio", "audio": content.url})
             hf_messages.append(hf_message)
@@ -118,7 +125,12 @@ class ChatMessages(BaseModel):
                         continue
                     if fetch_video is None:
                         raise ImportError("qwen_vl_utils is required for video processing. Please install it with: pip install qwen-vl-utils")
-                    video_input = fetch_video({"type": "video", "video": content.url, **video_kwargs})
+                    video_arg = {"type": "video", "video": content.url, **video_kwargs}
+                    if content.start_time is not None:
+                        video_arg["video_start"] = content.start_time
+                    if content.end_time is not None:
+                        video_arg["video_end"] = content.end_time
+                    video_input = fetch_video(video_arg)
                     for frame in video_input:
                         image = Image.fromarray(frame.permute(1, 2, 0).numpy().astype(np.uint8))
                         openai_message["content"].append(
@@ -156,8 +168,13 @@ class ChatMessages(BaseModel):
                 elif content.type == "video":
                     if fetch_video is None:
                         raise ImportError("qwen_vl_utils is required for video processing. Please install it with: pip install qwen-vl-utils")
+                    video_arg = {"type": "video", "video": content.url, **video_kwargs}
+                    if content.start_time is not None:
+                        video_arg["video_start"] = content.start_time
+                    if content.end_time is not None:
+                        video_arg["video_end"] = content.end_time
                     video_input, fps = fetch_video(
-                        {"type": "video", "video": content.url, **video_kwargs},
+                        video_arg,
                         return_video_metadata=True,
                         return_video_sample_fps=True,
                     )
