@@ -45,6 +45,15 @@ class ResolvedModel:
         return self.class_path.rsplit(".", 1)[-1]
 
 
+@dataclass(frozen=True)
+class PluginLoadFailure:
+    """A model entry point that could not be loaded or registered."""
+
+    source: str
+    error_type: str
+    message: str
+
+
 class ModelRegistryV2:
     """Canonical model registry with aliasing and typed resolution semantics."""
 
@@ -67,17 +76,36 @@ class ModelRegistryV2:
         raise `ValueError`.
         """
 
-        merged = self._merge_manifest(self._manifests.get(manifest.model_id), manifest, overwrite=overwrite)
-        self._manifests[manifest.model_id] = merged
+        self.register_manifests((manifest,), overwrite=overwrite)
 
-        names = (merged.model_id, *merged.aliases)
-        for name in names:
-            existing = self._alias_to_model_id.get(name)
-            if existing and existing != merged.model_id and not overwrite:
-                raise ValueError(
-                    f"Alias '{name}' already points to '{existing}', cannot remap to '{merged.model_id}'",
-                )
-            self._alias_to_model_id[name] = merged.model_id
+    def register_manifests(
+        self,
+        manifests: Iterable[ModelManifest],
+        *,
+        overwrite: bool = False,
+    ) -> None:
+        """Atomically register a batch of manifests and their aliases."""
+
+        candidate_manifests = self._manifests.copy()
+        candidate_names = self._alias_to_model_id.copy()
+        for manifest in manifests:
+            merged = self._merge_manifest(
+                candidate_manifests.get(manifest.model_id),
+                manifest,
+                overwrite=overwrite,
+            )
+            for name in (merged.model_id, *merged.aliases):
+                owner = candidate_names.get(name)
+                if owner is not None and owner != merged.model_id and not overwrite:
+                    raise ValueError(
+                        f"Model name '{name}' already points to '{owner}', " f"cannot remap to '{merged.model_id}'",
+                    )
+            candidate_manifests[merged.model_id] = merged
+            for name in (merged.model_id, *merged.aliases):
+                candidate_names[name] = merged.model_id
+
+        self._manifests = candidate_manifests
+        self._alias_to_model_id = candidate_names
 
     def resolve(self, model_name: str, force_simple: bool = False) -> ResolvedModel:
         """Resolve a model name to one concrete implementation class path."""
@@ -141,7 +169,7 @@ class ModelRegistryV2:
         group: str = "lmms_eval.models",
         *,
         overwrite: bool = False,
-    ) -> None:
+    ) -> tuple[PluginLoadFailure, ...]:
         """Load model manifests from Python entry points.
 
         Supported payloads per entry point:
@@ -150,12 +178,23 @@ class ModelRegistryV2:
         - `Callable[[], ModelManifest | Iterable[ModelManifest]]`
         """
 
-        selected = self._select_entry_points(group)
+        failures: list[PluginLoadFailure] = []
+        selected = sorted(
+            self._select_entry_points(group),
+            key=lambda ep: (ep.name, getattr(ep, "value", "")),
+        )
         for ep in selected:
-            payload = ep.load()
-            manifests = self._coerce_payload_to_manifests(payload)
-            for manifest in manifests:
-                self.register_manifest(manifest, overwrite=overwrite)
+            source = f"{ep.name} ({getattr(ep, 'value', '')})"
+            try:
+                self.register_manifests(
+                    self._coerce_payload_to_manifests(ep.load()),
+                    overwrite=overwrite,
+                )
+            except Exception as exc:
+                failures.append(
+                    PluginLoadFailure(source, type(exc).__name__, str(exc)),
+                )
+        return tuple(failures)
 
     def list_model_names(self) -> list[str]:
         """Return all known requestable model names (ids + aliases)."""
@@ -166,6 +205,11 @@ class ModelRegistryV2:
         """Return canonical model ids."""
 
         return sorted(self._manifests)
+
+    def list_manifests(self) -> list[ModelManifest]:
+        """Return all canonical manifests without importing model classes."""
+
+        return [self._manifests[model_id] for model_id in self.list_canonical_model_ids()]
 
     def get_manifest(self, model_name: str) -> ModelManifest:
         """Return canonical manifest for a model id or alias."""
