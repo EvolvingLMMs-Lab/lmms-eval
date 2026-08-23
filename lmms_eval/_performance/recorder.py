@@ -1,3 +1,4 @@
+import os
 import re
 import time
 from collections.abc import Mapping
@@ -5,6 +6,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any
 
 from .json_v1 import canonical_json_bytes, validate_v1_json
@@ -184,5 +186,15 @@ class BaselinePerformanceRecorder:
     def write_json(self, path: Path) -> Path:
         payload = canonical_json_bytes(self.to_record())
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(payload)
+        temporary = NamedTemporaryFile("wb", dir=path.parent, prefix=f".{path.name}.", delete=False)
+        temporary_path = Path(temporary.name)
+        try:
+            with temporary:
+                temporary.write(payload)
+                temporary.flush()
+                os.fsync(temporary.fileno())
+            os.replace(temporary_path, path)
+        except BaseException:
+            temporary_path.unlink(missing_ok=True)
+            raise
         return path
