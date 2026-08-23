@@ -51,3 +51,4 @@ jobs:
           test/performance/test_provenance.py
           test/performance/test_baseline_recorder.py
           test/performance/test_eval_phase_instrumentation.py
+          test/performance/test_benchmark_eval_phases.py
