@@ -25,20 +25,21 @@ def _col(text: str, width: int) -> str:
     return text[:width].ljust(width)
 
 
+def _model_rows() -> list[tuple[str, str, tuple[str, ...]]]:
+    from lmms_eval.models import MODEL_REGISTRY_V2
+
+    rows = []
+    for manifest in MODEL_REGISTRY_V2.list_manifests():
+        kind = "chat+simple" if manifest.chat_class_path and manifest.simple_class_path else "chat" if manifest.chat_class_path else "simple"
+        rows.append((manifest.model_id, kind, manifest.aliases))
+    return rows
+
+
 def run_models(args: argparse.Namespace) -> None:
-    from lmms_eval.models import (
-        AVAILABLE_CHAT_TEMPLATE_MODELS,
-        AVAILABLE_SIMPLE_MODELS,
-        MODEL_ALIASES,
-    )
-
-    chat_only = sorted(set(AVAILABLE_CHAT_TEMPLATE_MODELS) - set(AVAILABLE_SIMPLE_MODELS))
-    simple_only = sorted(set(AVAILABLE_SIMPLE_MODELS) - set(AVAILABLE_CHAT_TEMPLATE_MODELS))
-    dual = sorted(set(AVAILABLE_CHAT_TEMPLATE_MODELS) & set(AVAILABLE_SIMPLE_MODELS))
-
-    def _alias_str(name: str) -> str:
-        aliases = MODEL_ALIASES.get(name, ())
-        return ", ".join(aliases) if aliases else ""
+    rows = _model_rows()
+    chat_only = [row for row in rows if row[1] == "chat"]
+    dual = [row for row in rows if row[1] == "chat+simple"]
+    simple_only = [row for row in rows if row[1] == "simple"]
 
     show_aliases = getattr(args, "aliases", False)
 
@@ -48,26 +49,26 @@ def run_models(args: argparse.Namespace) -> None:
     else:
         header = f"{_col('Name', 28)}{_col('Type', 14)}"
         sep = "-" * 42
-    print(f"\nRegistered Models ({len(chat_only) + len(simple_only) + len(dual)} total)\n")
+    print(f"\nRegistered Models ({len(rows)} total)\n")
     print(header)
     print(sep)
 
-    def _print_row(name: str, typ: str) -> None:
+    def _print_row(name: str, typ: str, aliases: tuple[str, ...]) -> None:
         if show_aliases:
-            alias = _alias_str(name)
+            alias = ", ".join(aliases)
             print(f"{_col(name, 28)}{_col(typ, 14)}{alias}")
         else:
             print(f"{_col(name, 28)}{_col(typ, 14)}")
 
     # Chat-only models first (recommended)
-    for name in chat_only:
-        _print_row(name, "chat")
+    for row in chat_only:
+        _print_row(*row)
     # Dual-mode models
-    for name in dual:
-        _print_row(name, "chat+simple")
+    for row in dual:
+        _print_row(*row)
     # Simple-only models
-    for name in simple_only:
-        _print_row(name, "simple")
+    for row in simple_only:
+        _print_row(*row)
 
     print(sep)
     print(f"\n  chat-only: {len(chat_only)}  |  chat+simple: {len(dual)}  |  simple-only: {len(simple_only)}")

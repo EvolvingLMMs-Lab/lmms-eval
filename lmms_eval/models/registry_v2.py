@@ -96,10 +96,23 @@ class ModelRegistryV2:
             )
             for name in (merged.model_id, *merged.aliases):
                 owner = candidate_names.get(name)
-                if owner is not None and owner != merged.model_id and not overwrite:
+                if owner is None or owner == merged.model_id:
+                    continue
+                if name != merged.model_id and name in candidate_manifests:
+                    raise ValueError(
+                        f"Model alias '{name}' cannot shadow canonical model id '{name}'",
+                    )
+                if not overwrite:
                     raise ValueError(
                         f"Model name '{name}' already points to '{owner}', " f"cannot remap to '{merged.model_id}'",
                     )
+                previous = candidate_manifests[owner]
+                candidate_manifests[owner] = ModelManifest(
+                    model_id=previous.model_id,
+                    simple_class_path=previous.simple_class_path,
+                    chat_class_path=previous.chat_class_path,
+                    aliases=tuple(alias for alias in previous.aliases if alias != name),
+                )
             candidate_manifests[merged.model_id] = merged
             for name in (merged.model_id, *merged.aliases):
                 candidate_names[name] = merged.model_id
@@ -179,13 +192,18 @@ class ModelRegistryV2:
         """
 
         failures: list[PluginLoadFailure] = []
-        selected = sorted(
-            self._select_entry_points(group),
-            key=lambda ep: (ep.name, getattr(ep, "value", "")),
-        )
+        discovery_source = f"entrypoints:{group}"
+        try:
+            selected = sorted(
+                self._select_entry_points(group),
+                key=lambda ep: (ep.name, getattr(ep, "value", "")),
+            )
+        except Exception as exc:
+            return (PluginLoadFailure(discovery_source, type(exc).__name__, str(exc)),)
         for ep in selected:
-            source = f"{ep.name} ({getattr(ep, 'value', '')})"
+            source = discovery_source
             try:
+                source = f"{ep.name} ({getattr(ep, 'value', '')})"
                 self.register_manifests(
                     self._coerce_payload_to_manifests(ep.load()),
                     overwrite=overwrite,

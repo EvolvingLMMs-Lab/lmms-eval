@@ -4,6 +4,7 @@ import importlib.util
 import pathlib
 import sys
 import unittest
+from unittest.mock import patch
 
 _REGISTRY_PATH = pathlib.Path(__file__).resolve().parents[2] / "lmms_eval" / "models" / "registry_v2.py"
 _SPEC = importlib.util.spec_from_file_location("registry_v2_for_tests", _REGISTRY_PATH)
@@ -28,6 +29,17 @@ class _FakeEntryPoint:
         if self.error:
             raise self.error
         return self.payload
+
+
+class _BrokenIterable:
+    def __iter__(self):
+        raise RuntimeError("iteration failed")
+
+
+class _BrokenSortEntryPoint:
+    @property
+    def name(self):
+        raise RuntimeError("sort key failed")
 
 
 class TestModelRegistryV2(unittest.TestCase):
@@ -126,8 +138,82 @@ class TestModelRegistryV2(unittest.TestCase):
             ],
         )
 
+    def test_overwrite_transfers_alias_and_removes_stale_owner(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(ModelManifest("original", simple_class_path="pkg.Original", aliases=("shared",)))
+
+        registry.register_manifest(ModelManifest("replacement", simple_class_path="pkg.Replacement", aliases=("shared",)), overwrite=True)
+
+        self.assertEqual(registry.resolve("original").model_id, "original")
+        self.assertEqual(registry.resolve("replacement").model_id, "replacement")
+        self.assertEqual(registry.resolve("shared").model_id, "replacement")
+        self.assertEqual(registry.get_manifest("original").aliases, ())
+
+    def test_overwrite_canonical_id_takes_ownership_from_old_alias(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(ModelManifest("original", simple_class_path="pkg.Original", aliases=("replacement",)))
+
+        registry.register_manifest(ModelManifest("replacement", simple_class_path="pkg.Replacement"), overwrite=True)
+
+        self.assertEqual(registry.resolve("original").model_id, "original")
+        self.assertEqual(registry.resolve("replacement").model_id, "replacement")
+        self.assertEqual(registry.get_manifest("original").aliases, ())
+
+    def test_overwrite_alias_cannot_shadow_another_canonical_id(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(ModelManifest("protected", simple_class_path="pkg.Protected"))
+
+        with self.assertRaisesRegex(ValueError, "canonical model id"):
+            registry.register_manifests(
+                (
+                    ModelManifest("innocent", simple_class_path="pkg.Innocent"),
+                    ModelManifest("contender", simple_class_path="pkg.Contender", aliases=("protected",)),
+                ),
+                overwrite=True,
+            )
+
+        self.assertEqual(registry.resolve("protected").model_id, "protected")
+        with self.assertRaisesRegex(ValueError, "innocent"):
+            registry.resolve("innocent")
+        with self.assertRaisesRegex(ValueError, "contender"):
+            registry.resolve("contender")
+
 
 class TestEntryPointRegistration(unittest.TestCase):
+    def _assert_discovery_failure(self, registry, failures, message):
+        self.assertEqual(
+            [(failure.source, failure.error_type, failure.message) for failure in failures],
+            [("entrypoints:lmms_eval.models", "RuntimeError", message)],
+        )
+        self.assertEqual(registry.resolve("builtin").class_path, "pkg.Builtin")
+
+    def test_entry_point_enumeration_failure_is_reported(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(ModelManifest("builtin", simple_class_path="pkg.Builtin"))
+
+        with patch.object(_MODULE, "entry_points", side_effect=RuntimeError("enumeration failed")):
+            failures = registry.load_entrypoint_manifests()
+
+        self._assert_discovery_failure(registry, failures, "enumeration failed")
+
+    def test_entry_point_selection_iteration_failure_is_reported(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(ModelManifest("builtin", simple_class_path="pkg.Builtin"))
+        registry._select_entry_points = lambda group: _BrokenIterable()
+
+        failures = registry.load_entrypoint_manifests()
+
+        self._assert_discovery_failure(registry, failures, "iteration failed")
+
+    def test_entry_point_sort_key_failure_is_reported(self):
+        registry = ModelRegistryV2()
+        registry.register_manifest(ModelManifest("builtin", simple_class_path="pkg.Builtin"))
+        registry._select_entry_points = lambda group: [_BrokenSortEntryPoint()]
+
+        failures = registry.load_entrypoint_manifests()
+
+        self._assert_discovery_failure(registry, failures, "sort key failed")
+
     def test_entry_point_failure_is_reported_and_later_plugin_loads(self):
         registry = ModelRegistryV2()
         registry._select_entry_points = lambda group: [

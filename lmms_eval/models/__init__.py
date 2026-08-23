@@ -230,22 +230,7 @@ def _load_legacy_plugin_models(registry: ModelRegistryV2, plugins: str | None) -
 def _initialize_model_registry() -> ModelRegistryV2:
     registry = ModelRegistryV2()
     registry.register_manifests(_build_builtin_manifests())
-
-    plugins = os.environ.get("LMMS_EVAL_PLUGINS")
-    if plugins:
-        warnings.warn(
-            "LMMS_EVAL_PLUGINS is deprecated. Prefer Python entry-points group " "'lmms_eval.models' for plugin model registration.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-    failures = (*_load_legacy_plugin_models(registry, plugins), *registry.load_entrypoint_manifests(overwrite=True))
-    for failure in failures:
-        logger.warning(f"Failed to load model plugin {failure.source}: {failure.error_type}: {failure.message}")
-
     return registry
-
-
-MODEL_REGISTRY_V2 = _initialize_model_registry()
 
 
 class _RegistryView(Mapping[str, object]):
@@ -303,7 +288,24 @@ def _build_legacy_views(registry: ModelRegistryV2):
     )
 
 
+def _load_model_plugins(registry: ModelRegistryV2) -> None:
+    """Load trusted plugins during module startup and report all failures."""
+
+    plugins = os.environ.get("LMMS_EVAL_PLUGINS")
+    if plugins:
+        warnings.warn(
+            "LMMS_EVAL_PLUGINS is deprecated. Prefer Python entry-points group " "'lmms_eval.models' for plugin model registration.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+    failures = (*_load_legacy_plugin_models(registry, plugins), *registry.load_entrypoint_manifests(overwrite=True))
+    for failure in failures:
+        logger.warning(f"Failed to load model plugin {failure.source}: {failure.error_type}: {failure.message}")
+
+
+MODEL_REGISTRY_V2 = _initialize_model_registry()
 AVAILABLE_SIMPLE_MODELS, AVAILABLE_CHAT_TEMPLATE_MODELS, MODEL_ALIASES, AVAILABLE_MODELS = _build_legacy_views(MODEL_REGISTRY_V2)
+_load_model_plugins(MODEL_REGISTRY_V2)
 
 
 def list_available_models(include_aliases: bool = False) -> list[str]:

@@ -129,24 +129,37 @@ class MyModel(lmms):
     # is_simple = True  # simple model (legacy, default)
 ```
 
-Then add the entry in `lmms_eval/models/__init__.py`:
+For a built-in model, add one bootstrap declaration in `lmms_eval/models/__init__.py`:
 
 ```python
-# Recommended (ModelRegistryV2 manifest)
-from lmms_eval.models.registry_v2 import ModelManifest
-
-MODEL_REGISTRY_V2.register_manifest(
-    ModelManifest(
-        model_id="my_model",
-        chat_class_path="lmms_eval.models.chat.my_model.MyModel",
-    )
-)
-
-# Legacy (still supported)
-AVAILABLE_CHAT_TEMPLATE_MODELS["my_model"] = "MyModel"
+_BUILTIN_CHAT_TEMPLATE_MODELS = {
+    # ...
+    "my_model": "MyModel",
+}
 ```
 
-For external plugin packages, prefer Python entry-points (`lmms_eval.models`) over `LMMS_EVAL_PLUGINS`.
+Use `_BUILTIN_SIMPLE_MODELS` for a simple model. The registry converts these private declarations into `ModelManifest` objects at startup. `AVAILABLE_SIMPLE_MODELS`, `AVAILABLE_CHAT_TEMPLATE_MODELS`, `MODEL_ALIASES`, and `AVAILABLE_MODELS` are read-only compatibility views. Do not mutate them.
+
+External packages register through the `lmms_eval.models` entry-point group. An entry point can expose one `ModelManifest`, an iterable of manifests, or a function that returns either form:
+
+```toml
+[project.entry-points."lmms_eval.models"]
+my_model = "my_plugin.models:model_manifest"
+```
+
+```python
+# my_plugin/models.py
+from lmms_eval.models.registry_v2 import ModelManifest
+
+
+def model_manifest():
+    return ModelManifest(
+        model_id="my_model",
+        chat_class_path="my_plugin.models.MyModel",
+    )
+```
+
+Install the plugin before starting `lmms-eval`. Registration is a startup-only operation. Restart the process after changing installed plugins. `LMMS_EVAL_PLUGINS` remains available for older packages, but new packages should use entry points.
 
 ## Complete Example (Chat Model)
 

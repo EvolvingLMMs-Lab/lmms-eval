@@ -1,20 +1,123 @@
 """Compatibility tests for model-registry startup and legacy projections."""
 
+import asyncio
 import hashlib
 import json
 import subprocess
 import sys
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
 from lmms_eval import models
+from lmms_eval.api import registry as legacy_registry
+from lmms_eval.api.model import lmms
+from lmms_eval.cli import models_cmd, wizard
+from lmms_eval.entrypoints import http_server
 from lmms_eval.models.registry_v2 import ModelRegistryV2
+from lmms_eval.tui import discovery as tui_discovery
 
 
 def _resolution_tuple(registry, model_name, *, force_simple=False):
     resolved = registry.resolve(model_name, force_simple=force_simple)
     return resolved.model_id, resolved.model_type, resolved.class_path
+
+
+def test_legacy_decorator_lookup_preserves_registered_model(monkeypatch):
+    model_name = "compat_decorated"
+    monkeypatch.setitem(legacy_registry.MODEL_REGISTRY, model_name, lmms)
+    del legacy_registry.MODEL_REGISTRY[model_name]
+
+    @legacy_registry.register_model(model_name)
+    class CompatDecorated(lmms):
+        pass
+
+    assert legacy_registry.get_model(model_name) is CompatDecorated
+
+
+def test_legacy_decorator_lookup_falls_back_to_v2(monkeypatch):
+    sentinel = object()
+
+    def get_model_v2(model_name):
+        assert model_name == "compat_external"
+        return sentinel
+
+    monkeypatch.setattr(models, "get_model", get_model_v2)
+
+    assert legacy_registry.get_model("compat_external") is sentinel
+
+
+def test_frontend_discovery_uses_v2_manifests(monkeypatch):
+    registry = ModelRegistryV2()
+    registry.register_manifests(
+        (
+            models.ModelManifest("chat_plugin", chat_class_path="plugin.Chat"),
+            models.ModelManifest(
+                "dual_plugin",
+                simple_class_path="plugin.DualSimple",
+                chat_class_path="plugin.DualChat",
+                aliases=("dual_alias",),
+            ),
+            models.ModelManifest("simple_plugin", simple_class_path="plugin.Simple"),
+        ),
+    )
+    monkeypatch.setattr(models, "MODEL_REGISTRY_V2", registry)
+
+    assert models_cmd._model_rows() == [
+        ("chat_plugin", "chat", ()),
+        ("dual_plugin", "chat+simple", ("dual_alias",)),
+        ("simple_plugin", "simple", ()),
+    ]
+    assert wizard._model_choices() == [
+        ("chat_plugin", "chat"),
+        ("dual_plugin", "chat+simple"),
+        ("simple_plugin", "simple"),
+    ]
+    assert asyncio.run(http_server.list_available_models()) == {"models": ["chat_plugin", "dual_plugin", "simple_plugin"]}
+    assert dict(tui_discovery.discover_models())["dual_plugin"] == "dual_plugin (dual_alias)"
+
+
+def test_frontend_discovery_agrees_after_alias_ownership_transfer(monkeypatch):
+    registry = ModelRegistryV2()
+    registry.register_manifest(models.ModelManifest("original", simple_class_path="plugin.Original", aliases=("shared",)))
+    registry.register_manifest(models.ModelManifest("replacement", simple_class_path="plugin.Replacement", aliases=("shared",)), overwrite=True)
+    monkeypatch.setattr(models, "MODEL_REGISTRY_V2", registry)
+
+    assert models_cmd._model_rows() == [
+        ("original", "simple", ()),
+        ("replacement", "simple", ("shared",)),
+    ]
+    assert wizard._model_choices() == [
+        ("original", "simple"),
+        ("replacement", "simple"),
+    ]
+    assert asyncio.run(http_server.list_available_models()) == {"models": ["original", "replacement"]}
+    assert dict(tui_discovery.discover_models()) == {
+        "original": "original",
+        "replacement": "replacement (shared)",
+    }
+
+    fastmcp = ModuleType("mcp.server.fastmcp")
+    fastmcp.FastMCP = object
+    monkeypatch.setitem(sys.modules, "mcp.server.fastmcp", fastmcp)
+    from lmms_eval.mcp import tools as mcp_tools
+
+    class CapturingMCP:
+        def __init__(self):
+            self.tools = {}
+
+        def tool(self):
+            def register(function):
+                self.tools[function.__name__] = function
+                return function
+
+            return register
+
+    mcp = CapturingMCP()
+    mcp_tools.register_tools(mcp, scheduler=None)
+    mcp_models = {item["model_id"]: item for item in mcp.tools["list_models"](include_aliases=True)["models"]}
+    assert mcp_models["original"]["aliases"] == []
+    assert mcp_models["replacement"]["aliases"] == ["shared"]
 
 
 def test_builtin_manifests_preserve_all_model_resolutions():
@@ -124,6 +227,27 @@ def test_legacy_alias_view_exposes_only_current_owner_after_remap():
 def test_discovery_does_not_import_backend_modules():
     code = "import sys; import lmms_eval.models; assert 'lmms_eval.models.simple.qwen3_vl' not in sys.modules; assert 'lmms_eval.models.chat.vllm' not in sys.modules"
     subprocess.run([sys.executable, "-c", code], check=True)
+
+
+def test_public_legacy_views_exist_before_legacy_plugin_import(tmp_path):
+    plugin = tmp_path / "reads_legacy_views"
+    plugin.mkdir()
+    (plugin / "__init__.py").write_text("")
+    (plugin / "models.py").write_text(
+        "from lmms_eval.models import AVAILABLE_SIMPLE_MODELS\n" "assert 'qwen3_vl' in AVAILABLE_SIMPLE_MODELS\n" "AVAILABLE_MODELS = {'startup_visible': 'StartupVisible'}\n",
+    )
+    env = {
+        "LMMS_EVAL_PLUGINS": "reads_legacy_views",
+        "PYTHONPATH": str(tmp_path),
+    }
+    code = (
+        "from lmms_eval.models import AVAILABLE_SIMPLE_MODELS, MODEL_REGISTRY_V2; "
+        "assert AVAILABLE_SIMPLE_MODELS['startup_visible'] == "
+        "'reads_legacy_views.models.startup_visible.StartupVisible'; "
+        "assert MODEL_REGISTRY_V2.resolve('startup_visible').model_id == 'startup_visible'"
+    )
+
+    subprocess.run([sys.executable, "-c", code], check=True, env=env)
 
 
 def test_legacy_environment_plugins_isolate_failures(monkeypatch):

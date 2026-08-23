@@ -85,24 +85,21 @@ def _pick_from_list(
 # ── wizard steps ─────────────────────────────────────────────────────
 
 
+def _model_choices() -> list[tuple[str, str]]:
+    from lmms_eval.models import MODEL_REGISTRY_V2
+
+    choices = []
+    for manifest in MODEL_REGISTRY_V2.list_manifests():
+        kind = "chat+simple" if manifest.chat_class_path and manifest.simple_class_path else "chat" if manifest.chat_class_path else "simple"
+        choices.append((manifest.model_id, kind))
+    return [choice for choice in choices if choice[1] != "simple"] + [choice for choice in choices if choice[1] == "simple"]
+
+
 def _step_model() -> tuple[str, str]:
     """Step 1: pick model and model_args."""
-    from lmms_eval.models import (
-        AVAILABLE_CHAT_TEMPLATE_MODELS,
-        AVAILABLE_SIMPLE_MODELS,
-    )
-
-    # Build ordered list: chat first (recommended), then simple-only
-    chat_names = sorted(AVAILABLE_CHAT_TEMPLATE_MODELS.keys())
-    simple_only = sorted(set(AVAILABLE_SIMPLE_MODELS.keys()) - set(chat_names))
-
-    # Label chat models with a marker
-    labeled: list[tuple[str, str]] = []
-    for n in chat_names:
-        tag = "chat+simple" if n in AVAILABLE_SIMPLE_MODELS else "chat"
-        labeled.append((n, tag))
-    for n in simple_only:
-        labeled.append((n, "simple"))
+    labeled = _model_choices()
+    chat_names = [name for name, tag in labeled if tag.startswith("chat")]
+    simple_only = [name for name, tag in labeled if tag == "simple"]
 
     print("\n" + "=" * 60)
     print("  Step 1/4 \u2014 Select model")
@@ -119,7 +116,6 @@ def _step_model() -> tuple[str, str]:
             break
 
     print("\n  Simple models (legacy):")
-    simple_start = len(chat_names) + 1
     shown = 0
     for i, (name, tag) in enumerate(labeled, 1):
         if tag == "simple":
