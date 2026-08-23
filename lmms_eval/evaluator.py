@@ -7,6 +7,7 @@ import mimetypes
 import os
 import random
 import re
+from contextlib import nullcontext
 from datetime import timedelta
 from typing import Callable, List, Optional, Union
 
@@ -57,6 +58,7 @@ from lmms_eval.models.model_utils.usage_metrics import (
     set_task_context,
     summarize_usage_metrics,
 )
+from lmms_eval.performance import BaselinePerformanceRecorder
 from lmms_eval.tasks import TaskManager, get_task_dict
 from lmms_eval.utils import (
     create_iterator,
@@ -101,6 +103,15 @@ def _redact_eval_config_secrets(value):
         value = _SECRET_ASSIGNMENT_RE.sub(r"\1\2=[REDACTED]", value)
         return _HF_TOKEN_VALUE_RE.sub("[REDACTED]", value)
     return value
+
+
+def _performance_phase(recorder: Optional[BaselinePerformanceRecorder], name: str):
+    return recorder.phase(name) if recorder is not None else nullcontext()
+
+
+def _request_count_summary(requests: list[Instance]) -> tuple[int, int, int]:
+    real_requests = [request for request in requests if not (request.metadata or {}).get("__padding_only__", False)]
+    return len(real_requests), len({request.doc_id for request in real_requests}), len(requests) - len(real_requests)
 
 
 def _clone_padding_request(pad_source: Instance) -> Instance:
@@ -278,6 +289,7 @@ def simple_evaluate(
     repeats: int = 1,
     baseline: Optional[str] = None,
     max_tokens: Optional[int] = None,
+    performance_recorder: Optional[BaselinePerformanceRecorder] = None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -379,22 +391,24 @@ def simple_evaluate(
     else:
         eval_launcher = None
 
-    if task_manager is None:
-        task_manager = TaskManager(verbosity, model_name=model)
+    with _performance_phase(performance_recorder, "task_resolution"):
+        if task_manager is None:
+            task_manager = TaskManager(verbosity, model_name=model)
 
-    if isinstance(model, str):
-        if model_args is None:
-            model_args = ""
-        lm = models.get_model(model, force_simple).create_from_arg_string(
-            model_args,
-            {
-                "batch_size": batch_size,
-                "max_batch_size": max_batch_size,
-                "device": device,
-            },
-        )
-    elif isinstance(model, lmms_eval.api.model.lmms):
-        lm = model
+    with _performance_phase(performance_recorder, "model_load"):
+        if isinstance(model, str):
+            if model_args is None:
+                model_args = ""
+            lm = models.get_model(model, force_simple).create_from_arg_string(
+                model_args,
+                {
+                    "batch_size": batch_size,
+                    "max_batch_size": max_batch_size,
+                    "device": device,
+                },
+            )
+        elif isinstance(model, lmms_eval.api.model.lmms):
+            lm = model
     task_type = "simple" if lm.is_simple else "chat"
 
     # filelock >= 3.16 decides singleton behavior in the metaclass __call__ path,
@@ -420,13 +434,16 @@ def simple_evaluate(
         rank = torch.distributed.get_rank()
         if rank == 0:
             eval_logger.info("Rank 0: loading datasets first to warm HF cache")
-            task_dict = get_task_dict(tasks, task_manager, task_type)
+            with _performance_phase(performance_recorder, "task_resolution"):
+                task_dict = get_task_dict(tasks, task_manager, task_type)
         torch.distributed.barrier()
         if rank != 0:
             eval_logger.info(f"Rank {rank}: loading datasets from warm cache")
-            task_dict = get_task_dict(tasks, task_manager, task_type)
+            with _performance_phase(performance_recorder, "task_resolution"):
+                task_dict = get_task_dict(tasks, task_manager, task_type)
     else:
-        task_dict = get_task_dict(tasks, task_manager, task_type)
+        with _performance_phase(performance_recorder, "task_resolution"):
+            task_dict = get_task_dict(tasks, task_manager, task_type)
 
     # helper function to recursively apply config overrides to leaf subtasks, skipping their constituent groups.
     # (setting of num_fewshot ; bypassing metric calculation ; setting fewshot seed)
@@ -538,6 +555,7 @@ def simple_evaluate(
             cli_args=cli_args,
             eval_server_launcher=eval_launcher,
             response_cache=response_cache,
+            performance_recorder=performance_recorder,
         )
         eval_succeeded = True
     finally:
@@ -845,6 +863,7 @@ def evaluate(
     eval_server_launcher: Optional[Union[str, Callable]] = None,
     cli_args=None,
     response_cache: Optional[ResponseCache] = None,
+    performance_recorder: Optional[BaselinePerformanceRecorder] = None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -984,19 +1003,26 @@ def evaluate(
             task_group_alias[group_name] = configs[task_name]["group_alias"]
 
         limit = get_sample_size(task, limit)
-        task.build_all_requests(
-            limit=limit,
-            offset=offset,
-            rank=global_rank,
-            world_size=world_size,
-            cache_requests=cache_requests,  # later we will add them
-            rewrite_requests_cache=rewrite_requests_cache,
-            system_instruction=system_instruction,
-            apply_chat_template=apply_chat_template,
-            fewshot_as_multiturn=fewshot_as_multiturn,
-            chat_template=getattr(lm, "apply_chat_template") if apply_chat_template else None,
-            tokenizer_name=getattr(lm, "tokenizer_name", "") if apply_chat_template else "",
-        )
+        with _performance_phase(performance_recorder, "request_build"):
+            task.build_all_requests(
+                limit=limit,
+                offset=offset,
+                rank=global_rank,
+                world_size=world_size,
+                cache_requests=cache_requests,  # later we will add them
+                rewrite_requests_cache=rewrite_requests_cache,
+                system_instruction=system_instruction,
+                apply_chat_template=apply_chat_template,
+                fewshot_as_multiturn=fewshot_as_multiturn,
+                chat_template=getattr(lm, "apply_chat_template") if apply_chat_template else None,
+                tokenizer_name=getattr(lm, "tokenizer_name", "") if apply_chat_template else "",
+            )
+        if performance_recorder is not None:
+            built_instances, selected_documents, padding_instances = _request_count_summary(task.instances)
+            performance_recorder.increment("built_instances", built_instances)
+            performance_recorder.increment("selected_documents", selected_documents)
+            if padding_instances:
+                performance_recorder.increment("padding_instances", padding_instances)
         eval_logger.debug(f"Task: {task_output.task_name}; number of requests on this rank: {len(task._instances)}")
         if write_out:
             eval_logger.warning(
@@ -1067,25 +1093,37 @@ def evaluate(
             if pad_source is None:
                 eval_logger.warning(f"Running {reqtype} requests but could not find a pad source request on rank {global_rank}; skipping rank padding.")
             else:
+                created_padding_instances = 0
                 for _ in range(padding_requests[reqtype]):
                     pad_instance = _clone_padding_request(pad_source)
                     cloned_reqs.extend([pad_instance] * pad_instance.repeats)
+                    created_padding_instances += 1
+                if performance_recorder is not None:
+                    performance_recorder.increment("padding_instances", created_padding_instances)
 
         # run requests through model (with optional response cache)
-        if reqtype == "generate_until_agentic":
-            trace_mode = "basic"
-            if cli_args is not None:
-                trace_mode = getattr(cli_args, "agentic_trace_mode", "basic")
-            resps = _run_generate_until_agentic(
-                lm,
-                cloned_reqs,
-                agentic_trace_mode=trace_mode,
-                response_cache=response_cache,
-            )
-        elif response_cache is not None:
-            resps = response_cache.execute(lm, reqtype, cloned_reqs)
-        else:
-            resps = getattr(lm, reqtype)(cloned_reqs)
+        with _performance_phase(performance_recorder, "inference"):
+            if reqtype == "generate_until_agentic":
+                trace_mode = "basic"
+                if cli_args is not None:
+                    trace_mode = getattr(cli_args, "agentic_trace_mode", "basic")
+                resps = _run_generate_until_agentic(
+                    lm,
+                    cloned_reqs,
+                    agentic_trace_mode=trace_mode,
+                    response_cache=response_cache,
+                )
+            elif response_cache is not None:
+                resps = response_cache.execute(lm, reqtype, cloned_reqs)
+            else:
+                resps = getattr(lm, reqtype)(cloned_reqs)
+        if performance_recorder is not None:
+            real_responses, _, padding_responses = _request_count_summary(cloned_reqs[: len(resps)])
+            performance_recorder.increment("inference_dispatches")
+            performance_recorder.increment("responses", real_responses)
+            performance_recorder.increment("raw_outputs", real_responses)
+            if padding_responses:
+                performance_recorder.increment("padding_responses", padding_responses)
 
         for x, req in zip(resps, cloned_reqs):
             text, tc = unwrap_generation_output(x)
@@ -1105,7 +1143,8 @@ def evaluate(
                 raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
 
     # Cleaning lm's cuda memory if you are launching llm as judge in local
-    lm.clean()
+    with _performance_phase(performance_recorder, "reset"):
+        lm.clean()
     RANK = global_rank
     WORLD_SIZE = world_size
     if eval_server_launcher is not None and RANK == 0:
@@ -1146,7 +1185,8 @@ def evaluate(
 
     for task_output in eval_tasks:
         task = task_output.task
-        task.apply_filters()
+        with _performance_phase(performance_recorder, "filter_and_normalize"):
+            task.apply_filters()
         set_task_context(task_output.task_name)
 
         ### Collect values of metrics on all datapoints ###
@@ -1224,15 +1264,22 @@ def evaluate(
 
                 # Strip reasoning tags before scoring
                 if reasoning_tags is not None:
-                    for req in requests:
-                        raw_resp = req.filtered_resps[filter_key]
-                        req.raw_filtered_resps[filter_key] = raw_resp
-                        if isinstance(raw_resp, str):
-                            req.filtered_resps[filter_key] = strip_reasoning_tags(raw_resp, reasoning_tags)
-                        elif isinstance(raw_resp, list):
-                            req.filtered_resps[filter_key] = [strip_reasoning_tags(r, reasoning_tags) if isinstance(r, str) else r for r in raw_resp]
+                    with _performance_phase(performance_recorder, "filter_and_normalize"):
+                        for req in requests:
+                            raw_resp = req.filtered_resps[filter_key]
+                            req.raw_filtered_resps[filter_key] = raw_resp
+                            if isinstance(raw_resp, str):
+                                req.filtered_resps[filter_key] = strip_reasoning_tags(raw_resp, reasoning_tags)
+                            elif isinstance(raw_resp, list):
+                                req.filtered_resps[filter_key] = [strip_reasoning_tags(r, reasoning_tags) if isinstance(r, str) else r for r in raw_resp]
 
-                metrics = task.process_results(doc, [req.filtered_resps[filter_key] for req in requests])
+                filtered_resps = [req.filtered_resps[filter_key] for req in requests]
+                if performance_recorder is not None:
+                    performance_recorder.increment("normalized_outputs", len(filtered_resps))
+                with _performance_phase(performance_recorder, "score"):
+                    metrics = task.process_results(doc, filtered_resps)
+                if performance_recorder is not None:
+                    performance_recorder.increment("scored_documents")
 
                 # For stability metrics: compute per-sample scores when repeats > 1
                 repeats = task.config.repeats if hasattr(task, "config") and hasattr(task.config, "repeats") else 1
@@ -1240,7 +1287,8 @@ def evaluate(
                     # Compute per-sample scores by calling process_results for each sample individually
                     per_sample_scores = {}
                     for req in requests:
-                        sample_metrics = task.process_results(doc, [req.filtered_resps[filter_key]])
+                        with _performance_phase(performance_recorder, "score"):
+                            sample_metrics = task.process_results(doc, [req.filtered_resps[filter_key]])
                         for metric_name, value in sample_metrics.items():
                             if metric_name not in per_sample_scores:
                                 per_sample_scores[metric_name] = []
@@ -1408,24 +1456,31 @@ def evaluate(
         ### Aggregate results over all datapoints ###
         # aggregate results ; run bootstrap CIs
         for task_output in eval_tasks:
-            task_output.calculate_aggregate_metric(bootstrap_iters=bootstrap_iters)
-            task_output.calculate_clt_aggregate_metric()
-            task_output.calculate_stability_metrics()
-        (
-            results,
-            samples,
-            configs,
-            versions,
-            num_fewshot,
-            higher_is_better,
-        ) = consolidate_results(eval_tasks)
+            with _performance_phase(performance_recorder, "aggregate"):
+                task_output.calculate_aggregate_metric(bootstrap_iters=bootstrap_iters)
+            with _performance_phase(performance_recorder, "aggregate"):
+                task_output.calculate_clt_aggregate_metric()
+            with _performance_phase(performance_recorder, "aggregate"):
+                task_output.calculate_stability_metrics()
+        with _performance_phase(performance_recorder, "aggregate"):
+            (
+                results,
+                samples,
+                configs,
+                versions,
+                num_fewshot,
+                higher_is_better,
+            ) = consolidate_results(eval_tasks)
 
         ### Calculate group metrics ###
         if bool(results):
-            results, versions, show_group_table, *_ = consolidate_group_results(results, versions, task_dict)
+            with _performance_phase(performance_recorder, "aggregate"):
+                results, versions, show_group_table, *_ = consolidate_group_results(results, versions, task_dict)
 
-        results_agg, group_agg = prepare_print_tasks(task_dict, results)
-        subtask_list = get_subtask_list(task_dict)
+        with _performance_phase(performance_recorder, "aggregate"):
+            results_agg, group_agg = prepare_print_tasks(task_dict, results)
+        with _performance_phase(performance_recorder, "aggregate"):
+            subtask_list = get_subtask_list(task_dict)
 
         # collect all higher_is_better values for metrics
         # in the group's subtasks.

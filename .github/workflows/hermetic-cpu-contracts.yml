@@ -50,3 +50,4 @@ jobs:
           test/performance/test_legacy_invocation.py
           test/performance/test_provenance.py
           test/performance/test_baseline_recorder.py
+          test/performance/test_eval_phase_instrumentation.py
