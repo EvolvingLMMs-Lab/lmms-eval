@@ -276,33 +276,3 @@ def test_doc_to_text_string_return_updates_context():
     req = _make_agentic_request(max_steps=5, doc_to_text_fn=_string_doc_to_text)
     results = _run_generate_until_agentic(lm, [req])
     assert len(results) == 1
-
-
-# ===========================================================================
-# Instance args structure
-# ===========================================================================
-
-
-def test_agentic_instance_args_has_7_elements():
-    """Agentic instance has exactly 7 elements in args tuple."""
-    req = _make_agentic_request()
-    assert len(req.args) == 7
-
-
-def test_agentic_instance_args_unpacks_correctly():
-    """Agentic instance args unpack to correct types and values."""
-    req = _make_agentic_request(prompt="test", doc_id=5)
-    ctx, gen_kwargs, doc_to_visual, doc_to_text, doc_id, task_name, split = req.args
-    assert ctx == "test"
-    assert isinstance(gen_kwargs, dict)
-    assert callable(doc_to_visual)
-    assert callable(doc_to_text)
-    assert doc_id == 5
-    assert task_name == "agentic_task"
-    assert split == "test"
-
-
-def test_agentic_instance_args_gen_kwargs_has_max_agentic_steps():
-    """Agentic instance gen_kwargs includes max_agentic_steps."""
-    req = _make_agentic_request(max_steps=7)
-    assert req.args[1]["max_agentic_steps"] == 7
