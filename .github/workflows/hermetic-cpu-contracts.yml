@@ -46,3 +46,4 @@ jobs:
           test/eval/test_evaluator.py
           test/entrypoints/test_job_scheduler_subprocess.py
           test/performance/test_json_v1.py
+          test/performance/test_legacy_redaction.py
