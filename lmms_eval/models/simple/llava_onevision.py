@@ -3,7 +3,7 @@ import json
 import logging
 import warnings
 from datetime import timedelta
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import PIL
@@ -121,6 +121,7 @@ class Llava_OneVision(lmms):
         overwrite_config = {}
         overwrite_config["mm_spatial_pool_stride"] = self.mm_spatial_pool_stride
         overwrite_config["mm_spatial_pool_mode"] = self.mm_spatial_pool_mode
+        overwrite_config.update(self._get_model_overwrite_config())
         cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
 
         llava_model_args["overwrite_config"] = overwrite_config
@@ -190,6 +191,10 @@ class Llava_OneVision(lmms):
             self.model.to(self._device)
             self._rank = 0
             self._world_size = 1
+
+    def _get_model_overwrite_config(self) -> Dict[str, object]:
+        """Return model-specific config overrides for subclasses."""
+        return {}
 
     @property
     def config(self):
