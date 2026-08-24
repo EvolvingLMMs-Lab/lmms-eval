@@ -178,6 +178,18 @@ def mmmu_doc_to_visual(doc):
     return visual
 
 
+def to_submission_answer(parsed_pred):
+    """
+    Collapse a parsed prediction into the single answer the submission file expects.
+
+    A multiple-choice prediction is already a single option letter, while an open-ended
+    prediction is a list of answer candidates whose first element is the primary answer.
+    """
+    if isinstance(parsed_pred, list):
+        return str(parsed_pred[0]) if parsed_pred else ""
+    return str(parsed_pred)
+
+
 def mmmu_process_results(doc, results):
     parsed_preds = []
     for pred in results:
@@ -185,10 +197,11 @@ def mmmu_process_results(doc, results):
             index2ans, all_choices = get_multi_choice_info(ast.literal_eval(doc["options"]))
             parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
         else:
+            # Keep the full candidate list: eval_open iterates over the candidates, so
+            # collapsing it to a string here would make it iterate over single characters.
             parsed_pred = parse_open_response(pred)
-            parsed_pred = str(parsed_pred[0]) if parsed_pred else ""
         parsed_preds.append(parsed_pred)
-    mmmu_submission = {doc["id"]: parsed_preds[0]}
+    mmmu_submission = {doc["id"]: to_submission_answer(parsed_preds[0])}
     mmmu_exact_acc = {"id": doc["id"], "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "parsed_pred": parsed_preds}
     return {"mmmu_acc": mmmu_exact_acc, "mmmu_acc_pass_at_k": mmmu_exact_acc, "submission": mmmu_submission}
 
