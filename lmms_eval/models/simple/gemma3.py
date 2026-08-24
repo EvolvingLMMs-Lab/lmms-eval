@@ -1,4 +1,5 @@
 import os
+import re
 import warnings
 from typing import List, Optional, Tuple, Union
 
@@ -13,6 +14,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import read_video
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_data_url
 
 warnings.simplefilter("ignore", category=DeprecationWarning)
@@ -22,6 +24,7 @@ warnings.filterwarnings("ignore")
 DEFAULT_MIN_PIXELS = 256 * 28 * 28
 DEFAULT_MAX_PIXELS = 1605632
 DEFAULT_MAX_FRAMES = 32
+VIDEO_EXTENSIONS = (".mp4", ".avi", ".mov", ".mkv", ".webm", ".mpeg", ".mpg")
 
 
 @register_model("gemma3")
@@ -211,9 +214,10 @@ class Gemma3(lmms):
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
-            task = task[0]
-            split = split[0]
-            visual_list = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
+            visual_list = [
+                visual_fn(self.task_dict[task_name][split_name][ids])
+                for visual_fn, ids, task_name, split_name in zip(doc_to_visual, doc_id, task, split)
+            ]
             gen_kwargs = all_gen_kwargs[0]
 
             # Set default until or update values from gen_kwargs if present
@@ -246,29 +250,49 @@ class Gemma3(lmms):
                     contexts[i] = context
 
                 processed_visuals = []
+                visual_groups = []
                 for visual in visual_list[i]:
+                    visual_group = []
                     try:
-                        if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
+                        if isinstance(visual, str) and visual.lower().endswith(VIDEO_EXTENSIONS):
                             if not os.path.exists(visual):
                                 eval_logger.warning(f"Video file not found: {visual}")
-                                continue
-                            processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
-                        elif isinstance(visual, Image.Image):  # Handle both single and multiple images
-                            processed_visuals.append({"type": "image", "image": self._encode_image_data_url(visual), "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                            else:
+                                frames = read_video(visual, num_frm=self.max_num_frames)
+                                visual_group.extend({"type": "image", "image": self._encode_image_data_url(Image.fromarray(frame)), "max_pixels": self.max_pixels, "min_pixels": self.min_pixels} for frame in frames)
+                        elif isinstance(visual, Image.Image):
+                            visual_group.append({"type": "image", "image": self._encode_image_data_url(visual), "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
                     except Exception as e:
                         eval_logger.error(f"Failed to process visual: {e}")
-                        continue
+                    visual_groups.append(visual_group)
+                    processed_visuals.extend(visual_group)
 
-                message.append(
-                    {
-                        "role": "user",
-                        "content": processed_visuals + [{"type": "text", "text": context}],
-                    }
-                )
+                if not self.interleave_visuals:
+                    context = re.sub(r"<image \d+>", "", context)
+                    content = processed_visuals + [{"type": "text", "text": context}]
+                else:
+                    image_placeholders = re.findall(r"<image (\d+)>", context)
+                    if not image_placeholders:
+                        content = processed_visuals + [{"type": "text", "text": context}]
+                    else:
+                        content = []
+                        text_parts = re.split(r"<image \d+>", context)
+                        if text_parts[0]:
+                            content.append({"type": "text", "text": text_parts[0]})
+                        for placeholder_idx, image_number in enumerate(image_placeholders):
+                            visual_idx = int(image_number) - 1
+                            if 0 <= visual_idx < len(visual_groups):
+                                content.extend(visual_groups[visual_idx])
+                            else:
+                                eval_logger.warning(f"Image index {image_number} out of range for {len(visual_groups)} visual(s)")
+                            if text_parts[placeholder_idx + 1]:
+                                content.append({"type": "text", "text": text_parts[placeholder_idx + 1]})
+
+                message.append({"role": "user", "content": content})
 
                 batched_messages.append(message)
 
-            inputs = self.processor.apply_chat_template(batched_messages, add_generation_prompt=True, tokenize=True, return_dict=True, return_tensors="pt", padding="max_length", pad_to_multiple_of=8, max_length=self.max_length).to(
+            inputs = self.processor.apply_chat_template(batched_messages, add_generation_prompt=True, tokenize=True, return_dict=True, return_tensors="pt", processor_kwargs={"padding": True, "pad_to_multiple_of": 8}).to(
                 self.model.device, dtype=torch.bfloat16
             )
 
@@ -282,6 +306,7 @@ class Gemma3(lmms):
                 "max_new_tokens": 128,
                 "temperature": 0.0,  # Set to 0 for greedy default
                 "top_p": None,
+                "top_k": None,
                 "num_beams": 1,
             }
             # Update with provided kwargs
@@ -293,12 +318,14 @@ class Gemma3(lmms):
                 current_gen_kwargs["do_sample"] = False
                 current_gen_kwargs["temperature"] = None
                 current_gen_kwargs["top_p"] = None
+                current_gen_kwargs["top_k"] = None
 
             cont = self.model.generate(
                 **inputs,
                 do_sample=current_gen_kwargs["do_sample"],
                 temperature=current_gen_kwargs["temperature"],
                 top_p=current_gen_kwargs["top_p"],
+                top_k=current_gen_kwargs["top_k"],
                 num_beams=current_gen_kwargs["num_beams"],
                 max_new_tokens=current_gen_kwargs["max_new_tokens"],
                 use_cache=self.use_cache,
