@@ -84,6 +84,7 @@ class VLLMOmniAPI(lmms):
         model_version: Optional[str] = None,
         model: Optional[str] = None,
         base_url: Optional[str] = None,
+        base_urls: Optional[str | List[str]] = None,
         api_key: Optional[str] = None,
         timeout: int = 1200,
         max_retries: int = 3,
@@ -114,7 +115,18 @@ class VLLMOmniAPI(lmms):
             eval_logger.warning(f"Unknown model_args ignored: {list(kwargs.keys())}. " "Check the supported parameters for the 'vllm_omni_api' backend.")
 
         self.model_version = model_version or None
-        self.base_url = (base_url or os.getenv("VLLM_OMNI_API_BASE") or os.getenv("OPENAI_API_BASE") or "http://localhost:8091").rstrip("/")
+        configured_base_urls = base_urls or os.getenv("VLLM_OMNI_API_BASES")
+        if configured_base_urls:
+            if isinstance(configured_base_urls, str):
+                urls = [url.strip() for url in re.split(r"[|;\s]+", configured_base_urls) if url.strip()]
+            else:
+                urls = [str(url).strip() for url in configured_base_urls if str(url).strip()]
+            if not urls:
+                raise ValueError("base_urls must contain at least one URL")
+        else:
+            urls = [base_url or os.getenv("VLLM_OMNI_API_BASE") or os.getenv("OPENAI_API_BASE") or "http://localhost:8091"]
+        self.base_urls = [url.rstrip("/") for url in urls]
+        self.base_url = self.base_urls[0]
         self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
         self.timeout = int(timeout)
         self.max_retries = int(max_retries)
@@ -156,6 +168,8 @@ class VLLMOmniAPI(lmms):
         self._rank = accelerator.local_process_index
         self._world_size = accelerator.num_processes
         self.device = accelerator.device
+        if len(self.base_urls) > 1 and accelerator.is_local_main_process:
+            eval_logger.info(f"Using {len(self.base_urls)} vLLM-Omni API endpoints")
 
     @property
     def model(self):
@@ -171,10 +185,11 @@ class VLLMOmniAPI(lmms):
     def generate_until_multi_round(self, requests) -> List[str]:
         raise NotImplementedError("vllm_omni_api does not support multi-round generation")
 
-    def _endpoint_url(self) -> str:
-        if self.base_url.endswith("/v1"):
-            return f"{self.base_url}/videos/sync"
-        return f"{self.base_url}/v1/videos/sync"
+    def _endpoint_url(self, base_url: Optional[str] = None) -> str:
+        url = base_url or self.base_url
+        if url.endswith("/v1"):
+            return f"{url}/videos/sync"
+        return f"{url}/v1/videos/sync"
 
     def _headers(self) -> dict[str, str]:
         headers = {"Accept": "video/mp4"}
@@ -311,6 +326,7 @@ class VLLMOmniAPI(lmms):
     async def _post_one(self, client: httpx.AsyncClient, prep: Dict[str, Any], idx: int) -> tuple[GenerationResult, int]:
         output_path = prep["output_path"]
         prompt = prep["prompt"]
+        base_url = self.base_urls[idx % len(self.base_urls)]
         if not prompt:
             return self._empty_result("empty_prompt"), idx
         if os.path.isfile(output_path) and os.path.getsize(output_path) > 0 and not self.overwrite:
@@ -334,7 +350,7 @@ class VLLMOmniAPI(lmms):
             started_at = time.perf_counter()
             try:
                 response = await client.post(
-                    self._endpoint_url(),
+                    self._endpoint_url(base_url),
                     data=data,
                     files=files,
                     headers=self._headers(),
@@ -353,6 +369,7 @@ class VLLMOmniAPI(lmms):
                     "server_inference_time_s": response.headers.get("X-Inference-Time-S"),
                     "stage_durations": response.headers.get("X-Stage-Durations"),
                     "peak_memory_mb": response.headers.get("X-Peak-Memory-MB"),
+                    "server_url": base_url,
                 }
                 return self._pack_result(os.path.abspath(output_path), metadata), idx
             except Exception as exc:  # noqa: BLE001
@@ -369,7 +386,8 @@ class VLLMOmniAPI(lmms):
 
         async def run() -> list[tuple[GenerationResult, int]]:
             timeout = httpx.Timeout(self.timeout, connect=30.0)
-            limits = httpx.Limits(max_connections=max(1, self.num_cpus), max_keepalive_connections=max(1, self.num_cpus))
+            connection_count = max(1, self.num_cpus, len(self.base_urls))
+            limits = httpx.Limits(max_connections=connection_count, max_keepalive_connections=connection_count)
             semaphore = asyncio.Semaphore(max(1, self.num_cpus))
             async with httpx.AsyncClient(timeout=timeout, limits=limits) as client:
 

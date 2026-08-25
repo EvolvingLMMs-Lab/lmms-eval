@@ -333,7 +333,22 @@ class VLLMOmni(lmms):
         except Exception:
             return
 
-        original = async_omni_engine.initialize_diffusion_stage
+        patch_targets = []
+        original = getattr(async_omni_engine, "initialize_diffusion_stage", None)
+        if original is not None:
+            patch_targets.append(async_omni_engine)
+        else:
+            try:
+                from vllm_omni.engine import stage_engine_startup, stage_init_utils
+            except Exception:
+                return
+            original = getattr(stage_engine_startup, "initialize_diffusion_stage", None)
+            if original is None:
+                original = getattr(stage_init_utils, "initialize_diffusion_stage", None)
+            if original is None:
+                return
+            patch_targets.extend((stage_init_utils, stage_engine_startup))
+
         if getattr(original, "_lmms_eval_external_dp_single_rank_env", False):
             return
 
@@ -378,7 +393,8 @@ class VLLMOmni(lmms):
                         os.environ[key] = value
 
         initialize_diffusion_stage_single_rank_env._lmms_eval_external_dp_single_rank_env = True
-        async_omni_engine.initialize_diffusion_stage = initialize_diffusion_stage_single_rank_env
+        for target in patch_targets:
+            target.initialize_diffusion_stage = initialize_diffusion_stage_single_rank_env
 
     @classmethod
     def _patch_inline_diffusion_device_for_external_dp(cls, model: str) -> None:
