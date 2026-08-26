@@ -70,13 +70,13 @@ uv pip install --python .venv-sglang/bin/python --prerelease=allow "sglang[diffu
   --tasks vbvr \
   --batch_size 1 \
   --log_samples \
-  --output_path logs/sglang_wan22_vbvr
+  --output_path logs
 ```
 
 `runtime=diffusion` is optional for Wan repository names and local Diffusers
 checkpoints with a `model_index.json`; `--model sglang` detects those
 automatically. Use `--model sglang_diffusion` to select the same adapter
-explicitly. A complete configurable launcher is available at
+explicitly. The same minimal command is available as
 `examples/models/sglang_wan22_vbvr.sh`.
 
 ### Full example (multi-GPU Wan2.2-I2V)
