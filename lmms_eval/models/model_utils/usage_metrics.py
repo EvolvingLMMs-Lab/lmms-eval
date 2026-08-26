@@ -69,7 +69,9 @@ def set_task_context(task_name: Optional[str]) -> None:
     so that LLM-judge providers — which call ``log_usage(task_name=None)``
     — automatically inherit the correct task attribution.
 
-    Single-threaded (postprocessing loop); no lock required.
+    The evaluator sets this once before launching a task's postprocessing
+    workers and clears it after they join. All workers therefore read the same
+    stable task name, so no lock is required.
     """
     global _CURRENT_TASK_CONTEXT
     _CURRENT_TASK_CONTEXT = task_name

@@ -7,6 +7,9 @@ import mimetypes
 import os
 import random
 import re
+import time
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from dataclasses import dataclass
 from datetime import timedelta
 from typing import Callable, List, Optional, Union
 
@@ -239,6 +242,129 @@ def _collect_input_media(doc: dict, request_args: list) -> list[str]:
     return sources
 
 
+@dataclass
+class _ProcessedDocument:
+    metrics: dict
+    per_sample_scores: dict
+    logged_sample: Optional[dict]
+
+
+def _thread_map_ordered(function: Callable, items, max_workers: int, on_complete: Optional[Callable] = None) -> list:
+    """Run ``function`` concurrently while returning results in input order.
+
+    Only ``2 * max_workers`` inputs are materialized at once. This keeps media
+    documents bounded in memory while allowing a slow early document to finish
+    after later documents without stalling the worker pool.
+    """
+
+    if max_workers < 1:
+        raise ValueError(f"process_docs_parallel must be at least 1, got {max_workers}")
+
+    if max_workers == 1:
+        results = []
+        for item in items:
+            results.append(function(item))
+            if on_complete is not None:
+                on_complete()
+        return results
+
+    indexed_items = iter(enumerate(items))
+    completed = []
+    with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="lmms-process-results") as executor:
+        pending = {}
+
+        def submit_next() -> bool:
+            try:
+                index, item = next(indexed_items)
+            except StopIteration:
+                return False
+            pending[executor.submit(function, item)] = index
+            return True
+
+        for _ in range(max_workers * 2):
+            if not submit_next():
+                break
+
+        while pending:
+            done, _ = wait(tuple(pending), return_when=FIRST_COMPLETED)
+            for future in done:
+                index = pending.pop(future)
+                completed.append((index, future.result()))
+                if on_complete is not None:
+                    on_complete()
+                submit_next()
+
+    completed.sort(key=lambda item: item[0])
+    return [result for _, result in completed]
+
+
+def _process_document_results(item, *, task: Task, filter_key: str, reasoning_tags, log_samples: bool) -> _ProcessedDocument:
+    """Run one document's scoring without mutating shared ``TaskOutput`` state."""
+
+    doc_id, doc, requests = item
+
+    if reasoning_tags is not None:
+        for req in requests:
+            raw_resp = req.filtered_resps[filter_key]
+            req.raw_filtered_resps[filter_key] = raw_resp
+            if isinstance(raw_resp, str):
+                req.filtered_resps[filter_key] = strip_reasoning_tags(raw_resp, reasoning_tags)
+            elif isinstance(raw_resp, list):
+                req.filtered_resps[filter_key] = [strip_reasoning_tags(response, reasoning_tags) if isinstance(response, str) else response for response in raw_resp]
+
+    metrics = task.process_results(doc, [req.filtered_resps[filter_key] for req in requests])
+
+    per_sample_scores = {}
+    repeats = task.config.repeats if hasattr(task, "config") and hasattr(task.config, "repeats") else 1
+    if repeats > 1 and len(requests) == repeats:
+        for req in requests:
+            sample_metrics = task.process_results(doc, [req.filtered_resps[filter_key]])
+            for metric_name, value in sample_metrics.items():
+                per_sample_scores.setdefault(metric_name, []).append(value)
+
+    logged_sample = None
+    if log_samples:
+        target = task.doc_to_target(doc)
+        saved_doc = {key: value for key, value in doc.items() if not is_multimodal_content(value)}
+        filtered_arguments = []
+        for req in requests:
+            for value in req.args:
+                if isinstance(value, (str, int, float, bool, list, dict, type(None))):
+                    filtered_arguments.append(value)
+
+        input_media = _collect_input_media(doc, filtered_arguments)
+        per_sample_token_counts = []
+        for req in requests:
+            if req.token_counts:
+                token_counts = req.token_counts[0]
+                per_sample_token_counts.append(token_counts.to_dict() if token_counts is not None else None)
+            else:
+                per_sample_token_counts.append(None)
+
+        logged_sample = {
+            "doc_id": doc_id,
+            "doc": saved_doc,
+            "target": target,
+            "arguments": filtered_arguments,
+            "resps": [req.raw_filtered_resps.get(filter_key, req.resps) for req in requests],
+            "filtered_resps": [req.filtered_resps[filter_key] for req in requests],
+            "token_counts": per_sample_token_counts,
+            "doc_hash": hash_string(
+                json.dumps(
+                    requests[0].doc,
+                    indent=2,
+                    default=handle_non_serializable,
+                    ensure_ascii=False,
+                )
+            ),
+        }
+        if input_media:
+            logged_sample["input_media"] = input_media
+        logged_sample.update(metrics)
+
+    return _ProcessedDocument(metrics=metrics, per_sample_scores=per_sample_scores, logged_sample=logged_sample)
+
+
 @positional_deprecated
 def simple_evaluate(
     model,
@@ -278,6 +404,7 @@ def simple_evaluate(
     repeats: int = 1,
     baseline: Optional[str] = None,
     max_tokens: Optional[int] = None,
+    process_docs_parallel: int = 4,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -339,6 +466,8 @@ def simple_evaluate(
         Random seed for fewshot sampler random generator. If set to None, the seed of generator will be set to None.
     :param distributed_executor_backend: str
         The backend to use for distributed execution, `accelerate` or `torchrun`. Defaults to "accelerate" for the `accelerate` library.
+    :param process_docs_parallel: int
+        Number of worker threads used for per-document ``process_results`` calls. Set to 1 for serial postprocessing.
     :return
         Dictionary of results
     """
@@ -360,6 +489,10 @@ def simple_evaluate(
         eval_logger.info(" | ".join(seed_message))
 
     assert tasks != [], "No tasks specified, or no tasks found. Please verify the task names."
+
+    process_docs_parallel = int(process_docs_parallel)
+    if process_docs_parallel < 1:
+        raise ValueError(f"process_docs_parallel must be at least 1, got {process_docs_parallel}")
 
     assert distributed_executor_backend in {"accelerate", "torchrun"}, f"Invalid distributed executor backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'."
 
@@ -538,6 +671,7 @@ def simple_evaluate(
             cli_args=cli_args,
             eval_server_launcher=eval_launcher,
             response_cache=response_cache,
+            process_docs_parallel=process_docs_parallel,
         )
         eval_succeeded = True
     finally:
@@ -576,6 +710,7 @@ def simple_evaluate(
                 "limit": limit,
                 "offset": offset,
                 "bootstrap_iters": bootstrap_iters,
+                "process_docs_parallel": process_docs_parallel,
                 "gen_kwargs": gen_kwargs,
                 "random_seed": random_seed,
                 "numpy_seed": numpy_random_seed,
@@ -845,6 +980,7 @@ def evaluate(
     eval_server_launcher: Optional[Union[str, Callable]] = None,
     cli_args=None,
     response_cache: Optional[ResponseCache] = None,
+    process_docs_parallel: int = 4,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -870,9 +1006,15 @@ def evaluate(
         Whether to provide the fewshot examples as a multiturn conversation or a single user turn.
     :param distributed_executor_backend: str
         The backend to use for distributed execution, `accelerate` or `torchrun`. Defaults to "accelerate" for the `accelerate` library.
+    :param process_docs_parallel: int
+        Number of worker threads used for per-document ``process_results`` calls. Set to 1 for serial postprocessing.
     :return
         Dictionary of results
     """
+
+    process_docs_parallel = int(process_docs_parallel)
+    if process_docs_parallel < 1:
+        raise ValueError(f"process_docs_parallel must be at least 1, got {process_docs_parallel}")
 
     # stores the final result for each task, for each metric/filter pair.
     results = collections.defaultdict(dict)
@@ -1213,93 +1355,49 @@ def evaluate(
             )
             total_docs = sum(1 for _ in doc_iterator_for_counting)
             pbar = tqdm(total=total_docs, desc="Postprocessing", disable=(RANK != 0))
-            for doc_id, doc in doc_iterator:
-                requests = instances_by_doc_id[doc_id]
-                # Defensive skip: if a doc landed in this rank's shard but has
-                # no requests (e.g. a split mismatch during a partial rerun),
-                # skip rather than crashing at `requests[0].doc` below.
-                if not requests:
-                    pbar.update(1)
-                    continue
+            postprocess_started = time.perf_counter()
 
-                # Strip reasoning tags before scoring
-                if reasoning_tags is not None:
-                    for req in requests:
-                        raw_resp = req.filtered_resps[filter_key]
-                        req.raw_filtered_resps[filter_key] = raw_resp
-                        if isinstance(raw_resp, str):
-                            req.filtered_resps[filter_key] = strip_reasoning_tags(raw_resp, reasoning_tags)
-                        elif isinstance(raw_resp, list):
-                            req.filtered_resps[filter_key] = [strip_reasoning_tags(r, reasoning_tags) if isinstance(r, str) else r for r in raw_resp]
+            def documents_to_process():
+                for doc_id, doc in doc_iterator:
+                    requests = instances_by_doc_id[doc_id]
+                    # A partial rerun can leave a document in this rank's shard
+                    # without any corresponding requests.
+                    if not requests:
+                        pbar.update(1)
+                        continue
+                    yield doc_id, doc, requests
 
-                metrics = task.process_results(doc, [req.filtered_resps[filter_key] for req in requests])
+            def process_document(item):
+                return _process_document_results(
+                    item,
+                    task=task,
+                    filter_key=filter_key,
+                    reasoning_tags=reasoning_tags,
+                    log_samples=log_samples,
+                )
 
-                # For stability metrics: compute per-sample scores when repeats > 1
-                repeats = task.config.repeats if hasattr(task, "config") and hasattr(task.config, "repeats") else 1
-                if repeats > 1 and len(requests) == repeats:
-                    # Compute per-sample scores by calling process_results for each sample individually
-                    per_sample_scores = {}
-                    for req in requests:
-                        sample_metrics = task.process_results(doc, [req.filtered_resps[filter_key]])
-                        for metric_name, value in sample_metrics.items():
-                            if metric_name not in per_sample_scores:
-                                per_sample_scores[metric_name] = []
-                            per_sample_scores[metric_name].append(value)
-                    # Store per-sample scores grouped by doc_id
-                    for metric_name, scores in per_sample_scores.items():
-                        task_output.per_sample_metrics[(metric_name, filter_key)].append(scores)
+            processed_documents = _thread_map_ordered(
+                process_document,
+                documents_to_process(),
+                max_workers=process_docs_parallel,
+                on_complete=lambda: pbar.update(1),
+            )
 
-                if log_samples:
-                    target = task.doc_to_target(doc)
-                    saved_doc = {}
-                    for key, value in doc.items():
-                        if not is_multimodal_content(value):
-                            saved_doc[key] = value
-                    filtered_arguments = []
-                    for req in requests:
-                        # check if req.args is a list of tuples, and each item in the list is a serializable object
-                        for value in req.args:
-                            if isinstance(value, (str, int, float, bool, list, dict, type(None))):
-                                filtered_arguments.append(value)
-                            # else:
-                            #     filtered_arguments.append(_handle_non_serializable(value))
-
-                    input_media = _collect_input_media(doc, filtered_arguments)
-
-                    per_sample_tc = []
-                    for req in requests:
-                        if req.token_counts:
-                            tc = req.token_counts[0]
-                            per_sample_tc.append(tc.to_dict() if tc is not None else None)
-                        else:
-                            per_sample_tc.append(None)
-
-                    example = {
-                        "doc_id": doc_id,
-                        "doc": saved_doc,
-                        "target": target,
-                        "arguments": filtered_arguments,
-                        "resps": [req.raw_filtered_resps.get(filter_key, req.resps) for req in requests],
-                        "filtered_resps": [req.filtered_resps[filter_key] for req in requests],
-                        "token_counts": per_sample_tc,
-                        "doc_hash": hash_string(
-                            json.dumps(
-                                requests[0].doc,
-                                indent=2,
-                                default=handle_non_serializable,
-                                ensure_ascii=False,
-                            )
-                        ),
-                    }
-                    if input_media:
-                        example["input_media"] = input_media
-                    example.update(metrics)
-                    task_output.logged_samples.append(example)
-                for metric, value in metrics.items():
+            # Worker completion order is intentionally unconstrained. Commit
+            # results only after restoring document order so metrics and sample
+            # logs retain the serial evaluator's deterministic ordering.
+            for processed in processed_documents:
+                for metric_name, scores in processed.per_sample_scores.items():
+                    task_output.per_sample_metrics[(metric_name, filter_key)].append(scores)
+                if processed.logged_sample is not None:
+                    task_output.logged_samples.append(processed.logged_sample)
+                for metric, value in processed.metrics.items():
                     task_output.sample_metrics[(metric, filter_key)].append(value)
-                pbar.update(1)
 
             pbar.close()
+            if RANK == 0:
+                elapsed = time.perf_counter() - postprocess_started
+                eval_logger.info(f"Postprocessed {len(processed_documents)} docs for {task_output.task_name}/{filter_key} " f"with {process_docs_parallel} worker(s) in {elapsed:.2f}s")
         set_task_context(None)
 
     if WORLD_SIZE > 1:

@@ -29,6 +29,8 @@ This mode supports a number of command-line arguments, the details of which can 
 
 - `--limit` : Accepts an integer, or a float between 0.0 and 1.0 . If passed, will limit the number of documents to evaluate to the first X documents (if an integer) per task or first X% of documents per task. Useful for debugging, especially on costly API models.
 
+- `--process-docs-parallel` : Number of worker threads used for per-document `process_results` scoring. Defaults to `4`; set it to `1` to restore serial postprocessing. Results and sample logs are committed in original document order even when scoring finishes out of order.
+
 - `--use_cache` : Accepts either a cache root directory or a SQLite `.db` file path. When you pass a directory, or an explicit root `<dir>/cache.db`, lmms-eval stores the shared cache at `<dir>/cache.db` and writes each evaluation run into `<dir>/runs/<run_id>/...` before merging back into the root DB. This isolates concurrent writers automatically while keeping a single shared cache for reuse across runs. Other `.db` filenames keep the legacy single-target behavior.
 
 - `--cache_requests` : Can be "true", "refresh", or "delete". "true" means that the cache should be used. "refresh" means that you wish to regenerate the cache, which you should run if you change your dataset configuration for a given task. "delete" will delete the cache. Cached files are stored under lmms_eval/cache/.cache unless you specify a different path via the environment variable: `LM_HARNESS_CACHE_PATH`. e.g. `LM_HARNESS_CACHE_PATH=~/Documents/cache_for_lm_harness`.
