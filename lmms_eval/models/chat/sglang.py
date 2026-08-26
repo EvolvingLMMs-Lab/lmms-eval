@@ -1,7 +1,8 @@
 """SGLang model wrapper for lmms-eval.
 
-Supports image and video multimodal evaluation via SGLang's Engine API.
-Handles TP via SGLang's internal parallelism (not torch.distributed).
+Language and vision-language checkpoints use SGLang's Engine API. Diffusion
+checkpoints such as Wan are routed to ``SGLangDiffusion``. Both runtimes manage
+their own GPU parallelism rather than relying on torch.distributed here.
 """
 
 import asyncio
@@ -21,12 +22,15 @@ from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 import numpy as np
 from accelerate import Accelerator, DistributedType
 from PIL import Image
-from sglang import Engine
 from transformers import AutoConfig, AutoProcessor
 
 from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.chat.sglang_diffusion import (
+    SGLangDiffusion,
+    is_sglang_diffusion_model,
+)
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.model_utils.progress import make_progress
 from lmms_eval.protocol import ChatMessages
@@ -35,20 +39,6 @@ warnings.filterwarnings("ignore")
 
 from loguru import logger as eval_logger
 
-# ---------------------------------------------------------------------------
-# Optional imports with version-compatibility fallbacks
-# ---------------------------------------------------------------------------
-
-try:
-    from sglang.srt.function_call.function_call_parser import FunctionCallParser
-except ImportError:
-    from sglang.srt.function_call_parser import FunctionCallParser
-
-try:
-    from sglang.srt.entrypoints.openai.protocol import Tool
-except ImportError:
-    from sglang.srt.openai_api.protocol import Tool
-
 if TYPE_CHECKING:
     from lmms_eval.mcp.client import MCPClient
 
@@ -56,6 +46,30 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _load_sglang_engine():
+    try:
+        from sglang import Engine
+    except ImportError as exc:
+        raise ImportError("The SGLang language runtime is not installed. Install SGLang before using a language or VLM checkpoint.") from exc
+    return Engine
+
+
+def _load_sglang_tooling():
+    try:
+        try:
+            from sglang.srt.function_call.function_call_parser import FunctionCallParser
+        except ImportError:
+            from sglang.srt.function_call_parser import FunctionCallParser
+
+        try:
+            from sglang.srt.entrypoints.openai.protocol import Tool
+        except ImportError:
+            from sglang.srt.openai_api.protocol import Tool
+    except ImportError as exc:
+        raise ImportError("SGLang's function-calling components are required when mcp_server_path is set.") from exc
+    return FunctionCallParser, Tool
 
 
 def _build_mcp_client(server_path: str) -> "MCPClient":
@@ -83,6 +97,32 @@ def _is_mcp_text_content(result: Any) -> bool:
 class Sglang(lmms):
     is_simple = False
 
+    def __new__(cls, *args, **kwargs):
+        """Route diffusion checkpoints to SGLang's native DiffGenerator.
+
+        Keeping the dispatch here preserves the existing ``--model sglang``
+        interface for language/VLM checkpoints while allowing Wan and other
+        Diffusers-format checkpoints to use SGLang Diffusion.
+        """
+
+        if cls is Sglang:
+            if len(args) > 1:
+                # Positional language-runtime options are ambiguous for the
+                # diffusion constructor. Existing CLI paths use keyword args.
+                candidate_model = args[0]
+            else:
+                candidate_model = args[0] if args else (kwargs.get("model") or kwargs.get("pretrained") or "Qwen/Qwen2.5-VL-3B-Instruct")
+            runtime = kwargs.get("runtime", "auto")
+            if is_sglang_diffusion_model(candidate_model, runtime=runtime):
+                if len(args) > 1:
+                    raise TypeError("SGLang Diffusion accepts the model as its only positional argument; pass other options by name")
+                diffusion_kwargs = dict(kwargs)
+                diffusion_kwargs.pop("runtime", None)
+                if args:
+                    diffusion_kwargs.setdefault("model", args[0])
+                return SGLangDiffusion(**diffusion_kwargs)
+        return super().__new__(cls)
+
     def __init__(
         self,
         model: str = "Qwen/Qwen2.5-VL-3B-Instruct",
@@ -101,6 +141,7 @@ class Sglang(lmms):
         max_turn: int = 5,
         work_dir: str = None,
         json_model_override_args: Optional[str] = None,
+        runtime: str = "auto",
         **kwargs,
     ) -> None:
         super().__init__()
@@ -131,7 +172,8 @@ class Sglang(lmms):
         self.tools, self.tool_call_parser_type, self.sgl_tools, self.function_call_parser = self._init_tools_sglang()
 
         # SGLang Engine
-        self.client = Engine(
+        engine_cls = _load_sglang_engine()
+        self.client = engine_cls(
             model_path=model,
             tp_size=tensor_parallel_size,
             mem_fraction_static=gpu_memory_utilization,
@@ -387,16 +429,18 @@ class Sglang(lmms):
         if self.mcp_client is None:
             return [], None, [], None
 
+        function_call_parser_cls, tool_cls = _load_sglang_tooling()
         tools = self.get_mcp_tools()
         parser_type = self.get_tool_call_parser_type(self.processor)
-        sgl_tools = [Tool.model_validate(schema) for schema in tools]
-        parser = FunctionCallParser(sgl_tools, parser_type)
+        sgl_tools = [tool_cls.model_validate(schema) for schema in tools]
+        parser = function_call_parser_cls(sgl_tools, parser_type)
         parser.detector.bot_token = parser.detector.bot_token.strip()
         parser.detector.eot_token = parser.detector.eot_token.strip()
         return tools, parser_type, sgl_tools, parser
 
     def get_tool_call_parser_type(self, processing_class) -> str:
-        items = FunctionCallParser.ToolCallParserEnum.items()
+        function_call_parser_cls, _ = _load_sglang_tooling()
+        items = function_call_parser_cls.ToolCallParserEnum.items()
         if "gpt-oss" in getattr(processing_class, "name_or_path", "").lower():
             return "gpt-oss"
         for parser_type, parser_cls in items:

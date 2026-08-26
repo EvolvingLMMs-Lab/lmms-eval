@@ -145,6 +145,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "vllm_omni": "VLLMOmni",
     "vllm_generate": "VLLMGenerate",
     "sglang": "Sglang",
+    "sglang_diffusion": "SGLangDiffusion",
     "huggingface": "Huggingface",
     "litellm": "LiteLLMCompatible",
     "async_openai": "AsyncOpenAIChat",
@@ -165,6 +166,7 @@ MODEL_ALIASES: dict[str, tuple[str, ...]] = {
     "litellm": ("litellm_chat", "litellm_compatible"),
     "vllm_omni_api": ("vllm-omni-api", "vllm_omni_client"),
     "vllm_omni": ("vllm-omni",),
+    "sglang_diffusion": ("sglang-diffusion", "sglang_wan", "sglang-wan"),
 }
 
 
