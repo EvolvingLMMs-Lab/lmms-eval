@@ -8,7 +8,7 @@ official VBench scorer.
 
 ## Hugging Face dataset
 
-All tasks load [`pufanyi/VBench`](https://huggingface.co/datasets/pufanyi/VBench).
+All tasks load [`lmms-lab-eval/VBench`](https://huggingface.co/datasets/lmms-lab-eval/VBench).
 The conversion is built from VBench revision
 `1ee42dada7a2f7cfaf4290e8a02d087f6f8ee425` and retains the unmodified source
 registries and Apache-2.0 license.

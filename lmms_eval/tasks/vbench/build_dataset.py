@@ -12,7 +12,7 @@ Run with uv, for example::
 
     uv run python lmms_eval/tasks/vbench/build_dataset.py \
         --output-dir /tmp/vbench-hf \
-        --repo-id pufanyi/VBench \
+        --repo-id lmms-lab-eval/VBench \
         --push-to-hub
 """
 
@@ -251,7 +251,7 @@ def push_dataset(output_dir: Path, repo_id: str, private: bool) -> str:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--repo-id", default="pufanyi/VBench")
+    parser.add_argument("--repo-id", default="lmms-lab-eval/VBench")
     parser.add_argument("--push-to-hub", action="store_true")
     parser.add_argument("--private", action="store_true")
     parser.add_argument("--overwrite", action="store_true")

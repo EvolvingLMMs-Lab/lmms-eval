@@ -1,4 +1,4 @@
-dataset_path: pufanyi/VBench
+dataset_path: lmms-lab-eval/VBench
 output_type: generate_until
 doc_to_visual: !function utils.doc_to_visual
 doc_to_text: !function utils.doc_to_text
