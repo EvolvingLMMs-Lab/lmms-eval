@@ -1,8 +1,14 @@
 [tool.ruff]
 line-length = 240
+extend-exclude = ["*.ipynb", "*.md"]
 
-[tool.ruff.format]
-exclude = ["*.ipynb", "*.md"]
+[tool.ruff.lint]
+# Start with high-signal correctness checks that have no existing violations,
+# plus Ruff's import-sorting rules. Broader rule adoption can happen separately.
+select = ["E9", "F63", "F7", "F822", "F823", "I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["lmms_eval"]
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]
@@ -26,7 +32,6 @@ requires-python = ">=3.10"
 dependencies = [
     "accelerate>=0.29.1",
     "ruff>=0.16.4",
-    "isort>=5.13.2",
     "datasets>=2.19.0",
     "evaluate>=0.4.0",
     "httpx>=0.23.3",

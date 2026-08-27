@@ -210,6 +210,6 @@ export PERSPECTIVE_API_KEY="..."                # Toxicity scoring (optional, fa
 ## Constraints
 
 - **Package manager**: `uv` only, never `pip`
-- **Formatting**: Ruff formatter (line-length=240) + isort (profile=black). Run `uv run pre-commit run --all-files`
+- **Linting and formatting**: Ruff checks, sorts imports, and formats Python (line-length=240). Run `uv run pre-commit run --all-files`
 - **Testing**: Always use `--limit 5` or `--limit 8` when testing changes
 - **Follow patterns**: Match the style of neighboring files exactly

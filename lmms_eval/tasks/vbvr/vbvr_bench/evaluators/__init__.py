@@ -149,6 +149,8 @@ from .Out_of_Domain_50_part1 import (
 )
 from .Out_of_Domain_50_part1 import (
     LocatePointInOverlappingAreaEvaluator,
+    MultipleKeysForOneDoorEvaluator,
+    SelectNextFigureAlternatingEvaluator,
 )
 from .Out_of_Domain_50_part1 import (
     LocateTopmostFigureEvaluator as OutOfDomainLocateTopmostFigureEvaluator,
@@ -157,13 +159,7 @@ from .Out_of_Domain_50_part1 import (
     MarkSecondLargestShapeEvaluator as OutOfDomainMarkSecondLargestEvaluator,
 )
 from .Out_of_Domain_50_part1 import (
-    MultipleKeysForOneDoorEvaluator,
-)
-from .Out_of_Domain_50_part1 import (
     SelectLongestPolygonSideEvaluator as OutOfDomainSelectLongestSideEvaluator,
-)
-from .Out_of_Domain_50_part1 import (
-    SelectNextFigureAlternatingEvaluator,
 )
 from .Out_of_Domain_50_part1 import (
     SeparateObjectsNoSpinEvaluator as InDomainSeparateObjectsNoSpinEvaluator,
@@ -175,16 +171,15 @@ from .Out_of_Domain_50_part2 import (
 )
 from .Out_of_Domain_50_part2 import (
     CircleCentralDotEvaluator,
+    FindIncorrectArrowDirectionEvaluator,
+    IdentifyLargestAngleEvaluator,
+    MarkWavePeaksEvaluator,
 )
 from .Out_of_Domain_50_part2 import (
     DrawMidpointPerpendicularEvaluator as InDomainDrawMidpointPerpendicularEvaluator,
 )
 from .Out_of_Domain_50_part2 import (
     DrawNextSizedShapeEvaluator as OutOfDomainDrawNextShapeEvaluator,
-)
-from .Out_of_Domain_50_part2 import (
-    FindIncorrectArrowDirectionEvaluator,
-    IdentifyLargestAngleEvaluator,
 )
 from .Out_of_Domain_50_part2 import (
     IdentifyNearestSquareRectangleEvaluator as InDomainIdentifyNearestSquareRectangleEvaluator,
@@ -195,38 +190,27 @@ from .Out_of_Domain_50_part2 import (
 from .Out_of_Domain_50_part2 import (
     LocateSegmentIntersectionEvaluator as InDomainLocateSegmentIntersectionEvaluator,
 )
-from .Out_of_Domain_50_part2 import (
-    MarkWavePeaksEvaluator,
-)
 
 # Out-of-Domain_50 Part 3 (10 classes)
 from .Out_of_Domain_50_part3 import (
     AddBordersToUnborderedEvaluator,
+    HighDensityLiquidEvaluator,
+    IdentifyChineseCharacterEvaluator,
+    MarkAsymmetricalShapeEvaluator,
+    OutlineInnermostSquareEvaluator,
+    SelectLeftmostShapeEvaluator,
 )
 from .Out_of_Domain_50_part3 import (
     ColorTripleIntersectionEvaluator as InDomainColorTripleIntersectionEvaluator,
 )
 from .Out_of_Domain_50_part3 import (
-    HighDensityLiquidEvaluator,
-)
-from .Out_of_Domain_50_part3 import (
     HighlightHorizontalLinesEvaluator as InDomainHighlightHorizontalLinesEvaluator,
-)
-from .Out_of_Domain_50_part3 import (
-    IdentifyChineseCharacterEvaluator,
-    MarkAsymmetricalShapeEvaluator,
 )
 from .Out_of_Domain_50_part3 import (
     MarkTangentPointEvaluator as InDomainMarkTangentPointEvaluator,
 )
 from .Out_of_Domain_50_part3 import (
-    OutlineInnermostSquareEvaluator,
-)
-from .Out_of_Domain_50_part3 import (
     PigmentColorMixingEvaluator as OutOfDomainPigmentMixingEvaluator,
-)
-from .Out_of_Domain_50_part3 import (
-    SelectLeftmostShapeEvaluator,
 )
 
 # Out-of-Domain_50 Part 4 (10 classes)

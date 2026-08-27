@@ -97,7 +97,7 @@ refactor: extract shared flatten() to model_utils
 
 ### Code Style
 
-- **Formatter**: Ruff formatter (line length 240) + isort (handled by pre-commit)
+- **Linting and formatting**: Ruff checks, sorts imports, and formats Python (line length 240; handled by pre-commit)
 - **Naming**: PEP 8 - `snake_case` for functions/variables, `PascalCase` for classes
 - **Type hints**: Required for all new code
 - **Docstrings**: Required for public APIs
