@@ -5,9 +5,15 @@ import pytest
 
 from lmms_eval.models.simple.diffusers_wm_base import DiffusersWMBase
 from lmms_eval.models.simple.wan2_2_t2v import Wan2_2_T2V
-from lmms_eval.tasks.vbench.build_dataset import build_configs, deterministic_seed, merge_prompts
+from lmms_eval.tasks.vbench.build_dataset import (
+    build_configs,
+    deterministic_seed,
+    merge_prompts,
+)
 from lmms_eval.tasks.vbench.compare_wan22_results import OFFICIAL, aggregate
-from lmms_eval.tasks.vbench.reproduce_wan22_temporal_flickering import expected_video_paths
+from lmms_eval.tasks.vbench.reproduce_wan22_temporal_flickering import (
+    expected_video_paths,
+)
 
 
 def test_vbench_builder_expands_official_sample_counts():
