@@ -48,6 +48,8 @@ span.log
 
 # Data and models (large / local-only)
 data/
+# ViZDoom runtime config droppings
+_vizdoom.ini
 pretrained/
 ckpt
 submissions/

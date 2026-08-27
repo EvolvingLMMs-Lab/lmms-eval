@@ -59,6 +59,7 @@ ALL_OUTPUT_TYPES = [
     "generate_until",
     "generate_until_multi_round",
     "generate_until_agentic",
+    "generate_until_game",
     "generate_visual_cot",
 ]
 
@@ -127,6 +128,8 @@ class TaskConfig(dict):
     doc_to_target: Union[Callable, str] = None
     doc_to_choice: Union[Callable, str, dict, list] = None
     doc_to_messages: Callable = None
+    game_env: Union[Callable, str, dict] = None
+    model_specific_parsers: dict = None
     process_results: Union[Callable, str] = None
     use_prompt: str = None
     description: str = ""
@@ -1578,7 +1581,22 @@ class ConfigurableTask(Task):
             arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, partial(self.config.doc_to_text, lmms_eval_specific_kwargs=self.lmms_eval_specific_kwargs), doc_id, self.config.task, split)
         elif self.OUTPUT_TYPE == "generate_until_agentic":
             arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, partial(self.config.doc_to_text, lmms_eval_specific_kwargs=self.lmms_eval_specific_kwargs), doc_id, self.config.task, split)
+        elif self.OUTPUT_TYPE == "generate_until_game":
+            arguments = self._game_arguments(ctx, doc_id, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)
+
+    def _game_arguments(self, ctx: str, doc_id: int, split: str) -> tuple:
+        return (
+            ctx,
+            copy.deepcopy(self.config.generation_kwargs),
+            self.doc_to_visual,
+            self.config.game_env,
+            self.config.model_specific_parsers,
+            self.lmms_eval_specific_kwargs,
+            doc_id,
+            self.config.task,
+            split,
+        )
 
     # TODO: we add a full_docs interface here for some evaluations that needs to access the full datasets during process_results function. we may have better ways to handle this.
     @retry(stop=(stop_after_attempt(5) | stop_after_delay(1200)), wait=wait_fixed(2))
@@ -1730,7 +1748,7 @@ class ConfigurableTask(Task):
         else:
             raise ValueError(
                 f"Passed invalid output_type '{self.OUTPUT_TYPE}' ! Please use one of ",
-                "'loglikelihood','generate_until', 'generate_until_multi_round', 'generate_until_agentic', or 'multiple_choice'",
+                "'loglikelihood','generate_until', 'generate_until_multi_round', 'generate_until_agentic', 'generate_until_game', or 'multiple_choice'",
             )
 
         return result_dict
@@ -1845,10 +1863,13 @@ class ConfigurableMessagesTask(ConfigurableTask):
         assert self.OUTPUT_TYPE in [
             "generate_until",
             "generate_until_agentic",
+            "generate_until_game",
             "generate_until_multi_round",
         ], "Currently messages is used for generation only"
 
-        if self.OUTPUT_TYPE == "generate_until_agentic":
+        if self.OUTPUT_TYPE == "generate_until_game":
+            arguments = self._game_arguments(ctx, doc_id, split)
+        elif self.OUTPUT_TYPE == "generate_until_agentic":
             arguments = (
                 ctx,
                 copy.deepcopy(self.config.generation_kwargs),
