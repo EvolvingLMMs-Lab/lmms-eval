@@ -3,48 +3,47 @@ import re
 import warnings
 from typing import List, Optional, Tuple, Union
 
+import numpy as np
 import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
-from transformers import AutoProcessor, AutoTokenizer, Gemma3ForConditionalGeneration
+from transformers import AutoModelForImageTextToText, AutoProcessor
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_data_url
 
 warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
-# Constants for default pixel values
-DEFAULT_MIN_PIXELS = 256 * 28 * 28
-DEFAULT_MAX_PIXELS = 1605632
+# Gemma 4 vision soft-token budgets
+ALLOWED_MAX_SOFT_TOKENS = frozenset({70, 140, 280, 560, 1120})
+DEFAULT_MAX_SOFT_TOKENS = 280
 DEFAULT_MAX_FRAMES = 32
 VIDEO_EXTENSIONS = (".mp4", ".avi", ".mov", ".mkv", ".webm", ".mpeg", ".mpg")
 
 
-@register_model("gemma3")
-class Gemma3(lmms):
+@register_model("gemma4")
+class Gemma4(lmms):
     """
-    Gemma3 Model
-    https://huggingface.co/google/gemma-3-27b-it
+    Gemma 4 model.
+    https://huggingface.co/google/gemma-4-31B-it
     """
 
     def __init__(
         self,
-        pretrained: str = "google/gemma-3-27b-it",
+        pretrained: str = "google/gemma-4-31B-it",
         device: Optional[str] = "cuda",
         device_map: Optional[str] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
         trust_remote_code: Optional[bool] = True,
-        use_cache=True,
+        use_cache: bool = True,
         attn_implementation: Optional[str] = None,
-        min_pixels: int = DEFAULT_MIN_PIXELS,
-        max_pixels: int = DEFAULT_MAX_PIXELS,
+        max_soft_tokens: int = DEFAULT_MAX_SOFT_TOKENS,
         max_num_frames: int = DEFAULT_MAX_FRAMES,
         interleave_visuals: Optional[bool] = False,
         system_prompt: Optional[str] = "You are a helpful assistant.",
@@ -52,8 +51,10 @@ class Gemma3(lmms):
         **kwargs,
     ) -> None:
         super().__init__()
-        # Do not use kwargs for now
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
+
+        if max_soft_tokens not in ALLOWED_MAX_SOFT_TOKENS:
+            raise ValueError(f"max_soft_tokens must be one of {sorted(ALLOWED_MAX_SOFT_TOKENS)}, got {max_soft_tokens}")
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
@@ -63,31 +64,26 @@ class Gemma3(lmms):
             self._device = torch.device(device)
             self.device_map = device_map if device_map else device
 
-        # Prepare model loading arguments
         model_kwargs = {
             "torch_dtype": torch.bfloat16,
             "device_map": self.device_map,
+            "trust_remote_code": trust_remote_code,
         }
-
-        # Add attention implementation if specified
         if attn_implementation is not None:
             model_kwargs["attn_implementation"] = attn_implementation
 
-        # Minimal, generation-capable loader: use the dedicated Gemma3 class
-        self._model = Gemma3ForConditionalGeneration.from_pretrained(pretrained, **model_kwargs).eval()
-        self._tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=trust_remote_code, device_map=self.device_map)
-        self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels)
+        self._model = AutoModelForImageTextToText.from_pretrained(pretrained, **model_kwargs).eval()
+        self.processor = AutoProcessor.from_pretrained(pretrained, trust_remote_code=trust_remote_code, padding_side="left")
+        self.processor.video_processor.sample_frames = self._sample_video_frames
+        self._tokenizer = self.processor.tokenizer
 
         self._config = self._model.config
-        self._max_length = kwargs.get("max_length", 2048)
-        self._model.tie_weights()
+        self._max_length = self._config.text_config.max_position_embeddings
         self.batch_size_per_gpu = int(batch_size)
         self.use_cache = use_cache
         self.system_prompt = system_prompt
         self.interleave_visuals = interleave_visuals
-
-        self.max_pixels = max_pixels
-        self.min_pixels = min_pixels
+        self.max_soft_tokens = max_soft_tokens
         self.max_num_frames = max_num_frames
 
         if reasoning_prompt:
@@ -117,7 +113,6 @@ class Gemma3(lmms):
 
     @property
     def config(self):
-        # return the associated transformers.AutoConfig for the given pretrained model.
         return self._config
 
     @property
@@ -126,16 +121,12 @@ class Gemma3(lmms):
 
     @property
     def model(self):
-        # returns the model, unwrapping it if using Accelerate
         if hasattr(self, "accelerator"):
             return self.accelerator.unwrap_model(self._model)
-        else:
-            return self._model
+        return self._model
 
     @property
     def eot_token_id(self):
-        # we use EOT because end of *text* is more accurate for what we're doing than end of *sentence*
-        # return self.tokenizer.eod_id
         return self.tokenizer.eos_token_id
 
     @property
@@ -159,22 +150,7 @@ class Gemma3(lmms):
         return self._world_size
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        raise NotImplementedError("Not implemented for Gemma3.")
-
-    def flatten(self, input: List[List]) -> List:
-        """Flatten a nested list into a single list.
-
-        Args:
-            input: A nested list structure
-
-        Returns:
-            A flattened single-level list
-        """
-        new_list = []
-        for i in input:
-            for j in i:
-                new_list.append(j)
-        return new_list
+        raise NotImplementedError("Not implemented for Gemma4.")
 
     def _encode_image_data_url(self, image: Image.Image) -> str:
         return encode_image_to_data_url(
@@ -185,31 +161,18 @@ class Gemma3(lmms):
             quality=85,
         )
 
+    def _sample_video_frames(self, metadata, num_frames=None, **kwargs):
+        num_frames = min(num_frames or self.max_num_frames, metadata.total_num_frames)
+        return np.linspace(0, metadata.total_num_frames - 1, num_frames, dtype=int)
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
-        """Generate text completions for given requests.
-
-        Args:
-            requests: List of Instance objects containing generation requests
-
-        Returns:
-            List of generated text responses
-        """
         res = []
 
         def _collate(x):
-            # the negative sign on len(toks) sorts descending - this has a few advantages:
-            # - time estimates will always be over not underestimates, which is more useful for planning
-            # - to know the size of a batch when going through the list, you know the first one is always the batch
-            #   padded context length. this is useful to simplify the batching logic and more importantly to make
-            #   automatic adaptive batches much much easier to implement
-            # - any OOMs will happen right away rather than near the end
             toks = self.tokenizer.encode(x[0])
             return -len(toks), x[0]
 
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
-        # we group requests by their generation_kwargs,
-        # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
-        # in the same batch.
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         for chunk in chunks:
@@ -217,15 +180,11 @@ class Gemma3(lmms):
             visual_list = [visual_fn(self.task_dict[task_name][split_name][ids]) for visual_fn, ids, task_name, split_name in zip(doc_to_visual, doc_id, task, split)]
             gen_kwargs = all_gen_kwargs[0]
 
-            # Set default until or update values from gen_kwargs if present
             until = gen_kwargs.get("until", [self.tokenizer.decode(self.eot_token_id)])
-
             if isinstance(until, str):
                 until = [until]
             elif not isinstance(until, list):
                 raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str, list], but got {type(until)}")
-
-            # Avoid using '\n\n' as a stopper to prevent truncation, which can lead to incorrect results
             until = [item for item in until if item != "\n\n"]
 
             if isinstance(contexts, tuple):
@@ -237,9 +196,6 @@ class Gemma3(lmms):
 
             batched_messages = []
             for i, context in enumerate(contexts):
-                if "<image>" in context:
-                    context = context.replace("<image>", "")
-
                 message = [{"role": "system", "content": [{"type": "text", "text": self.system_prompt}]}]
 
                 if self.reasoning_prompt:
@@ -255,10 +211,9 @@ class Gemma3(lmms):
                             if not os.path.exists(visual):
                                 eval_logger.warning(f"Video file not found: {visual}")
                             else:
-                                frames = read_video(visual, num_frm=self.max_num_frames)
-                                visual_group.extend({"type": "image", "image": self._encode_image_data_url(Image.fromarray(frame)), "max_pixels": self.max_pixels, "min_pixels": self.min_pixels} for frame in frames)
+                                visual_group.append({"type": "video", "video": visual})
                         elif isinstance(visual, Image.Image):
-                            visual_group.append({"type": "image", "image": self._encode_image_data_url(visual), "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                            visual_group.append({"type": "image", "image": self._encode_image_data_url(visual)})
                     except Exception as e:
                         eval_logger.error(f"Failed to process visual: {e}")
                     visual_groups.append(visual_group)
@@ -286,27 +241,37 @@ class Gemma3(lmms):
                                 content.append({"type": "text", "text": text_parts[placeholder_idx + 1]})
 
                 message.append({"role": "user", "content": content})
-
                 batched_messages.append(message)
 
-            inputs = self.processor.apply_chat_template(batched_messages, add_generation_prompt=True, tokenize=True, return_dict=True, return_tensors="pt", processor_kwargs={"padding": True, "pad_to_multiple_of": 8}).to(
-                self.model.device, dtype=torch.bfloat16
-            )
+            inputs = self.processor.apply_chat_template(
+                batched_messages,
+                add_generation_prompt=True,
+                tokenize=True,
+                return_dict=True,
+                return_tensors="pt",
+                processor_kwargs={
+                    "text_kwargs": {"padding": True, "pad_to_multiple_of": 8},
+                    "images_kwargs": {"max_soft_tokens": self.max_soft_tokens},
+                    "videos_kwargs": {
+                        "max_soft_tokens": self.max_soft_tokens,
+                        "num_frames": self.max_num_frames,
+                        "do_sample_frames": True,
+                    },
+                },
+            ).to(self.model.device, dtype=torch.bfloat16)
 
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
             else:
                 inputs = inputs.to(self.device)
 
-            # Set default generation kwargs
             default_gen_kwargs = {
                 "max_new_tokens": 128,
-                "temperature": 0.0,  # Set to 0 for greedy default
+                "temperature": 0.0,
                 "top_p": None,
                 "top_k": None,
                 "num_beams": 1,
             }
-            # Update with provided kwargs
             current_gen_kwargs = {**default_gen_kwargs, **gen_kwargs}
 
             if current_gen_kwargs["temperature"] > 0:
@@ -331,7 +296,6 @@ class Gemma3(lmms):
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
             answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
             for i, ans in enumerate(answers):
-                # print(f"Raw answer {i}: {ans}")
                 for term in until:
                     if len(term) > 0:
                         ans = ans.split(term)[0]
@@ -341,22 +305,10 @@ class Gemma3(lmms):
                 res.append(ans)
                 self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
                 pbar.update(1)
-            # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
 
         pbar.close()
         return res
 
     def generate_until_multi_round(self, requests: List[Instance]) -> List[str]:
-        """Generate text in a multi-round conversation format.
-
-        Args:
-            requests: List of Instance objects for multi-round generation
-
-        Returns:
-            List of generated responses
-
-        Raises:
-            NotImplementedError: This method is not yet implemented
-        """
         raise NotImplementedError("TODO: Implement multi-round generation")
