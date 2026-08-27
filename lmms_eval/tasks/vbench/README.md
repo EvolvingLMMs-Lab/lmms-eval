@@ -8,11 +8,10 @@ official VBench scorer.
 
 ## Hugging Face dataset
 
-All tasks load [`pufanyi/VBench`](https://huggingface.co/datasets/pufanyi/VBench)
-at the immutable revision
-`f95c61c6ea5e45800d69ae0c9fe3824449d79548`. The conversion is built from
-VBench revision `1ee42dada7a2f7cfaf4290e8a02d087f6f8ee425` and retains the
-unmodified source registries and Apache-2.0 license.
+All tasks load [`pufanyi/VBench`](https://huggingface.co/datasets/pufanyi/VBench).
+The conversion is built from VBench revision
+`1ee42dada7a2f7cfaf4290e8a02d087f6f8ee425` and retains the unmodified source
+registries and Apache-2.0 license.
 
 The dataset has combined configs and one config per official dimension:
 
