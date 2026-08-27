@@ -1,0 +1,4 @@
+task: vbench2_instance_preservation
+dataset_name: vbench2_instance_preservation
+test_split: test
+include: _default_template_yaml

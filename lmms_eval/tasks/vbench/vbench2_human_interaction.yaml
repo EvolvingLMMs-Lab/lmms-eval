@@ -1,0 +1,4 @@
+task: vbench2_human_interaction
+dataset_name: vbench2_human_interaction
+test_split: test
+include: _default_template_yaml
