@@ -136,7 +136,7 @@ def sodac_llm_score(iou_matrix, score_matrix, predicted_captions, gt_captions, i
 
     res = {str(index): [p] for index, p in enumerate(predicted_captions)}
     fs = [0] * len(iou_thresholds)
-    gts = [{index: [x] for index in res} for x in gt_captions]
+    _gts = [{index: [x] for index in res} for x in gt_captions]
     for i, threshold in enumerate(iou_thresholds):
         iou_cur = np.copy(iou_matrix)
         iou_cur[iou_cur < threshold] = 0.0

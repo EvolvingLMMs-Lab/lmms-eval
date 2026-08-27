@@ -242,8 +242,8 @@ class SimpleMultiChoiceRegexFilter(ExtendedRegexFilter):
             choice_to_alpha = {}
             next_alpha = "A"
 
-            without_paren_fallback_regexes = []
-            without_paren_to_target = {}
+            _without_paren_fallback_regexes = []
+            _without_paren_to_target = {}
 
             # Regex to extract multiple choice options from the question
             multiple_choices_regex = re.compile(r"\b([A-Z])\.\s+([^\n]*)")

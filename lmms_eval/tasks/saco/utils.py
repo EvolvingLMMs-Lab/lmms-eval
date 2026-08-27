@@ -33,7 +33,7 @@ on the results JSON to compute dataset-level MCC, pmF1, and cgF1.
 
 import json
 import math
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import numpy as np
 from loguru import logger as eval_logger

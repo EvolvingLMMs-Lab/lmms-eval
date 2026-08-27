@@ -33,11 +33,17 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # Import LLaVA modules
 try:
     from llava.constants import (
-        DEFAULT_IM_END_TOKEN,
-        DEFAULT_IM_START_TOKEN,
+        DEFAULT_IM_END_TOKEN as DEFAULT_IM_END_TOKEN,
+    )
+    from llava.constants import (
+        DEFAULT_IM_START_TOKEN as DEFAULT_IM_START_TOKEN,
+    )
+    from llava.constants import (
         DEFAULT_IMAGE_TOKEN,
-        IGNORE_INDEX,
         IMAGE_TOKEN_INDEX,
+    )
+    from llava.constants import (
+        IGNORE_INDEX as IGNORE_INDEX,
     )
     from llava.conversation import SeparatorStyle, conv_templates
     from llava.mm_utils import (
@@ -122,7 +128,7 @@ class Llava_OneVision(lmms):
         overwrite_config["mm_spatial_pool_stride"] = self.mm_spatial_pool_stride
         overwrite_config["mm_spatial_pool_mode"] = self.mm_spatial_pool_mode
         overwrite_config.update(self._get_model_overwrite_config())
-        cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
+        _cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
 
         llava_model_args["overwrite_config"] = overwrite_config
         try:
@@ -258,7 +264,7 @@ class Llava_OneVision(lmms):
     def tok_decode(self, tokens):
         try:
             return self.tokenizer.decode(tokens)
-        except:
+        except Exception:
             return self.tokenizer.decode([tokens])
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
@@ -284,7 +290,7 @@ class Llava_OneVision(lmms):
                     eval_logger.info(f"In Multi-Image setting, image aspect ratio: {self._config.image_aspect_ratio}")
 
                 if "task_type" in self.metadata and self.metadata["task_type"] == "video" and "sample_frames" in self.metadata:
-                    assert type(visual) == list, "sample_frames must be specified for video task"
+                    assert type(visual) is list, "sample_frames must be specified for video task"
                     sample_indices = np.linspace(0, len(visual) - 1, self.metadata["sample_frames"], dtype=int)
                     visual = [visual[i] for i in sample_indices]
                     assert len(visual) == self.metadata["sample_frames"]
@@ -297,7 +303,7 @@ class Llava_OneVision(lmms):
 
                     task_type = "video"
 
-                # elif type(visual[0]) == PIL.Image.Image:
+                # elif type(visual[0]) is PIL.Image.Image:
                 elif isinstance(visual[0], PIL.Image.Image):
                     image_tensor = process_images(visual, self._image_processor, self._config)
                     if type(image_tensor) is list:
@@ -307,7 +313,7 @@ class Llava_OneVision(lmms):
 
                     task_type = "image"
 
-                elif type(visual[0]) == str:
+                elif type(visual[0]) is str:
                     image_tensor = []
                     try:
                         if self.video_decode_backend == "decord":
@@ -343,7 +349,7 @@ class Llava_OneVision(lmms):
 
             input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
 
-            if type(doc_to_target) == str:
+            if type(doc_to_target) is str:
                 continuation = doc_to_target
             else:
                 continuation = doc_to_target(self.task_dict[task][split][doc_id])
@@ -396,7 +402,7 @@ class Llava_OneVision(lmms):
         return new_list
 
     def load_video(self, video_path, max_frames_num):
-        if type(video_path) == str:
+        if type(video_path) is str:
             vr = VideoReader(video_path, ctx=cpu(0))
         else:
             vr = VideoReader(video_path[0], ctx=cpu(0))
@@ -468,7 +474,7 @@ class Llava_OneVision(lmms):
                         eval_logger.info(f"In Multi-Image setting, image aspect ratio: {self._config.image_aspect_ratio}")
 
                     if "task_type" in metadata and metadata["task_type"] == "video" and "sample_frames" in metadata:  # overwrite logic for video task with multiple static image frames
-                        assert type(visual) == list, "sample_frames must be specified for video task"
+                        assert type(visual) is list, "sample_frames must be specified for video task"
                         sample_indices = np.linspace(0, len(visual) - 1, metadata["sample_frames"], dtype=int)
                         visual = [visual[i] for i in sample_indices]
                         assert len(visual) == metadata["sample_frames"]
@@ -482,7 +488,7 @@ class Llava_OneVision(lmms):
                         task_type = "video"
                         placeholder_count = 1
 
-                    elif type(visual[0]) == PIL.Image.Image:  # For image, multi-image tasks
+                    elif type(visual[0]) is PIL.Image.Image:  # For image, multi-image tasks
                         image_tensor = process_images(visual, self._image_processor, self._config)
                         if type(image_tensor) is list:
                             image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]
@@ -492,7 +498,7 @@ class Llava_OneVision(lmms):
                         task_type = "image"
                         placeholder_count = len(visual) if isinstance(visual, list) else 1
 
-                    elif type(visual[0]) == str:  # For video task
+                    elif type(visual[0]) is str:  # For video task
                         image_tensor = []
                         try:
                             if self.video_decode_backend == "decord":
@@ -698,7 +704,7 @@ class Llava_OneVision(lmms):
                             eval_logger.info(f"In Multi-Image setting, image aspect ratio: {self._config.image_aspect_ratio}")
 
                         if "task_type" in metadata and metadata["task_type"] == "video" and "sample_frames" in metadata:  # overwrite logic for video task with multiple static image frames
-                            assert type(visual) == list, "sample_frames must be specified for video task"
+                            assert type(visual) is list, "sample_frames must be specified for video task"
                             sample_indices = np.linspace(0, len(visual) - 1, metadata["sample_frames"], dtype=int)
                             visual = [visual[i] for i in sample_indices]
                             assert len(visual) == metadata["sample_frames"]
@@ -712,7 +718,7 @@ class Llava_OneVision(lmms):
                             task_type = "video"
                             placeholder_count = 1
 
-                        elif type(visual[0]) == PIL.Image.Image:  # For image, multi-image tasks
+                        elif type(visual[0]) is PIL.Image.Image:  # For image, multi-image tasks
                             image_tensor = process_images(visual, self._image_processor, self._config)
                             if type(image_tensor) is list:
                                 image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]
@@ -722,7 +728,7 @@ class Llava_OneVision(lmms):
                             task_type = "image"
                             placeholder_count = len(visual) if isinstance(visual, list) else 1
 
-                        elif type(visual[0]) == str:  # For video task
+                        elif type(visual[0]) is str:  # For video task
                             image_tensor = []
                             try:
                                 if self.video_decode_backend == "decord":

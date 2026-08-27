@@ -1,7 +1,6 @@
 # credit to https://github.com/EleutherAI/lm-evaluation-harness
 import collections
 import inspect
-import logging
 import os
 from functools import partial
 from typing import Dict, List, Literal, Mapping, Optional, Union

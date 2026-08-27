@@ -63,9 +63,9 @@ class CDM:
         inliers = np.copy(ori_inliers)
         sub_idx = -1
         for idx in range(len(ori_inliers)):
-            if ori_inliers[idx] == False:
+            if not ori_inliers[idx]:
                 sub_idx += 1
-                if sub_inliers[sub_idx] == True:
+                if sub_inliers[sub_idx]:
                     inliers[idx] = True
         return inliers
 
@@ -129,11 +129,11 @@ class CDM:
         else:
             inliers = np.array([False for _ in matched_idxes])
             for i in range(self.max_iter):
-                if src[inliers == False].shape[0] <= self.min_samples:
+                if src[~inliers].shape[0] <= self.min_samples:
                     break
                 try:
                     model, inliers_1 = ransac(
-                        (src[inliers == False], dst[inliers == False]),
+                        (src[~inliers], dst[~inliers]),
                         SimpleAffineTransform,
                         min_samples=self.min_samples,
                         residual_threshold=self.residual_threshold,
@@ -143,7 +143,7 @@ class CDM:
                 except TypeError:
                     # Older scikit-image versions do not support `random_state`.
                     model, inliers_1 = ransac(
-                        (src[inliers == False], dst[inliers == False]),
+                        (src[~inliers], dst[~inliers]),
                         SimpleAffineTransform,
                         min_samples=self.min_samples,
                         residual_threshold=self.residual_threshold,
@@ -153,19 +153,19 @@ class CDM:
                     inliers = self.update_inliers(inliers, inliers_1)
                 else:
                     break
-                if len(inliers[inliers == True]) >= len(matched_idxes):
+                if len(inliers[inliers]) >= len(matched_idxes):
                     break
 
         # Filter token mismatches
         for idx, (a, b) in enumerate(matched_idxes):
-            if inliers[idx] == True and self.matcher.cost["token"][a, b] == 1:
+            if inliers[idx] and self.matcher.cost["token"][a, b] == 1:
                 inliers[idx] = False
 
         return matched_idxes, inliers
 
     def _calculate_metrics(self, box_gt, box_pred, inliers):
         """Calculate evaluation metrics"""
-        final_match_num = len(inliers[inliers == True])
+        final_match_num = len(inliers[inliers])
         recall = round(final_match_num / len(box_gt), 3)
         precision = round(final_match_num / len(box_pred), 3)
         F1_score = round(2 * final_match_num / (len(box_gt) + len(box_pred)), 3)
@@ -194,13 +194,13 @@ class CDM:
 
         # Draw GT boxes
         for idx, box in enumerate(box_gt):
-            color = "green" if idx in gt_matched_idx and gt_matched_idx[idx] == True else "red"
+            color = "green" if idx in gt_matched_idx and gt_matched_idx[idx] else "red"
             x_min, y_min, x_max, y_max = box["bbox"]
             match_draw.rectangle([x_min - 1, y_min - 1, x_max + 1, y_max + 1], fill=None, outline=color, width=2)
 
         # Draw prediction boxes
         for idx, box in enumerate(box_pred):
-            color = "green" if idx in pred_matched_idx and pred_matched_idx[idx] == True else "red"
+            color = "green" if idx in pred_matched_idx and pred_matched_idx[idx] else "red"
             x_min, y_min, x_max, y_max = box["bbox"]
             match_draw.rectangle([x_min - 1, y_min - 1 + H1 + gap, x_max + 1, y_max + 1 + H1 + gap], fill=None, outline=color, width=2)
 

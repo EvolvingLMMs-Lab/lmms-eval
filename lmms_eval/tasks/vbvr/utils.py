@@ -236,7 +236,7 @@ def vbvr_process_results(doc: Dict[str, Any], results: Sequence[Any], **kwargs) 
         eval_logger.error(f"VBVR evaluator failed for {task_name}/{video_idx}: {str(e)[:300]}")
         score = 0.0
         dimensions = {}
-        status = f"evaluator_error"
+        status = "evaluator_error"
 
     entry = {
         "task_name": task_name,

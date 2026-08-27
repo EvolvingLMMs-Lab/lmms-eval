@@ -16,7 +16,7 @@ correctness_entry = "gpt4v_output_gpt_check"
 
 metric = ["aAcc", "fAcc", "qAcc"]
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 
 def hb_doc_to_text(doc, lmms_eval_specific_kwargs=None):
@@ -105,7 +105,7 @@ def hb_aggregation_result_intern(results, metric):
             key = "_".join([r["category"], r["subcategory"], str(r["set_id"]), str(r["question_id"])])
             try:
                 qlist[key].append(r["answer"] == r["gt_answer"])
-            except:
+            except Exception:
                 qlist[key] = [r["answer"] == r["gt_answer"]]
         out = []
         for q, v in qlist.items():
@@ -118,7 +118,7 @@ def hb_aggregation_result_intern(results, metric):
             key = "_".join([r["category"], r["subcategory"], str(r["set_id"]), str(r["figure_id"])])
             try:
                 qlist[key].append(r["answer"] == r["gt_answer"])
-            except:
+            except Exception:
                 qlist[key] = [r["answer"] == r["gt_answer"]]
         out = []
         for q, v in qlist.items():

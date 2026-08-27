@@ -10,13 +10,13 @@ import warnings
 warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
-from typing import Iterable, List, Tuple, Union
+from typing import Iterable, List, Tuple, Union  # noqa: E402
 
-import numpy as np
-import torch
-import torch.nn.functional as F
-from transformers import PreTrainedTokenizer
-from transformers.generation import LogitsProcessor
+import numpy as np  # noqa: E402
+import torch  # noqa: E402
+import torch.nn.functional as F  # noqa: E402
+from transformers import PreTrainedTokenizer  # noqa: E402
+from transformers.generation import LogitsProcessor  # noqa: E402
 
 # Types.
 HistoryType = List[Tuple[str, str]]

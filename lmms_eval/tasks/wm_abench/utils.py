@@ -78,7 +78,7 @@ def _make_montage(source_imgs: list, choice_imgs: list) -> Image.Image:
     Layout: source images in top row, choice images A/B/C/D in bottom row.
     Each cell is resized to a common size for uniformity.
     """
-    from PIL import ImageDraw, ImageFont
+    from PIL import ImageDraw
 
     CELL = 384  # px per cell
     PAD = 4

@@ -7,8 +7,6 @@ so prediction parsing does not require matplotlib at runtime.
 import os
 import re
 
-import numpy as np
-
 
 def print_aligned_dict(data):
     # Find the maximum length of all keys
@@ -37,52 +35,10 @@ def create_dict_from_folders(directory):
     return body
 
 
-def create_radar_chart(df, title, filename):
-    labels = df.columns
-
-    # Calculate angles
-    angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
-    angles += angles[:1]
-
-    # Initialize radar chart
-    fig, ax = plt.subplots(figsize=(10, 6), subplot_kw=dict(polar=True), dpi=200)
-    # ax.spines['polar'].set_visible(False)
-
-    # Draw radar chart for each dataset
-    for index, row in df.iterrows():
-        values = row.tolist()
-        values += values[:1]
-        ax.fill(angles, values, alpha=0.1)
-        ax.plot(angles, values, label=index)
-
-        # Add percentage labels next to each data point
-        for angle, value in zip(angles, values):
-            ax.text(angle, value, "{:.1%}".format(value), ha="center", va="center", fontsize=7, alpha=0.7)
-
-    # Set labels
-    ax.set_yticklabels([])
-    ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(labels, fontproperties=font)
-    ax.spines["polar"].set_visible(False)  # Hide the outermost circle
-    ax.grid(False)
-    for j in np.arange(0, 1.2, 0.2):
-        ax.plot(angles, len(values) * [j], "-.", lw=0.5, color="black", alpha=0.5)
-    for j in range(len(values)):
-        ax.plot([angles[j], angles[j]], [0, 1], "-.", lw=0.5, color="black", alpha=0.5)
-
-    # Add title and legend
-    plt.legend(loc="upper right", bbox_to_anchor=(0.1, 0.1))
-
-    ax.tick_params(pad=30)
-    ax.set_theta_zero_location("N")
-    # Save chart to file
-    plt.savefig(filename)
-
-
 # The function is from https://github.com/intsig-textin/markdown_tester
 def markdown_to_html(markdown_table):
     rows = [row.strip() for row in markdown_table.strip().split("\n")]
-    num_columns = len(rows[0].split("|")) - 2
+    _num_columns = len(rows[0].split("|")) - 2
 
     html_table = "<table>\n  <thead>\n    <tr>\n"
 
@@ -100,21 +56,6 @@ def markdown_to_html(markdown_table):
 
     html_table += "  </tbody>\n</table>\n"
     return html_table
-
-
-def convert_markdown_to_html(self, markdown_content, md_type):
-    # Define a regex pattern to find Markdown tables with newlines
-    markdown_content = markdown_content.replace("\r", "")
-    pattern = re.compile(r"\|\s*.*?\s*\|\n", re.DOTALL)
-
-    # Find all matches in the Markdown content
-    matches = pattern.findall(markdown_content)
-    for match in matches:
-        html_table = markdown_to_html(match)
-        markdown_content = markdown_content.replace(match, html_table, 1)  # Only replace the first occurrence
-    res_html = convert_table(replace_table_with_placeholder(markdown_content))
-
-    return res_html
 
 
 def convert_table_str(s):
@@ -187,8 +128,8 @@ def replace_table_with_placeholder(input_string):
     temp_block = ""
     last_line = ""
 
-    org_table_list = []
-    in_org_table = False
+    _org_table_list = []
+    _in_org_table = False
 
     for idx, line in enumerate(lines):
         # if not in_org_table:

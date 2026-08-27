@@ -85,7 +85,7 @@ def chat_compeletion_openai(model, messages, temperature, max_tokens):
         "Content-Type": "application/json",
         "api-key": API_KEY,
     }
-    output = API_ERROR_OUTPUT
+    _output = API_ERROR_OUTPUT
     payload = {
         # "model": model,
         "messages": messages,
@@ -118,7 +118,7 @@ def chat_compeletion_openai(model, messages, temperature, max_tokens):
         if attempt < API_MAX_RETRY - 1:
             time.sleep(NUM_SECONDS_TO_SLEEP)
         else:  # If this was the last attempt, log and return empty
-            eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
+            eval_logger.error(f"All {API_MAX_RETRY} attempts failed.")
             return "", ""
 
     return "", ""

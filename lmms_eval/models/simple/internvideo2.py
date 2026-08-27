@@ -9,22 +9,22 @@ from accelerate import Accelerator, DistributedType
 from decord import VideoReader, cpu
 
 decord.bridge.set_bridge("torch")
-import torch.nn.functional as F
-from PIL import Image
-from tqdm import tqdm
-from transformers import AutoModel, AutoTokenizer
+import torch.nn.functional as F  # noqa: E402
+from PIL import Image  # noqa: E402
+from tqdm import tqdm  # noqa: E402
+from transformers import AutoModel, AutoTokenizer  # noqa: E402
 
-from lmms_eval.api.instance import Instance
-from lmms_eval.api.model import lmms
-from lmms_eval.api.registry import register_model
+from lmms_eval.api.instance import Instance  # noqa: E402
+from lmms_eval.api.model import lmms  # noqa: E402
+from lmms_eval.api.registry import register_model  # noqa: E402
 
 eval_logger = logging.getLogger("eval_logger")
 
 
-from datetime import timedelta
+from datetime import timedelta  # noqa: E402
 
-from accelerate.state import AcceleratorState
-from accelerate.utils import InitProcessGroupKwargs
+from accelerate.state import AcceleratorState  # noqa: E402
+from accelerate.utils import InitProcessGroupKwargs  # noqa: E402
 
 DEFAULT_GEN_KWARGS = dict(
     num_beams=1,
@@ -221,7 +221,7 @@ def HD_transform_no_padding(frames, image_size=224, hd_num=6, fix_ratio=(2, 1)):
     # calculate the target width and height
     target_width = image_size * target_aspect_ratio[0]
     target_height = image_size * target_aspect_ratio[1]
-    blocks = target_aspect_ratio[0] * target_aspect_ratio[1]
+    _blocks = target_aspect_ratio[0] * target_aspect_ratio[1]
 
     # resize the frames
     resized_frame = F.interpolate(frames, size=(target_height, target_width), mode="bicubic", align_corners=False)

@@ -235,7 +235,7 @@ class MovieChat(lmms):
     def tok_decode(self, tokens):
         try:
             return self.tokenizer.decode(tokens)
-        except:
+        except Exception:
             return self.tokenizer.decode([tokens])
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
@@ -339,14 +339,14 @@ class MovieChat(lmms):
             text_outputs = []
 
             for visual, context in zip(batched_visuals, batched_contexts):
-                if type(visual[0]) == PIL.Image.Image and "task_type" not in metadata and "sample_frames" not in metadata:  # For image task
+                if type(visual[0]) is PIL.Image.Image and "task_type" not in metadata and "sample_frames" not in metadata:  # For image task
                     raise NotImplementedError("MovieChat only supports video inputs.")
 
                 elif "task_type" in metadata and metadata["task_type"] == "video" and "sample_frames" in metadata:
                     raise NotImplementedError("MovieChat only supports video inputs.")
 
-                elif type(visual[0]) == str:  # For video task
-                    image_tensor = []
+                elif type(visual[0]) is str:  # For video task
+                    _image_tensor = []
                     self.model.short_memory_buffer = []
                     self.model.long_memory_buffer = []
                     img_list = []

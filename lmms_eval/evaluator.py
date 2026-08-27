@@ -22,21 +22,19 @@ from tqdm import tqdm
 # before slow ranks (e.g. 1h24m vs 4h24m).  3h was not enough — increase to 24h.
 torch.distributed.distributed_c10d.default_pg_timeout = timedelta(hours=24)
 
-import lmms_eval.api
-import lmms_eval.api.metrics
-import lmms_eval.api.registry
-from lmms_eval import models
-from lmms_eval.api.instance import Instance, unwrap_generation_output
-from lmms_eval.api.model import lmms
-from lmms_eval.api.reasoning import parse_reasoning_tags_config, strip_reasoning_tags
-from lmms_eval.api.task import Task
-from lmms_eval.baselines import (
-    BASELINE_REGISTRY,
+import lmms_eval.api  # noqa: E402
+import lmms_eval.api.metrics  # noqa: E402
+import lmms_eval.api.registry  # noqa: E402
+from lmms_eval import models  # noqa: E402
+from lmms_eval.api.instance import Instance, unwrap_generation_output  # noqa: E402
+from lmms_eval.api.reasoning import parse_reasoning_tags_config, strip_reasoning_tags  # noqa: E402
+from lmms_eval.api.task import Task  # noqa: E402
+from lmms_eval.baselines import (  # noqa: E402
     get_baseline_display_name,
     load_baseline,
 )
-from lmms_eval.caching.response_cache import ResponseCache
-from lmms_eval.evaluator_utils import (
+from lmms_eval.caching.response_cache import ResponseCache  # noqa: E402
+from lmms_eval.evaluator_utils import (  # noqa: E402
     compute_baseline_comparison,
     consolidate_group_results,
     consolidate_results,
@@ -45,20 +43,19 @@ from lmms_eval.evaluator_utils import (
     get_task_list,
     prepare_print_tasks,
     print_writeout,
-    run_task_tests,
 )
-from lmms_eval.llm_judge.launcher import get_launcher
-from lmms_eval.loggers.evaluation_tracker import EvaluationTracker
-from lmms_eval.models.model_utils.efficiency_metrics import build_efficiency_summary
-from lmms_eval.models.model_utils.usage_metrics import (
+from lmms_eval.llm_judge.launcher import get_launcher  # noqa: E402
+from lmms_eval.loggers.evaluation_tracker import EvaluationTracker  # noqa: E402
+from lmms_eval.models.model_utils.efficiency_metrics import build_efficiency_summary  # noqa: E402
+from lmms_eval.models.model_utils.usage_metrics import (  # noqa: E402
     is_budget_exceeded,
     reset_usage_metrics,
     set_budget,
     set_task_context,
     summarize_usage_metrics,
 )
-from lmms_eval.tasks import TaskManager, get_task_dict
-from lmms_eval.utils import (
+from lmms_eval.tasks import TaskManager, get_task_dict  # noqa: E402
+from lmms_eval.utils import (  # noqa: E402
     create_iterator,
     get_datetime_str,
     get_git_branch_name,
@@ -441,7 +438,7 @@ def simple_evaluate(
 
             else:
                 task_obj = task_dict[task_name]
-                if type(task_obj) == tuple:
+                if type(task_obj) is tuple:
                     group, task_obj = task_obj
                     if task_obj is None:
                         continue
@@ -503,7 +500,7 @@ def simple_evaluate(
         set_budget(max_tokens=max_tokens)
 
     # Getting the rank settings
-    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+    _local_rank = int(os.environ.get("LOCAL_RANK", 0))
     global_rank = int(os.environ.get("RANK", 0))
     world_size = int(os.environ.get("WORLD_SIZE", 1))
 
@@ -716,7 +713,7 @@ def _run_generate_until_agentic(
                     metadata=req.metadata,
                 )
             else:
-                current_doc = lm.task_dict[task_name][split][doc_id]
+                _current_doc = lm.task_dict[task_name][split][doc_id]
 
                 def _agentic_doc_to_messages(_doc):
                     visuals = current_doc_to_visual(_doc)
@@ -785,7 +782,9 @@ def _run_generate_until_agentic(
                 if next_context is not None:
                     current_context = next_context
                 if visuals is not None:
-                    current_doc_to_visual = lambda _doc, _visuals=visuals: _visuals
+
+                    def current_doc_to_visual(_doc, _visuals=visuals):
+                        return _visuals
             elif isinstance(step_payload, str):
                 current_context = step_payload
             else:
@@ -887,14 +886,14 @@ def evaluate(
     # Aggregated task scores presented with groups
     results_agg = collections.defaultdict(dict)
     # Aggregated groups scores only
-    groups_agg = collections.defaultdict(dict)
+    _groups_agg = collections.defaultdict(dict)
     # stores the amount to pad out reqs per req. type so that
     # number of fwd passes per distributed rank is equal
     padding_requests = collections.defaultdict(int)
     # store the hierarchy to do proper ordering
     task_hierarchy = collections.defaultdict(list)
     # store the ordering of tasks and groups
-    task_order = collections.defaultdict(int)
+    _task_order = collections.defaultdict(int)
     task_group_alias = collections.defaultdict(dict)
     # store num-fewshot value per task
     num_fewshot = collections.defaultdict(int)
@@ -957,7 +956,7 @@ def evaluate(
 
         name_to_task[task_name] = task
 
-        if type(task) == tuple:
+        if type(task) is tuple:
             group_name, task = task
             task_hierarchy[group_name].append(task_name)
             versions[group_name] = "N/A"

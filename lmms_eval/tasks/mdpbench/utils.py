@@ -44,7 +44,7 @@ import re
 import tempfile
 import unicodedata
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import Levenshtein
 from loguru import logger as eval_logger
@@ -422,7 +422,7 @@ def _replace_repeated_chars(s: str) -> str:
 
 
 def _md_table_to_html(md_block: str) -> str:
-    lines = [l.strip() for l in md_block.strip().splitlines() if l.strip()]
+    lines = [line.strip() for line in md_block.strip().splitlines() if line.strip()]
     rows = [[c.strip() for c in line.strip("|").split("|")] for line in lines if not re.match(r"^[\s|:-]+$", line)]
     if not rows:
         return ""

@@ -7,7 +7,7 @@ import json
 import os
 import re
 from io import BytesIO
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 # Azure OpenAI imports
 from azure.identity import (

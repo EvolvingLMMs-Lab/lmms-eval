@@ -95,7 +95,7 @@ def videott_doc_to_text_audio(doc, lmms_eval_specific_kwargs=None):
     try:
         with open(audio_path) as f:
             subtitle = f.read()
-    except:
+    except Exception:
         subtitle = ""
     question = doc["question"] + "\n" + doc["question_prompt"]
     post_prompt = lmms_eval_specific_kwargs["post_prompt"] if "post_prompt" in lmms_eval_specific_kwargs else "The best answer is:"

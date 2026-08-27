@@ -2,7 +2,7 @@
 Specific evaluators for In-Domain_50 tasks (Part 3).
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -404,9 +404,9 @@ class ShapeOutlineFillEvaluator(BaseEvaluator):
         # Determine if filled or outline
         # Filled shapes have higher area-to-perimeter ratio
         if perimeter > 0:
-            compactness = 4 * np.pi * area / (perimeter * perimeter)
+            _compactness = 4 * np.pi * area / (perimeter * perimeter)
         else:
-            compactness = 0
+            _compactness = 0
 
         # Check interior fill by sampling center
         M = cv2.moments(largest)
@@ -470,7 +470,7 @@ class ShapeOutlineFillEvaluator(BaseEvaluator):
         # Analyze bottom row
         gen_c = self._detect_shapes_in_quadrant(gen_final, "bottom_left")
         gen_d = self._detect_shapes_in_quadrant(gen_final, "bottom_right")
-        gt_d = self._detect_shapes_in_quadrant(gt_final, "bottom_right")
+        _gt_d = self._detect_shapes_in_quadrant(gt_final, "bottom_right")
 
         # 2. Bottom right (D) should match GT
         gen_d_region = gen_final[h // 2 :, w // 2 :]
@@ -656,7 +656,7 @@ class ShapeOutlineThenMoveEvaluator(BaseEvaluator):
             return False
 
         largest = max(contours, key=cv2.contourArea)
-        area = cv2.contourArea(largest)
+        _area = cv2.contourArea(largest)
 
         # Check interior
         M = cv2.moments(largest)
@@ -1150,7 +1150,7 @@ class GlassRefractionEvaluator(BaseEvaluator):
         lines = cv2.HoughLinesP(red_mask, 1, np.pi / 180, threshold=30, minLineLength=30, maxLineGap=10)
 
         if lines is not None and len(lines) > 0:
-            longest = max(lines, key=lambda l: np.sqrt((l[0][2] - l[0][0]) ** 2 + (l[0][3] - l[0][1]) ** 2))
+            longest = max(lines, key=lambda line: np.sqrt((line[0][2] - line[0][0]) ** 2 + (line[0][3] - line[0][1]) ** 2))
             x1, y1, x2, y2 = longest[0]
             angle = np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi
             length = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
@@ -1273,7 +1273,7 @@ class MirrorReflectionEvaluator(BaseEvaluator):
         lines = cv2.HoughLinesP(mask, 1, np.pi / 180, threshold=30, minLineLength=30, maxLineGap=10)
 
         if lines is not None and len(lines) > 0:
-            longest = max(lines, key=lambda l: np.sqrt((l[0][2] - l[0][0]) ** 2 + (l[0][3] - l[0][1]) ** 2))
+            longest = max(lines, key=lambda line: np.sqrt((line[0][2] - line[0][0]) ** 2 + (line[0][3] - line[0][1]) ** 2))
             x1, y1, x2, y2 = longest[0]
             angle = np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi
             length = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
@@ -1294,7 +1294,7 @@ class MirrorReflectionEvaluator(BaseEvaluator):
 
         # Detect lines
         gen_lines = self._detect_lines(gen_final)
-        gt_lines = self._detect_lines(gt_final)
+        _gt_lines = self._detect_lines(gt_final)
 
         # Try to detect reflected ray (often red or blue)
         gen_reflected = self._detect_colored_line(gen_final, "red")
@@ -1317,7 +1317,7 @@ class MirrorReflectionEvaluator(BaseEvaluator):
         # 2. Symmetry: Check if angles are symmetric about normal
         if gen_lines and len(gen_lines) >= 2:
             # Find incident and reflected rays
-            angles = [l["angle"] for l in gen_lines if l["length"] > 50]
+            angles = [line["angle"] for line in gen_lines if line["length"] > 50]
             if len(angles) >= 2:
                 # Check for angle symmetry
                 angles_sorted = sorted(angles)

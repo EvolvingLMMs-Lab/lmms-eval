@@ -17,8 +17,8 @@ from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from playwright.async_api import async_playwright
 from requests.exceptions import RequestException
 
-from lmms_eval.tasks.mmsearch.constants import *
-from lmms_eval.tasks.mmsearch.utils.web_content_utils import *
+from lmms_eval.tasks.mmsearch.constants import BRIEF_TIMEOUT, FULLPAGE_CONTENT_TIMEOUT, FULLPAGE_TIMEOUT, IMAGE_SEARCH_RESULT, USER_AGENT
+from lmms_eval.tasks.mmsearch.utils.web_content_utils import extract_main_content
 
 accelerator = Accelerator()
 WORLD_SIZE = accelerator.num_processes

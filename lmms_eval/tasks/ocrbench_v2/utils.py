@@ -81,7 +81,7 @@ def is_nan_value(value):
 
         if pd.isna(value):
             return True
-    except:
+    except Exception:
         pass
     return False
 
@@ -183,7 +183,7 @@ def ocrbench_v2_process_results(doc, results):
         score = math_expression_evaluation(pred, gt_ans)
 
     elif data_type == "table parsing en":
-        if type(gt_ans) == list and len(gt_ans) == 1:
+        if type(gt_ans) is list and len(gt_ans) == 1:
             if not isinstance(pred, str):
                 score = 0
 
@@ -204,7 +204,7 @@ def ocrbench_v2_process_results(doc, results):
                     gold_table_html = wrap_html_table(gt_ans[0])
                     try:
                         score = teds.evaluate(pred_table_html, gold_table_html)
-                    except:
+                    except Exception:
                         score = 0
 
             elif "markdown" in question.lower():
@@ -241,7 +241,7 @@ def ocrbench_v2_process_results(doc, results):
                 gold_table_html = wrap_html_table(gt_ans[0])
                 try:
                     score = teds.evaluate(pred_table_html, gold_table_html)
-                except:
+                except Exception:
                     score = 0
                     print("error")
 
@@ -261,18 +261,18 @@ def ocrbench_v2_process_results(doc, results):
             score = 0
 
     elif data_type == "document parsing en":
-        assert type(gt_ans) == list and len(gt_ans) == 1
+        assert type(gt_ans) is list and len(gt_ans) == 1
         score = doc_parsing_evaluation(pred, gt_ans[0])
 
     elif data_type == "document parsing cn":
-        assert type(gt_ans) == list and len(gt_ans) == 1
+        assert type(gt_ans) is list and len(gt_ans) == 1
         score = doc_parsing_evaluation(pred, gt_ans[0])
 
     elif data_type == "key information extraction en" or data_type == "key information mapping en":
         assert len(gt_ans) == 1
         answers = generate_combinations(gt_ans[0])
 
-        if type(answers) == list and len(answers) == 1:
+        if type(answers) is list and len(answers) == 1:
             if not isinstance(pred, str):
                 score = 0
             else:
@@ -293,7 +293,7 @@ def ocrbench_v2_process_results(doc, results):
         answers = ast.literal_eval(gt_ans[0])
         answers = {k: v if isinstance(v, list) else [v] for k, v in answers.items()}
         answers = generate_combinations(answers)
-        if type(answers) == list and len(answers) == 1:
+        if type(answers) is list and len(answers) == 1:
             if not isinstance(pred, str):
                 score = 0
             else:

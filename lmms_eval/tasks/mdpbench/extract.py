@@ -3,31 +3,20 @@
 Only import paths are adapted for lmms-eval; parsing behavior is unchanged.
 """
 
-import copy
-import json
-import os
-import pdb
 import re
-import unicodedata
 from collections import defaultdict
 
-from bs4 import BeautifulSoup
-from pylatexenc.latex2text import LatexNodes2Text
-from pylatexenc.latexencode import unicode_to_latex
 from pylatexenc.latexwalker import (
     LatexCharsNode,
     LatexEnvironmentNode,
     LatexGroupNode,
     LatexMacroNode,
     LatexSpecialsNode,
-    LatexWalker,
 )
 
 from lmms_eval.tasks.mdpbench.data_preprocess import (
     remove_markdown_fences,
     replace_repeated_chars,
-    textblock2unicode,
-    textblock_with_norm_formula,
 )
 
 # from  modules.table_utils import convert_markdown_to_html #end
@@ -194,7 +183,7 @@ def md_tex_filter(content):
 
     # extract interline formula
     display_matches = display_reg.finditer(content)
-    content_copy = content
+    _content_copy = content
     for match in display_matches:
         matched = match.group(0)
         if matched:

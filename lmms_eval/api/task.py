@@ -2,7 +2,6 @@ import abc
 import ast
 import copy
 import inspect
-import itertools
 import json
 import os
 import random
@@ -80,7 +79,7 @@ def _resolve_hf_datasets_cache_dir() -> str:
     hf_home = _expand_cache_path(os.getenv("HF_HOME", "~/.cache/huggingface"))
     target_cache_dir = _expand_cache_path(os.getenv("HF_DATASETS_CACHE", os.path.join(hf_home, "datasets")))
 
-    if detect_fs_type(target_cache_dir) != FsType.REMOTE:
+    if detect_fs_type(target_cache_dir) is not FsType.REMOTE:
         os.makedirs(target_cache_dir, exist_ok=True)
         return target_cache_dir
 
@@ -442,10 +441,10 @@ class Task(abc.ABC):
     ) -> None:
         """Build a set of Instances for a task, and store them in task.instances"""
         if self.has_test_docs():
-            docs = self.test_docs()
+            _docs = self.test_docs()
             split = self.config.test_split
         elif self.has_validation_docs():
-            docs = self.validation_docs()
+            _docs = self.validation_docs()
             split = self.config.validation_split
         else:
             assert False, f"Task dataset (path={self.DATASET_PATH}, name={self.DATASET_NAME}) must have valid or test docs!"
@@ -522,7 +521,7 @@ class Task(abc.ABC):
 
             # TODO: we should override self.config.repeats if doing greedy gen so users don't waste time+compute
             per_task_metadata = {"task": self.config["task"], "doc_id": doc_id, "repeats": self.config.repeats, "split": split}
-            if self.config.metadata and type(self.config.metadata) == dict:  # TODO: temporary fix for metadata loading, ignore the list of dict type.
+            if self.config.metadata and type(self.config.metadata) is dict:  # TODO: temporary fix for metadata loading, ignore the list of dict type.
                 per_task_metadata.update(self.config.metadata)
 
             inst = self.construct_requests(doc_id=doc_id, ctx=fewshot_ctx, metadata=per_task_metadata)
@@ -555,7 +554,7 @@ class Task(abc.ABC):
                         chat_template,
                     )
                     pad_metadata = {"task": self.config["task"], "doc_id": pad_doc_id, "repeats": self.config.repeats, "split": split, "__padding_only__": True}
-                    if self.config.metadata and type(self.config.metadata) == dict:
+                    if self.config.metadata and type(self.config.metadata) is dict:
                         pad_metadata.update(self.config.metadata)
                     pad_inst = self.construct_requests(doc_id=pad_doc_id, ctx=pad_ctx, metadata=pad_metadata)
                     if not isinstance(pad_inst, list):
@@ -943,7 +942,7 @@ class ConfigurableTask(Task):
 
                 if "aggregation" in metric_config:
                     agg_name = metric_config["aggregation"]
-                    if type(agg_name) == str:
+                    if type(agg_name) is str:
                         self._aggregation_list[metric_name] = get_aggregation(agg_name)
                     elif callable(agg_name):
                         self._aggregation_list[metric_name] = metric_config["aggregation"]
@@ -1407,9 +1406,9 @@ class ConfigurableTask(Task):
     def doc_to_text(self, doc):
         doc_to_text = self.config.doc_to_text
 
-        if type(doc_to_text) == int:
+        if type(doc_to_text) is int:
             return doc_to_text
-        elif type(doc_to_text) == str:
+        elif type(doc_to_text) is str:
             if doc_to_text in self.features:
                 # if self.config.doc_to_choice is not None:
                 #     return self.doc_to_choice(doc)[doc[doc_to_text]]
@@ -1444,9 +1443,9 @@ class ConfigurableTask(Task):
     def doc_to_target(self, doc: dict) -> Union[int, str, list]:
         doc_to_target = self.config.doc_to_target
 
-        if type(doc_to_target) == int:
+        if type(doc_to_target) is int:
             return doc_to_target
-        elif type(doc_to_target) == str:
+        elif type(doc_to_target) is str:
             if doc_to_target in self.features:
                 # if self.config.doc_to_choice is not None:
                 #     return self.doc_to_choice(doc)[doc[doc_to_target]]
@@ -1463,7 +1462,7 @@ class ConfigurableTask(Task):
                         return target_string
                 else:
                     return target_string
-        elif type(doc_to_target) == list:
+        elif type(doc_to_target) is list:
             return doc_to_target
         elif callable(doc_to_target):
             return doc_to_target(doc, self.model_specific_target_kwargs) if self.model_specific_target_kwargs is not None else doc_to_target(doc)
@@ -1480,7 +1479,7 @@ class ConfigurableTask(Task):
 
     def doc_to_visual(self, doc: dict) -> Union[int, str, list]:
         self.config.doc_to_visual
-        if type(self.config.doc_to_visual) == str:
+        if type(self.config.doc_to_visual) is str:
             assert self.config.doc_to_visual in self.features
             # Single image. Still return a list for consistency.
             return [doc[self.config.doc_to_visual]]
@@ -1502,14 +1501,14 @@ class ConfigurableTask(Task):
         else:
             doc_to_choice = self.config.doc_to_choice
 
-        if type(doc_to_choice) == str:
+        if type(doc_to_choice) is str:
             if doc_to_choice in self.features:
                 return doc[doc_to_choice]
             else:
                 return ast.literal_eval(utils.apply_template(doc_to_choice, doc))
-        elif type(doc_to_choice) == list:
+        elif type(doc_to_choice) is list:
             return doc_to_choice
-        elif type(doc_to_choice) == dict:
+        elif type(doc_to_choice) is dict:
             return list(doc_to_choice.values())
         elif callable(doc_to_choice):
             return doc_to_choice(doc)
@@ -1681,7 +1680,7 @@ class ConfigurableTask(Task):
             # we expect multiple_targets to be a list.
             elif self.multiple_target:
                 gold = list(gold)
-            # elif type(gold) != type(result):
+            # elif type(gold) is not type(result):
             #     # cast gold to the same type as result
             #     gold = type(result)(gold)
 

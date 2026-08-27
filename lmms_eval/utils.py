@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 import warnings
+from dataclasses import asdict, is_dataclass
 from typing import (
     Any,
     Callable,
@@ -29,15 +30,15 @@ import yaml
 warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
-import gc
-from itertools import islice
+import gc  # noqa: E402
+from itertools import islice  # noqa: E402
 
-import numpy as np
-import pytz
-import torch
-import transformers
-from jinja2 import BaseLoader, Environment, StrictUndefined
-from loguru import logger as eval_logger
+import numpy as np  # noqa: E402
+import pytz  # noqa: E402
+import torch  # noqa: E402
+import transformers  # noqa: E402
+from jinja2 import BaseLoader, Environment, StrictUndefined  # noqa: E402
+from loguru import logger as eval_logger  # noqa: E402
 
 SPACING = " " * 47
 HIGHER_IS_BETTER_SYMBOLS = {
@@ -295,7 +296,7 @@ class MultiChoice:
 # Returns a list containing all values of the source_list that
 # match at least one of the patterns
 def pattern_match(patterns, source_list):
-    if type(patterns) == str:
+    if type(patterns) is str:
         patterns = [patterns]
 
     task_names = set()

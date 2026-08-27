@@ -4,7 +4,6 @@
 
 import os
 import re
-from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -165,7 +164,7 @@ def build_prompt(doc, lmms_eval_specific_kwargs=None, include_video_length=False
     """Build the prompt text based on question category."""
     question_text = doc["question"]
     category = doc.get("category", "unknown")
-    video_length = doc.get("video_length", 0)
+    _video_length = doc.get("video_length", 0)
     options = doc.get("options", [])
 
     # Preamble for numeric-tagged objects

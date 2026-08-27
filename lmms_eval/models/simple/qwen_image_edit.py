@@ -1,8 +1,6 @@
-import base64
 import json
 import os
 import re
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
 import torch
@@ -12,7 +10,6 @@ from PIL import Image
 from tqdm import tqdm
 
 from lmms_eval import utils
-from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
@@ -129,7 +126,7 @@ class QwenImageEdit(lmms):
                 self.system_prompt = system_prompt
                 self.max_pixels = max_pixels
                 self.min_pixels = min_pixels
-                eval_logger.info(f"Successfully loaded Qwen2.5-VL for understanding mode")
+                eval_logger.info("Successfully loaded Qwen2.5-VL for understanding mode")
             except Exception as e:
                 eval_logger.error(f"Failed to load Qwen2.5-VL: {e}")
                 raise
@@ -143,7 +140,7 @@ class QwenImageEdit(lmms):
                     device_map=pipeline_device_map,
                     use_safetensors=True,
                 )
-                eval_logger.info(f"Successfully loaded Qwen-Image-Edit pipeline for editing mode")
+                eval_logger.info("Successfully loaded Qwen-Image-Edit pipeline for editing mode")
             except Exception as e:
                 eval_logger.error(f"Failed to load Qwen-Image-Edit: {e}")
                 raise
@@ -292,8 +289,8 @@ class QwenImageEdit(lmms):
 
         # Get generation parameters
         cfg_text_scale = interleaved_config.get("cfg_text_scale", 4.0)
-        cfg_interval = interleaved_config.get("cfg_interval", 0.4)
-        timestep_shift = interleaved_config.get("timestep_shift", 3.0)
+        _cfg_interval = interleaved_config.get("cfg_interval", 0.4)
+        _timestep_shift = interleaved_config.get("timestep_shift", 3.0)
         num_timesteps = interleaved_config.get("num_timesteps", 50)
 
         generated_images = []
@@ -336,7 +333,7 @@ class QwenImageEdit(lmms):
             }
 
             request_0 = MockEditRequest(mock_doc_0, [edit_prompt_0])
-            result_0 = self._generate_editing([request_0])
+            _result_0 = self._generate_editing([request_0])
 
             img0_path = os.path.join(self.generated_image_dir, f"{task}_{doc_id}_cand0.png")
             if os.path.exists(img0_path):
@@ -356,7 +353,7 @@ class QwenImageEdit(lmms):
             }
 
             request_1 = MockEditRequest(mock_doc_1, [edit_prompt_1])
-            result_1 = self._generate_editing([request_1])
+            _result_1 = self._generate_editing([request_1])
 
             img1_path = os.path.join(self.generated_image_dir, f"{task}_{doc_id}_cand1.png")
             if os.path.exists(img1_path):

@@ -2,7 +2,7 @@
 Specific evaluators for In-Domain_50 tasks (Part 4).
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -1365,7 +1365,7 @@ class DotToDotEvaluator(BaseEvaluator):
         if lines is None:
             return []
 
-        return [(l[0][0], l[0][1], l[0][2], l[0][3]) for l in lines]
+        return [(line[0][0], line[0][1], line[0][2], line[0][3]) for line in lines]
 
     def _evaluate_task_specific(self, video_frames: List[np.ndarray], gt_frames: List[np.ndarray], gt_first_frame: Optional[np.ndarray], gt_final_frame: Optional[np.ndarray], eval_info: Dict) -> float:
         """Evaluate dot-to-dot connection accuracy."""

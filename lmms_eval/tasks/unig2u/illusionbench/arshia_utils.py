@@ -208,7 +208,7 @@ def _build_shape_prompt(shape_candidates: List[str], scene_candidates: List[str]
     task_type: "icon", "logo", or "in"
     """
     # Combine shape and scene candidates as in original codebase
-    all_options = shape_candidates + scene_candidates
+    _all_options = shape_candidates + scene_candidates
     shape_string = ", ".join(shape_candidates)
     scene_string = ", ".join(scene_candidates)
 

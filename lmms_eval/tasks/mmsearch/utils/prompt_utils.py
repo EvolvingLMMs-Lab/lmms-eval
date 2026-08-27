@@ -23,8 +23,8 @@ def get_website_information(result_brief):
 
 
 def get_rerank_incontext_example(rerank_num):
-    l = [f"<Website {i}>" for i in range(rerank_num)]
-    return ",".join(l)
+    websites = [f"<Website {i}>" for i in range(rerank_num)]
+    return ",".join(websites)
 
 
 def get_full_website_information(result_full, image_dir="", fullpage_split_dict=None, save_slim_dir=None):

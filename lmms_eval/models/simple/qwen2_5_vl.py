@@ -375,7 +375,7 @@ class Qwen2_5_VL(lmms):
             toks = self.tokenizer.encode(x[0])
             return -len(toks), x[0]
 
-        metadata = requests[0].metadata
+        _metadata = requests[0].metadata
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1

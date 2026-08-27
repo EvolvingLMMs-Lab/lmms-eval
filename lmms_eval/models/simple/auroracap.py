@@ -1,5 +1,6 @@
 import logging
 import os.path as osp
+import warnings
 from typing import List, Optional, Tuple, Union
 
 import av
@@ -7,6 +8,7 @@ import numpy as np
 import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
+from decord import VideoReader, cpu
 from huggingface_hub import snapshot_download
 from PIL import Image
 from tqdm import tqdm
@@ -23,31 +25,40 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.load_video import read_video
 
+eval_logger = logging.getLogger("lmms-eval")
+
 try:
     from lmms_eval.models.aurora_xtuner.model.aurora import (
         AuroraEncoder,
         AuroraModel,
-        AuroraSigEncoder,
     )
-    from lmms_eval.models.aurora_xtuner.utils import PROMPT_TEMPLATE
+    from lmms_eval.models.aurora_xtuner.model.aurora import (
+        AuroraSigEncoder as AuroraSigEncoder,
+    )
+    from lmms_eval.models.aurora_xtuner.utils import PROMPT_TEMPLATE as PROMPT_TEMPLATE
 except ImportError:
     eval_logger.error("AuroraCap is not installed. Please install AuroraCap to use this model by `git clone https://github.com/rese1f/aurora.git` and link `src/xtuner/xtuner` to `lmms_eval/models/aurora_xtuner`")
-import warnings
 
 warnings.filterwarnings("ignore")
 
-eval_logger = logging.getLogger("lmms-eval")
-
 try:
     from llava.constants import (
-        DEFAULT_IM_END_TOKEN,
-        DEFAULT_IM_START_TOKEN,
+        DEFAULT_IM_END_TOKEN as DEFAULT_IM_END_TOKEN,
+    )
+    from llava.constants import (
+        DEFAULT_IM_START_TOKEN as DEFAULT_IM_START_TOKEN,
+    )
+    from llava.constants import (
         DEFAULT_IMAGE_TOKEN,
-        IGNORE_INDEX,
         IMAGE_TOKEN_INDEX,
     )
-    from llava.conversation import SeparatorStyle, conv_templates
-    from llava.mm_utils import get_model_name_from_path, tokenizer_image_token
+    from llava.constants import (
+        IGNORE_INDEX as IGNORE_INDEX,
+    )
+    from llava.conversation import SeparatorStyle as SeparatorStyle
+    from llava.conversation import conv_templates
+    from llava.mm_utils import expand2square, process_anyres_image, tokenizer_image_token
+    from llava.mm_utils import get_model_name_from_path as get_model_name_from_path
 except ImportError:
     eval_logger.error("LLaVA is not installed. Please install LLaVA to use this model.")
 
@@ -249,7 +260,7 @@ class AuroraCap(lmms):
 
         for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
-            if type(doc_to_target) == str:
+            if type(doc_to_target) is str:
                 continuation = doc_to_target
             else:
                 continuation = doc_to_target(self.task_dict[task][split][doc_id])
@@ -280,7 +291,7 @@ class AuroraCap(lmms):
             conv.append_message(conv.roles[0], prompts_input)
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
-            pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
+            _pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
             contxt_id = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
             # Add the answer of the second role
             conv.messages[1][1] = continuation
@@ -290,13 +301,14 @@ class AuroraCap(lmms):
             labels = input_ids.clone()
             # Context part no need to calculate for loss
             labels[0, : contxt_id.shape[1]] = -100
+            attention_masks = input_ids.ne(_pad_token_id).to(self.device)
             with torch.inference_mode():
                 data = dict()
-                data["pixel_values"] = image_tensor
+                data["pixel_values"] = image
                 data["input_ids"] = input_ids
                 data["attention_mask"] = attention_masks
                 self.model.visual_encoder.reset_tome_r(self.token_merge_ratio)
-                output = self.model(data, mode="tensor")
+                outputs = self.model(data, mode="tensor")
 
             loss = outputs["loss"]
             # loss = torch.exp(loss)

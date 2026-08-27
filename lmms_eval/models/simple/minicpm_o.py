@@ -45,7 +45,6 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.audio_processing import split_audio
 
 try:
     from transformers import AutoModel, AutoTokenizer
@@ -72,10 +71,10 @@ def encode_video(video_path: str, max_frames: int = MAX_NUM_FRAMES) -> List[Imag
     if VideoReader is None:
         raise ImportError("decord is required for video processing. Install with: pip install decord")
 
-    def uniform_sample(l, n):
-        gap = len(l) / n
+    def uniform_sample(sequence, n):
+        gap = len(sequence) / n
         idxs = [int(i * gap + gap / 2) for i in range(n)]
-        return [l[i] for i in idxs]
+        return [sequence[i] for i in idxs]
 
     vr = VideoReader(video_path, ctx=cpu(0))
     sample_fps = round(vr.get_avg_fps() / 1)

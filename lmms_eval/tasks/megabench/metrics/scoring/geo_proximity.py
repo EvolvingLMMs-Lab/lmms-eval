@@ -164,7 +164,7 @@ class GeoProximityLocationDict:
         """
         try:
             guess_coords = location_to_coords(**responses)
-        except:
+        except Exception:
             return 0
 
         if guess_coords is None:

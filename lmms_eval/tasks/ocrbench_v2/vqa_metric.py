@@ -20,7 +20,7 @@ def levenshtein_distance(s1, s2):
 
 def vqa_evaluation(predict, answers):
     score = 0
-    if type(answers) == list:
+    if type(answers) is list:
         for j in range(len(answers)):
             if isinstance(answers[j], (int, float)):
                 answers[j] = str(answers[j])
@@ -60,7 +60,7 @@ def vqa_evaluation(predict, answers):
 
 def cn_vqa_evaluation(predict, answers):
     score = 0
-    if type(answers) == list:
+    if type(answers) is list:
         for j in range(len(answers)):
             if isinstance(answers[j], (int, float)):
                 answers[j] = str(answers[j])
@@ -100,7 +100,7 @@ def cn_vqa_evaluation(predict, answers):
 
 def vqa_evaluation_case_sensitive(predict, answers):
     score = 0
-    if type(answers) == list:
+    if type(answers) is list:
         for j in range(len(answers)):
             if isinstance(answers[j], (int, float)):
                 answers[j] = str(answers[j])
@@ -152,7 +152,7 @@ def counting_evaluation(predict, answers, eval_method):
         return 0
     else:
         predict_processed = int(predict)
-    if type(answers) == list:
+    if type(answers) is list:
         temp_score = 0
         for j in range(len(answers)):
             if isinstance(answers[j], (int, float)):
@@ -210,7 +210,7 @@ def counting_evaluation(predict, answers, eval_method):
 
 def math_expression_evaluation(predict, answers):
     score = 0
-    if type(answers) == list:
+    if type(answers) is list:
         for j in range(len(answers)):
             answer = answers[j].strip().replace("\n", " ").replace(" ", "")
             predict = predict.strip().replace("\n", " ").replace(" ", "")
@@ -246,7 +246,7 @@ def cn_math_expression_evaluation(predict, answers):
     answers = [remove_text_tags(answers[0])]
     predict = remove_text_tags(predict)
 
-    if type(answers) == list:
+    if type(answers) is list:
         for j in range(len(answers)):
             answer = answers[j].strip().replace("\n", " ").replace(" ", "")
             predict = predict.strip().replace("\n", " ").replace(" ", "")

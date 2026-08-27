@@ -174,7 +174,7 @@ class VideoChat_Flash(lmms):
     def tok_decode(self, tokens):
         try:
             return self.tokenizer.decode(tokens)
-        except:
+        except Exception:
             return self.tokenizer.decode([tokens])
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
@@ -236,10 +236,10 @@ class VideoChat_Flash(lmms):
                     self._config.image_aspect_ratio = getattr(gen_kwargs, "image_aspect_ratio", "pad")
                     eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
 
-                if type(visual[0]) == PIL.Image.Image:  # and "task_type" not in metadata and "sample_frames" not in metadata:  # For image task
+                if type(visual[0]) is PIL.Image.Image:  # and "task_type" not in metadata and "sample_frames" not in metadata:  # For image task
                     raise NotImplementedError(f"I don't want image task now: {visual}, {task}, {metadata}")
 
-                elif type(visual[0]) == str:  # For video task
+                elif type(visual[0]) is str:  # For video task
                     if len(visual) > 1:
                         assert len(visual) == 2, visual
                         media_dict = visual[1]

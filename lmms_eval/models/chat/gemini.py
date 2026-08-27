@@ -149,7 +149,7 @@ class Gemini(GeminiSimple):
             started_at = time.time()
             rate_limited = False
             last_error_msg = "unknown error"
-            token_counts_result = (0, 0, 0)
+            _token_counts_result = (0, 0, 0)
 
             for attempt in range(self.max_retries):
                 try:

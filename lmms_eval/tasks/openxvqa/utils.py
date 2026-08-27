@@ -45,7 +45,7 @@ def openxvqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def openxvqa_doc_to_target(doc):
-    choices = _parse_choices(doc["choices"])
+    _choices = _parse_choices(doc["choices"])
     idx = int(doc["correct_answer"])
     return LETTERS[idx]
 

@@ -6,18 +6,18 @@ from typing import List, Optional, Tuple, Union
 warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
-import torch
-from accelerate import Accelerator, DistributedType
-from loguru import logger as eval_logger
-from PIL import Image
-from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
+import torch  # noqa: E402
+from accelerate import Accelerator, DistributedType  # noqa: E402
+from loguru import logger as eval_logger  # noqa: E402
+from PIL import Image  # noqa: E402
+from tqdm import tqdm  # noqa: E402
+from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer  # noqa: E402
 
-from lmms_eval import utils
-from lmms_eval.api.instance import Instance
-from lmms_eval.api.model import lmms
-from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.media_encoder import encode_image_to_data_url
+from lmms_eval import utils  # noqa: E402
+from lmms_eval.api.instance import Instance  # noqa: E402
+from lmms_eval.api.model import lmms  # noqa: E402
+from lmms_eval.api.registry import register_model  # noqa: E402
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_data_url  # noqa: E402
 
 
 @register_model("vora")
@@ -231,7 +231,7 @@ class VoRA(lmms):
             if "eos_token_id" not in gen_kwargs:
                 gen_kwargs["eos_token_id"] = self.tokenizer.eos_token_id
 
-            prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
+            _prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
             cont = self.model.generate(
                 input_data,
                 **gen_kwargs,
@@ -246,7 +246,7 @@ class VoRA(lmms):
                 for visual_path in visual_paths:
                     try:
                         os.remove(visual_path)
-                    except:
+                    except Exception:
                         pass
                 pbar.update(1)
             # reorder this group of results back to original unsorted form

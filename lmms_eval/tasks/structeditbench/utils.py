@@ -30,7 +30,6 @@ import base64
 import json
 import os
 import time
-from collections import defaultdict
 from io import BytesIO
 from typing import Any, Dict, List, Optional, Tuple
 

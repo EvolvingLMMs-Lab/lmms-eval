@@ -28,7 +28,8 @@ except ImportError:
     eval_logger.warning("pycocotools not found. Install with: pip install pycocotools")
 
 try:
-    from accelerate import Accelerator, DistributedType
+    from accelerate import Accelerator
+    from accelerate import DistributedType as DistributedType
 
     HAS_ACCELERATOR = True
 except ImportError:

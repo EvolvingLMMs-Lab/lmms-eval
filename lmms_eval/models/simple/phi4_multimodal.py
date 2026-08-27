@@ -21,7 +21,7 @@ from lmms_eval.models.model_utils.audio_processing import downsample_audio
 
 warnings.filterwarnings("ignore")
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 
 @register_model("phi4_multimodal")
@@ -180,7 +180,7 @@ class Phi4(lmms):
         return new_list
 
     def load_video(self, video_path, max_frames_num):
-        if type(video_path) == str:
+        if type(video_path) is str:
             vr = VideoReader(video_path, ctx=cpu(0))
         else:
             vr = VideoReader(video_path[0], ctx=cpu(0))

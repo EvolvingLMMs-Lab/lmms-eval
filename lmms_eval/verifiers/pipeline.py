@@ -9,7 +9,7 @@ entry-point tasks use to plug verification into ``process_results``.
     raw model output ──► extractor₁ ──► extractor₂ ──► verifier ──► VerifyResult
 """
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, List, Optional
 
 from .base import Extractor, Verifier, VerifyResult
 

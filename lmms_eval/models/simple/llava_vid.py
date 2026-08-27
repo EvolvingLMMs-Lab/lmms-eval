@@ -1,3 +1,4 @@
+import copy
 import glob
 import math
 import os
@@ -142,7 +143,7 @@ class LlavaVid(lmms):
         # self.add_faster_video = add_faster_video
         # self.faster_token_stride = faster_token_stride
         self.torch_dtype = torch_dtype
-        if self.overwrite == True:
+        if self.overwrite:
             overwrite_config = {}
             # overwrite_config["mm_resampler_type"] = self.mm_resampler_type
             overwrite_config["mm_spatial_pool_stride"] = self.mm_spatial_pool_stride
@@ -357,7 +358,7 @@ class LlavaVid(lmms):
 
         for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
-            if type(doc_to_target) == str:
+            if type(doc_to_target) is str:
                 continuation = doc_to_target
             else:
                 continuation = doc_to_target(self.task_dict[task][split][doc_id])
@@ -397,7 +398,7 @@ class LlavaVid(lmms):
             prompt = conv.get_prompt()
 
             input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self._device)
-            attention_masks = input_ids.ne(self.tokenizer.pad_token_id).long().to(self._device)
+            _attention_masks = input_ids.ne(self.tokenizer.pad_token_id).long().to(self._device)
 
             labels = input_ids.clone()
             # Context part no need to calculate for loss

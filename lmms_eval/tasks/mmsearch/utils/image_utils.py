@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image
 
 Image.MAX_IMAGE_PIXELS = 1000000000
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 
 # slim fullpage screenshot
@@ -145,7 +145,7 @@ def crop_and_split(fullpage_path, fullpage_split_dict, save_slice_path=None):
 def crop_image_search_results(image_path, save_path):
     image = cv2.imread(image_path)
     if image is None:
-        logger.warning("cv2 load failed. Using PIL to load")
+        eval_logger.warning("cv2 load failed. Using PIL to load")
         print(f"image_path: {image_path}; exist: {os.path.exists(image_path)}")
         image_rgb = Image.open(image_path)
         image_rgb = np.asanyarray(image_rgb)

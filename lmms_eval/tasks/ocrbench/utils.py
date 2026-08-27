@@ -51,7 +51,7 @@ def ocrbench_process_results(doc, results):
 
     score = 0
     if dataset_name == "HME100k":
-        if type(gt_ans) == list:
+        if type(gt_ans) is list:
             for j in range(len(gt_ans)):
                 answer = gt_ans[j].strip().replace("\n", " ").replace(" ", "")
                 predict = pred.strip().replace("\n", " ").replace(" ", "")
@@ -63,7 +63,7 @@ def ocrbench_process_results(doc, results):
             if answer in predict:
                 score = 1
     else:
-        if type(gt_ans) == list:
+        if type(gt_ans) is list:
             for j in range(len(gt_ans)):
                 answer = _fold_fullwidth_ascii(gt_ans[j]).lower().strip().replace("\n", " ")
                 predict = _fold_fullwidth_ascii(pred).lower().strip().replace("\n", " ")

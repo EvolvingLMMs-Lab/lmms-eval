@@ -15,21 +15,21 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
 wd = Path(__file__).parent.parent.parent.resolve()
-import sys
+import sys  # noqa: E402
 
 sys.path.append(os.path.join(str(wd), "InternVL", "internvl_chat"))
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 if not hasattr(eval_logger, "internvl_warning_logged"):
     eval_logger.internvl_warning_logged = False
 
 try:
-    from internvl.model.internlm2.modeling_internlm2 import InternLM2ForCausalLM
+    from internvl.model.internlm2.modeling_internlm2 import InternLM2ForCausalLM as InternLM2ForCausalLM
     from internvl.model.internvl_chat import InternVLChatModel
     from internvl.model.internvl_chat.configuration_internvl_chat import (
         InternVLChatConfig,
     )
-    from internvl.model.internvl_chat.modeling_intern_vit import InternVisionModel
+    from internvl.model.internvl_chat.modeling_intern_vit import InternVisionModel as InternVisionModel
     from internvl.train.dataset import build_transform, dynamic_preprocess
 except ImportError:
     eval_logger.debug("InternVL is not installed. Please install InternVL to use this model.")
@@ -37,12 +37,12 @@ except ImportError:
         eval_logger.debug("InternVL is not installed. Please install InternVL to use this model.")
         eval_logger.internvl_warning_logged = True
 
-import re
-import warnings
+import re  # noqa: E402
+import warnings  # noqa: E402
 
-import torch.utils.checkpoint
-from peft import LoraConfig, get_peft_model
-from transformers import (
+import torch.utils.checkpoint  # noqa: E402
+from peft import LoraConfig, get_peft_model  # noqa: E402
+from transformers import (  # noqa: E402
     AutoTokenizer,
     GenerationConfig,
 )
@@ -320,7 +320,7 @@ class InternVLChat(lmms):
         if history is None:
             history = []
             image_tokens = ""
-            image_bs = pixel_values.shape[0]
+            _image_bs = pixel_values.shape[0]
             # print(f"dynamic ViT batch size: {image_bs}, image_counts: {image_counts}")
             for idx, image_count in enumerate(image_counts):
                 image_tokens += f"<image {idx + 1}> (图{idx + 1}):" + IMG_START_TOKEN + IMG_CONTEXT_TOKEN * self.num_image_token * image_count + IMG_END_TOKEN
@@ -349,7 +349,7 @@ class InternVLChat(lmms):
         if return_history:
             return response, history
         else:
-            query_to_print = query.replace(image_tokens, "<image>")
+            _query_to_print = query.replace(image_tokens, "<image>")
             # print(query_to_print, response)
             return response
         return response
@@ -394,7 +394,7 @@ class InternVLChat(lmms):
     def tok_decode(self, tokens):
         try:
             return self.tokenizer.decode(tokens)
-        except:
+        except Exception:
             return self.tokenizer.decode([tokens])
 
     def post_processing(self, response):

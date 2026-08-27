@@ -16,8 +16,8 @@ from lmms_eval.models.model_utils.qwen.qwen_generate_utils import make_context
 warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
-from loguru import logger as eval_logger
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from loguru import logger as eval_logger  # noqa: E402
+from transformers import AutoModelForCausalLM, AutoTokenizer  # noqa: E402
 
 
 @register_model("qwen_vl")
@@ -126,7 +126,7 @@ class Qwen_VL(lmms):
 
         for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
-            if type(doc_to_target) == str:
+            if type(doc_to_target) is str:
                 continuation = doc_to_target
             else:
                 continuation = doc_to_target(self.task_dict[task][split][doc_id])
@@ -254,7 +254,7 @@ class Qwen_VL(lmms):
             if "image_sizes" not in gen_kwargs:
                 try:
                     gen_kwargs["image_sizes"] = [visuals[0].size]
-                except:
+                except Exception:
                     gen_kwargs["image_sizes"] = None
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
@@ -299,7 +299,7 @@ class Qwen_VL(lmms):
                 for visual_path in visual_paths:
                     try:
                         os.remove(visual_path)
-                    except:
+                    except Exception:
                         pass
                 pbar.update(1)
             # reorder this group of results back to original unsorted form

@@ -116,8 +116,8 @@ def ami_doc_to_text(doc, lmms_eval_specific_kwargs):
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
 
     # Get meeting context if needed
-    meeting_id = get_column_value(doc, ["meeting_id"])
-    speaker_id = get_column_value(doc, ["speaker_id"])
+    _meeting_id = get_column_value(doc, ["meeting_id"])
+    _speaker_id = get_column_value(doc, ["speaker_id"])
 
     # Default prompt for speech recognition
     default_prompt = "Please transcribe the following audio. Only provide the transcription without any additional explanation or formatting."

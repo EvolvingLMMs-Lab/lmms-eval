@@ -365,7 +365,7 @@ Now please provide your judgement (0 or 1), DONNOT output explanation:
         Prefetch (fast path) tries symbolic/string match before calling judge LLM.
         """
         log = ""
-        gt_answer = str(line.get("answer", ""))
+        _gt_answer = str(line.get("answer", ""))
 
         try:
             precheck = self._post_check(line, prefetch=True)

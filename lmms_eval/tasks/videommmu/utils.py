@@ -9,9 +9,6 @@ import yaml
 from lmms_eval.tasks._task_utils.mmmu_mcq_utils import (
     get_multi_choice_info as shared_get_multi_choice_info,
 )
-from lmms_eval.tasks._task_utils.mmmu_mcq_utils import (
-    parse_videommmu_multi_choice_response,
-)
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -342,7 +339,7 @@ def _extract_from_reasoning(response, all_choices):
 
     # 1. Explicit answer statements (highest weight)
     for ch in all_choices:
-        ch_lower = ch.lower()
+        _ch_lower = ch.lower()
         patterns = [
             rf"(?:the\s+)?answer\s+is\s+{ch}(?:\b|\.)",
             rf"correct\s+answer\s+is\s+{ch}(?:\b|\.)",

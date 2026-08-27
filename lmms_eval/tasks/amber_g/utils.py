@@ -149,7 +149,7 @@ def prepare_association(association):
 
 def process_generative_task(data_item, ground_truth_item, association, hallucination_words, global_safe_words, similarity_threshold, metrics):
     """Process a generative task item and update the metrics dictionary accordingly."""
-    question_id = data_item["question_id"]
+    _question_id = data_item["question_id"]
     nouns = extract_nouns(data_item["text"])
     filtered_nouns = [noun for noun in nouns if noun in hallucination_words]
 
@@ -235,7 +235,7 @@ def process_generative_task(data_item, ground_truth_item, association, hallucina
 
 def process_discriminative_task(data_item, ground_truth_item, metrics):
     """Process a discriminative task item and update the metrics dictionary accordingly."""
-    question_id = data_item["question_id"]
+    _question_id = data_item["question_id"]
     metrics["qa_correct_num"] += 1
 
     gt_type = ground_truth_item["type"]

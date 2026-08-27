@@ -101,7 +101,7 @@ def omni_bench_aggregate_results(results):
 
 def parse_multi_choice_response(response, all_choices):
     response = " " + response.strip() + " "
-    index_ans = True
+    _index_ans = True
     ans_with_brack = False
     candidates = []
 

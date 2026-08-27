@@ -4,13 +4,10 @@ Only the import path is adapted for lmms-eval; matching behavior is unchanged.
 """
 
 import copy
-import pdb
 import re
 from collections import Counter, defaultdict
 from copy import deepcopy
 from typing import Any, Dict, List
-
-import evaluate
 
 # from rapidfuzz.distance import Levenshtein
 import Levenshtein
@@ -276,8 +273,8 @@ def match_gt2pred_quick(gt_items, pred_items, line_type, img_name):
 
     # gt_lines, norm_gt_lines, gt_cat_list, pred_lines, norm_pred_lines= get_gt_pred_lines(gt_items, pred_items, line_type)
     gt_lines, norm_gt_lines, gt_cat_list, pred_lines, norm_pred_lines, gt_items, pred_items = get_gt_pred_lines(gt_items, pred_items, None)
-    all_gt_indices = set(range(len(norm_gt_lines)))
-    all_pred_indices = set(range(len(norm_pred_lines)))
+    _all_gt_indices = set(range(len(norm_gt_lines)))
+    _all_pred_indices = set(range(len(norm_pred_lines)))
 
     if not norm_gt_lines:
         match_list = []
@@ -401,7 +398,7 @@ def match_gt2pred_quick(gt_items, pred_items, line_type, img_name):
         # print(ignore_matches)
         if len(ignore_matches) > 0:
             ignore_pred_idxs = [_[1] for _ in ignore_matches]
-            ignore_gt_matched_idxs = [ignore_gt_idxs[_[0]] for _ in ignore_matches]
+            _ignore_gt_matched_idxs = [ignore_gt_idxs[_[0]] for _ in ignore_matches]
             # print("-------------ignore_pred_idxs-------------")
             # print(ignore_pred_idxs)
             # print("-------------ignore_gt_matched_idxs-------------")
@@ -487,7 +484,7 @@ def match_gt2pred_quick(gt_items, pred_items, line_type, img_name):
     no_ignore_pred_idxs = []
 
     for idx, line in enumerate(norm_pred_lines):
-        if not idx in ignore_pred_idxs:
+        if idx not in ignore_pred_idxs:
             no_ignores_pred_lines.append(line)
             no_ignores_ori_pred_lines.append(pred_lines[idx])
             # no_ignores_pred_indices.append(idx)
@@ -713,7 +710,7 @@ def sub_pred_fuzzy_matching(gt, pred):
             dist = Levenshtein_distance(sub, pred) / pred_len
             if dist < min_d:
                 min_d = dist
-                pos = i
+                _pos = i
 
         return min_d
     else:
@@ -849,8 +846,8 @@ def deal_with_truncated(cost_matrix, norm_gt_lines, norm_pred_lines):
     unmasked_pred_idx = [i for i in range(cost_matrix.shape[1]) if i not in masked_pred_idx]
 
     merges_gt_dict = {}
-    merges_pred_dict = {}
-    merged_gt_subsets = []
+    _merges_pred_dict = {}
+    _merged_gt_subsets = []
 
     for gt_idx in unmasked_gt_idx:
         check_merge_subset = []
@@ -949,12 +946,12 @@ def process_matches(matched_col_idx, row_ind, cost_list, norm_gt_lines, norm_pre
                 continue
 
             if isinstance(pred_idx, list):
-                pred_line = " | ".join(norm_pred_lines[pred_idx[0] : pred_idx[-1] + 1])
-                ori_pred_line = " | ".join(pred_lines[pred_idx[0] : pred_idx[-1] + 1])
+                _pred_line = " | ".join(norm_pred_lines[pred_idx[0] : pred_idx[-1] + 1])
+                _ori_pred_line = " | ".join(pred_lines[pred_idx[0] : pred_idx[-1] + 1])
                 matched_pred_indices_range = list(range(pred_idx[0], pred_idx[-1] + 1))
             else:
-                pred_line = norm_pred_lines[pred_idx]
-                ori_pred_line = pred_lines[pred_idx]
+                _pred_line = norm_pred_lines[pred_idx]
+                _ori_pred_line = pred_lines[pred_idx]
                 matched_pred_indices_range = [pred_idx]
 
             edit = cost_list[idx]

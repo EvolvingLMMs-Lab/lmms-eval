@@ -5,9 +5,8 @@ Evaluation for solid geometry problems with auxiliary line construction.
 
 import json
 import os
-import re
 import time
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from azure.identity import (
     AzureCliCredential,

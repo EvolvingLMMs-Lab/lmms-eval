@@ -14,8 +14,6 @@ import re
 import sys
 from typing import Any, Optional
 
-from loguru import logger as eval_logger
-
 HF_HOME = os.path.expanduser(os.getenv("HF_HOME", "~/.cache/huggingface"))
 
 CORPUS_CACHE = {
@@ -93,7 +91,7 @@ def ewb_process_docs(dataset):
         ]
         for corpus in sorted(missing):
             vids = missing[corpus]
-            lines.append(f"")
+            lines.append("")
             lines.append(f"  [{corpus}] {len(vids)} video(s) missing under {CORPUS_CACHE[corpus]}")
             lines.append(f"    Download:  {_DOWNLOAD_HINT[corpus]}")
             lines.append(f"    Or set:    export EWB_{corpus.upper()}_PATH=/abs/path/to/{corpus.lower()}/videos")

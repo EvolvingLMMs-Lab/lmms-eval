@@ -5,8 +5,6 @@ This module provides task-specific evaluators for all 100 VBVR-Bench tasks.
 Each evaluator implements rule-based evaluation following documented criteria.
 """
 
-from typing import Any, Dict, Optional
-
 from .base_evaluator import BaseEvaluator
 
 # In-Domain_50 Part 1 (10 classes)

@@ -221,10 +221,10 @@ def wild_vision_process_results(doc, results):
     }
 
 
-import math
+import math  # noqa: E402
 
-import pandas as pd
-from sklearn.linear_model import LogisticRegression
+import pandas as pd  # noqa: E402
+from sklearn.linear_model import LogisticRegression  # noqa: E402
 
 
 def prepare_elo_data(results):

@@ -103,7 +103,7 @@ def stare_doc_to_visual(doc):
     """
     try:
         [visual.convert("RGB") for visual in doc["images"]]
-    except:
+    except Exception:
         print("Not successful.")
         print(doc["qid"])
     return [visual.convert("RGB") for visual in doc["images"]]

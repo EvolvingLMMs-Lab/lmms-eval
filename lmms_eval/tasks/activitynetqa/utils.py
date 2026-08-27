@@ -141,7 +141,7 @@ def get_eval(question, answer, pred, max_tokens: int, retries: int = 5):
         if attempt < retries - 1:
             time.sleep(NUM_SECONDS_TO_SLEEP)
         else:  # If this was the last attempt, log and return empty
-            eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
+            eval_logger.error(f"All {retries} attempts failed.")
             return "", ""
 
     return "", ""
@@ -190,7 +190,7 @@ def activitynetqa_process_results(doc, result):
     except Exception as e:
         eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
         review = "Failed to Get a Proper Review."
-        model_name = "Failed Request"
+        _model_name = "Failed Request"
         scores = ["no", 0]
 
     return {
@@ -224,7 +224,7 @@ def activitynetqa_gpt_eval(results, args):
         except Exception as e:
             eval_logger.error(f"Error for Question ID: {data_dict.get('question_id', 'Unknown')}: {e}")
             review = "Failed to Get a Proper Review."
-            model_name = "Failed Request"
+            _model_name = "Failed Request"
             scores = ["no", 0]
 
         # Update the dictionary with the new entries

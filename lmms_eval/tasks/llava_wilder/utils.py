@@ -104,7 +104,7 @@ def llava_process_results(doc, result):
         ans1 = doc.get("Answer", "")
         ans2 = result[0] if result else ""
         content = f"[Question]\n{question}\n\n" + f"[Assistant 1]\n{ans1}\n\n[End of Assistant 1]\n\n" + f"[Assistant 2]\n{ans2}\n\n[End of Assistant 2]\n\n[System]\n{judge_rules}\n\n"
-        visuals = llava_doc_to_visual(doc)
+        _visuals = llava_doc_to_visual(doc)
         image_path = doc["image"]
         base64_image = image_to_base64(image_path)
         review, model_name = get_chat_response(base64_image, content)

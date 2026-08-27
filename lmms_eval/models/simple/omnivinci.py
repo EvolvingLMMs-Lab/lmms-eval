@@ -102,7 +102,7 @@ class OmniVinci(lmms):
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
         # Load config and update settings
-        config = AutoConfig.from_pretrained(pretrained, trust_remote_code=True)
+        _config = AutoConfig.from_pretrained(pretrained, trust_remote_code=True)
 
         # Load model
         self._model = AutoModel.from_pretrained(
@@ -393,16 +393,16 @@ class OmniVinci(lmms):
 
                 try:
                     # Determine if we're using audio
-                    use_audio = False
+                    _use_audio = False
                     if visual is not None:
                         if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov", ".mkv", ".webm")):
-                            use_audio = self._check_if_video_has_audio(visual)
+                            _use_audio = self._check_if_video_has_audio(visual)
                         elif isinstance(visual, np.ndarray):
-                            use_audio = True
+                            _use_audio = True
                         elif isinstance(visual, dict) or type(visual).__name__ in ("AudioDecoder", "AudioSamples"):
-                            use_audio = True
+                            _use_audio = True
                         elif isinstance(visual, (list, tuple)):
-                            use_audio = any(isinstance(v, (dict, np.ndarray)) or type(v).__name__ in ("AudioDecoder", "AudioSamples") for v in visual)
+                            _use_audio = any(isinstance(v, (dict, np.ndarray)) or type(v).__name__ in ("AudioDecoder", "AudioSamples") for v in visual)
 
                     # Build message
                     message = self._build_message(context, visual)

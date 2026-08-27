@@ -1,7 +1,6 @@
 import math
 import os
 import re
-from functools import partial
 from pathlib import Path
 
 import datasets
@@ -114,7 +113,7 @@ def sparbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 def process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
     if os.getenv("LMMS_EVAL_SHUFFLE_DOCS", None):
-        eval_logger.info(f"Environment variable LMMS_EVAL_SHUFFLE_DOCS detected, dataset will be shuffled.")
+        eval_logger.info("Environment variable LMMS_EVAL_SHUFFLE_DOCS detected, dataset will be shuffled.")
         return dataset.shuffle(seed=42)
     return dataset
 
@@ -150,7 +149,7 @@ def parse_instruction(instruction):
 
 def compute_vci_metric(pred, answer):
 
-    acion_list = ["move_right", "move_left", "move_forward", "move_backward", "move_up", "move_down", "rotate_right", "rotate_left", "rotate_up", "rotate_down"]
+    _acion_list = ["move_right", "move_left", "move_forward", "move_backward", "move_up", "move_down", "rotate_right", "rotate_left", "rotate_up", "rotate_down"]
     action_order = ["move_right_left", "move_up_down", "move_forward_backward", "rotate_right_left", "rotate_up_down"]
 
     answer_dict = parse_instruction(pred)
@@ -192,7 +191,7 @@ def parse_cmi(text):
     eval_logger.debug(f"[parse_cmi] initial matches: {matches}")
 
     if len(matches) < 2:
-        eval_logger.warning(f"[parse_cmi] Less than 2 matches found, applying fallback logic")
+        eval_logger.warning("[parse_cmi] Less than 2 matches found, applying fallback logic")
         if len(matches) == 1 and "(" in matches[0]:
             matches.append("0.0")
             eval_logger.debug(f"[parse_cmi] Appended '0.0', matches now: {matches}")
@@ -210,7 +209,7 @@ def parse_cmi(text):
 
     eval_logger.debug(f"[parse_cmi] final result (len={len(result)}): {result}")
     if len(result) < 3:
-        eval_logger.warning(f"[parse_cmi] Result has fewer than 3 elements! Accessing result[2] will fail.")
+        eval_logger.warning("[parse_cmi] Result has fewer than 3 elements! Accessing result[2] will fail.")
     return result
 
 
@@ -234,16 +233,16 @@ def exact_match(pred, target):
     target = target.lower()
     eval_logger.debug(f"[exact_match] pred: '{pred}', target: '{target}'")
     if pred.lower() == target.lower():
-        eval_logger.debug(f"[exact_match] Matched via exact match")
+        eval_logger.debug("[exact_match] Matched via exact match")
         return 1.0
     elif pred in target:
-        eval_logger.debug(f"[exact_match] Matched via 'pred in target'")
+        eval_logger.debug("[exact_match] Matched via 'pred in target'")
         return 1.0
     elif pred[0] == target:
         eval_logger.warning(f"[exact_match] SUSPICIOUS: Matched via pred[0]==target. pred[0]='{pred[0]}', target='{target}'. This compares first char to entire string!")
         return 1.0
     else:
-        eval_logger.debug(f"[exact_match] No match")
+        eval_logger.debug("[exact_match] No match")
         return 0
 
 
@@ -270,7 +269,7 @@ WORST_CASE_FOR_METRICS = {
 def to_float(pred):
     try:
         pred = float(pred)
-    except BaseException as e:
+    except BaseException:
         pred = None
     return pred
 
@@ -286,13 +285,13 @@ def sparbench_process_results(doc, results):
         for key, value in METRICS_FOR_NA.items():
             try:
                 doc[key] = eval(value)(to_float(process_na(doc["prediction"], doc["task"])), to_float(doc["answer"]))
-            except:
+            except Exception:
                 doc[key] = WORST_CASE_FOR_METRICS[key]
     elif doc["task"] in SPECIAL_QUESTION_TYPES:
         if doc["task"] == "view_change_infer":
             try:
                 doc["vci_metric"] = compute_vci_metric(doc["prediction"], doc["answer"])
-            except:
+            except Exception:
                 doc["vci_metric"] = 0
 
     else:

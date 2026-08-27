@@ -2,12 +2,12 @@
 Specific evaluators for Out-of-Domain_50 tasks (Part 1).
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
 
-from ..utils import compute_optical_flow, normalize_frame_size
+from ..utils import compute_optical_flow, normalize_frame_size, safe_distance
 from .base_evaluator import BaseEvaluator
 
 

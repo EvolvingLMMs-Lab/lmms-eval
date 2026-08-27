@@ -3,9 +3,8 @@ line-length = 240
 extend-exclude = ["*.ipynb", "*.md"]
 
 [tool.ruff.lint]
-# Start with high-signal correctness checks that have no existing violations,
-# plus Ruff's import-sorting rules. Broader rule adoption can happen separately.
-select = ["E9", "F63", "F7", "F822", "F823", "I"]
+# Ruff's default Pycodestyle and Pyflakes rules, plus import sorting.
+select = ["E4", "E7", "E9", "F", "I"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["lmms_eval"]

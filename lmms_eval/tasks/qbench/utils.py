@@ -1,6 +1,8 @@
 import random
 from collections import defaultdict
 
+import numpy as np
+
 
 def q_bench_doc_to_text(doc, lmms_eval_specific_kwargs):
     candidates = []

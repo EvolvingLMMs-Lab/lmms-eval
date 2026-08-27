@@ -13,7 +13,7 @@ def VisualPuzzles_doc_to_visual(doc):
 def VisualPuzzles_doc_to_text(doc, lmms_eval_specific_kwargs):
     question = "Question: " + doc["question"].strip()
     options = doc["options"]
-    if options != None:
+    if options is not None:
         question += "\nOptions:\n(A) " + options[0] + "\n(B) " + options[1] + "\n(C) " + options[2] + "\n(D) " + options[3]
     else:
         question += "\nOptions: Choose from (A) (B) (C) (D) in the image."
@@ -81,7 +81,7 @@ def parse_response(response, all_choices, index2ans):
         for match in matches[::-1]:
             if match in all_choices or match.upper() in all_choices:
                 return match
-    if index2ans != None:
+    if index2ans is not None:
         for index in all_choices:
             ans = index2ans[index]
             if f"answer: {ans}" in response.lower():
@@ -105,7 +105,7 @@ def VisualPuzzles_process_result(doc, results):
     print(f"results: {results}")
     pred = results[0].strip()
     all_choices = ["A", "B", "C", "D"]
-    if doc["options"] == None:
+    if doc["options"] is None:
         index2ans = None
     else:
         index2ans = {all_choices[i]: doc["options"][i] for i in range(4)}

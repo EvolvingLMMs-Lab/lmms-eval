@@ -7,7 +7,7 @@ from pycocotools.coco import COCO
 COCO_METRICS = ["CIDEr"]
 
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 
 def screenspot_bbox_doc_to_visual(doc):
@@ -87,7 +87,7 @@ def screenspot_aggregation_result(results, metric):
     # coco_eval.setEval(score, metric)
 
     # When metric is one of the Bleu, score will be a list
-    if type(score) == list:
+    if type(score) is list:
         n = int(metric.split("_")[-1])
         score = score[n - 1]
 

@@ -240,7 +240,7 @@ def get_multi_choice_prediction(response, all_choices, index2ans):
         for index, ans in index2ans.items():
             if ans in response:
                 candidates.append(index)
-                index_ans = False  # it's content ans.
+                _index_ans = False  # it's content ans.
 
     if len(candidates) == 0:  # still not get answer, randomly choose one.
         return random.choice(all_choices)
@@ -294,7 +294,7 @@ def normalize_str(string, answer):
     # check if characters in the string
 
     # if number, numerize it.
-    if string == None:
+    if string is None:
         return [string]
     string = string.strip()
 

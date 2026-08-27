@@ -99,7 +99,7 @@ def megabench_process_results(doc, result):
     return {"submission": data_dict}
 
 
-import time
+import time  # noqa: E402
 
 
 def megabench_aggregate_results_for_submission(results, args):

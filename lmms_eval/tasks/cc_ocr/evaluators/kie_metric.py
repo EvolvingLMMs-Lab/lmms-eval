@@ -4,7 +4,6 @@ Ported from CC-OCR kie_evaluator.py, which itself derives from the Donut paper.
 """
 
 import json
-from collections import Counter
 from typing import Any, Dict, List, Union
 
 import zss

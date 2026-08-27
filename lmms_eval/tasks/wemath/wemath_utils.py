@@ -17,18 +17,18 @@ def process_steps_data(df, steps):
 # Function to calculate evaluation metrics
 def calculate_metrics(merged_2steps, merged_3steps):
     metrics = {}
-    metrics["steps2_filtered_rows_1_loose"] = merged_2steps[((merged_2steps["joker_1"] == False) & (merged_2steps["joker_2"] == False)) & (merged_2steps["joker_multi"] == True)]
-    metrics["steps2_filtered_rows_1_strict"] = merged_2steps[((merged_2steps["joker_1"] == False) | (merged_2steps["joker_2"] == False)) & (merged_2steps["joker_multi"] == True)]
-    metrics["steps2_filtered_rows_2"] = merged_2steps[((merged_2steps["joker_1"] == True) & (merged_2steps["joker_2"] == True)) & (merged_2steps["joker_multi"] == False)]
-    metrics["steps2_filtered_rows_3"] = merged_2steps[((merged_2steps["joker_1"] == False) | (merged_2steps["joker_2"] == False)) & (merged_2steps["joker_multi"] == False)]
-    metrics["steps2_filtered_rows_4_loose"] = merged_2steps[((merged_2steps["joker_1"] == True) | (merged_2steps["joker_2"] == True)) & (merged_2steps["joker_multi"] == True)]
-    metrics["steps2_filtered_rows_4_strict"] = merged_2steps[((merged_2steps["joker_1"] == True) & (merged_2steps["joker_2"] == True)) & (merged_2steps["joker_multi"] == True)]
-    metrics["steps3_filtered_rows_1_loose"] = merged_3steps[((merged_3steps["joker_1"] == False) & (merged_3steps["joker_2"] == False) & (merged_3steps["joker_3"] == False)) & (merged_3steps["joker_multi"] == True)]
-    metrics["steps3_filtered_rows_1_strict"] = merged_3steps[((merged_3steps["joker_1"] == False) | (merged_3steps["joker_2"] == False) | (merged_3steps["joker_3"] == False)) & (merged_3steps["joker_multi"] == True)]
-    metrics["steps3_filtered_rows_2"] = merged_3steps[((merged_3steps["joker_1"] == True) & (merged_3steps["joker_2"] == True) & (merged_3steps["joker_3"] == True)) & (merged_3steps["joker_multi"] == False)]
-    metrics["steps3_filtered_rows_3"] = merged_3steps[((merged_3steps["joker_1"] == False) | (merged_3steps["joker_2"] == False) | (merged_3steps["joker_3"] == False)) & (merged_3steps["joker_multi"] == False)]
-    metrics["steps3_filtered_rows_4_loose"] = merged_3steps[((merged_3steps["joker_1"] == True) | (merged_3steps["joker_2"] == True) | (merged_3steps["joker_3"] == True)) & (merged_3steps["joker_multi"] == True)]
-    metrics["steps3_filtered_rows_4_strict"] = merged_3steps[((merged_3steps["joker_1"] == True) & (merged_3steps["joker_2"] == True) & (merged_3steps["joker_3"] == True)) & (merged_3steps["joker_multi"] == True)]
+    metrics["steps2_filtered_rows_1_loose"] = merged_2steps[((merged_2steps["joker_1"] == False) & (merged_2steps["joker_2"] == False)) & (merged_2steps["joker_multi"] == True)]  # noqa: E712
+    metrics["steps2_filtered_rows_1_strict"] = merged_2steps[((merged_2steps["joker_1"] == False) | (merged_2steps["joker_2"] == False)) & (merged_2steps["joker_multi"] == True)]  # noqa: E712
+    metrics["steps2_filtered_rows_2"] = merged_2steps[((merged_2steps["joker_1"] == True) & (merged_2steps["joker_2"] == True)) & (merged_2steps["joker_multi"] == False)]  # noqa: E712
+    metrics["steps2_filtered_rows_3"] = merged_2steps[((merged_2steps["joker_1"] == False) | (merged_2steps["joker_2"] == False)) & (merged_2steps["joker_multi"] == False)]  # noqa: E712
+    metrics["steps2_filtered_rows_4_loose"] = merged_2steps[((merged_2steps["joker_1"] == True) | (merged_2steps["joker_2"] == True)) & (merged_2steps["joker_multi"] == True)]  # noqa: E712
+    metrics["steps2_filtered_rows_4_strict"] = merged_2steps[((merged_2steps["joker_1"] == True) & (merged_2steps["joker_2"] == True)) & (merged_2steps["joker_multi"] == True)]  # noqa: E712
+    metrics["steps3_filtered_rows_1_loose"] = merged_3steps[((merged_3steps["joker_1"] == False) & (merged_3steps["joker_2"] == False) & (merged_3steps["joker_3"] == False)) & (merged_3steps["joker_multi"] == True)]  # noqa: E712
+    metrics["steps3_filtered_rows_1_strict"] = merged_3steps[((merged_3steps["joker_1"] == False) | (merged_3steps["joker_2"] == False) | (merged_3steps["joker_3"] == False)) & (merged_3steps["joker_multi"] == True)]  # noqa: E712
+    metrics["steps3_filtered_rows_2"] = merged_3steps[((merged_3steps["joker_1"] == True) & (merged_3steps["joker_2"] == True) & (merged_3steps["joker_3"] == True)) & (merged_3steps["joker_multi"] == False)]  # noqa: E712
+    metrics["steps3_filtered_rows_3"] = merged_3steps[((merged_3steps["joker_1"] == False) | (merged_3steps["joker_2"] == False) | (merged_3steps["joker_3"] == False)) & (merged_3steps["joker_multi"] == False)]  # noqa: E712
+    metrics["steps3_filtered_rows_4_loose"] = merged_3steps[((merged_3steps["joker_1"] == True) | (merged_3steps["joker_2"] == True) | (merged_3steps["joker_3"] == True)) & (merged_3steps["joker_multi"] == True)]  # noqa: E712
+    metrics["steps3_filtered_rows_4_strict"] = merged_3steps[((merged_3steps["joker_1"] == True) & (merged_3steps["joker_2"] == True) & (merged_3steps["joker_3"] == True)) & (merged_3steps["joker_multi"] == True)]  # noqa: E712
     # metrics.to_csv("/Users/mac/Desktop/测试结果/error_anal/csv/gpt4o-0626.csv", index = False)
     return metrics
 

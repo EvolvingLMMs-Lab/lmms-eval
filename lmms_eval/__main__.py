@@ -23,20 +23,19 @@ import yaml
 
 warnings.simplefilter("ignore", category=DeprecationWarning)
 
-from typing import Union
+from typing import Union  # noqa: E402
 
-from accelerate import Accelerator
-from accelerate.utils import InitProcessGroupKwargs
-from loguru import logger as eval_logger
+from accelerate import Accelerator  # noqa: E402
+from accelerate.utils import InitProcessGroupKwargs  # noqa: E402
+from loguru import logger as eval_logger  # noqa: E402
 
-from lmms_eval import evaluator, utils
-from lmms_eval.api.metrics import power_analysis
-from lmms_eval.api.registry import ALL_TASKS
-from lmms_eval.cli.power_utils import collect_task_sizes
-from lmms_eval.evaluator import request_caching_arg_to_dict
-from lmms_eval.loggers import EvaluationTracker, SwanLabLogger, WandbLogger
-from lmms_eval.tasks import TaskManager
-from lmms_eval.utils import (
+from lmms_eval import evaluator, utils  # noqa: E402
+from lmms_eval.api.metrics import power_analysis  # noqa: E402
+from lmms_eval.cli.power_utils import collect_task_sizes  # noqa: E402
+from lmms_eval.evaluator import request_caching_arg_to_dict  # noqa: E402
+from lmms_eval.loggers import EvaluationTracker, SwanLabLogger, WandbLogger  # noqa: E402
+from lmms_eval.tasks import TaskManager  # noqa: E402
+from lmms_eval.utils import (  # noqa: E402
     get_eval_banner,
     make_table,
     simple_parse_args_string,
@@ -108,21 +107,21 @@ def _run_power_analysis(args: argparse.Namespace) -> None:
     print("\n" + "=" * 60)
     print("POWER ANALYSIS RESULTS")
     print("=" * 60)
-    print(f"\nParameters:")
+    print("\nParameters:")
     print(f"  Effect size (delta):     {args.effect_size:.1%}")
     print(f"  Std (model A):           {result['std_a']}")
     print(f"  Std (model B):           {result['std_b']}")
     print(f"  Significance level (α):  {args.alpha}")
     print(f"  Desired power (1-β):     {args.power}")
     print(f"  Correlation (ρ):         {args.correlation}")
-    print(f"\nResult:")
+    print("\nResult:")
     print(f"  Minimum sample size:     n = {result['min_n']}")
-    print(f"\nInterpretation:")
+    print("\nInterpretation:")
     print(f"  To detect a {args.effect_size:.1%} difference with {args.power:.0%} power,")
     print(f"  you need at least {result['min_n']} questions in your benchmark.")
 
     if task_sizes:
-        print(f"\n" + "-" * 60)
+        print("\n" + "-" * 60)
         print("TASK ANALYSIS")
         print("-" * 60)
         for task_name, n_samples in task_sizes.items():
@@ -506,7 +505,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
         with open(args.config, "r") as file:
             config_args = yaml.safe_load(file)
-        config_args = [config_args] if type(config_args) != list else config_args
+        config_args = [config_args] if type(config_args) is not list else config_args
 
         # Extract and apply env vars before validation (env is not a CLI arg)
         for config in config_args:
@@ -613,7 +612,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
 
 def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
-    selected_task_list = args.tasks.split(",") if args.tasks else None
+    _selected_task_list = args.tasks.split(",") if args.tasks else None
 
     if args.include_path is not None:
         eval_logger.info(f"Including path: {args.include_path}")
@@ -775,7 +774,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         if args.show_config:
             print(dumped)
 
-        batch_sizes = ",".join(map(str, results["config"]["batch_sizes"]))
+        _batch_sizes = ",".join(map(str, results["config"]["batch_sizes"]))
 
         evaluation_tracker.save_results_aggregated(
             results=results,

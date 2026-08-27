@@ -40,7 +40,6 @@ from __future__ import annotations
 import argparse
 import glob
 import json
-import os
 import os.path as osp
 import random
 import sys
@@ -174,7 +173,7 @@ def push_to_hub(jsonl_path: str, hub_dataset_id: str):
     except ImportError:
         print("ERROR: pip install datasets", file=sys.stderr)
         sys.exit(1)
-    print(f"Loading JSONL...")
+    print("Loading JSONL...")
     ds = Dataset.from_json(jsonl_path)
     print(f"Pushing {len(ds)} records to {hub_dataset_id}...")
     ds.push_to_hub(hub_dataset_id, split="test")

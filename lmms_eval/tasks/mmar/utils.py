@@ -8,7 +8,6 @@ MMAR evaluates deep reasoning capabilities of Audio-Language Models across
 """
 
 import random
-import re
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 

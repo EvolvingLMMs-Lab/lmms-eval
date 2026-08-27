@@ -100,7 +100,7 @@ def revsi_process_results(doc, results):
     elif doc["question_type"] in NQ_QUESTION_TYPES:
         try:
             acc = _mean_relative_accuracy(float(pred_answer), float(gt_answer), 0.5, 0.95, 0.05)
-        except:
+        except Exception:
             acc = 0.0
     doc["acc"] = acc
     return {metric: doc for metric in REVSI_METRICS}

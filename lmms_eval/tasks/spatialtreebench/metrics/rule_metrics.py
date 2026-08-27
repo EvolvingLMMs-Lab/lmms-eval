@@ -793,8 +793,8 @@ def manipulateeval(response, answer, extra_info):
 
     # Calculate trajectory length (how much movement was required)
     trajectory_length = np.linalg.norm(gt_final_pose[:3] - initial_pose[:3])
-    required_movement = trajectory_length > 0.1  # If more than 10cm movement required
-    required_rotation = False
+    _required_movement = trajectory_length > 0.1  # If more than 10cm movement required
+    _required_rotation = False
     if len(optimal_poses) > 1:
         # Check if rotation was required during the trajectory
         for i in range(1, min(5, len(optimal_poses))):  # Check first few steps
@@ -802,7 +802,7 @@ def manipulateeval(response, answer, extra_info):
             curr_rot = R.from_quat(optimal_poses[i][3:])
             rot_diff = (prev_rot.inv() * curr_rot).magnitude()
             if rot_diff > np.deg2rad(5):  # If more than 5 degrees rotation between steps
-                required_rotation = True
+                _required_rotation = True
                 break
 
     # --- Component 1: Trajectory Direction Score (Weight: 0.25) ---
@@ -944,7 +944,7 @@ def action2cam_response(instructions, initial_pose, extra_info):
         "↻": "Roll CW",
         "STOP": "Stay",
     }
-    predicted_poses_list = [initial_pose.copy()]
+    _predicted_poses_list = [initial_pose.copy()]
     current_pose = initial_pose.copy()
 
     action_keys = sorted([k for k in extra_info if "->" in k], key=lambda x: int(x.split("->")[0]))
@@ -1069,7 +1069,7 @@ def agenticnaveval(response, answer, extra_info):
     if len(predicted_poses) == 0:
         return {"score": 0, "error": "Predicted trajectory is empty"}
 
-    action_keys = sorted([k for k in extra_info if "->" in k], key=lambda x: int(x.split("->")[0]))
+    _action_keys = sorted([k for k in extra_info if "->" in k], key=lambda x: int(x.split("->")[0]))
     num_predicted_segments = len(predicted_poses) - 1
 
     gt_poses_for_comparison = optimal_poses[: num_predicted_segments + 1]  # Ground truth poses to compare against
@@ -1078,15 +1078,15 @@ def agenticnaveval(response, answer, extra_info):
     gt_final_pose = gt_poses_for_comparison[-1]
 
     trajectory_length = np.linalg.norm(gt_final_pose[:3] - initial_pose[:3])
-    required_movement = trajectory_length > 0.1  # If more than 10cm movement required
-    required_rotation = False
+    _required_movement = trajectory_length > 0.1  # If more than 10cm movement required
+    _required_rotation = False
     if len(optimal_poses) > 1:
         for i in range(1, min(5, len(optimal_poses))):  # Check first few steps
             prev_rot = R.from_quat(optimal_poses[i - 1][3:])
             curr_rot = R.from_quat(optimal_poses[i][3:])
             rot_diff = (prev_rot.inv() * curr_rot).magnitude()
             if rot_diff > np.deg2rad(5):  # If more than 5 degrees rotation between steps
-                required_rotation = True
+                _required_rotation = True
                 break
 
     gt_traj_vec = gt_final_pose[:3] - initial_pose[:3]

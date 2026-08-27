@@ -2035,8 +2035,6 @@ class SymmetryCompletionEvaluator(BaseEvaluator):
 
         return consistent / len(final_hues) if final_hues else 0.5
 
-        return max(0.0, correlation)
-
     def _evaluate_preservation(self, first_frame: np.ndarray, final_frame: np.ndarray) -> float:
         """Rule-based: Check if left side is preserved."""
         h, w = first_frame.shape[:2]

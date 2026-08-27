@@ -535,7 +535,6 @@ class VLLM(lmms):
                             )
                     batched_messages.append(messages)
 
-                sampling_params = SamplingParams(**params)
                 self._write_watchdog_heartbeat("chat_start", batch_idx=batch_idx, batch_requests=batch_requests)
 
                 # NOTE:

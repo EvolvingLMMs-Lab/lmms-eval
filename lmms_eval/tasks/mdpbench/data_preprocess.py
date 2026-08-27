@@ -98,7 +98,7 @@ def textblock2unicode(text):
                 # inline_array.append(match.group(0))
                 unicode_content = LatexNodes2Text().latex_to_text(clean_content)
                 removal_positions.append((position[0], position[1], unicode_content))
-        except:
+        except Exception:
             continue
 
     # Remove inline formulas from original text
@@ -343,7 +343,7 @@ def normalized_latex_table(text):
             tables = [f"<table>{table}</table>" for table in tables]
             html_content = "\n".join(tables)
 
-        except Exception as e:
+        except Exception:
             html_content = ""
 
         shutil.rmtree(cache_dir)

@@ -252,7 +252,6 @@ class ILLUMEPlus(lmms):
         """Load ILLUME+ model and processor."""
         try:
             import os
-            import sys
             import time
 
             from transformers import AutoModel, AutoProcessor
@@ -522,10 +521,7 @@ class ILLUMEPlus(lmms):
             return
 
         try:
-            import importlib.machinery
             import os
-            import sys
-            from types import ModuleType
 
             import transformers.utils.import_utils as import_utils
             from transformers import AutoModel
@@ -550,7 +546,7 @@ class ILLUMEPlus(lmms):
                 eval_logger.info("Vision tokenizer loaded with flash_attention_2")
             except (ImportError, ValueError, RuntimeError) as e:
                 eval_logger.warning(f"Failed to load with flash_attention_2: {e}, falling back to sdpa")
-                dualvitok = AutoModel.from_pretrained(model_dir, trust_remote_code=True, torch_dtype=self._dtype, attn_implementation="sdpa").to(target_device).eval()
+                dualvitok = AutoModel.from_pretrained(model_dir, trust_remote_code=True, torch_dtype=self._dtype, attn_implementation="sdpa").to(self._device).eval()
                 eval_logger.info("Vision tokenizer loaded with sdpa")
 
             if hasattr(self._processor, "set_vision_tokenizer"):
@@ -953,7 +949,7 @@ class ILLUMEPlus(lmms):
             h, w = 256, 256
 
             # ILLUME+ only supports specific resolutions
-            SUPPORTED_RESOLUTIONS = [(256, 256), (512, 512), (384, 640), (640, 384), (512, 384), (384, 512), (256, 384), (384, 256), (256, 512), (512, 256)]
+            _SUPPORTED_RESOLUTIONS = [(256, 256), (512, 512), (384, 640), (640, 384), (512, 384), (384, 512), (256, 384), (384, 256), (256, 512), (512, 256)]
 
             # Find the closest supported resolution
             def find_closest_resolution(target_h, target_w, supported_resolutions):
@@ -989,7 +985,7 @@ class ILLUMEPlus(lmms):
             # Only apply this fix for geometry3k_visual_cot task.
             if task == "geometry3k_visual_cot":
                 generation_prompt_cleaned = re.sub(r"<image>", "", generation_prompt).strip()
-                eval_logger.info(f"Applied geometry3k_visual_cot fix: removed <image> tags from prompt")
+                eval_logger.info("Applied geometry3k_visual_cot fix: removed <image> tags from prompt")
             else:
                 generation_prompt_cleaned = generation_prompt
 
@@ -1241,7 +1237,7 @@ class ILLUMEPlus(lmms):
             log_gpu_memory("Before Generation")
 
             # Log input tensor sizes
-            eval_logger.info(f"Input tensor sizes:")
+            eval_logger.info("Input tensor sizes:")
             for key, value in inputs.items():
                 if isinstance(value, torch.Tensor):
                     size_mb = value.element_size() * value.nelement() / 1024**2
@@ -1292,7 +1288,7 @@ class ILLUMEPlus(lmms):
                             kv_cache_size = 2 * batch_size * num_layers * num_heads * total_seq_len * head_dim * dtype_size / 1024**3
                             eval_logger.error(f"Estimated KV cache size: {kv_cache_size:.2f}GB")
                         else:
-                            eval_logger.error(f"KV cache is DISABLED (use_cache=False)")
+                            eval_logger.error("KV cache is DISABLED (use_cache=False)")
                         eval_logger.error(f"  - Layers: {num_layers}, Heads: {num_heads}, Head dim: {head_dim}")
                         eval_logger.error(f"  - Sequence length: {seq_len} + {max_new} = {total_seq_len}")
                         eval_logger.error(f"  - Batch size: {batch_size}")
@@ -1311,11 +1307,11 @@ class ILLUMEPlus(lmms):
 
             # CRITICAL: Validate that we actually got image tokens
             if image_tokens is None or len(image_tokens) < 2:
-                eval_logger.error(f"❌ FAILED to generate image tokens!")
+                eval_logger.error("❌ FAILED to generate image tokens!")
                 eval_logger.error(f"Generated text: {generated_text[:500]}")
                 eval_logger.error(f"Image tokens: {image_tokens}")
             else:
-                eval_logger.info(f"✅ Successfully generated image tokens:")
+                eval_logger.info("✅ Successfully generated image tokens:")
                 eval_logger.info(f"   - Semantic tokens (L0): {len(image_tokens[0])} (expected: ~{semantic_token_num})")
                 eval_logger.info(f"   - Pixel tokens (L1): {len(image_tokens[1])} (expected: ~{pixel_token_num})")
 
@@ -1336,16 +1332,16 @@ class ILLUMEPlus(lmms):
                     Image.fromarray(decoded_image).save(image_path)
                     eval_logger.info(f"✅ Successfully saved decoded image to: {image_path}")
                 else:
-                    eval_logger.warning(f"⚠️ Image decoding failed, saving gray placeholder")
+                    eval_logger.warning("⚠️ Image decoding failed, saving gray placeholder")
                     Image.new("RGB", (h, w), color=(128, 128, 128)).save(image_path)
             else:
                 if not image_tokens:
-                    eval_logger.error(f"❌ No image tokens found in generated text!")
+                    eval_logger.error("❌ No image tokens found in generated text!")
                     eval_logger.error(f"Generated text preview: {generated_text[:100]}")
                 if not self.enable_image_decoding:
-                    eval_logger.warning(f"⚠️ Image decoding is disabled")
+                    eval_logger.warning("⚠️ Image decoding is disabled")
 
-                eval_logger.warning(f"Saving light gray placeholder image")
+                eval_logger.warning("Saving light gray placeholder image")
                 Image.new("RGB", (h, w), color=(200, 200, 200)).save(image_path)
 
             # Unload vision decoder to free memory after generation
@@ -1397,7 +1393,7 @@ class ILLUMEPlus(lmms):
             # Same issue as Stage 1 - images are provided through conversation structure
             if task == "geometry3k_visual_cot":
                 question_cleaned = re.sub(r"<image>", "", question).strip()
-                eval_logger.info(f"Applied geometry3k_visual_cot fix in Stage 2: removed <image> tags from question")
+                eval_logger.info("Applied geometry3k_visual_cot fix in Stage 2: removed <image> tags from question")
             else:
                 question_cleaned = question
 
@@ -1820,7 +1816,7 @@ class ILLUMEPlus(lmms):
                 self._save_intermediate_artifacts(
                     doc_id=str(doc_id),
                     task=task,
-                    generation_prompt=f"Interleaved generation",
+                    generation_prompt="Interleaved generation",
                     stage1_text="",
                     generated_images=generated_images,
                     question=contexts,

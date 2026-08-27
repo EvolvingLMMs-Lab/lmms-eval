@@ -116,4 +116,4 @@ class FromLog(lmms):
         assert False, "not support"
 
     def generate_until_multi_round(self, requests) -> List[str]:
-        return generate_until(self, requests)
+        return self.generate_until(requests)

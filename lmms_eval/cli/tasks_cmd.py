@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import sys
 
 
 def add_tasks_parser(subparsers: argparse._SubParsersAction) -> None:
