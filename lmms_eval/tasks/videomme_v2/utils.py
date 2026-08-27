@@ -202,16 +202,49 @@ def extract_characters_regex(s):
         "Answer:",
         "Option:",
     ]
-    for prefix in answer_prefixes:
-        s = s.replace(prefix, "")
 
-    if len(s.split()) > 10 and not re.search("[A-H]", s):
-        return ""
+    match = re.search(
+        r"(?:^|\n)[ \t]*(?:\*\*[ \t]*)?([A-H])(?:[ \t]*\*\*)?[ \t]*[.)]?[ \t]*$",
+        s,
+        re.IGNORECASE,
+    )
+    if match:
+        return match.group(1).upper()
 
-    matches = re.search(r"[A-H]", s)
-    if matches is None:
-        return ""
-    return matches[0]
+    match = re.match(
+        r"^[ \t]*(?:\*\*[ \t]*)?([A-H])(?:[ \t]*\*\*)?[ \t]*(?:[.)]|\r?\n|$)",
+        s,
+        re.IGNORECASE,
+    )
+    if match:
+        return match.group(1).upper()
+
+    prefix_pattern = "|".join(re.escape(prefix) for prefix in answer_prefixes)
+    matches = re.findall(
+        rf"(?:{prefix_pattern}|\b(?:answer|option)(?:\s+(?:is|would\s+be)|\s*:))[\s:*]*([A-H])\b",
+        s,
+        re.IGNORECASE,
+    )
+    if matches:
+        return matches[-1].upper()
+
+    matches = {choice.upper() for choice in re.findall(r"\*\*\s*([A-H])(?=\s*\*\*|[.)])", s, re.IGNORECASE)}
+    if len(matches) == 1:
+        return next(iter(matches))
+    return ""
+
+
+def extract_option(prediction, options):
+    choices = {}
+    for index, option in enumerate(options.split("\n")):
+        option_id = chr(ord("A") + index) + "."
+        option_start = option.find(option_id)
+        if option_start >= 0:
+            choices[option_id[0]] = option[option_start + len(option_id) :].strip(". \n")
+
+    prediction = prediction.lower()
+    candidates = [key for key, value in choices.items() if value.lower() in prediction]
+    return candidates[0] if len(candidates) == 1 else "Z"
 
 
 # ──────────────────────────────────────────────
@@ -222,6 +255,8 @@ def extract_characters_regex(s):
 def videomme_v2_process_results(doc, results):
     pred = results[0]
     pred_ans = extract_characters_regex(pred)
+    if pred_ans == "":
+        pred_ans = extract_option(pred, doc["options"])
     gt_ans = doc["answer"]
     score = 1 if pred_ans.upper() == gt_ans.upper() else 0
 
