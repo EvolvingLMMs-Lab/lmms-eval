@@ -177,10 +177,7 @@ class Gemma4(lmms):
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
-            visual_list = [
-                visual_fn(self.task_dict[task_name][split_name][ids])
-                for visual_fn, ids, task_name, split_name in zip(doc_to_visual, doc_id, task, split)
-            ]
+            visual_list = [visual_fn(self.task_dict[task_name][split_name][ids]) for visual_fn, ids, task_name, split_name in zip(doc_to_visual, doc_id, task, split)]
             gen_kwargs = all_gen_kwargs[0]
 
             until = gen_kwargs.get("until", [self.tokenizer.decode(self.eot_token_id)])
