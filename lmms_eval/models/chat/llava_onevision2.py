@@ -237,7 +237,7 @@ class Llava_OneVision2(lmms):
             codec_overrides["cache_root"] = Path(codec_cache_dir or os.getenv("ONLINE_CODEC_CACHE_DIR"))
         self.codec_overrides = codec_overrides
         if self.use_codec:
-            eval_logger.info(f"[codec] pixel budget unified: max_pixels={max_pixels}; " f"codec_overrides={codec_overrides}")
+            eval_logger.info(f"[codec] pixel budget unified: max_pixels={max_pixels}; codec_overrides={codec_overrides}")
         # Per-build_messages scratch for codec video URLs.
         self._current_codec_video_urls: list = []
 

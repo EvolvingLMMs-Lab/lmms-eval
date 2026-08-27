@@ -260,6 +260,7 @@ class CambriansVSCStreaming(CambriansVSC):
                 episodic_starts = 1
                 streaming_outputs = []
                 intermediate_predictions = []
+                frame_feature_prediction = None
 
                 for frame_idx in range(visual_features.size(0)):
                     past_key_values = []

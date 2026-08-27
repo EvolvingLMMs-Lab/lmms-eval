@@ -14,7 +14,7 @@ from lmms_eval.api.registry import register_model
 
 warnings.filterwarnings("ignore")
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 
 @register_model("cogvlm2")
@@ -215,7 +215,7 @@ class CogVLM2(lmms):
                 context = [{"role": "user", "content": context}, {"role": "assistant", "content": response}]
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
-                cont = ""
+                _cont = ""
             res.append(response)
             self.cache_hook.add_partial("generate_until", (context, gen_kwargs), response)
             pbar.update(1)

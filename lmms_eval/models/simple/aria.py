@@ -18,9 +18,9 @@ from lmms_eval.api.registry import register_model
 
 warnings.filterwarnings("ignore")
 
-import re
+import re  # noqa: E402
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 DEFAULT_IMAGE_TOKEN = "<image>"
 
@@ -180,7 +180,7 @@ class Aria(lmms):
         return new_list
 
     def load_video(self, video_path, max_frames_num):
-        if type(video_path) == str:
+        if type(video_path) is str:
             vr = VideoReader(video_path, ctx=cpu(0))
         else:
             vr = VideoReader(video_path[0], ctx=cpu(0))

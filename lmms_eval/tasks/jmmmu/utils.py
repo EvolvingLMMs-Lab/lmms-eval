@@ -344,7 +344,7 @@ def parse_open_response(response):
         response = response.strip().strip("。")
         sub_responses = re.split(r"[。！？.]\s*|\n", response)
 
-        indicators_of_keys = ["よって", "よって、", "答えは", "答えは、", "最終的に", "最終的に、", "解答は", "解答は、" "回答は", "回答は、"]
+        indicators_of_keys = ["よって", "よって、", "答えは", "答えは、", "最終的に", "最終的に、", "解答は", "解答は、回答は", "回答は、"]
         key_responses = []
         for index, resp in enumerate(sub_responses):
             # if last one, accept it's an equation (the entire response can be just one sentence with equation)

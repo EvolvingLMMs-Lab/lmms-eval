@@ -5,27 +5,27 @@ from transformers import AutoConfig
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
-import copy
-import logging
-import warnings
-from datetime import timedelta
-from typing import List, Optional, Tuple, Union
+import copy  # noqa: E402
+import logging  # noqa: E402
+import warnings  # noqa: E402
+from datetime import timedelta  # noqa: E402
+from typing import List, Optional, Tuple, Union  # noqa: E402
 
-import numpy as np
-import PIL
-from decord import VideoReader, cpu
-from packaging import version
-from tqdm import tqdm
+import numpy as np  # noqa: E402
+import PIL  # noqa: E402
+from decord import VideoReader, cpu  # noqa: E402
+from packaging import version  # noqa: E402
+from tqdm import tqdm  # noqa: E402
 
 warnings.filterwarnings("ignore")
 
 eval_logger = logging.getLogger("lmms-eval")
 
-from lmms_eval import utils
-from lmms_eval.api.instance import Instance
-from lmms_eval.api.model import lmms
-from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video
+from lmms_eval import utils  # noqa: E402
+from lmms_eval.api.instance import Instance  # noqa: E402
+from lmms_eval.api.model import lmms  # noqa: E402
+from lmms_eval.api.registry import register_model  # noqa: E402
+from lmms_eval.models.model_utils.load_video import read_video  # noqa: E402
 
 try:
     from longva.constants import (
@@ -114,7 +114,7 @@ class LongVA(lmms):
         overwrite_config = {}
         overwrite_config["mm_spatial_pool_stride"] = self.mm_spatial_pool_stride
         overwrite_config["mm_spatial_pool_mode"] = self.mm_spatial_pool_mode
-        cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
+        _cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
 
         llava_model_args["overwrite_config"] = overwrite_config
         try:
@@ -247,7 +247,7 @@ class LongVA(lmms):
     def tok_decode(self, tokens):
         try:
             return self.tokenizer.decode(tokens)
-        except:
+        except Exception:
             return self.tokenizer.decode([tokens])
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
@@ -257,7 +257,7 @@ class LongVA(lmms):
 
         for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
-            if type(doc_to_target) == str:
+            if type(doc_to_target) is str:
                 continuation = doc_to_target
             else:
                 continuation = doc_to_target(self.task_dict[task][split][doc_id])
@@ -295,7 +295,7 @@ class LongVA(lmms):
             conv.append_message(conv.roles[0], prompts_input)
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
-            pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
+            _pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
             contxt_id = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
             # Add the answer of the second role
             conv.messages[1][1] = continuation
@@ -334,7 +334,7 @@ class LongVA(lmms):
         return new_list
 
     def load_video(self, video_path, max_frames_num):
-        if type(video_path) == str:
+        if type(video_path) is str:
             vr = VideoReader(video_path, ctx=cpu(0))
         else:
             vr = VideoReader(video_path[0], ctx=cpu(0))
@@ -394,7 +394,7 @@ class LongVA(lmms):
                     eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
 
                 # encode, pad, and truncate contexts for this batch
-                if type(visual[0]) == PIL.Image.Image:  # For image task
+                if type(visual[0]) is PIL.Image.Image:  # For image task
                     image_tensor = process_images(visual, self._image_processor, self._config)
                     if type(image_tensor) is list:
                         image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]
@@ -403,7 +403,7 @@ class LongVA(lmms):
 
                     task_type = "image"
 
-                elif type(visual[0]) == str:  # For video task
+                elif type(visual[0]) is str:  # For video task
                     image_tensor = []
                     try:
                         if self.video_decode_backend == "decord":

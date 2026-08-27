@@ -53,7 +53,7 @@ class AudioFlamingo3(lmms):
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
         if AudioFlamingo3ForConditionalGeneration is None:
-            raise ImportError("AudioFlamingo3ForConditionalGeneration is not available in transformers " f"{transformers.__version__}. Please upgrade transformers/accelerate in this env, e.g. " "`pip install -U transformers accelerate`.")
+            raise ImportError(f"AudioFlamingo3ForConditionalGeneration is not available in transformers {transformers.__version__}. Please upgrade transformers/accelerate in this env, e.g. `pip install -U transformers accelerate`.")
 
         self._model = AudioFlamingo3ForConditionalGeneration.from_pretrained(
             pretrained,
@@ -160,7 +160,7 @@ class AudioFlamingo3(lmms):
                 if isinstance(until, str):
                     until = [until]
                 elif not isinstance(until, list):
-                    raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] " f"but got {type(until)}")
+                    raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
 
             # Build conversations for each item in the batch
             conversations = []

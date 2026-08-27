@@ -28,7 +28,7 @@ if os.path.exists(bagel_path):
     sys.path.append(bagel_path)
     eval_logger.info(f"Added Bagel path to sys.path: {bagel_path}")
 else:
-    eval_logger.warning(f"Bagel repository not found at {bagel_path}. " f"Please clone it: cd {wd} && git clone https://github.com/ByteDance-Seed/Bagel.git")
+    eval_logger.warning(f"Bagel repository not found at {bagel_path}. Please clone it: cd {wd} && git clone https://github.com/ByteDance-Seed/Bagel.git")
 
 
 @register_model("bagel_unig2u")
@@ -80,7 +80,7 @@ class BagelUniG2U(lmms):
         stage2_max_new_tokens: int = 16384,
         stage2_temperature: float = 0.0,
         stage2_do_sample: bool = False,
-        generation_prompt_template: str = ("Generate a detailed visual diagram or illustration " "to help answer this question: {question}"),
+        generation_prompt_template: str = ("Generate a detailed visual diagram or illustration to help answer this question: {question}"),
         save_intermediate: bool = False,
         intermediate_dir: Optional[str] = None,
         fail_gracefully: bool = True,
@@ -229,7 +229,7 @@ class BagelUniG2U(lmms):
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
             if self.continual_mode:
-                eval_logger.warning("Continual mode is not supported for distributed inference. " "Automatically disabling continual_mode.")
+                eval_logger.warning("Continual mode is not supported for distributed inference. Automatically disabling continual_mode.")
                 self.continual_mode = False
             self.accelerator = accelerator
             self._rank = self.accelerator.local_process_index
@@ -344,7 +344,7 @@ class BagelUniG2U(lmms):
                 ).eval()
                 eval_logger.info("Loaded model in 4-bit (NF4) quantization")
             except ImportError:
-                raise ImportError("4-bit quantization requires bitsandbytes. " "Install it with: pip install bitsandbytes")
+                raise ImportError("4-bit quantization requires bitsandbytes. Install it with: pip install bitsandbytes")
 
         elif self.precision_mode == "8bit":
             # INT8: 8-bit quantization
@@ -364,7 +364,7 @@ class BagelUniG2U(lmms):
                 ).eval()
                 eval_logger.info("Loaded model in 8-bit (INT8) quantization")
             except ImportError:
-                raise ImportError("8-bit quantization requires bitsandbytes. " "Install it with: pip install bitsandbytes")
+                raise ImportError("8-bit quantization requires bitsandbytes. Install it with: pip install bitsandbytes")
 
         else:
             raise ValueError(f"Unknown precision mode: {self.precision_mode}")
@@ -641,7 +641,7 @@ class BagelUniG2U(lmms):
                 gen_context = self.inferencer.update_context_text("COMPLETED WITH CANDIDATE 1:", gen_context)
 
                 # Final answer
-                final_suffix = 'Now output EXACTLY ONE <FINAL_ANSWER_JSON>{"choice": 0 or 1, "rationale": "≤30 words"}</FINAL_ANSWER_JSON>\n' "Do not output any additional images."
+                final_suffix = 'Now output EXACTLY ONE <FINAL_ANSWER_JSON>{"choice": 0 or 1, "rationale": "≤30 words"}</FINAL_ANSWER_JSON>\nDo not output any additional images.'
                 gen_context = self.inferencer.update_context_text(final_suffix, gen_context)
 
                 final_text = self.inferencer.gen_text(
@@ -729,7 +729,7 @@ class BagelUniG2U(lmms):
                     gen_context = self.inferencer.update_context_image(img_transformed, gen_context, vae=False, vit=True)
 
                 # Final answer
-                final_suffix = "After the images, emit EXACTLY ONE LINE containing ONLY the final move list " "as <ANSWER_JSON>[...]</ANSWER_JSON>. No other text."
+                final_suffix = "After the images, emit EXACTLY ONE LINE containing ONLY the final move list as <ANSWER_JSON>[...]</ANSWER_JSON>. No other text."
                 gen_context = self.inferencer.update_context_text(final_suffix, gen_context)
                 final_text = self.inferencer.gen_text(
                     gen_context,

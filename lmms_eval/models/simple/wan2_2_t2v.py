@@ -88,7 +88,7 @@ class Wan2_2_T2V(DiffusersWMBase):
 
     def _generation_signature(self, prompt, visuals, extras):
         request_seed = int(extras.get("_lmms_eval_seed", self.seed))
-        return f"{self.pretrained}:{request_seed}:{self.num_inference_steps}:" f"{self.guidance_scale}:{self.guidance_scale_2}:{self.flow_shift}:" f"{self.num_frames}:{self.height}x{self.width}:{self.negative_prompt}:" f"{prompt[:200]}"
+        return f"{self.pretrained}:{request_seed}:{self.num_inference_steps}:{self.guidance_scale}:{self.guidance_scale_2}:{self.flow_shift}:{self.num_frames}:{self.height}x{self.width}:{self.negative_prompt}:{prompt[:200]}"
 
     def _invoke_pipeline(self, prompt, visuals, generator, **extras):
         def _run():

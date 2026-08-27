@@ -155,7 +155,7 @@ def pushupbench_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs: Opti
     post_prompt = kwargs.get("post_prompt", "")
 
     action_name = str(doc.get("name", "the exercise")).replace("_", " ").strip()
-    question = f'Watch this video carefully and count the number of repetitions of "{action_name}". ' f"Provide the count as a single integer."
+    question = f'Watch this video carefully and count the number of repetitions of "{action_name}". Provide the count as a single integer.'
     return f"{pre_prompt}{question}{post_prompt}"
 
 

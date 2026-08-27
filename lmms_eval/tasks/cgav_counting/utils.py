@@ -173,7 +173,7 @@ def cgav_doc_to_visual_clue(doc: Document) -> list[str] | list[Image.Image]:
 def cgav_doc_to_text_count(doc: Document, lmms_eval_specific_kwargs: TaskKwargs | None = None) -> str:
     """Format the official number-only counting prompt."""
     kwargs = lmms_eval_specific_kwargs or {}
-    prompt = f"Please answer the question '{doc['question']}' with a number. " "Output only the number and nothing else."
+    prompt = f"Please answer the question '{doc['question']}' with a number. Output only the number and nothing else."
     return f"{kwargs.get('pre_prompt', '')}{prompt}{kwargs.get('post_prompt', '')}"
 
 

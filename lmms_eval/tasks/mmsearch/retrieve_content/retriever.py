@@ -48,7 +48,7 @@ class Content_Retriever:
         return passages
 
     def get_retrieved_content(self, requery, content):
-        docs = [content]
+        _docs = [content]
         all_chucks = self.split_doc_into_passages(content)
         # encode
         output_1 = self.model.encode([requery], return_dense=True, return_sparse=True, return_colbert_vecs=True, batch_size=12, max_length=self.config.chunk_length)

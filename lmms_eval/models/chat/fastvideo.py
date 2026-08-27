@@ -308,10 +308,10 @@ class FastVideo(lmms):
         )
         needed = self.data_parallel * gpus_per_worker
         if len(visible) < needed:
-            raise ValueError(f"data_parallel={self.data_parallel} × {gpus_per_worker} GPUs/worker = {needed} GPUs needed, " f"but only {len(visible)} visible (CUDA_VISIBLE_DEVICES={parent_vis or 'unset'}).")
+            raise ValueError(f"data_parallel={self.data_parallel} × {gpus_per_worker} GPUs/worker = {needed} GPUs needed, but only {len(visible)} visible (CUDA_VISIBLE_DEVICES={parent_vis or 'unset'}).")
         # One contiguous chunk of physical GPU ids per worker.
         worker_gpus: List[str] = [",".join(visible[r * gpus_per_worker : (r + 1) * gpus_per_worker]) for r in range(self.data_parallel)]
-        eval_logger.info(f"FastVideo DP: spawning {self.data_parallel} workers " f"(num_gpus={num_gpus_per_worker}, tp={tp_size_per_worker}, sp={sp_size_per_worker}) " f"on GPU groups {worker_gpus}")
+        eval_logger.info(f"FastVideo DP: spawning {self.data_parallel} workers (num_gpus={num_gpus_per_worker}, tp={tp_size_per_worker}, sp={sp_size_per_worker}) on GPU groups {worker_gpus}")
 
         config: Dict[str, Any] = {
             "model_path": self.model_path,

@@ -55,7 +55,7 @@ def vcrbench_doc_to_visual(doc: Document) -> list[str]:
         extra_subdirs=("videos",),
     )
     if not os.path.exists(video_path):
-        raise FileNotFoundError(f"VCRBench video not found: {video_path}. Set VCRBENCH_VIDEO_DIR to the directory holding the video_<N>.mp4 files, " "or VCRBENCH_ROOT to the directory holding the videos/ subdirectory.")
+        raise FileNotFoundError(f"VCRBench video not found: {video_path}. Set VCRBENCH_VIDEO_DIR to the directory holding the video_<N>.mp4 files, or VCRBENCH_ROOT to the directory holding the videos/ subdirectory.")
     return [video_path]
 
 

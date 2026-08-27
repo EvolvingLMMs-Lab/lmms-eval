@@ -141,7 +141,7 @@ def gedit_bench_process_results(doc, results, **kwargs):
         eval_logger.warning(f"Failed to parse prediction JSON: {pred}")
         pred = {"text": "", "images": []}
 
-    model_text = pred.get("text", "")
+    _model_text = pred.get("text", "")
     model_images = pred.get("images", [])
 
     # Extract document fields

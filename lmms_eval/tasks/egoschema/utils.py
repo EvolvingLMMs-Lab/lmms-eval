@@ -223,7 +223,7 @@ def egoschema_aggregate_submissions(results, args, task):
         if attempt < max_attempts:
             time.sleep(min(30, 5 * attempt))  # linear backoff, capped at 30s
 
-    raise RuntimeError(f"EgoSchema validation-server scoring failed after {max_attempts} attempts (last: {last_err}). " f"Submission saved at {path} — score it manually.")
+    raise RuntimeError(f"EgoSchema validation-server scoring failed after {max_attempts} attempts (last: {last_err}). Submission saved at {path} — score it manually.")
 
 
 # Factory into different aggregate

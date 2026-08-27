@@ -19,20 +19,20 @@ from lmms_eval.models.model_utils.load_video import read_video
 eval_logger = logging.getLogger("lmms-eval")
 
 require_package("llava", feature="VILA model")
-from llava.constants import (
+from llava.constants import (  # noqa: E402
     DEFAULT_IM_END_TOKEN,
     DEFAULT_IM_START_TOKEN,
     DEFAULT_IMAGE_TOKEN,
     IMAGE_TOKEN_INDEX,
 )
-from llava.conversation import SeparatorStyle, conv_templates
-from llava.mm_utils import (
+from llava.conversation import SeparatorStyle, conv_templates  # noqa: E402
+from llava.mm_utils import (  # noqa: E402
     KeywordsStoppingCriteria,
     get_model_name_from_path,
     process_images,
     tokenizer_image_token,
 )
-from llava.model.builder import load_pretrained_model
+from llava.model.builder import load_pretrained_model  # noqa: E402
 
 
 @register_model("vila")
@@ -201,7 +201,7 @@ class VILA(lmms):
         try:
             vr = VideoReader(video_path, ctx=cpu(0))
             total_frame_num = len(vr)
-            fps = round(vr.get_avg_fps())
+            _fps = round(vr.get_avg_fps())
             frame_idx = np.linspace(0, total_frame_num - 2, max_frames_num, dtype=int)
             spare_frames = vr.get_batch(frame_idx).asnumpy()
             return [Image.fromarray(img) for img in spare_frames]
@@ -218,7 +218,7 @@ class VILA(lmms):
 
         for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
-            if type(doc_to_target) == str:
+            if type(doc_to_target) is str:
                 continuation = doc_to_target
             else:
                 continuation = doc_to_target(self.task_dict[task][split][doc_id])
@@ -249,7 +249,7 @@ class VILA(lmms):
             prompt = conv.get_prompt()
 
             input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self._device)
-            attention_masks = input_ids.ne(self.tokenizer.pad_token_id).long().to(self._device)
+            _attention_masks = input_ids.ne(self.tokenizer.pad_token_id).long().to(self._device)
 
             labels = input_ids.clone()
             # Context part no need to calculate for loss

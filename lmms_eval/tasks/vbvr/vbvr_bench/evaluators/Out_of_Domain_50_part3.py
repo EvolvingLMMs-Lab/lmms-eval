@@ -203,7 +203,7 @@ class OutlineInnermostSquareEvaluator(BaseEvaluator):
         center_x, center_y = w // 2, h // 2
 
         # Detect concentric squares in first frame (GT reference)
-        gt_squares = self._detect_concentric_squares(first_frame)
+        _gt_squares = self._detect_concentric_squares(first_frame)
 
         # 1. Check concentric structure preservation (40%)
         scores["concentric_structure"] = self._evaluate_concentric_structure(first_frame, final_frame, center_x, center_y)
@@ -232,7 +232,7 @@ class OutlineInnermostSquareEvaluator(BaseEvaluator):
 
         squares = []
         prev_color = None
-        current_dist = 0
+        _current_dist = 0
 
         # Scan horizontally from center to right edge
         for x in range(center_x, w):
@@ -628,7 +628,7 @@ class HighlightHorizontalLinesEvaluator(BaseEvaluator):
         gt_lines = self._detect_horizontal_lines(gt_last)
 
         # Count expected horizontal lines (lines with y1 = y2)
-        expected_horizontal_count = len([l for l in gt_lines if abs(l["start"][1] - l["end"][1]) < 10])
+        expected_horizontal_count = len([line for line in gt_lines if abs(line["start"][1] - line["end"][1]) < 10])
 
         # 1. Identification: Check if markings are on horizontal lines (40%)
         # Rule: Must correctly identify horizontal lines (y1 = y2) vs vertical (x1 = x2)
@@ -775,7 +775,7 @@ class AddBordersToUnborderedEvaluator(BaseEvaluator):
 
         # Count shapes with black borders
         final_bordered = self._count_shapes_with_black_border(final_frame, final_shapes)
-        new_borders = final_bordered - first_bordered
+        _new_borders = final_bordered - first_bordered
 
         # CRITICAL CHECK: Shape count should remain approximately the same
         # Adding borders should NOT create new shapes

@@ -202,7 +202,7 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
                 pass  # TODO: Maybe add back legacy processing
 
         if a not in ["A", "B", "C", "D"]:
-            print(f"Warning: Default to A as given {results[i-1]} extracted {a}")
+            print(f"Warning: Default to A as given {results[i - 1]} extracted {a}")
             a = "A"
 
         metrics["extracted_answers"].append(a)

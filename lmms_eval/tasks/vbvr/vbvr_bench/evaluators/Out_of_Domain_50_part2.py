@@ -89,7 +89,7 @@ class IdentifyNearestSquareRectangleEvaluator(BaseEvaluator):
 
         # Detect rectangles and markings
         gen_rects = self._detect_rectangles(last_frame)
-        gt_rects = self._detect_rectangles(gt_last)
+        _gt_rects = self._detect_rectangles(gt_last)
 
         gen_marking = self._detect_red_marking(last_frame)
         gt_marking = self._detect_red_marking(gt_last)
@@ -176,7 +176,7 @@ class LocateSegmentIntersectionEvaluator(BaseEvaluator):
         if lines is None:
             return []
 
-        return [(l[0][0], l[0][1], l[0][2], l[0][3]) for l in lines]
+        return [(line[0][0], line[0][1], line[0][2], line[0][3]) for line in lines]
 
     def _line_intersection(self, line1: Tuple, line2: Tuple) -> Optional[Tuple[float, float]]:
         """Calculate intersection point of two line segments."""

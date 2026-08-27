@@ -601,7 +601,7 @@ async def export_yaml(request: ExportYamlRequest) -> ExportYamlResponse:
     if request.device:
         config["device"] = request.device
 
-    header = "# LMMs-Eval config exported from Web UI\n" "# Usage: python -m lmms_eval --config <this_file>.yaml\n" "# CLI args override YAML values.\n\n"
+    header = "# LMMs-Eval config exported from Web UI\n# Usage: python -m lmms_eval --config <this_file>.yaml\n# CLI args override YAML values.\n\n"
     yaml_content = header + yaml.dump(config, default_flow_style=False, sort_keys=False, allow_unicode=True)
     return ExportYamlResponse(yaml_content=yaml_content)
 

@@ -12,10 +12,8 @@ import numpy as np
 
 from ..utils import (
     compute_frame_difference,
-    compute_mse,
     compute_psnr,
     compute_ssim,
-    get_frame_count,
     get_video_frames,
     get_video_info,
     linear_score,
@@ -279,7 +277,7 @@ class BaseEvaluator(ABC):
             differences.append(diff)
 
         # Calculate statistics
-        mean_diff = np.mean(differences)
+        _mean_diff = np.mean(differences)
         std_diff = np.std(differences)
         max_diff = np.max(differences)
 

@@ -82,7 +82,7 @@ def mathvista_process_results(doc, results):
 
 
 def mathvista_aggregate_results(results, args, *, calculate_gain=False, random_scores=None):
-    split_flag = results[0]["metadata"]["split"]
+    _split_flag = results[0]["metadata"]["split"]
     full_pids = [result["question_id"] for result in results]
     total = len(results)
     correct = sum(1 for idx, pid in enumerate(full_pids) if results[idx]["true_false"])

@@ -2,30 +2,59 @@ import os
 
 import numpy as np
 from decord import VideoReader, cpu
-from loguru import logger as eval_logger
 from PIL import Image
 
 from lmms_eval.tasks.sitebench.utils import (
-    UpperLetters,
+    UpperLetters as UpperLetters,
+)
+from lmms_eval.tasks.sitebench.utils import (
     _format_neo_ov_video_content,
     _get_specific_kwarg,
-    aggregate_3d_information_understanding_acc,
-    aggregate_3d_information_understanding_caa,
-    aggregate_counting_and_existence_acc,
-    aggregate_counting_and_existence_caa,
-    aggregate_movement_prediction_and_navigation_acc,
-    aggregate_movement_prediction_and_navigation_caa,
-    aggregate_multiview_and_crossimage_reasoning_acc,
-    aggregate_multiview_and_crossimage_reasoning_caa,
-    aggregate_object_localization_and_positioning_acc,
-    aggregate_object_localization_and_positioning_caa,
-    aggregate_spatial_relationship_reasoning_acc,
-    aggregate_spatial_relationship_reasoning_caa,
     base_cache_dir,
     cache_name,
-    spatial_aggregate_results,
     spatial_doc_to_text_video,
-    spatial_process_results,
+)
+from lmms_eval.tasks.sitebench.utils import (
+    aggregate_3d_information_understanding_acc as aggregate_3d_information_understanding_acc,
+)
+from lmms_eval.tasks.sitebench.utils import (
+    aggregate_3d_information_understanding_caa as aggregate_3d_information_understanding_caa,
+)
+from lmms_eval.tasks.sitebench.utils import (
+    aggregate_counting_and_existence_acc as aggregate_counting_and_existence_acc,
+)
+from lmms_eval.tasks.sitebench.utils import (
+    aggregate_counting_and_existence_caa as aggregate_counting_and_existence_caa,
+)
+from lmms_eval.tasks.sitebench.utils import (
+    aggregate_movement_prediction_and_navigation_acc as aggregate_movement_prediction_and_navigation_acc,
+)
+from lmms_eval.tasks.sitebench.utils import (
+    aggregate_movement_prediction_and_navigation_caa as aggregate_movement_prediction_and_navigation_caa,
+)
+from lmms_eval.tasks.sitebench.utils import (
+    aggregate_multiview_and_crossimage_reasoning_acc as aggregate_multiview_and_crossimage_reasoning_acc,
+)
+from lmms_eval.tasks.sitebench.utils import (
+    aggregate_multiview_and_crossimage_reasoning_caa as aggregate_multiview_and_crossimage_reasoning_caa,
+)
+from lmms_eval.tasks.sitebench.utils import (
+    aggregate_object_localization_and_positioning_acc as aggregate_object_localization_and_positioning_acc,
+)
+from lmms_eval.tasks.sitebench.utils import (
+    aggregate_object_localization_and_positioning_caa as aggregate_object_localization_and_positioning_caa,
+)
+from lmms_eval.tasks.sitebench.utils import (
+    aggregate_spatial_relationship_reasoning_acc as aggregate_spatial_relationship_reasoning_acc,
+)
+from lmms_eval.tasks.sitebench.utils import (
+    aggregate_spatial_relationship_reasoning_caa as aggregate_spatial_relationship_reasoning_caa,
+)
+from lmms_eval.tasks.sitebench.utils import (
+    spatial_aggregate_results as spatial_aggregate_results,
+)
+from lmms_eval.tasks.sitebench.utils import (
+    spatial_process_results as spatial_process_results,
 )
 
 

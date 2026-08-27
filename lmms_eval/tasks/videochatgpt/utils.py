@@ -124,8 +124,8 @@ def videochatgpt_process_results_generic(doc, result):
 
     except Exception as e:
         eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
-        review = "Failed to Get a Proper Review."
-        model_name = "Failed Request"
+        _review = "Failed to Get a Proper Review."
+        _model_name = "Failed Request"
         score_correctness = 0
         score_detailed_orientation = 0
         score_context = 0
@@ -157,7 +157,7 @@ def videochatgpt_process_results_temporal(doc, result):
     except Exception as e:
         eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
         review = "Failed to Get a Proper Review."
-        model_name = "Failed Request"
+        _model_name = "Failed Request"
         score = 0
 
     return {"gpt_eval_score_temporal": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred, "score": score}}
@@ -346,7 +346,7 @@ def get_eval_generic(question, answer, pred, task, max_tokens: int, retries: int
         if attempt < retries - 1:
             time.sleep(NUM_SECONDS_TO_SLEEP)
         else:  # If this was the last attempt, log and return empty
-            eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
+            eval_logger.error(f"All {retries} attempts failed.")
             return "", ""
 
     return "", ""
@@ -415,7 +415,7 @@ def get_eval_consistency(question1, question2, answer, pred1, pred2, max_tokens:
         if attempt < retries - 1:
             time.sleep(NUM_SECONDS_TO_SLEEP)
         else:  # If this was the last attempt, log and return empty
-            eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
+            eval_logger.error(f"All {retries} attempts failed.")
             return "", ""
 
     return "", ""
@@ -534,7 +534,7 @@ def videochatgpt_gpt_eval(result_file_path, args, task):
             except Exception as e:
                 eval_logger.error(f"Error for Video Name: {data_dict.get('video_name', 'Unknown')}: {e}")
                 review = "Failed to Get a Proper Review."
-                model_name = "Failed Request"
+                _model_name = "Failed Request"
                 score = 0
 
             # Update the dictionary with the new entries

@@ -1,7 +1,6 @@
 # credit to https://github.com/EleutherAI/lm-evaluation-harness
 import collections
 import inspect
-import logging
 import os
 from functools import partial
 from typing import Dict, List, Literal, Mapping, Optional, Union
@@ -476,7 +475,7 @@ class TaskManager:
                                             "yaml_path": -1,
                                         }
                                     elif tasks_and_groups[tag]["type"] != "tag":
-                                        self.logger.warning(f"The tag {tag} is already registered as a group, this tag will not be registered. " "This may affect tasks you want to call.")
+                                        self.logger.warning(f"The tag {tag} is already registered as a group, this tag will not be registered. This may affect tasks you want to call.")
                                         break
                                     else:
                                         tasks_and_groups[tag]["task"].append(task)

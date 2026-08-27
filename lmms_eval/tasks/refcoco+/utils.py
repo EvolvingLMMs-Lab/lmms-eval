@@ -6,7 +6,7 @@ from pycocotools.coco import COCO
 COCO_METRICS = ["Bleu_4", "Bleu_3", "Bleu_2", "Bleu_1", "METEOR", "ROUGE_L", "CIDEr"]  # , "SPICE"]
 
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 
 def refcoco_bbox_doc_to_visual(doc):
@@ -95,7 +95,7 @@ def refcoco_aggregation_result(results, metric):
     # coco_eval.setEval(score, metric)
 
     # When metric is one of the Bleu, score will be a list
-    if type(score) == list:
+    if type(score) is list:
         n = int(metric.split("_")[-1])
         score = score[n - 1]
 

@@ -111,7 +111,7 @@ class GeminiVerifier(Verifier):
             else:
                 text = self.custom_prompt.format(question=question, prediction=prediction, ground_truth=ground_truth, **kwargs)
         else:
-            text = f"Question: {question}\n\n" f"Ground truth answer: {ground_truth}\n\n" f"Model prediction: {prediction}\n\n" "Is the model's prediction correct? Answer with CORRECT or INCORRECT."
+            text = f"Question: {question}\n\nGround truth answer: {ground_truth}\n\nModel prediction: {prediction}\n\nIs the model's prediction correct? Answer with CORRECT or INCORRECT."
 
         contents: list = []
 

@@ -1,6 +1,8 @@
 import os
 import re
 
+from loguru import logger as eval_logger
+
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 SUFFIX_FOR_VQA = {"yes_no": "Please answer Yes or No.", "multiple_choice": "Please output the letter corresponding to the correct option."}

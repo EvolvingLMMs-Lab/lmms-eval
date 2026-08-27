@@ -14,8 +14,6 @@ import re
 import sys
 from typing import Any, Optional
 
-from loguru import logger as eval_logger
-
 HF_HOME = os.path.expanduser(os.getenv("HF_HOME", "~/.cache/huggingface"))
 
 CORPUS_CACHE = {
@@ -93,7 +91,7 @@ def ewb_process_docs(dataset):
         ]
         for corpus in sorted(missing):
             vids = missing[corpus]
-            lines.append(f"")
+            lines.append("")
             lines.append(f"  [{corpus}] {len(vids)} video(s) missing under {CORPUS_CACHE[corpus]}")
             lines.append(f"    Download:  {_DOWNLOAD_HINT[corpus]}")
             lines.append(f"    Or set:    export EWB_{corpus.upper()}_PATH=/abs/path/to/{corpus.lower()}/videos")
@@ -116,7 +114,7 @@ def ewb_doc_to_visual(doc: dict[str, Any]) -> list[str]:
     # process_docs preflight should have caught this already; fall back to a
     # per-doc error if the task is invoked without the preflight (e.g., when
     # users disable process_docs).
-    raise FileNotFoundError(f"Video for qid={doc['qid']} ({corpus}/{vid}) not found. " f"Download via:\n  {_DOWNLOAD_HINT[corpus]}\n" f"or set EWB_{corpus.upper()}_PATH to a directory containing {vid}.mp4.")
+    raise FileNotFoundError(f"Video for qid={doc['qid']} ({corpus}/{vid}) not found. Download via:\n  {_DOWNLOAD_HINT[corpus]}\nor set EWB_{corpus.upper()}_PATH to a directory containing {vid}.mp4.")
 
 
 DEFAULT_PROMPT = (

@@ -1,7 +1,6 @@
 import time
 
 import numpy as np
-from PIL import Image
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial.distance import cdist
 
@@ -25,7 +24,7 @@ class SimpleAffineTransform:
         self.scale = np.mean(dst_dists) / (np.mean(src_dists) + 1e-10)
 
     def inverse(self):
-        inverse_transform = AffineTransform(-self.translation, 1.0 / self.scale)
+        inverse_transform = SimpleAffineTransform(-self.translation, 1.0 / self.scale)
         return inverse_transform
 
     def __call__(self, coords):
@@ -158,7 +157,7 @@ class HungarianMatcher:
         return l1_cost / scale
 
     def __call__(self, box_gt, box_pred, gt_size, pred_size):
-        aa = time.time()
+        _aa = time.time()
         gt_box_array = self.box2array(box_gt, gt_size)
         pred_box_array = self.box2array(box_pred, pred_size)
         gt_order_array = self.order2array(box_gt)

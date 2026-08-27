@@ -158,7 +158,7 @@ def test_extra_env_reaches_subprocess():
     knobs) through the safe-drain helper."""
     with tempfile.TemporaryDirectory() as tmp:
         log_path = Path(tmp) / "eval.log"
-        cmd = _python_subprocess_cmd("import os, sys; " "sys.stdout.write(os.environ.get('LMMS_EVAL_TEST_TOKEN', 'MISSING'))")
+        cmd = _python_subprocess_cmd("import os, sys; sys.stdout.write(os.environ.get('LMMS_EVAL_TEST_TOKEN', 'MISSING'))")
 
         returncode = asyncio.run(
             JobScheduler._run_subprocess_with_log(
@@ -187,9 +187,7 @@ def test_slurm_distributed_env_scrubbed_from_subprocess(monkeypatch):
 
     with tempfile.TemporaryDirectory() as tmp:
         log_path = Path(tmp) / "eval.log"
-        cmd = _python_subprocess_cmd(
-            "import os, sys; " "leaked = [v for v in ['SLURM_PROCID','SLURM_NTASKS','RANK'," "'LOCAL_RANK','MASTER_ADDR','MASTER_PORT'] if v in os.environ]; " "sys.stdout.write(','.join(leaked) if leaked else 'CLEAN')"
-        )
+        cmd = _python_subprocess_cmd("import os, sys; leaked = [v for v in ['SLURM_PROCID','SLURM_NTASKS','RANK','LOCAL_RANK','MASTER_ADDR','MASTER_PORT'] if v in os.environ]; sys.stdout.write(','.join(leaked) if leaked else 'CLEAN')")
 
         returncode = asyncio.run(JobScheduler._run_subprocess_with_log(cmd, log_path))
 

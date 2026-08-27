@@ -15,7 +15,7 @@ from lmms_eval.models.model_utils.audio_processing import downsample_audio
 
 warnings.filterwarnings("ignore")
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 DEFAULT_IMAGE_TOKEN = "<image>"
 DEFAULT_VIDEO_TOKEN = "<video>"
@@ -131,7 +131,7 @@ class Aero(lmms):
 
     def split_audio(self, audio_arrays):
         CHUNK_LIM = 480000
-        SAMPLE_RATE = 16000
+        _SAMPLE_RATE = 16000
         audio_splits = []
         # Split the loaded audio to 30s chunks and extend the messages content
         for i in range(
@@ -209,7 +209,7 @@ class Aero(lmms):
             task = task[0]
             split = split[0]
             batched_visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
-            flattened_visuals = self.flatten(batched_visuals)
+            _flattened_visuals = self.flatten(batched_visuals)
             batched_messages = []
             audios = []
             for visuals in batched_visuals:

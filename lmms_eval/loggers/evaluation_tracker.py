@@ -147,7 +147,7 @@ class EvaluationTracker:
         self.gated_repo = gated
 
         if not self.api and (push_results_to_hub or push_samples_to_hub):
-            raise ValueError("Hugging Face token is not defined, but 'push_results_to_hub' or 'push_samples_to_hub' is set to True. " "Please provide a valid Hugging Face token by setting the HF_TOKEN environment variable.")
+            raise ValueError("Hugging Face token is not defined, but 'push_results_to_hub' or 'push_samples_to_hub' is set to True. Please provide a valid Hugging Face token by setting the HF_TOKEN environment variable.")
 
         if self.api and hub_results_org == "" and (push_results_to_hub or push_samples_to_hub):
             hub_results_org = self.api.whoami()["name"]
@@ -229,7 +229,7 @@ class EvaluationTracker:
                         repo_type="dataset",
                         commit_message=f"Adding aggregated results for {self.general_config_tracker.model_name}",
                     )
-                    eval_logger.info("Successfully pushed aggregated results to the Hugging Face Hub. " f"You can find them at: {repo_id}")
+                    eval_logger.info(f"Successfully pushed aggregated results to the Hugging Face Hub. You can find them at: {repo_id}")
 
             except Exception as e:
                 eval_logger.warning("Could not save results aggregated")
@@ -326,7 +326,7 @@ class EvaluationTracker:
                         repo_type="dataset",
                         commit_message=f"Adding samples results for {task_name} to {self.general_config_tracker.model_name}",
                     )
-                    eval_logger.info(f"Successfully pushed sample results for task: {task_name} to the Hugging Face Hub. " f"You can find them at: {repo_id}")
+                    eval_logger.info(f"Successfully pushed sample results for task: {task_name} to the Hugging Face Hub. You can find them at: {repo_id}")
 
             except Exception as e:
                 eval_logger.warning("Could not save sample results")
@@ -435,17 +435,17 @@ class EvaluationTracker:
         else:
             dataset_summary += f"{self.general_config_tracker.model_name}\n"
         dataset_summary += (
-            f"The dataset is composed of {len(card_metadata)-1} configuration(s), each one corresponding to one of the evaluated task.\n\n"
+            f"The dataset is composed of {len(card_metadata) - 1} configuration(s), each one corresponding to one of the evaluated task.\n\n"
             f"The dataset has been created from {len(results_files)} run(s). Each run can be found as a specific split in each "
             'configuration, the split being named using the timestamp of the run.The "train" split is always pointing to the latest results.\n\n'
             'An additional configuration "results" store all the aggregated results of the run.\n\n'
             "To load the details from a run, you can for instance do the following:\n"
         )
         if self.general_config_tracker.model_source == "hf":
-            dataset_summary += "```python\nfrom datasets import load_dataset\n" f'data = load_dataset(\n\t"{repo_id}",\n\tname="{latest_model_name}",\n\tsplit="latest"\n)\n```\n\n'
+            dataset_summary += f'```python\nfrom datasets import load_dataset\ndata = load_dataset(\n\t"{repo_id}",\n\tname="{latest_model_name}",\n\tsplit="latest"\n)\n```\n\n'
         dataset_summary += (
             "## Latest results\n\n"
-            f'These are the [latest results from run {latest_datetime}]({last_results_file_path.replace("/resolve/", "/blob/")}) '
+            f"These are the [latest results from run {latest_datetime}]({last_results_file_path.replace('/resolve/', '/blob/')}) "
             "(note that there might be results for other tasks in the repos if successive evals didn't cover the same tasks. "
             'You find each in the results and the "latest" split for each eval):\n\n'
             f"```python\n{results_string}\n```"

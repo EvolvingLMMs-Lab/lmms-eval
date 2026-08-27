@@ -12,7 +12,7 @@ from lmms_eval.tasks._task_utils.video_loader import get_cache_dir
 
 COCO_METRICS = ["Bleu_4", "Bleu_3", "Bleu_2", "Bleu_1", "METEOR", "ROUGE_L", "CIDEr"]  # , "SPICE"]
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 
 def remove_nonascii(text):

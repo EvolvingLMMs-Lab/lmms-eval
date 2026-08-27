@@ -176,7 +176,7 @@ class Phi3v(lmms):
                 else:
                     query = ""
                     for placeholder_id in range(len(visuals)):
-                        query += f"<|image_{placeholder_id+1}|>\n"
+                        query += f"<|image_{placeholder_id + 1}|>\n"
                     query += contexts[i]
                 messages = [{"role": "user", "content": query}]
                 contexts[i] = self._tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)

@@ -335,10 +335,10 @@ def _parse_with_verifier(
         verifier_raw_output = str(payload["choices"][0]["message"]["content"]).strip()
         prediction = parse_verifier_preference(verifier_raw_output) or "error"
     except Exception as exc:  # pragma: no cover - provider failures vary
-        eval_logger.error(f"Multi-Crit verifier failed for {question_id}: " f"{_safe_exception_summary(exc)}")
+        eval_logger.error(f"Multi-Crit verifier failed for {question_id}: {_safe_exception_summary(exc)}")
         prediction = "error"
 
-    eval_logger.info(f"Multi-Crit verifier fallback for {question_id}: " f"model={model_name}, prediction={prediction}")
+    eval_logger.info(f"Multi-Crit verifier fallback for {question_id}: model={model_name}, prediction={prediction}")
     return prediction, model_name, verifier_raw_output
 
 
@@ -426,7 +426,7 @@ def _criteria_for_records(records: Sequence[Mapping[str, Any]]) -> tuple[str, ..
 
     benchmark_types = {str(record["benchmark_type"]) for record in records}
     if len(benchmark_types) != 1:
-        raise ValueError("Multi-Crit aggregators require exactly one benchmark type; " f"received {sorted(benchmark_types)}")
+        raise ValueError(f"Multi-Crit aggregators require exactly one benchmark type; received {sorted(benchmark_types)}")
     benchmark_type = normalize_benchmark_type(benchmark_types.pop())
     return OPEN_ENDED_CRITERIA if benchmark_type == "open-ended" else REASONING_CRITERIA
 
@@ -580,7 +580,7 @@ def multi_crit_aggregate_tradeoff_sensitivity(
     """Aggregate prompt-macro trade-off sensitivity over conflict prompts."""
 
     summary = _compute_metrics(results)
-    eval_logger.info("Multi-Crit TOS: " f"{summary['tradeoff_detected']}/{summary['tradeoff_total']} conflict prompts")
+    eval_logger.info(f"Multi-Crit TOS: {summary['tradeoff_detected']}/{summary['tradeoff_total']} conflict prompts")
     return summary["tradeoff_sensitivity"]
 
 
@@ -590,7 +590,7 @@ def multi_crit_aggregate_conflict_matching(
     """Aggregate pair-micro conflict matching rate (CMR), never prompt-macro."""
 
     summary = _compute_metrics(results)
-    eval_logger.info("Multi-Crit CMR: " f"{summary['conflict_correct']}/{summary['conflict_total']} conflict pairs")
+    eval_logger.info(f"Multi-Crit CMR: {summary['conflict_correct']}/{summary['conflict_total']} conflict pairs")
     return summary["conflict_matching"]
 
 

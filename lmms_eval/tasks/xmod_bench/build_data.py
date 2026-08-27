@@ -128,12 +128,12 @@ def _compute_mismatch_info(
     if not global_skip_positions:
         # Count mismatch exists but our intersection didn't find skip positions
         # (shouldn't happen with valid data; log and skip)
-        print(f"[MISMATCH] WARNING: {subtask} has unequal row counts " f"{set(n_per_file)} but no skip positions found — skipping fix")
+        print(f"[MISMATCH] WARNING: {subtask} has unequal row counts {set(n_per_file)} but no skip positions found — skipping fix")
         return None
 
     global_skip_sorted = sorted(global_skip_positions)
     n_valid = max(n_per_file) - len(global_skip_positions)
-    print(f"[MISMATCH] {subtask}: row counts {sorted(set(n_per_file))} " f"→ keeping {n_valid} instances  (skip positions: {global_skip_sorted})")
+    print(f"[MISMATCH] {subtask}: row counts {sorted(set(n_per_file))} → keeping {n_valid} instances  (skip positions: {global_skip_sorted})")
 
     # Build per-file filtering info
     path_info: dict[str, dict] = {}

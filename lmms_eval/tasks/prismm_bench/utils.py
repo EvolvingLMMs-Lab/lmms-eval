@@ -66,7 +66,7 @@ def prismm_doc_to_visual_whole_page(doc):
             images = convert_from_bytes(pdf_bytes, dpi=144, first_page=page_num, last_page=page_num)
             if images:
                 visuals.append(images[0].convert("RGB"))
-        except Exception as e:
+        except Exception:
             pass
     return visuals
 

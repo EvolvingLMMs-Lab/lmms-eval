@@ -1,5 +1,8 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+
+if TYPE_CHECKING:
+    from PIL import Image
 
 # Configuration for retry logic
 DEFAULT_NUM_RETRIES = 5

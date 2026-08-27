@@ -1,15 +1,13 @@
 import json
 import logging
 import os
-import re
-import shutil
 import subprocess
 from threading import Timer
 
 import numpy as np
 from PIL import Image, ImageDraw
 
-from .latex_processor import clean_latex, normalize_latex, token_add_color_RGB
+from .latex_processor import normalize_latex, token_add_color_RGB
 from .tokenize_latex.tokenize_latex import tokenize_latex
 
 tabular_template = r"""
@@ -83,7 +81,10 @@ def run_cmd(cmd, timeout_sec=30, temp_dir=None):
         env["TEXMFVAR"] = temp_dir
 
     proc = subprocess.Popen(cmd, shell=True, env=env)
-    kill_proc = lambda p: p.kill()
+
+    def kill_proc(p):
+        return p.kill()
+
     timer = Timer(timeout_sec, kill_proc, [proc])
     try:
         timer.start()
@@ -133,7 +134,7 @@ def extrac_bbox_from_color_image(image_path, color_list):
             y_min, y_max, x_min, x_max = min(y_list), max(y_list), min(x_list), max(x_list)
             bbox_list.append([x_min - 1, y_min - 1, x_max + 1, y_max + 1])
 
-        except:
+        except Exception:
             bbox_list.append([])
             continue
 
@@ -145,7 +146,7 @@ def extrac_bbox_from_color_image(image_path, color_list):
 
 def latex2bbox_color(input_arg):
     latex, basename, output_path, temp_dir, total_color_list = input_arg
-    template = tabular_template if "tabular" in latex else formular_template
+    _template = tabular_template if "tabular" in latex else formular_template
     basename = basename.replace(".jpg", "")  # *****
     output_bbox_path = os.path.join(output_path, "bbox", basename + ".jsonl")
     output_vis_path = os.path.join(output_path, "vis", basename + ".png")
@@ -205,7 +206,7 @@ def latex2bbox_color(input_arg):
         os.remove(tex_filename)
         os.remove(log_filename)
         os.remove(aux_filename)
-    except:
+    except Exception:
         pass
     pdf_filename = tex_filename[:-4] + ".pdf"
     if not os.path.exists(pdf_filename):
@@ -231,7 +232,7 @@ def latex2bbox_color(input_arg):
                 draw.rectangle([x_min, y_min, x_max, y_max], fill=None, outline=(0, 250, 0), width=1)
                 try:
                     draw.text((x_min, y_min), token, (250, 0, 0))
-                except:
+                except Exception:
                     pass
 
         vis.save(output_vis_path)

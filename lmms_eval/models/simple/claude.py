@@ -18,7 +18,7 @@ from lmms_eval.models.model_utils.usage_metrics import is_budget_exceeded, log_u
 
 NUM_SECONDS_TO_SLEEP = 5
 
-from loguru import logger
+from loguru import logger  # noqa: E402
 
 eval_logger = logger
 

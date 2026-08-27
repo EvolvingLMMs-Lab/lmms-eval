@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
-from ..utils import compute_optical_flow, normalize_frame_size
+from ..utils import normalize_frame_size
 from .base_evaluator import BaseEvaluator
 
 
@@ -196,7 +196,7 @@ class ControlPanelEvaluator(BaseEvaluator):
 
         # Check if control counts are reasonable
         first_count = sum(len(v) for v in first_controls.values())
-        final_count = sum(len(v) for v in final_controls.values())
+        _final_count = sum(len(v) for v in final_controls.values())
 
         if first_count == 0:
             return 0.5
@@ -536,7 +536,7 @@ class SymbolDeleteEvaluator(BaseEvaluator):
 
     def _evaluate_reorganization(self, first: np.ndarray, final: np.ndarray) -> float:
         """Check if symbols shift left correctly."""
-        first_symbols = self._detect_symbols(first)
+        _first_symbols = self._detect_symbols(first)
         final_symbols = self._detect_symbols(final)
 
         if not final_symbols:
@@ -1517,7 +1517,7 @@ class AnimalSizeSortingEvaluator(BaseEvaluator):
             return 0.0  # STRICT: Different number of animals
 
         # Check size preservation
-        size_diffs = [abs(f - l) / max(f, 1) for f, l in zip(first_sizes, final_sizes)]
+        size_diffs = [abs(first_size - final_size) / max(first_size, 1) for first_size, final_size in zip(first_sizes, final_sizes)]
         return 1.0 - min(1.0, np.mean(size_diffs))
 
     def _evaluate_completeness(self, first: np.ndarray, final: np.ndarray) -> float:

@@ -245,7 +245,7 @@ def mmvp_aggregate_pair_results(results: List[Dict[str, Any]]) -> float:
                 correct_pairs += 1
         elif len(pair_results) == 1:
             # Handle edge case of incomplete pairs (shouldn't happen with full dataset)
-            eval_logger.warning(f"MMVP: Incomplete pair at index {pair_idx}, " f"only {len(pair_results)} sample(s)")
+            eval_logger.warning(f"MMVP: Incomplete pair at index {pair_idx}, only {len(pair_results)} sample(s)")
 
     if total_pairs == 0:
         return 0.0

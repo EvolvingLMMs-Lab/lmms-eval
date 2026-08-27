@@ -147,7 +147,7 @@ def is_str_valid_score_format_brackets(s):
 
             scores[key] = value
 
-        fetch_words = [f"score{i+1}" for i in range(length)]
+        fetch_words = [f"score{i + 1}" for i in range(length)]
         # Check if at least 'score1' and 'score2' are present
         return all(key in scores for key in fetch_words)
 
@@ -227,12 +227,12 @@ def mllm_output_to_dict(input_string, give_up_parsing=False):
             new_data = json.loads(json_str)
             if not isinstance(new_data["score"], list):
                 new_data["score"] = [new_data["score"]]
-        except:
+        except Exception:
             print("Now fixing: ", json_str)
             try:
                 new_data = json.loads(fix_json(json_str))
                 return new_data
-            except:
+            except Exception:
                 print("Error: Cannot fix", json_str)
                 return False
         return new_data

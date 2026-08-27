@@ -2,15 +2,12 @@
 Specific evaluators for In-Domain_50 tasks (Part 2).
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
 
 from ..utils import (
-    color_distance,
-    compute_optical_flow,
-    detect_shapes,
     normalize_frame_size,
     safe_distance,
 )
@@ -1266,7 +1263,7 @@ class KeyDoorMatchingEvaluator(BaseEvaluator):
         first_keys = self._detect_keys(first_frame)
         first_doors = self._detect_doors(first_frame)
         last_keys = self._detect_keys(last_frame)
-        last_doors = self._detect_doors(last_frame)
+        _last_doors = self._detect_doors(last_frame)
 
         # Store detection info for debugging
         scores["num_first_keys"] = len(first_keys)
@@ -1350,7 +1347,7 @@ class KeyDoorMatchingEvaluator(BaseEvaluator):
 
         # Calculate displacement from start to end
         end_pos = positions[-1]
-        displacement = safe_distance(start_pos, end_pos)
+        _displacement = safe_distance(start_pos, end_pos)
 
         # Score based on how far agent traveled from start
         # Agent should travel a significant distance to reach keys/doors
@@ -1388,12 +1385,12 @@ class KeyDoorMatchingEvaluator(BaseEvaluator):
 
             # Find minimum distance agent got to this key
             min_dist_to_key = float("inf")
-            visit_frame_idx = -1
+            _visit_frame_idx = -1
             for i, pos in enumerate(positions):
                 dist = safe_distance(pos, key_pos)
                 if dist < min_dist_to_key:
                     min_dist_to_key = dist
-                    visit_frame_idx = i
+                    _visit_frame_idx = i
 
             # CRITICAL: Agent must have PHYSICALLY moved to the key position
             # Key position must be significantly different from start position
@@ -2371,8 +2368,8 @@ class SpotUniqueColorEvaluator(BaseEvaluator):
             M = cv2.moments(cnt)
             if M["m00"] == 0:
                 continue
-            cx = int(M["m10"] / M["m00"])
-            cy = int(M["m01"] / M["m00"])
+            _cx = int(M["m10"] / M["m00"])
+            _cy = int(M["m01"] / M["m00"])
 
             # For outline markings, the center might be the center of the outlined shape
             # Get bounding rect to find the approximate center of the marked region

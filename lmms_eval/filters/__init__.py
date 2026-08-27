@@ -1,4 +1,5 @@
-from lmms_eval.api.filter import Filter, FilterEnsemble
+from lmms_eval.api.filter import Filter as Filter
+from lmms_eval.api.filter import FilterEnsemble as FilterEnsemble
 
 from . import extraction, selection, transformation
 

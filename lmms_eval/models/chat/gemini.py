@@ -149,7 +149,7 @@ class Gemini(GeminiSimple):
             started_at = time.time()
             rate_limited = False
             last_error_msg = "unknown error"
-            token_counts_result = (0, 0, 0)
+            _token_counts_result = (0, 0, 0)
 
             for attempt in range(self.max_retries):
                 try:
@@ -244,7 +244,7 @@ class Gemini(GeminiSimple):
                 config=self.adaptive_config,
             )
             if decision.next_concurrency != decision.current_concurrency:
-                eval_logger.info(f"Adaptive concurrency: {decision.current_concurrency} -> {decision.next_concurrency} " f"(fail={decision.failure_rate:.3f}, rl={decision.rate_limit_rate:.3f}, p95={decision.p95_latency_s:.3f}s)")
+                eval_logger.info(f"Adaptive concurrency: {decision.current_concurrency} -> {decision.next_concurrency} (fail={decision.failure_rate:.3f}, rl={decision.rate_limit_rate:.3f}, p95={decision.p95_latency_s:.3f}s)")
             current_concurrency = decision.next_concurrency
             failed_requests = 0
             rate_limited_requests = 0

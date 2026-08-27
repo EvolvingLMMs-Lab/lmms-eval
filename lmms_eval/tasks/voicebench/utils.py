@@ -52,10 +52,10 @@ def voicebench_doc_to_audio(doc):
                     elif str(type(audio_array).__name__) == "Tensor":
                         try:
                             audio_array = audio_array.cpu().numpy()
-                        except:
+                        except Exception:
                             try:
                                 audio_array = audio_array.detach().cpu().numpy()
-                            except:
+                            except Exception:
                                 audio_array = np.array(audio_array)
 
                     sampling_rate = 16000  # default
@@ -1174,7 +1174,7 @@ def voicebench_process_results_qa(doc, results):
     parsed_preds = []
     pedant_scores = []
     gpt_scores = []
-    combined_scores = []
+    _combined_scores = []
 
     try:
         from qa_metrics.pedant import PEDANT
@@ -1453,7 +1453,7 @@ def voicebench_process_results_mcq(doc, results):
     ground_truth = get_column_value(doc, ["reference"])
     cnt = 0
     for idx in range(len(results)):
-        if results[idx] == None:
+        if results[idx] is None:
             results[idx] = random.choice(["A", "B", "C", "D"])
             cnt += 1
     correct_predictions = sum([1 for pred, gt in zip(results, ground_truth) if extract_answer(pred) == gt])

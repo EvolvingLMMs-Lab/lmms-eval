@@ -69,7 +69,6 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
     question = doc_to_text(doc)
     extra_info = {"question": question}
     for i, a in enumerate(results, start=1):
-
         score_dict = compute_score(data_source="aime", solution_str=a.strip(), ground_truth=gt, extra_info=extra_info)
         acc_score = score_dict["acc_score"]
 

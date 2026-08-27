@@ -193,7 +193,7 @@ class DiffusersWMBase(lmms):
         # lazily to keep diffusers out of the module-import path.
         self.plan = ParallelPlan.from_env(tp_size=tp_size)
         if self.plan.tp_size != 1:
-            raise NotImplementedError(f"{type(self).__name__}: tp_size={self.plan.tp_size} not yet supported. " "DiffusersWMBase is DP-only; TP support is planned in a follow-up PR.")
+            raise NotImplementedError(f"{type(self).__name__}: tp_size={self.plan.tp_size} not yet supported. DiffusersWMBase is DP-only; TP support is planned in a follow-up PR.")
 
         self.pretrained = str(pretrained)
         self.output_dir = str(output_dir)
@@ -210,10 +210,7 @@ class DiffusersWMBase(lmms):
 
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
         eval_logger.info(
-            f"{type(self).__name__} init: pretrained={self.pretrained}, "
-            f"rank={self.plan.global_rank}/{self.plan.world_size}, "
-            f"device={self.plan.device_str()}, dtype={self.dtype_name}, "
-            f"seed={self.seed}, output_dir={self.output_dir}"
+            f"{type(self).__name__} init: pretrained={self.pretrained}, rank={self.plan.global_rank}/{self.plan.world_size}, device={self.plan.device_str()}, dtype={self.dtype_name}, seed={self.seed}, output_dir={self.output_dir}"
         )
 
     @property
@@ -241,7 +238,7 @@ class DiffusersWMBase(lmms):
     def _load_pipeline(self) -> None:
         self._patch_pipeline_cls_before_load()
         if self._pipeline_cls is None:
-            raise TypeError(f"{type(self).__name__} must set _pipeline_cls before _load_pipeline runs " "(either as a class attribute or inside _patch_pipeline_cls_before_load)")
+            raise TypeError(f"{type(self).__name__} must set _pipeline_cls before _load_pipeline runs (either as a class attribute or inside _patch_pipeline_cls_before_load)")
         device = self.plan.device_str()
         dtype = _resolve_torch_dtype(self.dtype_name)
         eval_logger.info(f"Loading {self._pipeline_cls.__name__} from {self.pretrained} on {device}")
@@ -377,7 +374,7 @@ class DiffusersWMBase(lmms):
                 eval_logger.error(f"Output NOT on disk after export: {out_path}")
             return str(out_path)
         except Exception as exc:
-            eval_logger.error(f"Generation failed: task={task} doc_id={doc_id}: {exc}\n" f"{traceback.format_exc()}")
+            eval_logger.error(f"Generation failed: task={task} doc_id={doc_id}: {exc}\n{traceback.format_exc()}")
             return f"[GENERATION_FAILED] {exc}"
 
     def generate_until(self, requests: List[Instance]) -> List[str]:

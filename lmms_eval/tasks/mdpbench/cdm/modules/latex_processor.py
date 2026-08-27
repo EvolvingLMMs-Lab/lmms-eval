@@ -1,11 +1,4 @@
-import json
-import logging
-import os
 import re
-import shutil
-
-import numpy as np
-from PIL import Image
 
 SKIP_PATTERNS = [r"\{", r"\}", r"[\[\]]", r"\\begin\{.*?\}", r"\\end\{.*?\}", r"\^", r"\_", r"\\.*rule.*", r"\\.*line.*", r"\[[\-.0-9]+[epm][xtm]\]"]
 SKIP_Tokens = [
@@ -126,41 +119,42 @@ def find_matching_brace(sequence, start_index, brace=["{", "}"]):
     return -1
 
 
-def normalize_latex(l, rm_trail=False):
-    if "tabular" in l:
+def normalize_latex(l, rm_trail=False):  # noqa: E741
+    latex = l
+    if "tabular" in latex:
         latex_type = "tabular"
     else:
         latex_type = "formula"
 
     if rm_trail:
-        l = remove_trailing_latex(l)
-    l = l.strip().replace(r"\pmatrix", r"\mypmatrix").replace(r"\matrix", r"\mymatrix")
+        latex = remove_trailing_latex(latex)
+    latex = latex.strip().replace(r"\pmatrix", r"\mypmatrix").replace(r"\matrix", r"\mymatrix")
 
     # TODO \raggedright \arraybackslash, these align method, difficult to handle, remove it.
     for item in ["\\raggedright", "\\arraybackslash"]:
-        l = l.replace(item, "")
+        latex = latex.replace(item, "")
 
     for item in ["\\lowercase", "\\uppercase"]:
-        l = l.replace(item, "")
+        latex = latex.replace(item, "")
 
     # TODO \hspace {1 . 5 cm}, for formula, change to \hspace{1.5cm}, for table, remove it.
     pattern = r"\\[hv]space { [.0-9a-z ]+ }"
-    old_token = re.findall(pattern, l, re.DOTALL)
+    old_token = re.findall(pattern, latex, re.DOTALL)
     if latex_type == "tabular":
         new_token = ["" for item in old_token]
     else:
         new_token = [item.replace(" ", "") for item in old_token]
     for bef, aft in zip(old_token, new_token):
-        l = l.replace(bef, aft)
+        latex = latex.replace(bef, aft)
 
     # TODO take \begin {tabular} {} as one token
     # TODO there are \begin{array} in table too，so the process should run in both formula and table.
     if latex_type == "tabular":
-        l = l.replace("\\begin {tabular}", "\\begin{tabular}")
-        l = l.replace("\\end {tabular}", "\\end{tabular}")
-        l = l.replace("\\begin {array}", "\\begin{array}")
-        l = l.replace("\\end {array}", "\\end{array}")
-        l_split = l.split(" ")
+        latex = latex.replace("\\begin {tabular}", "\\begin{tabular}")
+        latex = latex.replace("\\end {tabular}", "\\end{tabular}")
+        latex = latex.replace("\\begin {array}", "\\begin{array}")
+        latex = latex.replace("\\end {array}", "\\end{array}")
+        l_split = latex.split(" ")
         idx = 0
         while idx < len(l_split):
             token = l_split[idx]
@@ -171,10 +165,10 @@ def normalize_latex(l, rm_trail=False):
                 l_split = l_split[0:idx] + [new_token] + l_split[end_idx + 1 :]
                 break
             idx += 1
-        l = " ".join(l_split)
+        latex = " ".join(l_split)
 
         # TODO some complex format, hart to deal with re.match, so using brace match, such as：\cmidrule ( l { 3 p t } r { 3 p t } ) { 1 - 1 }
-        l_split = l.split(" ")
+        l_split = latex.split(" ")
         idx = 0
         while idx < len(l_split):
             token = l_split[idx]
@@ -188,121 +182,121 @@ def normalize_latex(l, rm_trail=False):
                 new_token = "".join(l_split[idx : end_idx + 1])
                 l_split = l_split[0:idx] + [new_token] + l_split[end_idx + 1 :]
             idx += 1
-        l = " ".join(l_split)
+        latex = " ".join(l_split)
 
     pattern = r"\\begin{array} { [lrc ]+ }"
-    old_token = re.findall(pattern, l, re.DOTALL)
+    old_token = re.findall(pattern, latex, re.DOTALL)
     new_token = [item.replace("\\begin{array} ", "<s>").replace(" ", "").replace("<s>", "\\begin{array} ") for item in old_token]
     for bef, aft in zip(old_token, new_token):
-        l = l.replace(bef, aft)
+        latex = latex.replace(bef, aft)
 
     # TODO token such \not= should be one token
     pattern = r"\\not [<>+=\-]"
-    old_token = re.findall(pattern, l, re.DOTALL)
+    old_token = re.findall(pattern, latex, re.DOTALL)
     new_token = [item.replace(" ", "") for item in old_token]
     for bef, aft in zip(old_token, new_token):
-        l = l.replace(bef, aft)
+        latex = latex.replace(bef, aft)
 
     # TODO tokens such as \dots \exp \sinh, split them to parts, so the bbox match will be easier.
 
-    l = " " + l + " "
-    l = l.replace(" \\ldots ", " . . . ")
-    l = l.replace(" \\cdots ", " . . . ")
-    l = l.replace(" \\dots ", " . . . ")
-    l = l.replace(" \\dotsb ", " . . . ")
-    l = l.replace(" \\log ", " \\mathrm { l o g } ")
-    l = l.replace(" \\exp ", " \\mathrm { e x p } ")
-    l = l.replace(" \\sin ", " \\mathrm { s i n } ")
-    l = l.replace(" \\cos ", " \\mathrm { c o s } ")
-    l = l.replace(" \\tan ", " \\mathrm { t a n } ")
-    l = l.replace(" \\tanh ", " \\mathrm { t a n h } ")
-    l = l.replace(" \\cosh ", " \\mathrm { c o s h } ")
-    l = l.replace(" \\sinh ", " \\mathrm { s i n h } ")
+    latex = " " + latex + " "
+    latex = latex.replace(" \\ldots ", " . . . ")
+    latex = latex.replace(" \\cdots ", " . . . ")
+    latex = latex.replace(" \\dots ", " . . . ")
+    latex = latex.replace(" \\dotsb ", " . . . ")
+    latex = latex.replace(" \\log ", " \\mathrm { l o g } ")
+    latex = latex.replace(" \\exp ", " \\mathrm { e x p } ")
+    latex = latex.replace(" \\sin ", " \\mathrm { s i n } ")
+    latex = latex.replace(" \\cos ", " \\mathrm { c o s } ")
+    latex = latex.replace(" \\tan ", " \\mathrm { t a n } ")
+    latex = latex.replace(" \\tanh ", " \\mathrm { t a n h } ")
+    latex = latex.replace(" \\cosh ", " \\mathrm { c o s h } ")
+    latex = latex.replace(" \\sinh ", " \\mathrm { s i n h } ")
 
     # ** token such as \big( should be one token
     pattern = r"\\[Bb]ig[g]?[glrm]? [(){}|\[\]] "
-    old_token = re.findall(pattern, l, re.DOTALL)
+    old_token = re.findall(pattern, latex, re.DOTALL)
     new_token = [item.replace(" ", "") for item in old_token]
     for bef, aft in zip(old_token, new_token):
-        l = l.replace(bef, aft + " ")
+        latex = latex.replace(bef, aft + " ")
 
     pattern = r"\\[Bb]ig[g]?[glrm]? \\.*? "
-    old_token = re.findall(pattern, l, re.DOTALL)
+    old_token = re.findall(pattern, latex, re.DOTALL)
     new_token = [item.replace(" ", "") for item in old_token]
     for bef, aft in zip(old_token, new_token):
-        l = l.replace(bef, aft + " ")
+        latex = latex.replace(bef, aft + " ")
 
     # TODO when \operatorname * meets mathcolor it comes error, yet the * is useless, so we simply remove it bynow.
     pattern = r"\\operatorname \*"
-    old_token = re.findall(pattern, l, re.DOTALL)
+    old_token = re.findall(pattern, latex, re.DOTALL)
     new_token = ["\\operatorname" for item in old_token]
     for bef, aft in zip(old_token, new_token):
-        l = l.replace(bef, aft)
+        latex = latex.replace(bef, aft)
 
     # TODO \lefteqn will lead to letter overlap, it's harmfull for render, so simply remove it.
-    l = l.replace("\\lefteqn", "")
+    latex = latex.replace("\\lefteqn", "")
 
     # TODO \footnote can not seem as ONE_Tail_Invisb_Tokens(usually this type token add color by \mathrm {\color(x)}, yet \footnode should be \color{\footnote{x}}), so we simple change it to "^".
-    l = l.replace("\\footnote ", "^ ")
+    latex = latex.replace("\\footnote ", "^ ")
 
     # TODO \' can not be rendered separately(cause to different visulize performence), so we take these tokens as one token such as \' e -> \'e, on the other hand, if { after \' then render them separately.
     pattern = r"\\\' [^{] "
-    old_token = re.findall(pattern, l, re.DOTALL)
+    old_token = re.findall(pattern, latex, re.DOTALL)
     new_token = [item.replace(" ", "") for item in old_token]
     for bef, aft in zip(old_token, new_token):
-        l = l.replace(bef, aft + " ")
+        latex = latex.replace(bef, aft + " ")
 
     # TODO [ -1.5ex ] [ 1.5pt ] [ 3 mm ] some layout adjustment, no need to render. combine them as one token.
     if latex_type == "tabular":
         pattern = r"\[ [\-.0-9 ]+[exptcm ]+ \]"
-        old_token = re.findall(pattern, l, re.DOTALL)
+        old_token = re.findall(pattern, latex, re.DOTALL)
         new_token = [item.replace(" ", "") for item in old_token]
         for bef, aft in zip(old_token, new_token):
-            l = l.replace(bef, aft)
+            latex = latex.replace(bef, aft)
 
     # ** \parbox { 3cm } {} shoudle be combined as one token
     pattern = r"\\parbox {[^{]+}"
-    old_token = re.findall(pattern, l, re.DOTALL)
+    old_token = re.findall(pattern, latex, re.DOTALL)
     new_token = [item.replace(" ", "") for item in old_token]
     for bef, aft in zip(old_token, new_token):
-        l = l.replace(bef, aft)
+        latex = latex.replace(bef, aft)
 
     # ** \raisebox{<lift>}[<height>][<depth>] {} shoudle be combined as one token, \raisebox{-1.5ex}[0pt]
     pattern = r"\\raisebox {[^{]+} [\[\]0-9 exptcm]+{"
-    old_token = re.findall(pattern, l, re.DOTALL)
+    old_token = re.findall(pattern, latex, re.DOTALL)
     new_token = [item.replace(" ", "") for item in old_token]
     for bef, aft in zip(old_token, new_token):
-        l = l.replace(bef, aft[0:-1] + " {")
+        latex = latex.replace(bef, aft[0:-1] + " {")
 
     # ** \char shoudle be combined as one token
     pattern = r"{ \\char[0-9\' ]+}"
-    old_token = re.findall(pattern, l, re.DOTALL)
+    old_token = re.findall(pattern, latex, re.DOTALL)
     new_token = [item.replace(" ", "") for item in old_token]
     for bef, aft in zip(old_token, new_token):
-        l = l.replace(bef, "{ " + aft[1:-1] + " }")
+        latex = latex.replace(bef, "{ " + aft[1:-1] + " }")
 
     # ** \not xx shoudle be combined as one token
     pattern = r"\\not [\\=\<\>][^ ]+ "
-    old_token = re.findall(pattern, l, re.DOTALL)
+    old_token = re.findall(pattern, latex, re.DOTALL)
     new_token = [item.replace(" ", "") for item in old_token]
     for bef, aft in zip(old_token, new_token):
-        l = l.replace(bef, aft + " ")
+        latex = latex.replace(bef, aft + " ")
 
     # ** \specialrule{1pt}{2pt}{2pt}, special lines, shoudle be combined as one token
     pattern = r"\\specialrule {[ .0-9a-z]+} {[ .0-9a-z]+} {[ .0-9a-z]+}"
-    old_token = re.findall(pattern, l, re.DOTALL)
+    old_token = re.findall(pattern, latex, re.DOTALL)
     new_token = [item.replace(" ", "") for item in old_token]
     for bef, aft in zip(old_token, new_token):
-        l = l.replace(bef, aft)
+        latex = latex.replace(bef, aft)
 
     # ** for easier add color, the original color should be removed, there are two type of color for now: \color[rgb]{0, 1, 0} and \color{red}
     pattern = r"\\colorbox[ \[\]RGBrgb]+{ [A-Za-z 0-9,!]+ } |\\color[ \[\]RGBrgb]+{ [A-Za-z 0-9,!]+ } |\\textcolor[ \[\]RGBrgb]+{ [A-Za-z 0-9,!]+ } |\\cellcolor[ \[\]RGBrgb]+{ [A-Za-z 0-9,!]+ } "
-    old_token = re.findall(pattern, l, re.DOTALL)
+    old_token = re.findall(pattern, latex, re.DOTALL)
     for bef in old_token:
-        l = l.replace(bef, "")
+        latex = latex.replace(bef, "")
 
     # ** filling the missing brace [] and {} according to token.
-    l_split = l.split(" ")
+    l_split = latex.split(" ")
     idx = 0
     while idx < len(l_split):
         token = l_split[idx]
@@ -341,9 +335,9 @@ def normalize_latex(l, rm_trail=False):
                 l_split = l_split[0 : end1 + 1] + ["{"] + [l_split[end1 + 1]] + ["}"] + l_split[end1 + 2 :]
 
         idx += 1
-    l = " ".join(l_split)
+    latex = " ".join(l_split)
 
-    return l
+    return latex
 
 
 def token_add_color(l_split, idx, render_dict):

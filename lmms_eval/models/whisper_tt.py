@@ -207,7 +207,7 @@ class WhisperTT(lmms):
         start_time = time.time()
 
         # Prepare request
-        url = f"{self.base_url}/audio/transcriptions"
+        _url = f"{self.base_url}/audio/transcriptions"
         headers = {"accept": "application/json", "Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"

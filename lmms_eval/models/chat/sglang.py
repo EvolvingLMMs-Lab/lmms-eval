@@ -18,7 +18,6 @@ from concurrent.futures import ThreadPoolExecutor
 from json import JSONDecodeError
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
-import numpy as np
 from accelerate import Accelerator, DistributedType
 from PIL import Image
 from sglang import Engine
@@ -33,7 +32,7 @@ from lmms_eval.protocol import ChatMessages
 
 warnings.filterwarnings("ignore")
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Optional imports with version-compatibility fallbacks
@@ -62,7 +61,7 @@ def _build_mcp_client(server_path: str) -> "MCPClient":
     try:
         from lmms_eval.mcp.client import MCPClient
     except ImportError as exc:
-        raise ImportError("MCP support requires the optional 'mcp' dependency. " "Install with: pip install 'lmms_eval[mcp]'") from exc
+        raise ImportError("MCP support requires the optional 'mcp' dependency. Install with: pip install 'lmms_eval[mcp]'") from exc
     return MCPClient(server_path)
 
 

@@ -2,7 +2,7 @@
 Specific evaluators for In-Domain_50 tasks (Part 5).
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -584,7 +584,7 @@ class LightSequenceEvaluator(BaseEvaluator):
             lights.append({"center": (cx, cy), "area": area, "is_on": is_on, "color": mean_color})
 
         # Sort by x position (left to right)
-        lights.sort(key=lambda l: l["center"][0])
+        lights.sort(key=lambda light: light["center"][0])
         return lights
 
     def _detect_lights_by_color(self, frame: np.ndarray) -> List[Dict]:
@@ -635,11 +635,11 @@ class LightSequenceEvaluator(BaseEvaluator):
                             cx = int(M["m10"] / M["m00"])
                             cy = int(M["m01"] / M["m00"])
                             # Check not already added as gold
-                            is_new = all(abs(l["center"][0] - cx) > 15 for l in lights)
+                            is_new = all(abs(light["center"][0] - cx) > 15 for light in lights)
                             if is_new:
                                 lights.append({"center": (cx, cy), "is_on": False, "area": area})
 
-        lights.sort(key=lambda l: l["center"][0])
+        lights.sort(key=lambda light: light["center"][0])
         return lights
 
     def _evaluate_rule_understanding(self, gen_lights: List[Dict], gt_lights: List[Dict]) -> float:
@@ -648,8 +648,8 @@ class LightSequenceEvaluator(BaseEvaluator):
             return 0.5
 
         # Get on/off pattern
-        gt_pattern = [l["is_on"] for l in gt_lights]
-        gen_pattern = [l["is_on"] for l in gen_lights]
+        gt_pattern = [light["is_on"] for light in gt_lights]
+        gen_pattern = [light["is_on"] for light in gen_lights]
 
         if len(gen_pattern) != len(gt_pattern):
             # Different number of lights
@@ -713,8 +713,8 @@ class LightSequenceEvaluator(BaseEvaluator):
             return 0.0
 
         # Check if ON lights have gold/yellow color
-        on_lights = [l for l in gen_lights if l.get("is_on", False)]
-        off_lights = [l for l in gen_lights if not l.get("is_on", False)]
+        on_lights = [light for light in gen_lights if light.get("is_on", False)]
+        _off_lights = [light for light in gen_lights if not light.get("is_on", False)]
 
         quality_scores = []
 
@@ -1828,7 +1828,7 @@ class ClockTimeEvaluator(BaseEvaluator):
         if not video_frames or gt_final_frame is None:
             return 0.0
 
-        first_frame = video_frames[0]
+        _first_frame = video_frames[0]
         gen_final = video_frames[-1]
         gt_final = gt_final_frame
 
@@ -2120,7 +2120,7 @@ class RotationEvaluator(BaseEvaluator):
     def _evaluate_rendering_quality(self, gen_frame: np.ndarray, gt_frame: np.ndarray) -> float:
         """Evaluate 3D rendering quality."""
         gen_voxels = self._detect_voxels(gen_frame)
-        gt_voxels = self._detect_voxels(gt_frame)
+        _gt_voxels = self._detect_voxels(gt_frame)
 
         # Check if voxels have clear edges (black borders)
         gen_gray = cv2.cvtColor(gen_frame, cv2.COLOR_BGR2GRAY)
@@ -2229,7 +2229,7 @@ class CommunicatingVesselsEvaluator(BaseEvaluator):
         gt_mean = np.mean(gt_levels)
 
         # Generated levels should also be approximately equal
-        gen_std = np.std(gen_levels)
+        _gen_std = np.std(gen_levels)
         gen_range = max(gen_levels) - min(gen_levels)
         gen_mean = np.mean(gen_levels)
 

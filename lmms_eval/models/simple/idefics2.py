@@ -16,11 +16,11 @@ from lmms_eval.models.model_utils.load_video import load_video_decord
 
 warnings.filterwarnings("ignore")
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 DEFAULT_IMAGE_TOKEN = "<image>"
 try:
-    import flash_attn
+    import flash_attn as flash_attn
 
     best_fit_attn_implementation = "flash_attention_2"
 except ImportError:
@@ -201,8 +201,8 @@ class Idefics2(lmms):
             # this is safe to assume because the `grouper` object ensures it.
             gen_kwargs = all_gen_kwargs[0]
             #
-            until = gen_kwargs.pop("until", None)
-            image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio", None)
+            _until = gen_kwargs.pop("until", None)
+            _image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio", None)
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:

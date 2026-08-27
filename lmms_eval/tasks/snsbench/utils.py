@@ -92,7 +92,6 @@ def sns_aggregate_results(results):
 
 
 if __name__ == "__main__":
-
     from datasets import load_dataset
 
     ds = load_dataset("morpheushoc/SNS-Bench-VL")["test"]

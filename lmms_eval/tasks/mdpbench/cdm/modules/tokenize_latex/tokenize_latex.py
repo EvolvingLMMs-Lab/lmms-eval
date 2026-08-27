@@ -2,19 +2,19 @@
 # Copyright (c) 2016 Harvard NLP; licensed under MIT.
 # See LICENSE-IM2MARKUP in this directory.
 # tokenize latex formulas
-import argparse
 import os
 import re
-import shutil
 import subprocess
-import sys
 from datetime import datetime
 from threading import Timer
 
 
 def run_cmd(cmd, timeout_sec=30):
     proc = subprocess.Popen(cmd, shell=True)
-    kill_proc = lambda p: p.kill()
+
+    def kill_proc(p):
+        return p.kill()
+
     timer = Timer(timeout_sec, kill_proc, [proc])
     try:
         timer.start()
@@ -109,7 +109,7 @@ def tokenize_latex(latex_code, latex_type="", middle_file=""):
         latex_code = latex_code.replace("\%", "<PERCENTAGE_TOKEN>")
         latex_code = latex_code.split("%")[0]
         latex_code = latex_code.replace("<PERCENTAGE_TOKEN>", "\%")
-        if not "\\end{tabular}" in latex_code:
+        if "\\end{tabular}" not in latex_code:
             latex_code += "\\end{tabular}"
         with open(middle_file, "w") as f:
             f.write(latex_code.replace("\r", " ").replace("\n", " "))

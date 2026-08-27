@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import yaml
+from loguru import logger as eval_logger
 from PIL import Image
 
 UpperLetters = list(string.ascii_uppercase)
@@ -347,8 +348,8 @@ def spatial_aggregate_results(results):
                 dataset_total[key] += result["total"]
 
     overall_accuracy = (total_correct / total_examples) * 100 if total_examples > 0 else 0.0
-    category_accuracy = {category: (category_correct[category] / category_total[category]) * 100 if category_total[category] > 0 else 0.0 for category in category_correct}
-    dataset_accuracy = {dataset: (dataset_correct[dataset] / dataset_total[dataset]) * 100 if dataset_total[dataset] > 0 else 0.0 for dataset in dataset_correct}
+    _category_accuracy = {category: (category_correct[category] / category_total[category]) * 100 if category_total[category] > 0 else 0.0 for category in category_correct}
+    _dataset_accuracy = {dataset: (dataset_correct[dataset] / dataset_total[dataset]) * 100 if dataset_total[dataset] > 0 else 0.0 for dataset in dataset_correct}
 
     # eval_logger.info("=" * 50)
     # eval_logger.info(f"Overall Accuracy: {overall_accuracy:.2f}%")

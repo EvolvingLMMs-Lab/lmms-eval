@@ -15,7 +15,7 @@ from lmms_eval.tasks.mmmu.utils_group_img import process_images
 
 warnings.filterwarnings("ignore")
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 
 @register_model("instructblip")

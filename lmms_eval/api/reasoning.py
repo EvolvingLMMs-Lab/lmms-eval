@@ -1,5 +1,4 @@
-import re
-from typing import List, Optional, Union
+from typing import List, Optional
 
 
 def strip_reasoning_tags(text: str, tag_pairs: List[List[str]]) -> str:

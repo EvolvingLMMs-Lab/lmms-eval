@@ -33,13 +33,13 @@ from lmms_eval.api.registry import register_model
 
 eval_logger = logging.getLogger("lmms-eval")
 
-import sys
+import sys  # noqa: E402
 
 wd = Path(__file__).parent.parent.parent.parent.resolve()
 sys.path.append(os.path.join(str(wd), "Ola"))
 
-import whisper
-from ola.constants import (
+import whisper  # noqa: E402
+from ola.constants import (  # noqa: E402
     DEFAULT_IM_END_TOKEN,
     DEFAULT_IM_START_TOKEN,
     DEFAULT_IMAGE_TOKEN,
@@ -47,27 +47,27 @@ from ola.constants import (
     IMAGE_TOKEN_INDEX,
     SPEECH_TOKEN_INDEX,
 )
-from ola.conversation import SeparatorStyle, conv_templates
-from ola.datasets.preprocess import (
+from ola.conversation import SeparatorStyle, conv_templates  # noqa: E402
+from ola.datasets.preprocess import (  # noqa: E402
     tokenizer_image_token,
     tokenizer_speech_image_token,
     tokenizer_speech_token,
 )
-from ola.mm_utils import (
+from ola.mm_utils import (  # noqa: E402
     KeywordsStoppingCriteria,
     get_model_name_from_path,
     process_anyres_highres_image,
     process_anyres_video,
 )
-from ola.model.builder import load_pretrained_model
+from ola.model.builder import load_pretrained_model  # noqa: E402
 
 try:
     from ola.model.language_model.ola_qwen import OlaConfigQwen
 
     AutoConfig.register("ola_qwen", OlaConfigQwen)
-except:
+except Exception:
     eval_logger.debug("")
-from moviepy.video.io.VideoFileClip import VideoFileClip
+from moviepy.video.io.VideoFileClip import VideoFileClip  # noqa: E402
 
 if "USE_SPEECH" in os.environ:
     USE_SPEECH = os.environ["USE_SPEECH"]
@@ -156,12 +156,12 @@ class Ola(lmms):
         self.overwrite = overwrite
         self.mm_resampler_type = mm_resampler_type
         self.max_frames_num = int(max_frames_num)
-        if self.overwrite == True:
+        if self.overwrite:
             overwrite_config = {}
             overwrite_config["patchify_video_feature"] = False
             overwrite_config["attn_implementation"] = attn_implementation
 
-            cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
+            _cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
 
             self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, device=self.device_map)
         else:
@@ -272,7 +272,7 @@ class Ola(lmms):
     def load_video(self, video_path, max_frames_num):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
-        fps = round(vr.get_avg_fps())
+        _fps = round(vr.get_avg_fps())
 
         uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
         frame_idx = uniform_sampled_frames.tolist()
@@ -290,7 +290,7 @@ class Ola(lmms):
 
         for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
-            if type(doc_to_target) == str:
+            if type(doc_to_target) is str:
                 continuation = doc_to_target
             else:
                 continuation = doc_to_target(self.task_dict[task][split][doc_id])

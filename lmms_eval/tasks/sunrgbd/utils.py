@@ -163,8 +163,8 @@ def _iou_3d(a: List[float], b: List[float]) -> float:
     """Rotated 3D IoU: shapely BEV polygon IoU multiplied by vertical overlap ratio."""
     from shapely.geometry import Polygon
 
-    ax, ay, az, asx, asy, asz = a[0], a[1], a[2], a[3], a[4], a[5]
-    bx, by, bz, bsx, bsy, bsz = b[0], b[1], b[2], b[3], b[4], b[5]
+    _ax, ay, _az, asx, asy, asz = a[0], a[1], a[2], a[3], a[4], a[5]
+    _bx, by, _bz, bsx, bsy, bsz = b[0], b[1], b[2], b[3], b[4], b[5]
     if min(asx, asy, asz, bsx, bsy, bsz) <= 0:
         return 0.0
 

@@ -74,7 +74,7 @@ for i in tqdm(range(len(data))):
     question = data[i]["question"]
     answers = data[i]["answers"]
     question_type = data[i]["type"]
-    if type(answers) == str:
+    if type(answers) is str:
         answers = [answers]
     img = PIL_Image.open(image_path).convert("RGB")
     byte_data = image2byte(img)

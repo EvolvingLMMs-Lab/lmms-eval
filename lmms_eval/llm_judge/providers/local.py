@@ -8,7 +8,7 @@ Environment variables:
 
 import os
 import time
-from typing import Dict, Optional
+from typing import Optional
 
 import requests
 from loguru import logger as eval_logger

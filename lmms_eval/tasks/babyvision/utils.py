@@ -6,11 +6,14 @@ MLLM evaluation task using LLM-as-Judge API
 import os
 import re
 from collections import defaultdict
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from loguru import logger as eval_logger
 
 from lmms_eval.tasks.babyvision.prompt import build_judge_prompt
+
+if TYPE_CHECKING:
+    from openai import OpenAI
 
 
 def _get_openai_client() -> Optional["OpenAI"]:

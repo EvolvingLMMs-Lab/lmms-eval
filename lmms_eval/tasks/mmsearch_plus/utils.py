@@ -37,7 +37,7 @@ def mmsearch_plus_doc_to_visual(doc: Dict[str, Any]) -> List[Any]:
                 eval_logger.warning(f"Failed to load image {img_key}: {e}")
 
     if not images:
-        eval_logger.warning(f"No images found in document")
+        eval_logger.warning("No images found in document")
 
     return images
 

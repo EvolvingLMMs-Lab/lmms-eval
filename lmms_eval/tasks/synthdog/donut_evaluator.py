@@ -62,11 +62,11 @@ class JSONParseEvaluator:
         label2 = node2.label
         label1_leaf = "<leaf>" in label1
         label2_leaf = "<leaf>" in label2
-        if label1_leaf == True and label2_leaf == True:
+        if label1_leaf and label2_leaf:
             return edit_distance(label1.replace("<leaf>", ""), label2.replace("<leaf>", ""))
-        elif label1_leaf == False and label2_leaf == True:
+        elif not label1_leaf and label2_leaf:
             return 1 + len(label2.replace("<leaf>", ""))
-        elif label1_leaf == True and label2_leaf == False:
+        elif label1_leaf and not label2_leaf:
             return 1 + len(label1.replace("<leaf>", ""))
         else:
             return int(label1 != label2)

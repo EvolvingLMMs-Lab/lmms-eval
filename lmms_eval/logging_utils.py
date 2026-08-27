@@ -20,7 +20,7 @@ try:
     if Version(wandb.__version__) < Version("0.13.6"):
         wandb.require("report-editing:v0")
 except Exception as e:
-    logger.warning("To use the wandb reporting functionality please install wandb>=0.13.6.\n" "To install the latest version of wandb run `pip install wandb --upgrade`\n" f"{e}")
+    logger.warning(f"To use the wandb reporting functionality please install wandb>=0.13.6.\nTo install the latest version of wandb run `pip install wandb --upgrade`\n{e}")
 
 
 def remove_none_pattern(input_string):
@@ -269,8 +269,8 @@ class WandbLogger:
         if config["output_type"] == "loglikelihood":
             instance = [x["arguments"][0][0] for x in data]
             labels = [x["arguments"][0][1] for x in data]
-            resps = [f'log probability of continuation is {x["resps"][0][0][0]} ' + "\n\n" + "continuation will {} generated with greedy sampling".format("not be" if not x["resps"][0][0][1] else "be") for x in data]
-            filtered_resps = [f'log probability of continuation is {x["filtered_resps"][0][0]} ' + "\n\n" + "continuation will {} generated with greedy sampling".format("not be" if not x["filtered_resps"][0][1] else "be") for x in data]
+            resps = [f"log probability of continuation is {x['resps'][0][0][0]} " + "\n\n" + "continuation will {} generated with greedy sampling".format("not be" if not x["resps"][0][0][1] else "be") for x in data]
+            filtered_resps = [f"log probability of continuation is {x['filtered_resps'][0][0]} " + "\n\n" + "continuation will {} generated with greedy sampling".format("not be" if not x["filtered_resps"][0][1] else "be") for x in data]
         elif config["output_type"] == "multiple_choice":
             instance = [x["arguments"][0][0] for x in data]
             choices = ["\n".join([f"{idx}. {y[1]}" for idx, y in enumerate(x["arguments"])]) for x in data]

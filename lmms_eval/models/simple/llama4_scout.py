@@ -22,7 +22,7 @@ try:
     from transformers import Llama4ForConditionalGeneration
 except ImportError:
     Llama4ForConditionalGeneration = None
-    eval_logger.warning("Failed to import Llama4ForConditionalGeneration. " "Please install transformers>=4.51.0: pip install transformers>=4.51.0")
+    eval_logger.warning("Failed to import Llama4ForConditionalGeneration. Please install transformers>=4.51.0: pip install transformers>=4.51.0")
 
 
 @register_model("llama4_scout")
@@ -59,7 +59,7 @@ class Llama4Scout(lmms):
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
 
         if Llama4ForConditionalGeneration is None:
-            raise ImportError("Llama4ForConditionalGeneration not available. " "Please install transformers>=4.51.0: pip install transformers>=4.51.0")
+            raise ImportError("Llama4ForConditionalGeneration not available. Please install transformers>=4.51.0: pip install transformers>=4.51.0")
 
         # Validate attention implementation
         valid_attn_implementations = [None, "flex_attention", "sdpa", "eager"]

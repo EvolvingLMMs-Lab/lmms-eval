@@ -18,7 +18,7 @@ from lmms_eval.api.registry import register_model
 warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 try:
     from cambrian.conversation import conv_templates

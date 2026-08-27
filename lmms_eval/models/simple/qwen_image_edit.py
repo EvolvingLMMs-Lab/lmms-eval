@@ -1,8 +1,6 @@
-import base64
 import json
 import os
 import re
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
 import torch
@@ -12,7 +10,6 @@ from PIL import Image
 from tqdm import tqdm
 
 from lmms_eval import utils
-from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
@@ -65,7 +62,7 @@ class QwenImageEdit(lmms):
         stage2_max_new_tokens: int = 512,
         stage2_temperature: float = 0.0,
         stage2_do_sample: bool = False,
-        generation_prompt_template: str = ("Based on this image and question, generate an annotated " "or highlighted version that helps answer: {question}"),
+        generation_prompt_template: str = ("Based on this image and question, generate an annotated or highlighted version that helps answer: {question}"),
         save_intermediate: bool = False,
         intermediate_dir: Optional[str] = None,
         fail_gracefully: bool = True,
@@ -129,7 +126,7 @@ class QwenImageEdit(lmms):
                 self.system_prompt = system_prompt
                 self.max_pixels = max_pixels
                 self.min_pixels = min_pixels
-                eval_logger.info(f"Successfully loaded Qwen2.5-VL for understanding mode")
+                eval_logger.info("Successfully loaded Qwen2.5-VL for understanding mode")
             except Exception as e:
                 eval_logger.error(f"Failed to load Qwen2.5-VL: {e}")
                 raise
@@ -143,7 +140,7 @@ class QwenImageEdit(lmms):
                     device_map=pipeline_device_map,
                     use_safetensors=True,
                 )
-                eval_logger.info(f"Successfully loaded Qwen-Image-Edit pipeline for editing mode")
+                eval_logger.info("Successfully loaded Qwen-Image-Edit pipeline for editing mode")
             except Exception as e:
                 eval_logger.error(f"Failed to load Qwen-Image-Edit: {e}")
                 raise
@@ -292,15 +289,15 @@ class QwenImageEdit(lmms):
 
         # Get generation parameters
         cfg_text_scale = interleaved_config.get("cfg_text_scale", 4.0)
-        cfg_interval = interleaved_config.get("cfg_interval", 0.4)
-        timestep_shift = interleaved_config.get("timestep_shift", 3.0)
+        _cfg_interval = interleaved_config.get("cfg_interval", 0.4)
+        _timestep_shift = interleaved_config.get("timestep_shift", 3.0)
         num_timesteps = interleaved_config.get("num_timesteps", 50)
 
         generated_images = []
 
         # Ensure we have both editing and understanding capabilities
         if self.mode != "editing":
-            raise ValueError("Uni-MMMU interleaved mode requires editing mode. " "Use: --model_args mode=editing")
+            raise ValueError("Uni-MMMU interleaved mode requires editing mode. Use: --model_args mode=editing")
 
         # We need understanding model for text generation
         # Load it temporarily if not already loaded
@@ -336,7 +333,7 @@ class QwenImageEdit(lmms):
             }
 
             request_0 = MockEditRequest(mock_doc_0, [edit_prompt_0])
-            result_0 = self._generate_editing([request_0])
+            _result_0 = self._generate_editing([request_0])
 
             img0_path = os.path.join(self.generated_image_dir, f"{task}_{doc_id}_cand0.png")
             if os.path.exists(img0_path):
@@ -356,7 +353,7 @@ class QwenImageEdit(lmms):
             }
 
             request_1 = MockEditRequest(mock_doc_1, [edit_prompt_1])
-            result_1 = self._generate_editing([request_1])
+            _result_1 = self._generate_editing([request_1])
 
             img1_path = os.path.join(self.generated_image_dir, f"{task}_{doc_id}_cand1.png")
             if os.path.exists(img1_path):
@@ -364,7 +361,7 @@ class QwenImageEdit(lmms):
                 eval_logger.info(f"Saved jigsaw image 1: {img1_path}")
 
             # Generate final answer using understanding model
-            final_prompt = f"{prompt}\n\n" f"Two completion images have been generated. " f'Now output EXACTLY ONE <FINAL_ANSWER_JSON>{{"choice": 0 or 1, "rationale": "≤30 words"}}</FINAL_ANSWER_JSON>'
+            final_prompt = f'{prompt}\n\nTwo completion images have been generated. Now output EXACTLY ONE <FINAL_ANSWER_JSON>{{"choice": 0 or 1, "rationale": "≤30 words"}}</FINAL_ANSWER_JSON>'
 
             # Load generated images
             completion_images = []
@@ -462,7 +459,7 @@ class QwenImageEdit(lmms):
                     eval_logger.info(f"Saved step {i} image: {img_path}")
 
             # Generate final answer
-            final_prompt = f"{accumulated_text}\n\n" f"After the images, emit EXACTLY ONE LINE containing ONLY the final move list " f"as <ANSWER_JSON>[...]</ANSWER_JSON>."
+            final_prompt = f"{accumulated_text}\n\nAfter the images, emit EXACTLY ONE LINE containing ONLY the final move list as <ANSWER_JSON>[...]</ANSWER_JSON>."
 
             all_step_images = [Image.open(p).convert("RGB") for p in generated_images if os.path.exists(p)]
             all_images = (input_images if input_images else []) + all_step_images
@@ -883,7 +880,7 @@ class QwenImageEdit(lmms):
         Note: This is not typically applicable for diffusion-based image editing models.
         Returns dummy values.
         """
-        eval_logger.warning("loglikelihood is not supported for Qwen-Image-Edit (diffusion model). " "Returning dummy values.")
+        eval_logger.warning("loglikelihood is not supported for Qwen-Image-Edit (diffusion model). Returning dummy values.")
         return [(0.0, False) for _ in requests]
 
     def generate_until_multi_round(self, requests) -> List[str]:

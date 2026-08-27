@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 import warnings
+from dataclasses import asdict, is_dataclass
 from typing import (
     Any,
     Callable,
@@ -29,15 +30,15 @@ import yaml
 warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
-import gc
-from itertools import islice
+import gc  # noqa: E402
+from itertools import islice  # noqa: E402
 
-import numpy as np
-import pytz
-import torch
-import transformers
-from jinja2 import BaseLoader, Environment, StrictUndefined
-from loguru import logger as eval_logger
+import numpy as np  # noqa: E402
+import pytz  # noqa: E402
+import torch  # noqa: E402
+import transformers  # noqa: E402
+from jinja2 import BaseLoader, Environment, StrictUndefined  # noqa: E402
+from loguru import logger as eval_logger  # noqa: E402
 
 SPACING = " " * 47
 HIGHER_IS_BETTER_SYMBOLS = {
@@ -295,7 +296,7 @@ class MultiChoice:
 # Returns a list containing all values of the source_list that
 # match at least one of the patterns
 def pattern_match(patterns, source_list):
-    if type(patterns) == str:
+    if type(patterns) is str:
         patterns = [patterns]
 
     task_names = set()
@@ -732,7 +733,7 @@ def positional_deprecated(fn):
     @functools.wraps(fn)
     def _wrapper(*args, **kwargs):
         if len(args) != 1 if inspect.ismethod(fn) else 0:
-            print(f"WARNING: using {fn.__name__} with positional arguments is " "deprecated and will be disallowed in a future version of " "lmms-evaluation-harness!")
+            print(f"WARNING: using {fn.__name__} with positional arguments is deprecated and will be disallowed in a future version of lmms-evaluation-harness!")
         return fn(*args, **kwargs)
 
     return _wrapper
@@ -954,7 +955,7 @@ def import_function(loader, node):
         return function
     except Exception as ex:
         # Re-raise with context to aid debugging
-        raise ImportError(f"Failed to import function '{function_name}' from module '{module_name}'. " f"Tried relative path '{module_path}' and absolute import.") from ex
+        raise ImportError(f"Failed to import function '{function_name}' from module '{module_name}'. Tried relative path '{module_path}' and absolute import.") from ex
 
 
 _LOCAL_BUILDERS = frozenset({"csv", "json", "parquet", "text", "pandas", "arrow"})

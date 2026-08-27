@@ -126,7 +126,7 @@ def llava_process_results(doc, result):
         rule = rule_dict.get(category, {})
         prompt = rule.get("prompt", "")
         role = rule.get("role", "user")
-        content = f"[Context]\n{context}\n\n" f"[Question]\n{question}\n\n" f"[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n" f"[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n" f"[System]\n{prompt}\n\n"
+        content = f"[Context]\n{context}\n\n[Question]\n{question}\n\n[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n[System]\n{prompt}\n\n"
 
         pipeline = _get_pipeline()
         vresult = pipeline(question=question, prediction=ans2, ground_truth=ans1, content=content)

@@ -382,6 +382,7 @@ class CambriansVSR(CambrianS):
                     _append_cache_entry(global_kv_cache[layer_idx], key_states, value_states, "T", key_states.size(2), 1.0)
                     _append_cache_entry(runtime_kv_cache[layer_idx], key_states, value_states, "T", key_states.size(2), 1.0)
 
+                frame_feature_prediction = None
                 for frame_idx in range(visual_features.size(0)):
                     past_key_values = []
                     for layer_cache in runtime_kv_cache:
