@@ -1,0 +1,10 @@
+group: vrbench
+task:
+  - vrbench_mcq
+  - vrbench_process
+aggregate_metric_list:
+  - metric: vrbench_score
+    aggregation: mean
+    weight_by_size: false
+metadata:
+  version: 1.0

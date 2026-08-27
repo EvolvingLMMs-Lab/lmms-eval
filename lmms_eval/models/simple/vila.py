@@ -1,9 +1,4 @@
-import argparse
-import json
 import logging
-import math
-import os
-import signal
 from datetime import timedelta
 from typing import List, Optional, Tuple, Union
 
@@ -13,32 +8,31 @@ from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
 from PIL import Image
-from torchvision.transforms import Resize
 from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import require_package
+from lmms_eval.models.model_utils.load_video import read_video
 
 eval_logger = logging.getLogger("lmms-eval")
-# import sys;sys.path.append("llava-video")
-try:
-    from llava.constants import (
-        DEFAULT_IM_END_TOKEN,
-        DEFAULT_IM_START_TOKEN,
-        DEFAULT_IMAGE_TOKEN,
-        IMAGE_TOKEN_INDEX,
-    )
-    from llava.conversation import SeparatorStyle, conv_templates
-    from llava.mm_utils import (
-        KeywordsStoppingCriteria,
-        get_model_name_from_path,
-        process_images,
-        tokenizer_image_token,
-    )
-    from llava.model.builder import load_pretrained_model
-except ImportError as e:
-    raise ImportError(f"VILA is not installed. Please install VILA to use this model. Error: {e}")
+
+require_package("llava", feature="VILA model")
+from llava.constants import (
+    DEFAULT_IM_END_TOKEN,
+    DEFAULT_IM_START_TOKEN,
+    DEFAULT_IMAGE_TOKEN,
+    IMAGE_TOKEN_INDEX,
+)
+from llava.conversation import SeparatorStyle, conv_templates
+from llava.mm_utils import (
+    KeywordsStoppingCriteria,
+    get_model_name_from_path,
+    process_images,
+    tokenizer_image_token,
+)
+from llava.model.builder import load_pretrained_model
 
 
 @register_model("vila")
@@ -84,7 +78,12 @@ class VILA(lmms):
         self.max_frames_num = max_frames_num
         # self._config = AutoConfig.from_pretrained(self.pretrained)
 
-        self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, self.model_name, device_map=self.device_map, attn_implementation=attn_implementation)
+        self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(
+            pretrained,
+            self.model_name,
+            device_map=self.device_map,
+            attn_implementation=attn_implementation,
+        )
 
         self.model.image_processor = self._image_processor
 
@@ -105,7 +104,11 @@ class VILA(lmms):
         self.truncate_context = truncate_context
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
         if accelerator.num_processes > 1:
-            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+                DistributedType.DEEPSPEED,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
             # Also, you have to select zero stage 0 (equivalent to DDP) in order to make the prepare model works
             # I tried to set different parameters in the kwargs to let default zero 2 stage works, but it didn't work.
@@ -224,7 +227,7 @@ class VILA(lmms):
             videos = []
             for visual in visuals:
                 video = self.load_video(visual, self.max_frames_num)
-                video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].half().cuda()
+                video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].half().to(self._device)
                 videos.append(video)
 
             qs = contexts
@@ -245,15 +248,20 @@ class VILA(lmms):
             conv.append_message(conv.roles[1], continuation)
             prompt = conv.get_prompt()
 
-            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).cuda()
-            attention_masks = input_ids.ne(self.tokenizer.pad_token_id).long().cuda()
+            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self._device)
+            attention_masks = input_ids.ne(self.tokenizer.pad_token_id).long().to(self._device)
 
             labels = input_ids.clone()
             # Context part no need to calculate for loss
             labels[0, : contxt_id.shape[1]] = -100
 
             with torch.inference_mode():
-                outputs = self.model(input_ids=input_ids, labels=labels, images=videos, modalities="video")
+                outputs = self.model(
+                    input_ids=input_ids,
+                    labels=labels,
+                    images=videos,
+                    modalities="video",
+                )
 
             loss = outputs["loss"]
             # loss = torch.exp(loss)
@@ -287,15 +295,15 @@ class VILA(lmms):
             videos = []
             if self.max_frames_num == 0:
                 images = [Image.new("RGB", (448, 448), (0, 0, 0))] * num_video_frames
-                video = process_images(images, self.model.image_processor, self.model.config).half().cuda()
+                video = process_images(images, self.model.image_processor, self.model.config).half().to(self._device)
                 videos.append(video)
             else:
                 for visual in visuals:
                     if self.video_decode_backend == "decord":
                         images = self.load_video(visual, num_video_frames)
                     elif self.video_decode_backend == "pyav":
-                        images = read_video_pyav(visual, num_frm=num_video_frames)
-                    video = process_images(images, self.model.image_processor, self.model.config).half().cuda()
+                        images = read_video(visual, num_frm=num_video_frames)
+                    video = process_images(images, self.model.image_processor, self.model.config).half().to(self._device)
                     videos.append(video)
 
             qs = f"<video>\n {contexts}"
@@ -315,11 +323,11 @@ class VILA(lmms):
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
 
-            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).cuda()
+            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self._device)
             pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
             # if "llama_3" in self.conv_template:
             #     pad_token_ids = 0  # lmms-lab/llama3-llava-8b is trained on this pad token id. You may need to customize this for other models.
-            attention_masks = input_ids.ne(pad_token_ids).long().cuda()
+            attention_masks = input_ids.ne(pad_token_ids).long().to(self._device)
 
             # input_ids_list = [tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt") for prompt in question_input]
             # pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id

@@ -1,5 +1,4 @@
 import logging
-import os
 from typing import List, Tuple
 
 import decord
@@ -66,21 +65,43 @@ def load_image(image_path, resolution=224, hd_num=6):
     std = (0.229, 0.224, 0.225)
 
     transform = T.Compose([T.Lambda(lambda x: x.float().div(255.0)), T.Normalize(mean, std)])
-    image_tensor = transform(image_tensor).cuda()
+    image_tensor = transform(image_tensor)
 
     sub_img = image_tensor.reshape(1, T_, 3, H // resolution, resolution, W // resolution, resolution).permute(0, 3, 5, 1, 2, 4, 6).reshape(-1, T_, 3, resolution, resolution).contiguous()
 
-    glb_img = F.interpolate(image_tensor.float(), size=(resolution, resolution), mode="bicubic", align_corners=False).to(sub_img.dtype).unsqueeze(0)
+    glb_img = (
+        F.interpolate(
+            image_tensor.float(),
+            size=(resolution, resolution),
+            mode="bicubic",
+            align_corners=False,
+        )
+        .to(sub_img.dtype)
+        .unsqueeze(0)
+    )
 
     image_tensor = torch.cat([sub_img, glb_img])  # .unsqueeze(0)
     return image_tensor
 
 
-def load_video(video_path, num_segments=16, return_msg=False, resolution=224, hd_num=6, padding=False):
+def load_video(
+    video_path,
+    num_segments=16,
+    return_msg=False,
+    resolution=224,
+    hd_num=6,
+    padding=False,
+):
     vr = VideoReader(video_path, ctx=cpu(0), num_threads=1)
     num_frames = len(vr) - 1
 
-    frame_indices = get_index(max_frame=num_frames, num_segments=num_segments, fps=float(vr.get_avg_fps()), first_idx=0, bound=None)
+    frame_indices = get_index(
+        max_frame=num_frames,
+        num_segments=num_segments,
+        fps=float(vr.get_avg_fps()),
+        first_idx=0,
+        bound=None,
+    )
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
 
@@ -99,7 +120,16 @@ def load_video(video_path, num_segments=16, return_msg=False, resolution=224, hd
 
     sub_img = frames.reshape(1, T_, 3, H // resolution, resolution, W // resolution, resolution).permute(0, 3, 5, 1, 2, 4, 6).reshape(-1, T_, 3, resolution, resolution).contiguous()
 
-    glb_img = F.interpolate(frames.float(), size=(resolution, resolution), mode="bicubic", align_corners=False).to(sub_img.dtype).unsqueeze(0)
+    glb_img = (
+        F.interpolate(
+            frames.float(),
+            size=(resolution, resolution),
+            mode="bicubic",
+            align_corners=False,
+        )
+        .to(sub_img.dtype)
+        .unsqueeze(0)
+    )
 
     frames = torch.cat([sub_img, glb_img]).unsqueeze(0)
 
@@ -122,7 +152,12 @@ def HD_transform_padding(frames, image_size=224, hd_num=6):
         left_padding = 0
         right_padding = 0
 
-        padded_frames = F.pad(frames, pad=[left_padding, right_padding, top_padding, bottom_padding], mode="constant", value=255)
+        padded_frames = F.pad(
+            frames,
+            pad=[left_padding, right_padding, top_padding, bottom_padding],
+            mode="constant",
+            value=255,
+        )
         return padded_frames
 
     _, _, H, W = frames.shape
@@ -211,7 +246,7 @@ class InternVideo2(lmms):
         self.instruction = "Carefully watch the video and pay attention to the cause and sequence of events, the detail and movement of objects, and the action and pose of persons.\n"
 
         self._tokenizer = AutoTokenizer.from_pretrained(self.path, trust_remote_code=True, use_fast=False)
-        self._model = AutoModel.from_pretrained(self.path, torch_dtype=torch.bfloat16, trust_remote_code=True).eval().cuda()
+        self._model = AutoModel.from_pretrained(self.path, torch_dtype=torch.bfloat16, trust_remote_code=True).eval().to(self._device)
         batch_size = int(batch_size)
         self.num_segments = int(num_segments)
         self.hd_num = int(hd_num)
@@ -231,7 +266,11 @@ class InternVideo2(lmms):
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
         if accelerator.num_processes > 1:
-            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+                DistributedType.DEEPSPEED,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
             # Also, you have to select zero stage 0 (equivalent to DDP) in order to make the prepare model works
             # I tried to set different parameters in the kwargs to let default zero 2 stage works, but it didn't work.
@@ -328,9 +367,19 @@ class InternVideo2(lmms):
             if self.modality == "image":
                 image_path = visuals[0]
                 pixel_values = load_image(image_path, resolution=224, hd_num=self.hd_num)
-                pixel_values = pixel_values.to(torch.bfloat16).cuda()
+                pixel_values = pixel_values.to(torch.bfloat16).to(self._device)
                 question = contexts
-                response, history = self.model.chat(self.tokenizer, msg="", user_prompt=question, media_type="image", media_tensor=pixel_values, instruction=None, chat_history=[], return_history=True, **gen_kwargs)
+                response, history = self.model.chat(
+                    self.tokenizer,
+                    msg="",
+                    user_prompt=question,
+                    media_type="image",
+                    media_tensor=pixel_values,
+                    instruction=None,
+                    chat_history=[],
+                    return_history=True,
+                    **gen_kwargs,
+                )
             elif self.modality == "video":
                 assert len(visuals) == 1, f"Only one video is supported, but got {len(visuals)} videos. [META-INFO]{visuals}"
                 video_path = visuals[0]
@@ -338,8 +387,14 @@ class InternVideo2(lmms):
                     answer_prompt = "Best Option:("
                 else:
                     answer_prompt = None
-                pixel_values = load_video(video_path, num_segments=self.num_segments, return_msg=False, resolution=224, hd_num=self.hd_num)
-                pixel_values = pixel_values.to(torch.bfloat16).cuda()
+                pixel_values = load_video(
+                    video_path,
+                    num_segments=self.num_segments,
+                    return_msg=False,
+                    resolution=224,
+                    hd_num=self.hd_num,
+                )
+                pixel_values = pixel_values.to(torch.bfloat16).to(self._device)
                 question = self.instruction + contexts
                 response, history = self.model.chat(
                     self.tokenizer,

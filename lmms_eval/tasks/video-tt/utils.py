@@ -170,7 +170,7 @@ def videott_process_results(doc, results):
     data_dict = {"video_id": doc["video_id"], "capability": capability, "pred_answer": pred_ans, "answer": doc["answer"]}
 
     # return {f"videott_perception_score": data_dict for metric in matrices}
-    return {f"videott_perception_score": data_dict}
+    return {"videott_perception_score": data_dict}
 
 
 def videott_process_results_oe(doc, results):
@@ -188,7 +188,7 @@ def videott_process_results_oe(doc, results):
     data_dict = {"video_id": doc["video_id"], "capability": capability, "pred_answer": pred, "answer": doc["answer"]}
 
     # return {f"videott_perception_score": data_dict for metric in matrices}
-    return {f"videott_perception_score": data_dict}
+    return {"videott_perception_score": data_dict}
 
 
 def videott_aggregate_results(results):

@@ -1,0 +1,9 @@
+group: saco_gold
+task:
+  - saco_gold_attributes
+  - saco_gold_crowded
+  - saco_gold_food
+  - saco_gold_metaclip
+  - saco_gold_sa1b
+  - saco_gold_sport
+  - saco_gold_wiki_common

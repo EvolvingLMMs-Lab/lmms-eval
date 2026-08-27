@@ -1,0 +1,4 @@
+task: "mle_bench_large"
+task_alias: "MLE-Bench (Large 60-100%)"
+include: _default_template_yaml
+process_docs: !function utils.filter_large

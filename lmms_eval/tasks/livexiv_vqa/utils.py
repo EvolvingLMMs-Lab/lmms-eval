@@ -31,7 +31,7 @@ def livexiv_process_result(doc, result):
             pred = pred[0]
     answer = doc["gt"]
 
-    return {f"livexiv_vqa": {"pred": pred, "answer": answer}}
+    return {"livexiv_vqa": {"pred": pred, "answer": answer}}
 
 
 def livexiv_aggregation_result(results):

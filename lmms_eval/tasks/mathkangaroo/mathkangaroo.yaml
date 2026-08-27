@@ -1,0 +1,25 @@
+dataset_path: dfkiuser/kangaroo_math_mc_questions
+dataset_kwargs:
+  token: True
+task: mathkangaroo
+tag: visual_reasoning_collection
+test_split: train
+output_type: generate_until
+doc_to_visual: !function utils.mathkangaroo_doc_to_visual
+doc_to_text: !function utils.mathkangaroo_doc_to_text
+doc_to_target: "ground_truth"
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  do_sample: false
+process_results: !function utils.mathkangaroo_process_results
+metric_list:
+  - metric: mathkangaroo_accuracy
+    aggregation: mean
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option letter (A, B, C, D, or E) only."
+metadata:
+  - version: 0.0

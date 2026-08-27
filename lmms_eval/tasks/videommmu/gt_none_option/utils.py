@@ -1,15 +1,6 @@
 # VideoMMMU GT None Option Setting Utils
 import datasets
 
-from lmms_eval.tasks.videommmu.utils import (
-    videommmu_aggregate_results,
-    videommmu_doc_to_answer,
-    videommmu_doc_to_text_adaptation,
-    videommmu_doc_to_text_perception_comprehension,
-    videommmu_doc_to_visual,
-    videommmu_process_results,
-)
-
 
 def videommmu_process_docs_gt_none(dataset: datasets.Dataset) -> datasets.Dataset:
     """Replace correct answer content with 'None' for MCQ questions."""

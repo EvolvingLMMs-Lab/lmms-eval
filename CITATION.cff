@@ -1,0 +1,49 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "LMMs-Eval: Accelerating the Development of Large Multimodal Models"
+type: software
+authors:
+  - name: "MC Evil Team"
+license: MIT
+version: "0.6.0"
+date-released: "2024-03-01"
+url: "https://github.com/EvolvingLMMs-Lab/lmms-eval"
+repository-code: "https://github.com/EvolvingLMMs-Lab/lmms-eval"
+keywords:
+  - multimodal evaluation
+  - large language models
+  - vision language models
+  - benchmark
+  - evaluation framework
+preferred-citation:
+  type: article
+  title: "LMMs-Eval: Reality Check on the Evaluation of Large Multimodal Models"
+  authors:
+    - family-names: "Zhang"
+      given-names: "Kaichen"
+    - family-names: "Li"
+      given-names: "Bo"
+    - family-names: "Zhang"
+      given-names: "Peiyuan"
+    - family-names: "Pu"
+      given-names: "Fanyi"
+    - family-names: "Cahyono"
+      given-names: "Joshua Adrian"
+    - family-names: "Hu"
+      given-names: "Kairui"
+    - family-names: "Liu"
+      given-names: "Shuai"
+    - family-names: "Zhang"
+      given-names: "Yuanhan"
+    - family-names: "Yang"
+      given-names: "Jingkang"
+    - family-names: "Li"
+      given-names: "Chunyuan"
+    - family-names: "Liu"
+      given-names: "Ziwei"
+  year: 2024
+  url: "https://arxiv.org/abs/2407.12772"
+  identifiers:
+    - type: other
+      value: "arXiv:2407.12772"
+      description: "arXiv preprint"

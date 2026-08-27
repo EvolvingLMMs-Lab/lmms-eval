@@ -1,3 +1,35 @@
-from .client import MCPClient
+"""lmms-eval MCP Server - Model Context Protocol interface for evaluation."""
 
-__all__ = ["MCPClient"]
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from lmms_eval.mcp.client import MCPClient
+
+__all__ = ["MCPClient", "main"]
+
+
+def __getattr__(name: str) -> Any:
+    if name == "MCPClient":
+        from lmms_eval.mcp.client import MCPClient
+
+        return MCPClient
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def main() -> None:
+    """Entry point for the lmms-eval MCP server (stdio transport)."""
+    try:
+        from mcp.server.fastmcp import FastMCP  # noqa: F401
+    except ImportError:
+        raise SystemExit("MCP server requires the 'mcp' package. Install with: pip install 'lmms_eval[mcp]'")
+
+    from lmms_eval.mcp.server import create_mcp_server
+
+    server = create_mcp_server()
+    server.run(transport="stdio")
+
+
+if __name__ == "__main__":
+    main()

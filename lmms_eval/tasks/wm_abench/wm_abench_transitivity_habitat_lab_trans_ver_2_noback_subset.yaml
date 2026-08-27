@@ -1,0 +1,4 @@
+dataset_name: "Transitivity_habitat_lab_trans_ver_2_noback_subset"
+tag: "wm_abench_subtasks"
+task: "wm_abench_transitivity_habitat_lab_trans_ver_2_noback_subset"
+include: _default_template_yaml

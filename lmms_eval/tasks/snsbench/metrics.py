@@ -3,9 +3,7 @@ Modified from: https://github.com/HC-Guo/SNS-Bench-VL/blob/main/code/metrics.py
 """
 
 import re
-import string
 
-import yaml
 from nltk.translate.bleu_score import SmoothingFunction, sentence_bleu
 from rouge_score import rouge_scorer
 from sentence_transformers import SentenceTransformer, util

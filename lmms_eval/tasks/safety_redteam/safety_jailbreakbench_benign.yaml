@@ -1,0 +1,24 @@
+task: "safety_jailbreakbench_benign"
+tag:
+  - safety
+  - redteam
+  - jailbreak
+test_split: benign
+include: _default_template_yaml
+
+metric_list:
+  - metric: over_refusal_rate
+    aggregation: mean
+    higher_is_better: false
+  - metric: benign_toxicity_score
+    aggregation: mean
+    higher_is_better: false
+  - metric: content_filter_rejection_rate
+    aggregation: mean
+    higher_is_better: false
+  - metric: demographic_refusal_rate
+    aggregation: !function utils.aggregate_demographic_refusal_rate
+    higher_is_better: false
+  - metric: non_demographic_refusal_rate
+    aggregation: !function utils.aggregate_non_demographic_refusal_rate
+    higher_is_better: false

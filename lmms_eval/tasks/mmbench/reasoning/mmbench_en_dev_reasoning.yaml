@@ -1,0 +1,9 @@
+include: _default_template_mmbench_reasoning_yaml
+task: "mmbench_en_dev_reasoning"
+dataset_name: "en"
+test_split: "dev"
+doc_to_text: !function utils.mmbench_en_doc_to_text
+doc_to_messages: !function utils.mmbench_en_doc_to_messages
+process_results: !function utils.mmbench_process_results
+metadata:
+  version: 0.0

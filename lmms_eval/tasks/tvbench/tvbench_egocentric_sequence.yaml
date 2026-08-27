@@ -1,0 +1,4 @@
+include: _default_template_yaml
+task: tvbench_egocentric_sequence
+dataset_name: egocentric_sequence
+test_split: train

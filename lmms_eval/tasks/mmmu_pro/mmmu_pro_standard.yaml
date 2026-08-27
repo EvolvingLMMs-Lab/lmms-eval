@@ -1,4 +1,7 @@
 task: "mmmu_pro_standard"
+tag:
+  - public_eval_qwen3_5_family
+  - public_eval_gemini3_family
 dataset_path: MMMU/MMMU_Pro
 dataset_name: "standard (10 options)"
 test_split: test
@@ -20,6 +23,9 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "Answer with the option letter from the given choices directly."
+  penguinvl:
+    format: "penguinvl"
+    post_prompt: "Please reasoning step by step and select the correct answer with the option letter from the options above.\n"
   qwen3_vl:
     format: "qwen3_vl"
     pre_prompt: "Question: "

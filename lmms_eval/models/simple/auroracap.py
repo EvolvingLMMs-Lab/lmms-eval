@@ -1,7 +1,4 @@
-import copy
-import json
 import logging
-import os
 import os.path as osp
 from typing import List, Optional, Tuple, Union
 
@@ -11,14 +8,12 @@ import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from huggingface_hub import snapshot_download
-from peft import PeftModel
 from PIL import Image
 from tqdm import tqdm
 from transformers import (
     AutoModel,
     AutoModelForCausalLM,
     AutoTokenizer,
-    BitsAndBytesConfig,
     CLIPImageProcessor,
 )
 
@@ -26,8 +21,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video_pyav
-from lmms_eval.utils import stop_sequences_criteria
+from lmms_eval.models.model_utils.load_video import read_video
 
 try:
     from lmms_eval.models.aurora_xtuner.model.aurora import (
@@ -132,7 +126,11 @@ class AuroraCap(lmms):
         self.batch_size_per_gpu = int(batch_size)
         self.conv_template = conv_template
         if accelerator.num_processes > 1:
-            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+                DistributedType.DEEPSPEED,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
             # Also, you have to select zero stage 0 (equivalent to DDP) in order to make the prepare model works
             # I tried to set different parameters in the kwargs to let default zero 2 stage works, but it didn't work.
@@ -409,7 +407,7 @@ class AuroraCap(lmms):
                     video_path = visuals[0]["video_path"]
                     keyframe = visuals[0]["keyframe"]
                     video = self.extract_keyframes(video_path, keyframe)
-                    image_tensor = self.process_images(video, self._image_processor, self._config).cuda()
+                    image_tensor = self.process_images(video, self._image_processor, self._config).to(self._device)
                 elif isinstance(visuals, list):
                     print(visuals[0])
                     if isinstance(visuals[0], Image.Image):
@@ -419,12 +417,12 @@ class AuroraCap(lmms):
                             if self.video_decode_backend == "decord":
                                 video = self.load_video(visuals[0], self.max_frames_num)
                             elif self.video_decode_backend == "pyav":
-                                video = read_video_pyav(visuals[0], num_frm=self.max_frames_num)
-                            image_tensor = self.process_images(video, self._image_processor, self._config).cuda()
+                                video = read_video(visuals[0], num_frm=self.max_frames_num)
+                            image_tensor = self.process_images(video, self._image_processor, self._config).to(self._device)
                         elif visuals[0].endswith("mkv"):
                             assert self.video_decode_backend == "pyav", "we only tested this case, decord may not work"
-                            video = read_video_pyav(visuals[0], num_frm=self.max_frames_num)
-                            image_tensor = self.process_images(video, self._image_processor, self._config).cuda()
+                            video = read_video(visuals[0], num_frm=self.max_frames_num)
+                            image_tensor = self.process_images(video, self._image_processor, self._config).to(self._device)
 
                 if type(image_tensor) is list:
                     image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]

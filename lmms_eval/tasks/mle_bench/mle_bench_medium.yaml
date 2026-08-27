@@ -1,0 +1,4 @@
+task: "mle_bench_medium"
+task_alias: "MLE-Bench (Medium 30-60%)"
+include: _default_template_yaml
+process_docs: !function utils.filter_medium

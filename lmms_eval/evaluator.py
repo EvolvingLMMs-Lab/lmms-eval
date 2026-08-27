@@ -1,27 +1,43 @@
+import base64
 import collections
-import inspect
+import copy
 import itertools
 import json
+import mimetypes
 import os
 import random
-import sys
-import time
-from collections import defaultdict
-from dataclasses import dataclass
+import re
+from datetime import timedelta
 from typing import Callable, List, Optional, Union
 
 import numpy as np
 import torch
 import torch.distributed as dist
 from accelerate import Accelerator
-from datasets import Image, Sequence
 from loguru import logger as eval_logger
 from tqdm import tqdm
+
+# Increase default torch.distributed process group timeout from 30 min to 24 hours.
+# With dp=16 across 2 nodes, workload imbalance causes fast ranks to finish hours
+# before slow ranks (e.g. 1h24m vs 4h24m).  3h was not enough — increase to 24h.
+torch.distributed.distributed_c10d.default_pg_timeout = timedelta(hours=24)
 
 import lmms_eval.api
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
+from lmms_eval import models
+from lmms_eval.api.instance import Instance, unwrap_generation_output
+from lmms_eval.api.model import lmms
+from lmms_eval.api.reasoning import parse_reasoning_tags_config, strip_reasoning_tags
+from lmms_eval.api.task import Task
+from lmms_eval.baselines import (
+    BASELINE_REGISTRY,
+    get_baseline_display_name,
+    load_baseline,
+)
+from lmms_eval.caching.response_cache import ResponseCache
 from lmms_eval.evaluator_utils import (
+    compute_baseline_comparison,
     consolidate_group_results,
     consolidate_results,
     get_sample_size,
@@ -33,21 +49,194 @@ from lmms_eval.evaluator_utils import (
 )
 from lmms_eval.llm_judge.launcher import get_launcher
 from lmms_eval.loggers.evaluation_tracker import EvaluationTracker
-from lmms_eval.models import get_model
-from lmms_eval.api.task import Task
+from lmms_eval.models.model_utils.efficiency_metrics import build_efficiency_summary
+from lmms_eval.models.model_utils.usage_metrics import (
+    is_budget_exceeded,
+    reset_usage_metrics,
+    set_budget,
+    set_task_context,
+    summarize_usage_metrics,
+)
 from lmms_eval.tasks import TaskManager, get_task_dict
 from lmms_eval.utils import (
     create_iterator,
     get_datetime_str,
+    get_git_branch_name,
     get_git_commit_hash,
+    get_lmms_eval_version_string,
     handle_non_serializable,
     hash_string,
     is_multimodal_content,
-    make_table,
     positional_deprecated,
     run_task_tests,
     simple_parse_args_string,
 )
+
+IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff")
+_SENSITIVE_CONFIG_KEYS = {
+    "api_key",
+    "client_secret",
+    "hf_token",
+    "huggingface_hub_token",
+    "huggingfacehub_api_token",
+    "token",
+}
+# Suffixes also catch prefixed variants: openai_api_key, github_token, my_secret, db_password.
+_SENSITIVE_KEY_SUFFIXES = ("api_key", "_token", "_secret", "password")
+_SECRET_ASSIGNMENT_RE = re.compile(r"(?i)(^|[,\s])(\w*(?:api_key|token|secret|password))=([^,\s]+)")
+_HF_TOKEN_VALUE_RE = re.compile(r"\bhf_[A-Za-z0-9]{20,}\b")
+
+
+def _is_sensitive_config_key(key) -> bool:
+    key_lower = str(key).lower()
+    return key_lower in _SENSITIVE_CONFIG_KEYS or key_lower.endswith(_SENSITIVE_KEY_SUFFIXES)
+
+
+def _redact_eval_config_secrets(value):
+    if isinstance(value, dict):
+        return {key: ("[REDACTED]" if _is_sensitive_config_key(key) else _redact_eval_config_secrets(item)) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return type(value)(_redact_eval_config_secrets(item) for item in value)
+    if isinstance(value, str):
+        value = _SECRET_ASSIGNMENT_RE.sub(r"\1\2=[REDACTED]", value)
+        return _HF_TOKEN_VALUE_RE.sub("[REDACTED]", value)
+    return value
+
+
+def _clone_padding_request(pad_source: Instance) -> Instance:
+    pad_instance = copy.copy(pad_source)
+    pad_instance.metadata = dict(pad_source.metadata or {})
+    pad_instance.metadata["__padding_only__"] = True
+    pad_instance.resps = []
+    pad_instance.token_counts = []
+    return pad_instance
+
+
+def _enable_reentrant_filelocks() -> None:
+    """Force singleton file locks so nested load_dataset calls cannot deadlock.
+
+    filelock >= 3.16 detects in-thread deadlocks via a global ``_registry``
+    that tracks *all* held locks by canonical path and instance ``id()``.
+    Meanwhile, ``is_singleton=True`` caches instances per-class in
+    ``cls._instances``.  ``filelock.FileLock`` (``UnixFileLock``) and
+    ``datasets.utils._filelock.FileLock`` are **different classes**, so each
+    maintains a separate singleton cache — two distinct instances can end up
+    targeting the same OS lock file, triggering the global deadlock check.
+
+    Fix: maintain a **cross-class** singleton cache keyed on the canonical
+    lock path.  Any target-class ``FileLock(path)`` call returns the single
+    cached instance regardless of which class originated it.
+    """
+    if getattr(_enable_reentrant_filelocks, "_patched", False):
+        return
+
+    import filelock as _fl
+    import filelock._api as _fl_api
+    from datasets.utils import _filelock as _datasets_filelock
+
+    target_lock_classes = tuple(
+        cls
+        for cls in (
+            getattr(_fl, "FileLock", None),
+            getattr(_datasets_filelock, "FileLock", None),
+        )
+        if cls is not None
+    )
+
+    original_call = _fl_api.FileLockMeta.__call__
+    _cross_class_cache: dict[str, _fl_api.BaseFileLock] = {}
+
+    def _patched_call(cls, lock_file, *args, **kwargs):
+        if cls in target_lock_classes:
+            canonical = str(lock_file)
+            cached = _cross_class_cache.get(canonical)
+            if cached is not None:
+                return cached
+            kwargs.setdefault("is_singleton", True)
+            if cls is getattr(_datasets_filelock, "FileLock", None):
+                unset_mode = getattr(_fl_api, "_UNSET_FILE_MODE", None)
+                if kwargs.get("mode", unset_mode) == unset_mode:
+                    umask = os.umask(0o666)
+                    os.umask(umask)
+                    kwargs["mode"] = 0o666 & ~umask
+            instance = original_call(cls, lock_file, *args, **kwargs)
+            _cross_class_cache[canonical] = instance
+            return instance
+        return original_call(cls, lock_file, *args, **kwargs)
+
+    _fl_api.FileLockMeta.__call__ = _patched_call
+    _enable_reentrant_filelocks._patched = True
+
+
+def _looks_like_image_ref(value: str) -> bool:
+    lowered = value.lower().strip()
+    if lowered.startswith("data:image/"):
+        return True
+    if lowered.startswith(("http://", "https://", "file://")):
+        return any(ext in lowered for ext in IMAGE_EXTENSIONS)
+    return lowered.endswith(IMAGE_EXTENSIONS)
+
+
+def _guess_image_mime(path_hint: Optional[str]) -> str:
+    if path_hint:
+        guessed, _ = mimetypes.guess_type(path_hint)
+        if guessed and guessed.startswith("image/"):
+            return guessed
+    return "image/png"
+
+
+def _append_image_source(target: list[str], source: str, seen: set[str], max_items: int) -> None:
+    if not source or source in seen or len(target) >= max_items:
+        return
+    seen.add(source)
+    target.append(source)
+
+
+def _extract_image_sources(value, out: list[str], seen: set[str], max_items: int = 4, max_inline_bytes: int = 300_000) -> None:
+    if len(out) >= max_items:
+        return
+
+    if isinstance(value, str):
+        if _looks_like_image_ref(value):
+            _append_image_source(out, value, seen, max_items)
+        return
+
+    if isinstance(value, dict):
+        path_hint: Optional[str] = None
+        for key in ("url", "uri", "path", "image", "image_url", "image_path"):
+            candidate = value.get(key)
+            if isinstance(candidate, str):
+                if key == "path":
+                    path_hint = candidate
+                if _looks_like_image_ref(candidate):
+                    _append_image_source(out, candidate, seen, max_items)
+
+        raw_bytes = value.get("bytes")
+        if isinstance(raw_bytes, (bytes, bytearray)) and 0 < len(raw_bytes) <= max_inline_bytes and len(out) < max_items:
+            mime = _guess_image_mime(path_hint)
+            encoded = base64.b64encode(raw_bytes).decode("ascii")
+            _append_image_source(out, f"data:{mime};base64,{encoded}", seen, max_items)
+
+        for nested in value.values():
+            _extract_image_sources(nested, out, seen, max_items=max_items, max_inline_bytes=max_inline_bytes)
+        return
+
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            _extract_image_sources(item, out, seen, max_items=max_items, max_inline_bytes=max_inline_bytes)
+            if len(out) >= max_items:
+                break
+
+
+def _collect_input_media(doc: dict, request_args: list) -> list[str]:
+    sources: list[str] = []
+    seen: set[str] = set()
+    _extract_image_sources(doc, sources, seen)
+    for arg in request_args:
+        if len(sources) >= 4:
+            break
+        _extract_image_sources(arg, sources, seen)
+    return sources
 
 
 @positional_deprecated
@@ -65,6 +254,7 @@ def simple_evaluate(
     rewrite_requests_cache: bool = False,
     delete_requests_cache: bool = False,
     limit: Optional[Union[int, float]] = None,
+    offset: int = 0,
     bootstrap_iters: int = 100000,
     check_integrity: bool = False,
     write_out: bool = False,
@@ -85,6 +275,9 @@ def simple_evaluate(
     distributed_executor_backend: str = "accelerate",
     cli_args=None,
     force_simple: bool = False,
+    repeats: int = 1,
+    baseline: Optional[str] = None,
+    max_tokens: Optional[int] = None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -104,7 +297,7 @@ def simple_evaluate(
     :param device: str, optional
         PyTorch device (e.g. "cpu" or "cuda:0") for running models
     :param use_cache: str, optional
-        A path to a sqlite db file for caching model responses. `None` if not caching.
+        Path to a response-cache root directory or SQLite .db file for response-level caching. `None` to disable.
     :param cache_requests: bool, optional
         Speed up evaluation by caching the building of dataset requests. `None` if not caching.
     :param rewrite_requests_cache: bool, optional
@@ -113,6 +306,8 @@ def simple_evaluate(
         Deletes all of the request cache if set to `True`. `None` if not desired.
     :param limit: int or float, optional
         Limit the number of examples per task (only use this for testing), If <1, limit is a percentage of the total number of examples.
+    :param offset: int, optional
+        Start evaluation from this dataset index for each task.
     :param bootstrap_iters:
         Number of iterations for bootstrap statistics, used when calculating stderrs. set to 0 for no stderr calculations to be performed.
     :param check_integrity: bool
@@ -121,6 +316,8 @@ def simple_evaluate(
         If True, write out an example document and model input for checking task integrity
     :param log_samples: bool
         If True, write out all model outputs and documents for per-sample measurement and post-hoc analysis
+    :param repeats: int
+        Number of repeated generations per question for k-samples stability metrics.
     :param system_instruction: str
         System instruction to be applied to the prompt
     :param apply_chat_template: bool
@@ -168,7 +365,7 @@ def simple_evaluate(
 
     if gen_kwargs:
         gen_kwargs = simple_parse_args_string(gen_kwargs)
-        eval_logger.warning(f"generation_kwargs specified through cli, these settings will be used over set parameters in yaml tasks.")
+        eval_logger.warning("generation_kwargs specified through cli, these settings will be used over set parameters in yaml tasks.")
         if gen_kwargs == "":
             gen_kwargs = None
 
@@ -188,7 +385,7 @@ def simple_evaluate(
     if isinstance(model, str):
         if model_args is None:
             model_args = ""
-        lm = lmms_eval.models.get_model(model, force_simple).create_from_arg_string(
+        lm = models.get_model(model, force_simple).create_from_arg_string(
             model_args,
             {
                 "batch_size": batch_size,
@@ -199,7 +396,37 @@ def simple_evaluate(
     elif isinstance(model, lmms_eval.api.model.lmms):
         lm = model
     task_type = "simple" if lm.is_simple else "chat"
-    task_dict = get_task_dict(tasks, task_manager, task_type)
+
+    # filelock >= 3.16 decides singleton behavior in the metaclass __call__ path,
+    # before __init__ runs. datasets.load_dataset() uses datasets.utils._filelock.FileLock,
+    # which wraps filelock separately, so patch the shared metaclass instead.
+    _enable_reentrant_filelocks()
+
+    # Make SSLContext picklable so dill/datasets can fingerprint closures that
+    # capture the HF Hub HTTP session.  Without this, datasets 4.x raises
+    # "TypeError: cannot pickle 'SSLContext' object" during load_dataset().
+    import ssl
+
+    if not hasattr(ssl.SSLContext, "_orig_reduce"):
+        ssl.SSLContext._orig_reduce = True  # sentinel to avoid double-patching
+        ssl.SSLContext.__reduce__ = lambda self: (ssl.SSLContext, (self.protocol,))
+
+    # Stagger dataset loading across ranks to avoid cross-process FileLock contention
+    # on shared FS.  Rank 0 loads first (populates HF cache), then all others load
+    # from warm cache after a barrier.
+    # NOTE: use torch.distributed directly (not `dist`) because later code in this function
+    # has local `import torch.distributed as dist` which shadows the module-level import.
+    if torch.distributed.is_initialized():
+        rank = torch.distributed.get_rank()
+        if rank == 0:
+            eval_logger.info("Rank 0: loading datasets first to warm HF cache")
+            task_dict = get_task_dict(tasks, task_manager, task_type)
+        torch.distributed.barrier()
+        if rank != 0:
+            eval_logger.info(f"Rank {rank}: loading datasets from warm cache")
+            task_dict = get_task_dict(tasks, task_manager, task_type)
+    else:
+        task_dict = get_task_dict(tasks, task_manager, task_type)
 
     # helper function to recursively apply config overrides to leaf subtasks, skipping their constituent groups.
     # (setting of num_fewshot ; bypassing metric calculation ; setting fewshot seed)
@@ -244,6 +471,12 @@ def simple_evaluate(
                 task_obj.set_fewshot_seed(seed=fewshot_random_seed)
                 # eval_logger.info(f"Setting fewshot random generator seed to {fewshot_random_seed}")
 
+                # Handle repeated generations for model stability measurement (k-samples mode)
+                if repeats > 1:
+                    default_repeats = task_obj.get_config("repeats") or 1
+                    eval_logger.info(f"[Model Stability] Setting repeats={repeats} for {task_name} (was: {default_repeats})")
+                    task_obj.set_config(key="repeats", value=repeats)
+
                 adjusted_task_dict[task_name] = task_obj
 
         return adjusted_task_dict
@@ -262,30 +495,61 @@ def simple_evaluate(
             fewshot_as_multiturn=fewshot_as_multiturn,
         )
 
+    from lmms_eval.models.model_utils.gen_metrics import reset_logged_metrics
+
+    reset_logged_metrics()
+    reset_usage_metrics()
+    if max_tokens is not None:
+        set_budget(max_tokens=max_tokens)
+
     # Getting the rank settings
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     global_rank = int(os.environ.get("RANK", 0))
     world_size = int(os.environ.get("WORLD_SIZE", 1))
 
-    results = evaluate(
-        lm=lm,
-        task_dict=task_dict,
-        limit=limit,
-        cache_requests=cache_requests,
-        rewrite_requests_cache=rewrite_requests_cache,
-        bootstrap_iters=bootstrap_iters,
-        write_out=write_out,
-        log_samples=True if predict_only else log_samples,
-        system_instruction=system_instruction,
-        apply_chat_template=apply_chat_template,
-        fewshot_as_multiturn=fewshot_as_multiturn,
-        verbosity=verbosity,
-        distributed_executor_backend=distributed_executor_backend,
-        cli_args=cli_args,
-        eval_server_launcher=eval_launcher,
-    )
+    response_cache = None
+    if use_cache is not None:
+        response_cache = ResponseCache.create(
+            cache_root=use_cache,
+            model=model,
+            model_args=model_args,
+            task_dict=task_dict,
+            world_size=world_size,
+            global_rank=global_rank,
+        )
 
+    eval_succeeded = False
+    try:
+        results = evaluate(
+            lm=lm,
+            task_dict=task_dict,
+            limit=limit,
+            offset=offset,
+            cache_requests=cache_requests,
+            rewrite_requests_cache=rewrite_requests_cache,
+            bootstrap_iters=bootstrap_iters,
+            write_out=write_out,
+            log_samples=True if predict_only else log_samples,
+            system_instruction=system_instruction,
+            apply_chat_template=apply_chat_template,
+            fewshot_as_multiturn=fewshot_as_multiturn,
+            verbosity=verbosity,
+            distributed_executor_backend=distributed_executor_backend,
+            cli_args=cli_args,
+            eval_server_launcher=eval_launcher,
+            response_cache=response_cache,
+        )
+        eval_succeeded = True
+    finally:
+        if response_cache is not None:
+            response_cache.finalize(
+                success=eval_succeeded,
+                dist_backend=distributed_executor_backend,
+                accelerator=getattr(lm, "accelerator", None),
+            )
     if global_rank == 0:
+        from lmms_eval.models.model_utils.gen_metrics import summarize_logged_metrics
+
         if isinstance(model, str):
             model_name = model
         elif hasattr(model, "config") and hasattr(model.config, "_name_or_path"):
@@ -304,11 +568,13 @@ def simple_evaluate(
         # add info about execution
         results["config"].update(
             {
+                "model_backend": f"{type(lm).__module__}.{type(lm).__name__} ({task_type})",
                 "batch_size": batch_size,
                 "batch_sizes": (list(lm.batch_sizes.values()) if hasattr(lm, "batch_sizes") else []),
                 "device": device,
                 "use_cache": use_cache,
                 "limit": limit,
+                "offset": offset,
                 "bootstrap_iters": bootstrap_iters,
                 "gen_kwargs": gen_kwargs,
                 "random_seed": random_seed,
@@ -317,10 +583,90 @@ def simple_evaluate(
                 "fewshot_seed": fewshot_random_seed,
             }
         )
+        # Store full resolved CLI args for reproducibility
+        if cli_args is not None:
+            resolved = {}
+            for key, value in vars(cli_args).items():
+                try:
+                    json.dumps(value)
+                    resolved[key] = value
+                except (TypeError, ValueError):
+                    resolved[key] = str(value)
+            results["config"]["resolved_cli_args"] = resolved
+
+        results["config"] = _redact_eval_config_secrets(results["config"])
+
         results["git_hash"] = get_git_commit_hash()
+        results["git_branch"] = get_git_branch_name()
+        results["lmms_eval_version"] = get_lmms_eval_version_string()
         results["date"] = datetime_str
+        throughput_summary = summarize_logged_metrics()
+        if throughput_summary:
+            results["throughput"] = throughput_summary
+        usage_summary = summarize_usage_metrics()
+        results["usage"] = usage_summary
+        efficiency_summary = build_efficiency_summary(results)
+        if efficiency_summary:
+            results["efficiency"] = efficiency_summary
         # add_env_info(results)  # additional environment info to results
         # add_tokenizer_info(results, lm)  # additional info about tokenizer
+
+        # Baseline comparison (paired t-test)
+        if baseline:
+            baseline_display_name = get_baseline_display_name(baseline)
+
+            for task_name in results.get("results", {}).keys():
+                try:
+                    baseline_scores_dict, baseline_agg = load_baseline(baseline, task_name)
+                    # Extract current scores from samples
+                    if "samples" in results and task_name in results["samples"]:
+                        current_samples = results["samples"][task_name]
+                        # Get score_key from task config, default to "score"
+                        task_config = results.get("configs", {}).get(task_name, {})
+                        score_key = task_config.get("score_key", "score")
+
+                        current_scores = []
+                        baseline_scores = []
+                        for sample in current_samples:
+                            doc_id = sample.get("doc_id")
+                            if doc_id in baseline_scores_dict:
+                                # Extract score: first try exact score_key, then search for *_score fields
+                                score = None
+                                if score_key in sample:
+                                    val = sample[score_key]
+                                    if isinstance(val, (int, float)):
+                                        score = float(val)
+                                    elif isinstance(val, dict) and "score" in val:
+                                        score = float(val["score"])
+                                # Fallback: search for fields ending with "_score" (e.g., videomme_perception_score)
+                                if score is None:
+                                    for key in sample:
+                                        if key.endswith("_score") and key != score_key:
+                                            val = sample[key]
+                                            if isinstance(val, (int, float)):
+                                                score = float(val)
+                                                break
+                                            elif isinstance(val, dict) and "score" in val:
+                                                score = float(val["score"])
+                                                break
+                                if score is not None:
+                                    current_scores.append(score)
+                                    baseline_scores.append(baseline_scores_dict[doc_id])
+
+                        if current_scores and baseline_scores:
+                            comparison = compute_baseline_comparison(current_scores, baseline_scores, baseline_display_name)
+                            task_results = results["results"][task_name]
+                            task_results["paired_baseline"] = comparison["baseline_name"]
+                            task_results["paired_baseline_score"] = comparison["baseline_mean"] * 100
+                            task_results["paired_ci_lower"] = comparison["ci_lower"] * 100
+                            task_results["paired_ci_upper"] = comparison["ci_upper"] * 100
+                            task_results["paired_pvalue"] = comparison["p_value"]
+                            eval_logger.info(f"[Baseline] {task_name}: diff={comparison['mean_diff']*100:.2f}%, p={comparison['p_value']:.4f}")
+                        else:
+                            eval_logger.debug(f"[Baseline] Skipping {task_name}: no valid scores found with score_key='{score_key}'")
+                except Exception as e:
+                    eval_logger.warning(f"[Baseline] Failed for {task_name}: {e}")
+
         return results
     else:
         return None
@@ -329,11 +675,163 @@ def simple_evaluate(
 decontaminate_suffix = "_decontaminate"
 
 
+def _run_generate_until_agentic(
+    lm,
+    requests: list[Instance],
+    agentic_trace_mode: str = "basic",
+    response_cache: Optional[ResponseCache] = None,
+) -> list[str]:
+    responses: list[str] = []
+
+    for req in requests:
+        (
+            current_context,
+            generation_kwargs,
+            current_doc_to_visual,
+            doc_to_text,
+            doc_id,
+            task_name,
+            split,
+        ) = req.args
+
+        if not callable(doc_to_text):
+            raise ValueError("generate_until_agentic requires callable doc_to_text")
+
+        max_agentic_steps = int(generation_kwargs.get("max_agentic_steps", 12))
+        base_generation_kwargs = copy.deepcopy(generation_kwargs)
+        base_generation_kwargs.pop("max_agentic_steps", None)
+
+        model_outputs: list[str] = []
+        previous_round_info = None
+        final_response = ""
+        full_round_trace: list[dict] = []
+
+        for round_idx in range(max_agentic_steps):
+            round_input_context = current_context
+            if getattr(lm, "is_simple", False):
+                single_req = Instance(
+                    request_type="generate_until",
+                    arguments=(current_context, copy.deepcopy(base_generation_kwargs), current_doc_to_visual, doc_id, task_name, split),
+                    idx=0,
+                    metadata=req.metadata,
+                )
+            else:
+                current_doc = lm.task_dict[task_name][split][doc_id]
+
+                def _agentic_doc_to_messages(_doc):
+                    visuals = current_doc_to_visual(_doc)
+                    if visuals is None:
+                        visuals = []
+                    content = []
+                    for visual in visuals:
+                        if isinstance(visual, dict):
+                            content.append({"type": "audio", "url": visual})
+                        elif isinstance(visual, str):
+                            content.append({"type": "video", "url": visual})
+                        else:
+                            content.append({"type": "image", "url": visual})
+                    content.append({"type": "text", "text": current_context})
+                    return [{"role": "user", "content": content}]
+
+                single_req = Instance(
+                    request_type="generate_until",
+                    arguments=(current_context, _agentic_doc_to_messages, copy.deepcopy(base_generation_kwargs), doc_id, task_name, split),
+                    idx=0,
+                    metadata=req.metadata,
+                )
+            if response_cache is not None:
+                current_raw_output = response_cache.execute(lm, "generate_until", [single_req])[0]
+            else:
+                current_raw_output = lm.generate_until([single_req])[0]
+            current_output, _ = unwrap_generation_output(current_raw_output)
+            model_outputs.append(current_output)
+            final_response = current_output
+
+            step_payload = doc_to_text(
+                lm.task_dict[task_name][split][doc_id],
+                previous_output=model_outputs,
+                round_idx=round_idx + 1,
+                previous_round_info=previous_round_info,
+            )
+
+            if isinstance(step_payload, tuple) and len(step_payload) == 5:
+                visuals, next_context, terminal_signal, updated_outputs, next_round_info = step_payload
+                if updated_outputs is not None:
+                    model_outputs = list(updated_outputs)
+                    if model_outputs:
+                        final_response = model_outputs[-1]
+                previous_round_info = next_round_info
+
+                if agentic_trace_mode == "full":
+                    round_record = {
+                        "round_idx": round_idx + 1,
+                        "round_input": round_input_context,
+                        "model_output": current_output,
+                        "terminal": bool(terminal_signal),
+                    }
+                    if isinstance(next_round_info, dict):
+                        round_record["state"] = next_round_info.get("state")
+                        round_record["tool_result"] = next_round_info.get("last_tool_result")
+                        round_record["tool_calls"] = next_round_info.get("tool_calls")
+                        round_record["valid_tool_calls"] = next_round_info.get("valid_tool_calls")
+                        round_record["invalid_steps"] = next_round_info.get("invalid_steps")
+                    if next_context is not None:
+                        round_record["next_input"] = next_context
+                    full_round_trace.append(round_record)
+
+                if terminal_signal:
+                    break
+
+                if next_context is not None:
+                    current_context = next_context
+                if visuals is not None:
+                    current_doc_to_visual = lambda _doc, _visuals=visuals: _visuals
+            elif isinstance(step_payload, str):
+                current_context = step_payload
+            else:
+                break
+
+        if previous_round_info is not None and not (isinstance(final_response, str) and final_response.strip().startswith("{")):
+            state = previous_round_info.get("state", {}) if isinstance(previous_round_info, dict) else {}
+            valid_tool_calls = float(previous_round_info.get("valid_tool_calls", previous_round_info.get("tool_calls", 0))) if isinstance(previous_round_info, dict) else 0.0
+            invalid_steps = float(previous_round_info.get("invalid_steps", 0.0)) if isinstance(previous_round_info, dict) else 0.0
+            fallback_payload = {
+                "success": False,
+                "error": "max_agentic_steps_reached",
+                "tool_calls": float(previous_round_info.get("tool_calls", 0)) if isinstance(previous_round_info, dict) else 0.0,
+                "valid_tool_calls": valid_tool_calls,
+                "invalid_steps": invalid_steps,
+                "state": state,
+                "last_model_output": final_response,
+                "trace": model_outputs,
+            }
+            if isinstance(state, dict):
+                for key in ["cash", "days_elapsed", "inventory", "mobile_data_working"]:
+                    if key in state:
+                        fallback_payload[key] = state[key]
+            final_response = json.dumps(fallback_payload, ensure_ascii=False)
+
+        if agentic_trace_mode == "full":
+            try:
+                parsed_response = json.loads(final_response) if isinstance(final_response, str) else None
+                if isinstance(parsed_response, dict):
+                    parsed_response["agentic_trace_mode"] = "full"
+                    parsed_response["agentic_rounds"] = full_round_trace
+                    final_response = json.dumps(parsed_response, ensure_ascii=False)
+            except (TypeError, json.JSONDecodeError):
+                pass
+
+        responses.append(final_response)
+
+    return responses
+
+
 @positional_deprecated
 def evaluate(
-    lm: "LM",
+    lm,
     task_dict,
     limit: Optional[int] = None,
+    offset: int = 0,
     cache_requests: bool = False,
     rewrite_requests_cache: bool = False,
     bootstrap_iters: Optional[int] = 100000,
@@ -346,6 +844,7 @@ def evaluate(
     distributed_executor_backend: str = "accelerate",
     eval_server_launcher: Optional[Union[str, Callable]] = None,
     cli_args=None,
+    response_cache: Optional[ResponseCache] = None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -355,6 +854,8 @@ def evaluate(
         Dictionary of tasks. Tasks will be taken to have name type(task).config.task .
     :param limit: int, optional
         Limit the number of examples per task (only use this for testing)
+    :param offset: int, optional
+        Start evaluation from this dataset index for each task.
     :param bootstrap_iters:
         Number of iterations for bootstrap statistics, used when calculating stderr. Set to 0 for skipping all stderr calculations.
     :param write_out: bool
@@ -401,7 +902,19 @@ def evaluate(
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     global_rank = int(os.environ.get("RANK", 0))
     world_size = int(os.environ.get("WORLD_SIZE", 1))
+
     eval_logger.info(f"Running on rank {global_rank} (local rank {local_rank})")
+
+    def _infer_task_request_type(task_obj: Task) -> Optional[str]:
+        if task_obj.instances:
+            return task_obj.instances[0].request_type
+
+        output_type = getattr(task_obj, "OUTPUT_TYPE", None)
+        if output_type == "multiple_choice":
+            return "loglikelihood"
+        if isinstance(output_type, str):
+            return output_type
+        return None
 
     # get lists of group hierarchy and each type of request
     eval_tasks = get_task_list(task_dict)
@@ -410,11 +923,35 @@ def evaluate(
         if not all("bypass" not in getattr(task_output.task, "_metric_fn_list", {}).keys() for task_output in eval_tasks):
             raise ValueError("log_samples must be True for 'bypass' metric-only tasks")
 
-    if distributed_executor_backend == "accelerate" and not hasattr(lm, "accelerator"):
-        lm.accelerator = Accelerator()
+    if distributed_executor_backend == "accelerate":
+        if not hasattr(lm, "accelerator"):
+            lm.accelerator = Accelerator()
+    else:
+        # Torchrun/native path: auto-init a process group for multi-rank runs
+        # whose model backend never called init_process_group (e.g. diffusers
+        # video-gen models), so evaluator collectives don't crash. gloo needs no
+        # GPU. Gated out of the accelerate path on purpose: pre-initializing here
+        # would make Accelerator() adopt this gloo group instead of building NCCL,
+        # silently running GPU collectives on CPU.
+        if world_size > 1 and dist.is_available() and not dist.is_initialized():
+            if os.environ.get("MASTER_ADDR") and os.environ.get("MASTER_PORT"):
+                dist.init_process_group(backend="gloo")
+                eval_logger.info(f"evaluator: auto-initialized gloo process group (world={world_size})")
+            else:
+                eval_logger.warning(
+                    f"evaluator: WORLD_SIZE={world_size} but MASTER_ADDR/MASTER_PORT are unset; skipping torch.distributed auto-init. Distributed collectives will fail unless the model backend initializes the process group itself."
+                )
+
+    # Inject rank/world_size into the model so that logging (tqdm disable)
+    # and rank-conditional logic work on non-zero ranks.  Many simple models
+    # only read LOCAL_RANK for device binding and leave _rank/_world_size
+    # at their defaults (0, 1).
+    if world_size > 1:
+        lm._rank = global_rank
+        lm._world_size = world_size
 
     for task_output in eval_tasks:
-        task: Task = task_output.task
+        task = task_output.task
         task_name = task_output.task_name
         task.args = cli_args
 
@@ -449,6 +986,7 @@ def evaluate(
         limit = get_sample_size(task, limit)
         task.build_all_requests(
             limit=limit,
+            offset=offset,
             rank=global_rank,
             world_size=world_size,
             cache_requests=cache_requests,  # later we will add them
@@ -477,39 +1015,86 @@ def evaluate(
                 instances_rnk = torch.tensor(len(task._instances), device=lm.device)
                 gathered_item = lm.accelerator.gather(instances_rnk).cpu().detach().numpy().tolist()
             elif distributed_executor_backend == "torchrun":
-                instances_rnk = torch.tensor(len(task._instances), device=lm.device)
-                gathered_item = torch.zeros(world_size * 1, dtype=instances_rnk.dtype, device=lm.device)
+                instances_rnk = torch.tensor([len(task._instances)], device=lm.device)
+                gathered_item = torch.zeros(world_size, dtype=instances_rnk.dtype, device=lm.device)
                 dist.all_gather_into_tensor(gathered_item, instances_rnk)
                 gathered_item = gathered_item.cpu().detach().numpy().tolist()
             else:
                 raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
 
-            # "multiple_choice" task types dispatch (several) "loglikelihood" request types
-            reqtype = "loglikelihood" if task.OUTPUT_TYPE == "multiple_choice" else task.OUTPUT_TYPE
+            # "multiple_choice" task types dispatch "loglikelihood" requests.
+            local_reqtype = _infer_task_request_type(task)
+            reqtype = local_reqtype
+            if dist.is_available() and dist.is_initialized():
+                gathered_reqtypes = [None] * world_size
+                dist.all_gather_object(gathered_reqtypes, local_reqtype)
+                reqtype = next((rt for rt in gathered_reqtypes if rt is not None), None)
+
             # compute number of pseudo-batches to pad with (FSDP/DDP require even batches among ranks)
             numpad = max(gathered_item) - gathered_item[lm.rank]
-            # todo: may not account for padding in cases like SquadV2 which has multiple req types
-            padding_requests[reqtype] += numpad
+            if reqtype is None:
+                eval_logger.warning(f"Task: {task_output.task_name}; unable to infer request type on rank {global_rank}, skipping padding computation.")
+            else:
+                # todo: may not account for padding in cases like SquadV2 which has multiple req types
+                padding_requests[reqtype] += numpad
 
     ### Run LMM on inputs, get all outputs ###
+    if world_size > 1 and dist.is_available() and dist.is_initialized():
+        local_reqtypes = list(requests.keys())
+        gathered_reqtypes = [None] * world_size
+        dist.all_gather_object(gathered_reqtypes, local_reqtypes)
+        canonical_reqtypes = []
+        for rank_reqtypes in gathered_reqtypes:
+            if not rank_reqtypes:
+                continue
+            for reqtype in rank_reqtypes:
+                if reqtype not in canonical_reqtypes:
+                    canonical_reqtypes.append(reqtype)
+    else:
+        canonical_reqtypes = list(requests.keys())
+
     # execute each type of request
-    for reqtype, reqs in requests.items():
+    for reqtype in canonical_reqtypes:
+        reqs = requests.get(reqtype, [])
         eval_logger.info("Running {} requests".format(reqtype))
         # create `K` copies of each request `req` based off `K = req.repeats`
         cloned_reqs = []
+        pad_source = reqs[-1] if reqs else None
         for req in reqs:
             cloned_reqs.extend([req] * req.repeats)
 
         if (world_size > 1) and (padding_requests[reqtype] > 0):
-            for _ in range(padding_requests[reqtype]):
-                cloned_reqs.extend([req] * req.repeats)
+            if pad_source is None:
+                eval_logger.warning(f"Running {reqtype} requests but could not find a pad source request on rank {global_rank}; skipping rank padding.")
+            else:
+                for _ in range(padding_requests[reqtype]):
+                    pad_instance = _clone_padding_request(pad_source)
+                    cloned_reqs.extend([pad_instance] * pad_instance.repeats)
 
-        # run requests through model
-        resps = getattr(lm, reqtype)(cloned_reqs)  # Choiszt run generate until
+        # run requests through model (with optional response cache)
+        if reqtype == "generate_until_agentic":
+            trace_mode = "basic"
+            if cli_args is not None:
+                trace_mode = getattr(cli_args, "agentic_trace_mode", "basic")
+            resps = _run_generate_until_agentic(
+                lm,
+                cloned_reqs,
+                agentic_trace_mode=trace_mode,
+                response_cache=response_cache,
+            )
+        elif response_cache is not None:
+            resps = response_cache.execute(lm, reqtype, cloned_reqs)
+        else:
+            resps = getattr(lm, reqtype)(cloned_reqs)
 
-        # put responses from model into a list of length K for each request.
         for x, req in zip(resps, cloned_reqs):
-            req.resps.append(x)
+            text, tc = unwrap_generation_output(x)
+            req.resps.append(text)
+            req.token_counts.append(tc)
+
+        if is_budget_exceeded():
+            eval_logger.warning("Token budget reached after '{}' requests. Skipping remaining request types.", reqtype)
+            break
 
         if world_size > 1:
             if distributed_executor_backend == "accelerate":
@@ -534,9 +1119,35 @@ def evaluate(
 
     ### Postprocess outputs ###
     # TODO: del model here, maybe (idea: allow user to specify device of e.g. reward model separately)
+
+    # When a task opts in via `auto_strip_thinking`, prepend a StripThinkingFilter to
+    # the FRONT of each existing filter ensemble's chain so answer-extraction filters
+    # (take_first / regex / multi_choice_regex) receive text with the <think>/<thinking>
+    # reasoning blocks already removed. We deliberately do NOT add a sibling ensemble:
+    # FilterEnsembles do not chain (each reads raw inst.resps and writes its own
+    # filtered_resps key), so a sibling would leave extraction filters seeing un-stripped
+    # text and would create a new scored key holding an unselected list.
+    from lmms_eval.filters.transformation import StripThinkingFilter
+
+    for task_output in eval_tasks:
+        task = task_output.task
+        if not hasattr(task, "_filters"):
+            continue
+        if not getattr(getattr(task, "config", None), "auto_strip_thinking", False):
+            continue
+        # Skip when reasoning_tags is already configured (task or CLI): the scoring loop
+        # below strips those blocks, so auto-stripping here would double-strip.
+        cli_reasoning_tags = getattr(cli_args, "reasoning_tags", None) if cli_args else None
+        task_reasoning_tags = getattr(task.config, "reasoning_tags", None)
+        if parse_reasoning_tags_config(cli_value=cli_reasoning_tags, task_value=task_reasoning_tags) is not None:
+            continue
+        for ensemble in task._filters:
+            ensemble.filters.insert(0, StripThinkingFilter())
+
     for task_output in eval_tasks:
         task = task_output.task
         task.apply_filters()
+        set_task_context(task_output.task_name)
 
         ### Collect values of metrics on all datapoints ###
         # # unpack results and sort back in order and return control to Task
@@ -549,17 +1160,95 @@ def evaluate(
         for instances in instances_by_doc_id.values():
             instances.sort(key=lambda x: x.idx)
         # iterate over different filters used
-        for filter_key in task.instances[0].filtered_resps.keys():
+        local_filter_keys = list(task.instances[0].filtered_resps.keys()) if task.instances else []
+        if WORLD_SIZE > 1 and dist.is_available() and dist.is_initialized():
+            gathered_filter_keys = [None] * WORLD_SIZE
+            dist.all_gather_object(gathered_filter_keys, local_filter_keys)
+            filter_keys = []
+            for rank_keys in gathered_filter_keys:
+                if not rank_keys:
+                    continue
+                for filter_key in rank_keys:
+                    if filter_key not in filter_keys:
+                        filter_keys.append(filter_key)
+        else:
+            filter_keys = local_filter_keys
+
+        if len(filter_keys) == 0:
+            eval_logger.warning(f"Task: {task_output.task_name}; no filter keys available on rank {RANK}.")
+            continue
+
+        for filter_key in filter_keys:
+            # Resolve reasoning tags for this task
+            cli_reasoning_tags = getattr(cli_args, "reasoning_tags", None) if cli_args else None
+            task_reasoning_tags = getattr(task.config, "reasoning_tags", None)
+            reasoning_tags = parse_reasoning_tags_config(cli_value=cli_reasoning_tags, task_value=task_reasoning_tags)
+
             if cli_args is not None and not cli_args.process_with_media:
-                doc_iterator = create_iterator(enumerate(task.eval_docs_no_media), rank=RANK, limit=int(limit) if limit else None, world_size=WORLD_SIZE)
+                doc_iterator = create_iterator(
+                    enumerate(task.eval_docs_no_media),
+                    rank=RANK,
+                    limit=int(limit) if limit else None,
+                    world_size=WORLD_SIZE,
+                    offset=offset,
+                )
             else:
-                doc_iterator = task.doc_iterator(rank=RANK, limit=limit, world_size=WORLD_SIZE)
-            doc_iterator_for_counting = itertools.islice(range(len(task.test_docs())), RANK, limit, WORLD_SIZE) if task.has_test_docs() else itertools.islice(range(len(task.validation_docs())), RANK, limit, WORLD_SIZE)
+                doc_iterator = task.doc_iterator(rank=RANK, limit=limit, world_size=WORLD_SIZE, offset=offset)
+            doc_iterator_for_counting = (
+                create_iterator(
+                    range(len(task.test_docs())),
+                    rank=RANK,
+                    limit=limit,
+                    world_size=WORLD_SIZE,
+                    offset=offset,
+                )
+                if task.has_test_docs()
+                else create_iterator(
+                    range(len(task.validation_docs())),
+                    rank=RANK,
+                    limit=limit,
+                    world_size=WORLD_SIZE,
+                    offset=offset,
+                )
+            )
             total_docs = sum(1 for _ in doc_iterator_for_counting)
-            pbar = tqdm(total=total_docs, desc=f"Postprocessing", disable=(RANK != 0))
+            pbar = tqdm(total=total_docs, desc="Postprocessing", disable=(RANK != 0))
             for doc_id, doc in doc_iterator:
                 requests = instances_by_doc_id[doc_id]
+                # Defensive skip: if a doc landed in this rank's shard but has
+                # no requests (e.g. a split mismatch during a partial rerun),
+                # skip rather than crashing at `requests[0].doc` below.
+                if not requests:
+                    pbar.update(1)
+                    continue
+
+                # Strip reasoning tags before scoring
+                if reasoning_tags is not None:
+                    for req in requests:
+                        raw_resp = req.filtered_resps[filter_key]
+                        req.raw_filtered_resps[filter_key] = raw_resp
+                        if isinstance(raw_resp, str):
+                            req.filtered_resps[filter_key] = strip_reasoning_tags(raw_resp, reasoning_tags)
+                        elif isinstance(raw_resp, list):
+                            req.filtered_resps[filter_key] = [strip_reasoning_tags(r, reasoning_tags) if isinstance(r, str) else r for r in raw_resp]
+
                 metrics = task.process_results(doc, [req.filtered_resps[filter_key] for req in requests])
+
+                # For stability metrics: compute per-sample scores when repeats > 1
+                repeats = task.config.repeats if hasattr(task, "config") and hasattr(task.config, "repeats") else 1
+                if repeats > 1 and len(requests) == repeats:
+                    # Compute per-sample scores by calling process_results for each sample individually
+                    per_sample_scores = {}
+                    for req in requests:
+                        sample_metrics = task.process_results(doc, [req.filtered_resps[filter_key]])
+                        for metric_name, value in sample_metrics.items():
+                            if metric_name not in per_sample_scores:
+                                per_sample_scores[metric_name] = []
+                            per_sample_scores[metric_name].append(value)
+                    # Store per-sample scores grouped by doc_id
+                    for metric_name, scores in per_sample_scores.items():
+                        task_output.per_sample_metrics[(metric_name, filter_key)].append(scores)
+
                 if log_samples:
                     target = task.doc_to_target(doc)
                     saved_doc = {}
@@ -575,14 +1264,24 @@ def evaluate(
                             # else:
                             #     filtered_arguments.append(_handle_non_serializable(value))
 
+                    input_media = _collect_input_media(doc, filtered_arguments)
+
+                    per_sample_tc = []
+                    for req in requests:
+                        if req.token_counts:
+                            tc = req.token_counts[0]
+                            per_sample_tc.append(tc.to_dict() if tc is not None else None)
+                        else:
+                            per_sample_tc.append(None)
+
                     example = {
                         "doc_id": doc_id,
                         "doc": saved_doc,
                         "target": target,
-                        # "pred": metrics['coco_cap_chair_i']['pred'],
                         "arguments": filtered_arguments,
-                        "resps": [req.resps for req in requests],
+                        "resps": [req.raw_filtered_resps.get(filter_key, req.resps) for req in requests],
                         "filtered_resps": [req.filtered_resps[filter_key] for req in requests],
+                        "token_counts": per_sample_tc,
                         "doc_hash": hash_string(
                             json.dumps(
                                 requests[0].doc,
@@ -591,8 +1290,9 @@ def evaluate(
                                 ensure_ascii=False,
                             )
                         ),
-                        # Removing prompt hash and target hash here
                     }
+                    if input_media:
+                        example["input_media"] = input_media
                     example.update(metrics)
                     task_output.logged_samples.append(example)
                 for metric, value in metrics.items():
@@ -600,6 +1300,7 @@ def evaluate(
                 pbar.update(1)
 
             pbar.close()
+        set_task_context(None)
 
     if WORLD_SIZE > 1:
         # if multigpu, then gather data across all ranks to rank 0
@@ -622,15 +1323,82 @@ def evaluate(
                     task_output.logged_samples = list(itertools.chain.from_iterable(full_samples))
 
             # then collect metrics across all ranks
-            for metrics in task_output.sample_metrics:
+            # All ranks must iterate over metric keys in the SAME order,
+            # otherwise gather_object calls will misalign values between keys.
+            # Gather all keys, merge, sort, and broadcast a canonical order.
+            # this important when returning many keys from a benchmark, to avoid misalignments between ranks.
+            all_metric_keys = list(task_output.sample_metrics.keys())
+            gathered_keys = [None] * WORLD_SIZE if RANK == 0 else None
+            torch.distributed.gather_object(
+                obj=all_metric_keys,
+                object_gather_list=gathered_keys,
+                dst=0,
+            )
+
+            if RANK == 0:
+                all_keys_set = set()
+                for rank_keys in gathered_keys:
+                    if rank_keys:
+                        all_keys_set.update(rank_keys)
+                canonical_keys = sorted(all_keys_set, key=lambda x: str(x))
+            else:
+                canonical_keys = None
+
+            broadcast_list = [canonical_keys] if RANK == 0 else [None]
+            torch.distributed.broadcast_object_list(broadcast_list, src=0)
+            canonical_keys = broadcast_list[0]
+
+            for metrics in canonical_keys:
+                if metrics in task_output.sample_metrics:
+                    pre_gather = task_output.sample_metrics[metrics]
+                else:
+                    pre_gather = []
+
                 metric_list = [None] * WORLD_SIZE if RANK == 0 else None
                 torch.distributed.gather_object(
-                    obj=task_output.sample_metrics[metrics],
+                    obj=pre_gather,
                     object_gather_list=metric_list,
                     dst=0,
                 )
                 if RANK == 0:
                     task_output.sample_metrics[metrics] = list(itertools.chain.from_iterable(metric_list))
+
+            # gather per_sample_metrics for stability metrics (same canonical ordering)
+            all_ps_keys = list(task_output.per_sample_metrics.keys())
+            gathered_ps_keys = [None] * WORLD_SIZE if RANK == 0 else None
+            torch.distributed.gather_object(
+                obj=all_ps_keys,
+                object_gather_list=gathered_ps_keys,
+                dst=0,
+            )
+
+            if RANK == 0:
+                all_ps_set = set()
+                for rank_keys in gathered_ps_keys:
+                    if rank_keys:
+                        all_ps_set.update(rank_keys)
+                canonical_ps_keys = sorted(all_ps_set, key=lambda x: str(x))
+            else:
+                canonical_ps_keys = None
+
+            broadcast_ps = [canonical_ps_keys] if RANK == 0 else [None]
+            torch.distributed.broadcast_object_list(broadcast_ps, src=0)
+            canonical_ps_keys = broadcast_ps[0]
+
+            for metrics in canonical_ps_keys:
+                if metrics in task_output.per_sample_metrics:
+                    pre_gather = task_output.per_sample_metrics[metrics]
+                else:
+                    pre_gather = []
+
+                metric_list = [None] * WORLD_SIZE if RANK == 0 else None
+                torch.distributed.gather_object(
+                    obj=pre_gather,
+                    object_gather_list=metric_list,
+                    dst=0,
+                )
+                if RANK == 0:
+                    task_output.per_sample_metrics[metrics] = list(itertools.chain.from_iterable(metric_list))
 
         dist.barrier()  # Ensure all processes are synced before proceeding
 
@@ -642,6 +1410,7 @@ def evaluate(
         for task_output in eval_tasks:
             task_output.calculate_aggregate_metric(bootstrap_iters=bootstrap_iters)
             task_output.calculate_clt_aggregate_metric()
+            task_output.calculate_stability_metrics()
         (
             results,
             samples,

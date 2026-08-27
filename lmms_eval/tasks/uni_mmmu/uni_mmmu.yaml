@@ -1,0 +1,8 @@
+# Uni-MMMU Task Group
+# https://arxiv.org/abs/2510.13759
+group: uni_mmmu
+task:
+  - uni_mmmu_jigsaw
+  - uni_mmmu_maze
+  - uni_mmmu_sliding
+  - uni_mmmu_geometry

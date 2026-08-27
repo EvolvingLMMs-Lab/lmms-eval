@@ -1,0 +1,106 @@
+test_split: test
+output_type: generate_until
+dataset_kwargs:
+  token: True
+  cache_dir: sparbench_cache
+process_docs: !function utils.process_docs
+doc_to_visual: !function utils.sparbench_doc_to_visual
+doc_to_text: !function utils.sparbench_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 100
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+# The return value of process_results will be used by metrics
+process_results: !function utils.sparbench_process_results
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: sparbench_score
+    aggregation: !function utils.sparbench_aggregate_results
+    higher_is_better: true
+  - metric: obj_spatial_relation_oo_accuracy
+    aggregation: !function utils.sparbench_aggregate_obj_spatial_relation_oo
+    higher_is_better: true
+  - metric: obj_spatial_relation_oc_mv_accuracy
+    aggregation: !function utils.sparbench_aggregate_obj_spatial_relation_oc_mv
+    higher_is_better: true
+  - metric: obj_spatial_relation_oo_mv_accuracy
+    aggregation: !function utils.sparbench_aggregate_obj_spatial_relation_oo_mv
+    higher_is_better: true
+  - metric: spatial_imagination_oc_accuracy
+    aggregation: !function utils.sparbench_aggregate_spatial_imagination_oc
+    higher_is_better: true
+  - metric: spatial_imagination_oo_accuracy
+    aggregation: !function utils.sparbench_aggregate_spatial_imagination_oo
+    higher_is_better: true
+  - metric: spatial_imagination_oc_mv_accuracy
+    aggregation: !function utils.sparbench_aggregate_spatial_imagination_oc_mv
+    higher_is_better: true
+  - metric: spatial_imagination_oo_mv_accuracy
+    aggregation: !function utils.sparbench_aggregate_spatial_imagination_oo_mv
+    higher_is_better: true
+  - metric: position_matching_accuracy
+    aggregation: !function utils.sparbench_aggregate_position_matching
+    higher_is_better: true
+  - metric: camera_motion_infer_accuracy
+    aggregation: !function utils.sparbench_aggregate_camera_motion_infer
+    higher_is_better: true
+  - metric: distance_infer_center_oo_accuracy
+    aggregation: !function utils.sparbench_aggregate_distance_infer_center_oo
+    higher_is_better: true
+  - metric: distance_infer_center_oo_mv_accuracy
+    aggregation: !function utils.sparbench_aggregate_distance_infer_center_oo_mv
+    higher_is_better: true
+  - metric: depth_prediction_oc
+    aggregation: !function utils.sparbench_aggregate_depth_prediction_oc
+    higher_is_better: true
+  - metric: depth_prediction_oo
+    aggregation: !function utils.sparbench_aggregate_depth_prediction_oo
+    higher_is_better: true
+  - metric: distance_prediction_oc
+    aggregation: !function utils.sparbench_aggregate_distance_prediction_oc
+    higher_is_better: true
+  - metric: distance_prediction_oo
+    aggregation: !function utils.sparbench_aggregate_distance_prediction_oo
+    higher_is_better: true
+  - metric: depth_prediction_oc_mv
+    aggregation: !function utils.sparbench_aggregate_depth_prediction_oc_mv
+    higher_is_better: true
+  - metric: depth_prediction_oo_mv
+    aggregation: !function utils.sparbench_aggregate_depth_prediction_oo_mv
+    higher_is_better: true
+  - metric: distance_prediction_oo_mv
+    aggregation: !function utils.sparbench_aggregate_distance_prediction_oo_mv
+    higher_is_better: true
+  - metric: distance_prediction_oc_mv
+    aggregation: !function utils.sparbench_aggregate_distance_prediction_oc_mv
+    higher_is_better: true
+  - metric: view_change_infer_vci_metric
+    aggregation: !function utils.sparbench_aggregate_view_change_infer
+    higher_is_better: true
+  - metric: high
+    aggregation: !function utils.sparbench_aggregate_high
+    higher_is_better: true
+  - metric: middle
+    aggregation: !function utils.sparbench_aggregate_middle
+    higher_is_better: true
+  - metric: low
+    aggregation: !function utils.sparbench_aggregate_low
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    mca_post_prompt: "Answer with the option's letter from the given choices directly."
+    na_post_prompt: "Please answer the question using a single word or phrase."
+  gemini_api:
+    pre_prompt: ""
+    mca_post_prompt: "Answer with the option's letter from the given choices directly."
+    na_post_prompt: "Do not response anything other than a single number!"
+  gpt4v:
+    pre_prompt: ""
+    mca_post_prompt: "Answer with the option's letter from the given choices directly."
+    na_post_prompt: "Do not response anything other than a single number!"
+metadata:
+  - version: 0.0

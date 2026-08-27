@@ -1,0 +1,42 @@
+dataset_path: ahmed-masry/ChartQAPro
+dataset_kwargs:
+  token: True
+task: "chartqapro"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.chartqapro_doc_to_visual
+doc_to_text: !function utils.chartqapro_doc_to_text
+doc_to_target: !function utils.chartqapro_doc_to_target
+generation_kwargs:
+  max_new_tokens: 128
+  temperature: 0
+  do_sample: False
+process_results: !function utils.chartqapro_process_results
+metric_list:
+  - metric: relaxed_overall
+    aggregation: mean
+    higher_is_better: true
+  - metric: relaxed_factoid
+    aggregation: mean
+    higher_is_better: true
+  - metric: relaxed_conversational
+    aggregation: mean
+    higher_is_better: true
+  - metric: relaxed_hypothetical
+    aggregation: mean
+    higher_is_better: true
+  - metric: relaxed_fact_checking
+    aggregation: mean
+    higher_is_better: true
+  - metric: relaxed_multi_choice
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  - version: 0.0
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer the question with a short phrase."
+  qwen_vl:
+    pre_prompt: ""
+    post_prompt: " Answer:"

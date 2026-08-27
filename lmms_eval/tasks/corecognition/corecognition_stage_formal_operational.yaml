@@ -1,0 +1,4 @@
+task: "corecognition_stage_formal_operational"
+process_docs: !function utils.process_docs_stage_formal_operational
+
+include: _default_template_yaml

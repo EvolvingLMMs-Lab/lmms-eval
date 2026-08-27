@@ -1,0 +1,19 @@
+task: cgav_counting_ref
+include: _default_template_yaml
+doc_to_visual: !function utils.cgav_doc_to_visual_ref
+doc_to_text: !function utils.cgav_doc_to_text_count
+doc_to_target: answer
+process_results: !function utils.cgav_process_results_ref
+metric_list:
+  - metric: acc
+    aggregation: !function utils.aggregate_acc
+    higher_is_better: true
+  - metric: oboa
+    aggregation: !function utils.aggregate_oboa
+    higher_is_better: true
+  - metric: mae
+    aggregation: !function utils.aggregate_mae
+    higher_is_better: false
+  - metric: rmse
+    aggregation: !function utils.aggregate_rmse
+    higher_is_better: false

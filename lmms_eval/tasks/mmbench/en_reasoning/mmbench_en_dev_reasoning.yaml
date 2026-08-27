@@ -1,0 +1,5 @@
+task: "mmbench_en_dev_reasoning"
+test_split: dev
+include: _default_template_mmbench_en_reasoning_yaml
+metadata:
+  version: 0.0

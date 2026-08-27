@@ -16,7 +16,8 @@ def register_model(*names):
         for name in names:
             assert issubclass(cls, lmms), f"Model '{name}' ({cls.__name__}) must extend lmms class"
 
-            assert name not in MODEL_REGISTRY, f"Model named '{name}' conflicts with existing model! Please register with a non-conflicting alias instead."
+            if name in MODEL_REGISTRY:
+                eval_logger.debug(f"Model '{name}' already registered ({MODEL_REGISTRY[name].__name__}); overwriting with {cls.__name__}.")
 
             MODEL_REGISTRY[name] = cls
         return cls
@@ -83,6 +84,7 @@ DEFAULT_METRIC_REGISTRY = {
     "multiple_choice": ["acc", "acc_norm"],
     "generate_until": ["exact_match"],
     "generate_until_multi_round": ["exact_match"],
+    "generate_until_agentic": ["exact_match"],
 }
 
 

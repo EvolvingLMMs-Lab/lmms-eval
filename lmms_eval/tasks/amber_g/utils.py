@@ -1,14 +1,9 @@
 import json
 import os
-import warnings
-from pathlib import Path
 
-import datasets
 import nltk
-import numpy as np
 import spacy
 from nltk.stem import WordNetLemmatizer
-from PIL import Image
 
 # Configuration
 AMBER_BASE_DIR = os.environ.get("AMBER_BASE_DIR", "./data/amber")

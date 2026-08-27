@@ -1,0 +1,4 @@
+dataset_name: "Compositionality_maniskill_push_subset"
+tag: "wm_abench_subtasks"
+task: "wm_abench_compositionality_maniskill_push_subset"
+include: _default_template_yaml

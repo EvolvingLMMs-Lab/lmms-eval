@@ -1,0 +1,4 @@
+task: "corecognition_stage_concrete_operational"
+process_docs: !function utils.process_docs_stage_concrete_operational
+
+include: _default_template_yaml

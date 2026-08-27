@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmms_eval"
-version = "0.5.0"
+version = "0.7.2"
 authors = [
     { name = "LMMMs-Lab Evaluation Team", email = "lmms-lab@outlook.com" },
 ]
@@ -19,7 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "accelerate>=0.29.1",
     "black>=24.1.0",
@@ -36,7 +36,6 @@ dependencies = [
     "pytablewriter",
     "sacrebleu>=1.5.0",
     "scikit-learn>=0.24.1",
-    "sqlitedict>=2.1.0",
     "torch>=2.1.0", # to enable sdpa mode for running 34B model on one 80GB GPU
     "torchvision>=0.16.0",
     "timm",
@@ -64,18 +63,17 @@ dependencies = [
     "loguru",
     "hf_transfer",
     "tenacity>=8.3.0",
-    "wandb>=0.16.0",
+    "wandb==0.25.0",
     "tiktoken",
     "pre-commit",
     "pydantic",
     "packaging",
-    "decord; platform_system != 'Darwin'",
-    "eva-decord; platform_system == 'Darwin'",
     "zss",
     "protobuf",
     "sentence_transformers",
     "python-dotenv",
     "qwen-vl-utils>=0.0.14",
+    "math-verify",
 ]
 
 [project.optional-dependencies]
@@ -87,6 +85,9 @@ core = [
 server = [
     "fastapi",
     "uvicorn",
+]
+mcp = [
+    "mcp[cli]>=1.20.0",
 ]
 audio = [
     "more-itertools",
@@ -104,14 +105,19 @@ metrics = [
     "Levenshtein",
 ]
 gemini = [
-    "google-generativeai",
+    "google-genai>=1.0.0",
+]
+litellm = [
+    "litellm",
+]
+swanlab = [
+    "swanlab",
 ]
 reka = [
     "httpx>=0.23.3",
     "reka-api",
 ]
 qwen = [
-    "decord",
     "qwen_vl_utils",
 ]
 mmsearch = [
@@ -125,13 +131,36 @@ mmsearch = [
     "FlagEmbedding",
     "rouge",
 ]
+prismmbench = [
+    "pdf2image>=1.17.0",
+    "pdfplumber>=0.11.9"
+]
+tui = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+]
+video = [
+    "torchcodec>=0.3.0",
+]
+video-legacy = [
+    "decord; platform_system != 'Darwin'",
+    "eva-decord; platform_system == 'Darwin' and python_version < '3.12'",
+]
 all = [
     "lmms_eval[core]",
+    "lmms_eval[mcp]",
     "lmms_eval[gemini]",
     "lmms_eval[reka]",
     "lmms_eval[qwen]",
     "lmms_eval[mmsearch]",
+    "lmms_eval[tui]",
+    "lmms_eval[video]",
 ]
+
+[tool.setuptools.package-data]
+"lmms_eval" = ["**/*.yaml", "**/*.yml", "**/*.json", "**/*.txt", "tasks/**/*"]
+"lmms_eval.tui.web.dist" = ["**/*"]
+"lmms_eval.tui.web.dist.assets" = ["**/*"]
 
 [tool.setuptools.packages.find]
 include = ["lmms_eval*"]
@@ -171,8 +200,30 @@ exclude = [
 ]
 
 [project.scripts]
-lmms-eval = "lmms_eval.__main__:cli_evaluate"
+lmms-eval = "lmms_eval.cli.dispatch:main"
+lmms-eval-mcp = "lmms_eval.mcp:main"
+lmms-eval-ui = "lmms_eval.tui.cli:main"
 
 [project.urls]
 Homepage = "https://lmms-lab.github.io"
 Repository = "https://github.com/EvolvingLMMs-Lab/lmms-eval"
+
+[dependency-groups]
+dev = [
+    "textual>=7.2.0",
+    "textual-dev>=1.8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+markers = [
+    "gpu: requires GPU hardware (deselect with '-m not gpu')",
+    "api: requires external API keys (deselect with '-m not api')",
+    "slow: slow integration tests (deselect with '-m not slow')",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

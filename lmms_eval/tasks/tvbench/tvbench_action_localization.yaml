@@ -1,0 +1,4 @@
+include: _default_template_yaml
+task: tvbench_action_localization
+dataset_name: action_localization
+test_split: train

@@ -11,7 +11,6 @@ import openai
 import pandas as pd
 import requests
 import yaml
-from tqdm import tqdm
 
 eval_logger = logging.getLogger("lmms-eval")
 

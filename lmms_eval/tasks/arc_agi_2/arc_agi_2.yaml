@@ -1,0 +1,3 @@
+include: _default_template_yaml
+task: arc_agi_2
+test_split: evaluation

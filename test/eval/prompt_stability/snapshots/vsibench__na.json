@@ -1,0 +1,13 @@
+{
+  "task": "vsibench",
+  "variant": "numerical-answer",
+  "doc_id": "unknown",
+  "prompt_text": "These are frames of a video.\nHow many chairs are visible in this room?\nPlease answer the question using a single word or phrase.",
+  "gen_kwargs": {
+    "max_new_tokens": 16,
+    "temperature": 0,
+    "top_p": 1.0,
+    "num_beams": 1,
+    "do_sample": false
+  }
+}

@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pandas as pd
 import yaml
-from loguru import logger as eval_logger
 from PIL import Image
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file

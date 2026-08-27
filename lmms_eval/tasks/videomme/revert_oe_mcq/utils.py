@@ -3,10 +3,6 @@
 
 import re
 
-from lmms_eval.tasks.videomme.utils import (
-    videomme_doc_to_visual,
-)
-
 
 def doc_to_text(doc, lmms_eval_specific_kwargs=None):
     """Build open-ended question text (without options)."""

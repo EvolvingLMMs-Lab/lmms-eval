@@ -1,0 +1,8 @@
+group: mmbench_reasoning
+task:
+  - mmbench_cn_dev_reasoning
+  - mmbench_cn_test_reasoning
+  - mmbench_en_dev_reasoning
+  - mmbench_en_test_reasoning
+metadata:
+  version: 0.0

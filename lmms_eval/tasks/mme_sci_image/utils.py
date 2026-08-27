@@ -2,7 +2,6 @@ import base64
 import json
 import os
 import re
-import sys
 from io import BytesIO
 from typing import Any, Dict, List
 
@@ -153,7 +152,7 @@ def mmesci_agg(results: List[Dict[str, Any]]) -> Dict[str, float]:
     correct = sum(1 for x in valid_samples if x["judge"] == "correct")
     accuracy = correct / total * 100 if total > 0 else 0.0
 
-    print(f"[INFO] Judging complete.")
+    print("[INFO] Judging complete.")
     print(f"[INFO] Total valid samples: {total}")
     print(f"[INFO] Correct: {correct}")
     print(f"[INFO] Accuracy: {accuracy:.2f}%")

@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # ============================================================================
-# Async OpenAI Compatible Model Example
+# Async OpenAI Model Example
 # ============================================================================
-# This script demonstrates how to use the async_openai_compatible model with:
+# This script demonstrates how to use the async_openai model with:
 # 1. Basic video/image evaluation (without MCP tools)
 # 2. Tool-enabled evaluation (with MCP client)
 #
@@ -61,7 +61,7 @@ accelerate launch --num_processes=1 --main_process_port 12345 -m lmms_eval \
 # 7. The result is sent back to the model for continuation
 # 8. Steps 3-7 repeat in a loop until the model produces final text output
 #
-# Tool Calling Loop in Code (from async_openai.py):
+# Tool Calling Loop in Code (from async_openai_compatible.py):
 # ──────────────────────────────────────────────────
 # while response.choices[0].finish_reason == "tool_calls":
 #     for tool_call in response.choices[0].message.tool_calls:

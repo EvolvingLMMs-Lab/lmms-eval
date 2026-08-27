@@ -1,9 +1,6 @@
 import re
 
-import pandas as pd
-
 from lmms_eval.filters.extraction import ExtendedRegexFilter
-from lmms_eval.filters.transformation import MapFilter
 
 
 def muir_doc_to_text(doc, lmms_eval_specific_kwargs=None):

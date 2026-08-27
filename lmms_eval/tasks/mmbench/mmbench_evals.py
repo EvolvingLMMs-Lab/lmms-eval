@@ -1,16 +1,12 @@
 import math
 import os
-import os.path as osp
 import random as rd
 import string
 import time
-from collections import defaultdict
 
-import numpy as np
 import pandas as pd
 import requests
 from loguru import logger as eval_logger
-from tqdm import tqdm
 
 
 class MMBench_Evaluator:
@@ -207,7 +203,7 @@ class MMBench_Evaluator:
                     return chars[tmp], "Failed to predict, thus randomly generate one. "
 
     # Extract answer from multiple rolling records
-    def eval_sub_data(self, sub_data, answer_map):
+    def eval_sub_data(self, sub_data, answer_map, static_only=False):
         lt = len(sub_data)
         GT, PRED = [], []
         for i in range(lt):
@@ -221,6 +217,15 @@ class MMBench_Evaluator:
         for i in range(lt):
             if PRED[i]:
                 continue
+            elif static_only:
+                # Use robust MCQ extraction instead of GPT API
+                from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+                choices = self.build_choices(sub_data.iloc[i])
+                choice_list = sorted(choices.keys())
+                PRED[i] = extract_mcq_answer(sub_data.iloc[i]["prediction"], choices=choice_list)
+                if not PRED[i] or PRED[i] != GT[i]:
+                    return 0
             else:
                 ret, _ = self.extract_answer_from_item(sub_data.iloc[i])
                 PRED[i] = ret
@@ -246,7 +251,8 @@ class MMBench_Evaluator:
     # Evaluate Results
     def eval_result(self, results, eval_method):
         rd.seed(2680)
-        assert eval_method == "openai"
+        static_only = eval_method == "static"
+        assert eval_method in ("openai", "static")
         # Set a large retry number to avoid failure
         # model = OpenAI('gpt-3.5-turbo-0613', retry=99)
 
@@ -290,7 +296,7 @@ class MMBench_Evaluator:
                 continue
 
             sub_data = data[data["index"] % int(1e6) == idx]
-            ret = self.eval_sub_data(sub_data, answer_map)
+            ret = self.eval_sub_data(sub_data, answer_map, static_only=static_only)
             result[idx] = ret
             hit += ret
             tot += 1
@@ -308,7 +314,7 @@ class MMBench_Evaluator:
         overall_hit_rate, category_hit_rate, l2_category_hit_rate = self.calculate_hit_rates(data_main)
 
         if "category" in data_main.columns:
-            print(f"Category Acc. (dev):")
+            print("Category Acc. (dev):")
             for category_key in category_hit_rate:
                 if category_key == "split":
                     continue
@@ -317,7 +323,7 @@ class MMBench_Evaluator:
                 print(f"\t{category_key}: {category_percentage:.3f}")
 
         if "l2-category" in data_main.columns:
-            print(f"L2-category Acc. (dev):")
+            print("L2-category Acc. (dev):")
             for l2_category_key in l2_category_hit_rate:
                 if l2_category_key == "split":
                     continue

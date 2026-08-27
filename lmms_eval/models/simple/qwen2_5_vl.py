@@ -1,6 +1,4 @@
-import base64
 import re
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
 import decord
@@ -20,13 +18,11 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.reasoning_model_utils import (
-    parse_reasoning_model_answer,
-)
+from lmms_eval.imports import optional_import
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_data_url
 
-try:
-    from qwen_vl_utils import process_vision_info
-except ImportError:
+process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
+if not _has_qwen_vl:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
 
@@ -48,9 +44,7 @@ class Qwen2_5_VL(lmms):
         min_pixels: int = 256 * 28 * 28,
         max_pixels: int = 1605632,
         max_num_frames: int = 32,
-        use_custom_video_loader: Optional[bool] = False,
-        fps: Optional[float] = None,  # Only applicable if use_custom_video_loader is True
-        max_image_size: Optional[int] = None,  # Only applicable if use_custom_video_loader is True
+        fps: Optional[float] = None,
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
         reasoning_prompt: Optional[str] = None,
@@ -64,14 +58,6 @@ class Qwen2_5_VL(lmms):
         valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
         if attn_implementation not in valid_attn_implementations:
             raise ValueError(f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}")
-
-        self.use_custom_video_loader = use_custom_video_loader
-        self.fps = fps
-        # if self.fps and not self.use_custom_video_loader:
-        #     raise ValueError("FPS is only applicable if use_custom_video_loader is True")
-        self.max_image_size = max_image_size
-        if self.max_image_size and not self.use_custom_video_loader:
-            raise ValueError("max_image_size is only applicable if use_custom_video_loader is True")
 
         accelerator = Accelerator()
         self.accelerator = accelerator
@@ -96,6 +82,7 @@ class Qwen2_5_VL(lmms):
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.max_num_frames = max_num_frames
+        self.fps = fps
 
         if reasoning_prompt:
             self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
@@ -180,6 +167,15 @@ class Qwen2_5_VL(lmms):
                 new_list.append(j)
         return new_list
 
+    def _encode_image_data_url(self, image: Image.Image) -> str:
+        return encode_image_to_data_url(
+            image,
+            image_format="JPEG",
+            mime_type="image/jpeg",
+            convert_rgb=True,
+            quality=85,
+        )
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
 
@@ -242,14 +238,23 @@ class Qwen2_5_VL(lmms):
                             first_frame = vr[0].asnumpy()
                             height, width = first_frame.shape[:2]
                             # max_pixels = height * width
-                            processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                            processed_visuals.append(
+                                {
+                                    "type": "video",
+                                    "video": visual,
+                                    "max_pixels": self.max_pixels,
+                                    "min_pixels": self.min_pixels,
+                                }
+                            )
                         elif isinstance(visual, Image.Image):  # Handle both single and multiple images
-                            base64_image = visual.convert("RGB")
-                            buffer = BytesIO()
-                            base64_image.save(buffer, format="JPEG")
-                            base64_bytes = base64.b64encode(buffer.getvalue())
-                            base64_string = base64_bytes.decode("utf-8")
-                            processed_visuals.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}", "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                            processed_visuals.append(
+                                {
+                                    "type": "image",
+                                    "image": self._encode_image_data_url(visual),
+                                    "max_pixels": self.max_pixels,
+                                    "min_pixels": self.min_pixels,
+                                }
+                            )
 
                 if self.interleave_visuals is False:
                     message.append(
@@ -295,7 +300,14 @@ class Qwen2_5_VL(lmms):
                     indices = np.unique(indices)  # Ensure uniqueness again
                 video_inputs[0] = video_inputs[0][indices]
             padding_side = "left" if self.batch_size > 1 else "right"
-            inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, padding_side=padding_side, return_tensors="pt")
+            inputs = self.processor(
+                text=texts,
+                images=image_inputs,
+                videos=video_inputs,
+                padding=True,
+                padding_side=padding_side,
+                return_tensors="pt",
+            )
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
             else:
@@ -332,7 +344,11 @@ class Qwen2_5_VL(lmms):
             )
 
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
-            answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+            answers = self.processor.batch_decode(
+                generated_ids_trimmed,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=False,
+            )
             for i, ans in enumerate(answers):
                 for term in until:
                     if len(term) > 0:
@@ -340,14 +356,12 @@ class Qwen2_5_VL(lmms):
                 answers[i] = ans
 
             for ans, context in zip(answers, contexts):
-                clean_ans = parse_reasoning_model_answer(ans)
-                res.append(clean_ans)
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), clean_ans)
+                res.append(ans)
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
                 pbar.update(1)
 
                 # eval_logger.debug(f"Question: {context}")
-                # eval_logger.debug(f"Model Raw Response: {ans}")
-                # eval_logger.debug(f"Model Clean Response: {clean_ans}")
+                # eval_logger.debug(f"Model Response: {ans}")
             # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
 
@@ -368,7 +382,15 @@ class Qwen2_5_VL(lmms):
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
 
         for chunk in chunks:
-            batched_contexts, all_gen_kwargs, batched_doc_to_visual, batched_doc_to_text, batched_doc_id, batched_task, batched_split = zip(*chunk)
+            (
+                batched_contexts,
+                all_gen_kwargs,
+                batched_doc_to_visual,
+                batched_doc_to_text,
+                batched_doc_id,
+                batched_task,
+                batched_split,
+            ) = zip(*chunk)
             task = batched_task[0]
             split = batched_split[0]
             batched_visuals = [batched_doc_to_visual[0](self.task_dict[task][split][ids]) for ids in batched_doc_id]
@@ -386,7 +408,13 @@ class Qwen2_5_VL(lmms):
                 visuals_list = []
 
                 if round_idx != 0:
-                    visuals_list, contexts, batched_terminal_signal, batched_round_res, batched_previous_round_info = list(
+                    (
+                        visuals_list,
+                        contexts,
+                        batched_terminal_signal,
+                        batched_round_res,
+                        batched_previous_round_info,
+                    ) = list(
                         zip(
                             *[
                                 batched_doc_to_text[0](
@@ -426,14 +454,23 @@ class Qwen2_5_VL(lmms):
                                 vr = decord.VideoReader(visual)
                                 first_frame = vr[0].asnumpy()
                                 height, width = first_frame.shape[:2]
-                                processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                                processed_visuals.append(
+                                    {
+                                        "type": "video",
+                                        "video": visual,
+                                        "max_pixels": self.max_pixels,
+                                        "min_pixels": self.min_pixels,
+                                    }
+                                )
                             elif isinstance(visual, Image.Image):
-                                base64_image = visual.convert("RGB")
-                                buffer = BytesIO()
-                                base64_image.save(buffer, format="JPEG")
-                                base64_bytes = base64.b64encode(buffer.getvalue())
-                                base64_string = base64_bytes.decode("utf-8")
-                                processed_visuals.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}", "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                                processed_visuals.append(
+                                    {
+                                        "type": "image",
+                                        "image": self._encode_image_data_url(visual),
+                                        "max_pixels": self.max_pixels,
+                                        "min_pixels": self.min_pixels,
+                                    }
+                                )
 
                     if self.interleave_visuals is False:
                         message.append(
@@ -476,7 +513,13 @@ class Qwen2_5_VL(lmms):
                         indices = np.append(indices, total_frames - 1)
                         indices = np.unique(indices)
                     video_inputs[0] = video_inputs[0][indices]
-                inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
+                inputs = self.processor(
+                    text=texts,
+                    images=image_inputs,
+                    videos=video_inputs,
+                    padding=True,
+                    return_tensors="pt",
+                )
 
                 if self.device_map == "auto":
                     inputs = inputs.to("cuda")
@@ -512,18 +555,25 @@ class Qwen2_5_VL(lmms):
                 )
 
                 generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
-                answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+                answers = self.processor.batch_decode(
+                    generated_ids_trimmed,
+                    skip_special_tokens=True,
+                    clean_up_tokenization_spaces=False,
+                )
 
                 clean_answers = []
                 for ans in answers:
-                    clean_ans = parse_reasoning_model_answer(ans)
-                    clean_answers.append(clean_ans)
+                    clean_answers.append(ans)
 
                 batched_round_res.append(clean_answers)
                 round_idx += 1
 
             res.extend(list(zip(*batched_round_res)))
-            self.cache_hook.add_partial("generate_until_multi_round", (batched_contexts[0], gen_kwargs), batched_round_res)
+            self.cache_hook.add_partial(
+                "generate_until_multi_round",
+                (batched_contexts[0], gen_kwargs),
+                batched_round_res,
+            )
             pbar.update(1)
 
         res = re_ords.get_original(res)

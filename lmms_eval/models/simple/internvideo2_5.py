@@ -32,7 +32,14 @@ DEFAULT_GEN_KWARGS = dict(
 
 def build_transform(input_size):
     MEAN, STD = IMAGENET_MEAN, IMAGENET_STD
-    transform = T.Compose([T.Lambda(lambda img: img.convert("RGB") if img.mode != "RGB" else img), T.Resize((input_size, input_size), interpolation=InterpolationMode.BICUBIC), T.ToTensor(), T.Normalize(mean=MEAN, std=STD)])
+    transform = T.Compose(
+        [
+            T.Lambda(lambda img: img.convert("RGB") if img.mode != "RGB" else img),
+            T.Resize((input_size, input_size), interpolation=InterpolationMode.BICUBIC),
+            T.ToTensor(),
+            T.Normalize(mean=MEAN, std=STD),
+        ]
+    )
     return transform
 
 
@@ -72,7 +79,12 @@ def dynamic_preprocess(image, min_num=1, max_num=6, image_size=448, use_thumbnai
     resized_img = image.resize((target_width, target_height))
     processed_images = []
     for i in range(blocks):
-        box = ((i % (target_width // image_size)) * image_size, (i // (target_width // image_size)) * image_size, ((i % (target_width // image_size)) + 1) * image_size, ((i // (target_width // image_size)) + 1) * image_size)
+        box = (
+            (i % (target_width // image_size)) * image_size,
+            (i // (target_width // image_size)) * image_size,
+            ((i % (target_width // image_size)) + 1) * image_size,
+            ((i // (target_width // image_size)) + 1) * image_size,
+        )
         # split the image
         split_img = resized_img.crop(box)
         processed_images.append(split_img)
@@ -146,8 +158,6 @@ class InternVideo2_5(lmms):
         super().__init__()
         self.max_frames_num = max_frames_num
         self.path = pretrained
-        self._model = AutoModel.from_pretrained(self.path, torch_dtype=torch.bfloat16, low_cpu_mem_usage=True, use_flash_attn=True, trust_remote_code=True).eval().cuda()
-        self._tokenizer = AutoTokenizer.from_pretrained(self.path, trust_remote_code=True)
 
         batch_size = int(batch_size)
         assert batch_size == 1, f"Batch size should be 1 for InternVL2, but got {batch_size}."
@@ -166,8 +176,25 @@ class InternVideo2_5(lmms):
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
+        self._model = (
+            AutoModel.from_pretrained(
+                self.path,
+                torch_dtype=torch.bfloat16,
+                low_cpu_mem_usage=True,
+                use_flash_attn=True,
+                trust_remote_code=True,
+            )
+            .eval()
+            .to(self._device)
+        )
+        self._tokenizer = AutoTokenizer.from_pretrained(self.path, trust_remote_code=True)
+
         if accelerator.num_processes > 1:
-            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+                DistributedType.DEEPSPEED,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
             # Also, you have to select zero stage 0 (equivalent to DDP) in order to make the prepare model works
             # I tried to set different parameters in the kwargs to let default zero 2 stage works, but it didn't work.
@@ -263,7 +290,7 @@ class InternVideo2_5(lmms):
             visuals = self.flatten(visuals)
             if self.modality == "image":
                 if visuals:
-                    visuals = [load_image(visual).to(torch.bfloat16).cuda() for visual in visuals]
+                    visuals = [load_image(visual).to(torch.bfloat16).to(self._device) for visual in visuals]
                     pixel_values = torch.cat(visuals, dim=0)
                     num_patches_list = [visual.size(0) for visual in visuals]
                     image_tokens = ["<image>"] * len(visuals)
@@ -272,7 +299,15 @@ class InternVideo2_5(lmms):
                 else:
                     pixel_values = None
                     num_patch_list = None
-                response, history = self.model.chat(self.tokenizer, pixel_values, contexts, gen_kwargs, num_patches_list=num_patches_list, history=None, return_history=True)
+                response, history = self.model.chat(
+                    self.tokenizer,
+                    pixel_values,
+                    contexts,
+                    gen_kwargs,
+                    num_patches_list=num_patches_list,
+                    history=None,
+                    return_history=True,
+                )
             elif self.modality == "video":
                 # assert len(visuals) == 1, f"Only one video is supported, but got {len(visuals)} videos. {visuals}"
                 video_path = visuals[0]
@@ -281,11 +316,24 @@ class InternVideo2_5(lmms):
                     media_dict = visuals[1]
                 else:
                     media_dict = {"video_read_type": "decord"}
-                pixel_values, num_patches_list = load_video(video_path, num_segments=self.max_frames_num, max_num=1, media_dict=media_dict)
-                pixel_values = pixel_values.to(torch.bfloat16).cuda()
-                video_prefix = "".join([f"Frame{i+1}: <image>\n" for i in range(len(num_patches_list))])
+                pixel_values, num_patches_list = load_video(
+                    video_path,
+                    num_segments=self.max_frames_num,
+                    max_num=1,
+                    media_dict=media_dict,
+                )
+                pixel_values = pixel_values.to(torch.bfloat16).to(self._device)
+                video_prefix = "".join([f"Frame{i + 1}: <image>\n" for i in range(len(num_patches_list))])
                 question = video_prefix + contexts
-                response, history = self.model.chat(self.tokenizer, pixel_values, question, gen_kwargs, num_patches_list=num_patches_list, history=None, return_history=True)
+                response, history = self.model.chat(
+                    self.tokenizer,
+                    pixel_values,
+                    question,
+                    gen_kwargs,
+                    num_patches_list=num_patches_list,
+                    history=None,
+                    return_history=True,
+                )
             res.append(response)
             pbar.update(1)
         pbar.close()

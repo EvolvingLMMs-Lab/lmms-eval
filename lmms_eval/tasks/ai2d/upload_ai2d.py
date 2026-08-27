@@ -27,9 +27,9 @@ _DESCRIPTION = "AI2D is a dataset of illustrative diagrams for research on diagr
 def get_builder_config(VERSION):
     builder_config = [
         datasets.BuilderConfig(
-            name=f"ai2d",
+            name="ai2d",
             version=VERSION,
-            description=f"ai2d",
+            description="ai2d",
         )
     ]
     return builder_config
@@ -114,4 +114,4 @@ if __name__ == "__main__":
     data = load_dataset(
         "/path/to/lmms-eval/lmms_eval/tasks/ai2d/upload_ai2d.py",
     )
-    data.push_to_hub("lmms-lab/ai2d", private=True)
+    data.push_to_hub("lmms-lab-encoder/ai2d", private=True)

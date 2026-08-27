@@ -1,0 +1,37 @@
+dataset_path: williamium/CoreCognition
+dataset_name: frame-combined
+test_split: train
+output_type: generate_until
+
+doc_to_visual: !function utils.corecognition_doc_to_visual
+doc_to_text: !function utils.corecognition_doc_to_text
+doc_to_target: "answer"
+
+process_results: !function utils.corecognition_process_results
+
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+metric_list:
+  - metric: accuracy
+    aggregation: mean
+    higher_is_better: true
+  - metric: accuracy_by_concept
+    aggregation: !function utils.corecognition_aggregate_by_concept
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+
+metadata:
+  version: 1.0
+  description: "CoreCognition benchmark for evaluating core knowledge in MLLMs"
+  paper_url: "https://arxiv.org/abs/2410.10855"
+  project_page: "https://williamium3000.github.io/core-knowledge/"
+  use_lmms_judge: false  # Set true to use LLM judge when template match fails (requires API_TYPE, DEPLOYMENT_NAME/OPENAI_API_KEY)

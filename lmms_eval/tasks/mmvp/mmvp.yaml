@@ -1,0 +1,3 @@
+dataset_path: lmms-lab-eval/MMVP
+task: "mmvp"
+include: _default_template_yaml

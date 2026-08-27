@@ -3,8 +3,6 @@ from collections import defaultdict
 
 from loguru import logger as eval_logger
 
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
 
 def vstar_doc_to_visual(doc):
     """Convert document to visual input."""

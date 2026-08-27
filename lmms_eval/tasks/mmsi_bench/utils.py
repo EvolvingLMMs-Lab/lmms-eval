@@ -3,22 +3,35 @@ import logging
 import re
 from collections import defaultdict
 
-import numpy as np
-import pandas as pd
 from PIL import Image
-
-from lmms_eval.filters.extraction import ExtendedRegexFilter
-from lmms_eval.filters.transformation import MapFilter
 
 eval_logger = logging.getLogger("lmms-eval")
 
+MMSI_DIRECT_POST_PROMPT = "\nAnswer with the option's letter from the given choices directly. Enclose the option's letter within ``."
+
+
+CATEGORY_ALIASES = {
+    "Positional Relationship (Obj.-Obj.)": "Positional Relationship (Obj.–Obj.)",
+    "Positional Relationship (Cam.-Obj.)": "Positional Relationship (Cam.–Obj.)",
+    "Positional Relationship (Cam.-Cam.)": "Positional Relationship (Cam.–Cam.)",
+    "Positional Relationship (Obj.-Reg.)": "Positional Relationship (Obj.–Reg.)",
+    "Positional Relationship (Cam.-Reg.)": "Positional Relationship (Cam.–Reg.)",
+    "Positional Relationship (Reg.-Reg.)": "Positional Relationship (Reg.–Reg.)",
+}
+
 
 def msr_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    if not isinstance(lmms_eval_specific_kwargs, dict):
+        lmms_eval_specific_kwargs = {}
+
+    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
+
     question = doc["question"].strip()
-    if "pre_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["pre_prompt"] != "":
-        question = f"{lmms_eval_specific_kwargs['pre_prompt']}{question}"
-    if "post_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["post_prompt"] != "":
-        question = f"{question}{lmms_eval_specific_kwargs['post_prompt']}"
+    if pre_prompt != "":
+        question = f"{pre_prompt}{question}"
+    if post_prompt != "":
+        question = f"{question}{post_prompt}"
     return question
 
 
@@ -33,7 +46,42 @@ def msr_doc_to_visual(doc):
     return image_list
 
 
+def _format_neo_ov_content(images, prompt):
+    if len(images) == 1:
+        return [{"type": "image", "url": images[0]}, {"type": "text", "text": prompt}]
+
+    content = []
+    for idx, image in enumerate(images, start=1):
+        content.append({"type": "text", "text": f"Image-{idx}: "})
+        content.append({"type": "image", "url": image})
+    content.append({"type": "text", "text": prompt})
+    return content
+
+
+def _msr_neo_ov_prompt(doc):
+    return f"{doc['question'].strip()}{MMSI_DIRECT_POST_PROMPT}"
+
+
+def msr_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    lmms_eval_specific_kwargs = lmms_eval_specific_kwargs or {}
+    images = msr_doc_to_visual(doc)
+
+    if lmms_eval_specific_kwargs.get("prompt_format") == "neo_ov":
+        prompt = _msr_neo_ov_prompt(doc)
+        return [{"role": "user", "content": _format_neo_ov_content(images, prompt)}]
+
+    prompt = msr_doc_to_text(doc, lmms_eval_specific_kwargs)
+    content = [{"type": "image", "url": image} for image in images]
+    content.append({"type": "text", "text": prompt})
+    return [{"role": "user", "content": content}]
+
+
 def extract_single_choice_with_word_boundary(pred, gt):
+    if pred is None:
+        return None
+
+    pred = str(pred)
+
     pattern_1 = r"``([^`]*)``"
     match = re.search(pattern_1, pred)
     if match:
@@ -49,10 +97,10 @@ def extract_single_choice_with_word_boundary(pred, gt):
     if match:
         pred = match.group(1)
 
-    pattern_3 = r"\b[A-D]\b(?!\s[a-zA-Z])"
-    match = re.search(pattern_3, pred)
+    pattern_3 = r"\b[A-F]\b(?!\s[a-zA-Z])"
+    match = re.search(pattern_3, pred, flags=re.IGNORECASE)
     if match:
-        pred = match.group()
+        pred = match.group().upper()
     else:
         return None
 
@@ -67,7 +115,7 @@ def extract_single_choice_with_word_boundary(pred, gt):
             return 1.0
         elif predict[0:14] == "the answer is " and answer == predict[14]:
             return 1.0
-    except Exception as e:
+    except Exception:
         return 0.0
     return 0.0
 
@@ -84,10 +132,10 @@ def msr_process_results(doc, results):
     gt = doc["answer"]
 
     score = extract_single_choice_with_word_boundary(pred, gt)
-    category = doc["question_type"]
-    l2_category = doc["question_type"]
+    category = CATEGORY_ALIASES.get(doc["question_type"], doc["question_type"])
+    l2_category = category
     if score is None:
-        return {category: {"question_id": doc["id"], "l2_category": l2_category, "score": 0, "note": "can not find anwser"}, "average": {"question_id": doc["id"], "l2_category": l2_category, "score": 0, "note": "can not find anwser"}}
+        return {category: {"question_id": doc["id"], "l2_category": l2_category, "score": 0, "note": "cannot find answer"}, "average": {"question_id": doc["id"], "l2_category": l2_category, "score": 0, "note": "cannot find answer"}}
     return {category: {"question_id": doc["id"], "l2_category": l2_category, "score": score}, "average": {"question_id": doc["id"], "l2_category": l2_category, "score": score}}
 
 

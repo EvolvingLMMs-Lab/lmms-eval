@@ -1,18 +1,11 @@
-import datetime
-import json
 import os
-import random
 import re
-import sys
 import time
 from pathlib import Path
 
 import requests
 import yaml
 from loguru import logger as eval_logger
-
-import lmms_eval.tasks._task_utils.file_utils as file_utils
-from lmms_eval.filters.extraction import ExtendedRegexFilter
 
 
 def doc_to_audio(doc):

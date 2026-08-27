@@ -1,13 +1,8 @@
 # Copyright 2025 Xiaomi Corporation.
 
-import datetime
-import json
 import os
 import re
 
-from loguru import logger as eval_logger
-
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from lmms_eval.tasks._task_utils.math_verify_utils import MathVerifyFn
 from lmms_eval.tasks.olympiadbench_mimo.olympiadbench_evals import (
     OlympiadBenchEvaluator,

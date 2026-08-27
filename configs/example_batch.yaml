@@ -1,0 +1,19 @@
+# Example: Batch evaluation - multiple models in one run
+# Usage: python -m lmms_eval --config configs/example_batch.yaml
+#
+# Each entry runs as a separate evaluation.
+# CLI args (e.g. --limit 5) apply to all entries.
+
+- model: qwen2_5_vl
+  model_args: "pretrained=Qwen/Qwen2.5-VL-3B-Instruct,device_map=auto"
+  tasks: "mme"
+  batch_size: 1
+  output_path: "results/qwen25vl/"
+  log_samples: true
+
+- model: qwen3_vl
+  model_args: "pretrained=Qwen/Qwen3-VL-4B-Instruct,device_map=auto"
+  tasks: "mme"
+  batch_size: 1
+  output_path: "results/qwen3vl/"
+  log_samples: true

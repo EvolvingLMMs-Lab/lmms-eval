@@ -2,10 +2,22 @@ import ast
 import os
 import re
 import time
+from pathlib import Path
 
+import yaml
 from loguru import logger as eval_logger
 from openai import OpenAI
-from utils import load_phyx_config
+
+
+def load_phyx_config():
+    with open(Path(__file__).parent / "phyx.yaml", "r") as f:
+        raw_data = f.readlines()
+        safe_data = []
+        for line in raw_data:
+            if "!function" not in line:
+                safe_data.append(line)
+        return yaml.safe_load("".join(safe_data))
+
 
 FAIL_MSG = "Failed to obtain answer via API."
 config = load_phyx_config()

@@ -14,7 +14,6 @@ from typing import Iterable, List, Tuple, Union
 import numpy as np
 import torch
 import torch.nn.functional as F
-from loguru import logger
 from transformers import PreTrainedTokenizer
 from transformers.generation import LogitsProcessor
 

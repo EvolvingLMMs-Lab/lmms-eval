@@ -1,22 +1,35 @@
-Before you open a pull-request, please check if a similar issue already exists or has been closed before.
+## Summary
+<!-- Max 3 bullets. -->
+- 
+- 
+- 
 
-### When you open a pull-request, please be sure to include the following
+## In scope
+<!-- Explicitly list what this PR changes. -->
+- 
 
-- [ ] A descriptive title: [xxx] XXXX
-- [ ] A detailed description
+## Out of scope
+<!-- Explicitly list what this PR does NOT change. -->
+- 
 
-If you meet the lint warnings, you can use following scripts to reformat code.
+## Validation
+<!--
+Max 3 bullets.
+Use this format:
+`<command>` | sample size: `N=<...>` | key metrics: `<...>` | result: `pass/fail`
+If you ran tests/benchmarks with metrics, include concrete numbers.
+-->
+- 
 
-```sh
-pip install pre-commit
-pre-commit install
-pre-commit run --all-files
-```
+## Risk / Compatibility
+<!-- 1-2 bullets. Note breaking changes, behavior changes, or migration impact. -->
+- 
 
-### Ask for review
-Once you feel comfortable for your PR, feel free to @ one of the contributors to review
-
-General: @Luodian @kcz358 @pufanyi
-Audio: @pbcong @ngquangtrung57
-
-Thank you for your contributions!
+## Type of Change
+- [ ] Bug fix (non-breaking change)
+- [ ] New feature
+- [ ] New benchmark/task
+- [ ] New model integration
+- [ ] Breaking change
+- [ ] Documentation update
+- [ ] Refactoring (no functional changes)

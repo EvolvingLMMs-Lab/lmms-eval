@@ -1,54 +1,99 @@
-**/.cache
-env
+# Python
 *.pyc
-output/
-data/
-lm_cache
-.idea
+__pycache__
+*.egg-info
+*.isorted
+
+# Virtual environments
+env
+venv
+.venv
+
+# Build artifacts
 build
 dist
-*.egg-info
-venv
+!lmms_eval/tui/web/dist
+
+# Package manager
+node_modules/
+uv.lock
+
+# IDE / Editor
+.idea
 .vscode/
-temp
-__pycache__
 .ipynb_checkpoints
-temp
-.DS_STORE
-# IPython
 profile_default/
 ipython_config.py
-logs/
-scripts/
-wandb/
-SimSun.ttf
-submissions/
-lmms_eval/tasks/hallusion_bench/hallusion_output_vs_model.json
-lmms_eval/tasks/hallusion_bench/hallusion_output_vd_model.json
-zk.log
+
+# OS
+.DS_Store
+
+# Environment and secrets
+.env
+
+# Caches and temp
+**/.cache
+lm_cache
 cache_dir
-ckpt
-pretrained/
-LLaVA/
-*logs
-*.isorted
 temp/
-InternVL/
+outputs/
+output/
+
+# Logs
 logs/
+*.log
+wandb/
+zk.log
+span.log
+
+# Data and models (large / local-only)
 data/
+pretrained/
+ckpt
+submissions/
+remote_code/*
+
+# External repos cloned locally
+LLaVA/
+InternVL/
 llava-video/
 Video-MME/
 VATEX/
-lmms_eval/tasks/vatex/__pycache__/utils.cpython-310.pyc
-lmms_eval/tasks/mlvu/__pycache__/utils.cpython-310.pyc
 
+# Task-specific generated files
+lmms_eval/tasks/hallusion_bench/hallusion_output_vs_model.json
+lmms_eval/tasks/hallusion_bench/hallusion_output_vd_model.json
+
+# Fonts
+SimSun.ttf
+
+# Scripts and workspace (local-only)
 scripts/
-.env
-.venv
-outputs/
-span.log
-uv.lock
-workspace/*
+workspace/
+docs/plans/
+
+# Agent / AI assistant memory files (user-local, not tracked), we encourage users to design their own agents, and can use our provided skills as reference.
+AGENTS.md
+CLAUDE.md
 .claude/*
-remote_code/*
+!.claude-plugin/
+.opencode/
 .opencode
+.ignored/
+.worktrees/
+Bagel/
+MMaDA/
+.codex
+lmms_eval/tasks/hd_epic/hd_epic_questions.jsonl
+
+# user-specific cluster scripts (kept locally, not part of upstream PR)
+debug_xmod_bench_lite.slurm
+submit_lite.sh
+submit_full.sh
+
+# user-specific cluster scripts (kept on dev branch, not part of upstream PR)
+run_xmod_bench_lite_qwen2_5_omni.slurm
+run_xmod_bench_qwen2_5_omni.slurm
+run_xmod_full_generic.slurm
+run_xmod_lite_generic.slurm
+upload_eval_logs.sh

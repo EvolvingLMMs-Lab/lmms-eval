@@ -1,0 +1,23 @@
+group: refcoco_grounding
+task:
+- refcoco_grounding_test
+- refcoco_grounding_testA
+- refcoco_grounding_testB
+- refcoco_plus_grounding_testA
+- refcoco_plus_grounding_testB
+- refcocog_grounding_test
+aggregate_metric_list:
+  - metric: refcoco_grounding_IoU
+    weight_by_size: true
+  - metric: refcoco_grounding_ACC@0.1
+    weight_by_size: true
+  - metric: refcoco_grounding_ACC@0.3
+    weight_by_size: true
+  - metric: refcoco_grounding_ACC@0.5
+    weight_by_size: true
+  - metric: refcoco_grounding_ACC@0.7
+    weight_by_size: true
+  - metric: refcoco_grounding_ACC@0.9
+    weight_by_size: true
+  - metric: refcoco_grounding_Center_ACC
+    weight_by_size: true

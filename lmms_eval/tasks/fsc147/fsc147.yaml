@@ -1,0 +1,25 @@
+dataset_path: yifehuang97/CoCount-train-fsc147
+task: fsc147
+test_split: train
+output_type: generate_until
+doc_to_visual: !function utils.fsc147_doc_to_visual
+doc_to_text: !function utils.fsc147_doc_to_text
+doc_to_target: !function utils.fsc147_doc_to_target
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  do_sample: false
+process_results: !function utils.fsc147_process_results
+metric_list:
+  - metric: fsc147_exact_match
+    aggregation: !function utils.fsc147_aggregate_exact_match
+    higher_is_better: true
+  - metric: fsc147_mae
+    aggregation: !function utils.fsc147_aggregate_mae
+    higher_is_better: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with only an integer."
+metadata:
+  - version: 0.0

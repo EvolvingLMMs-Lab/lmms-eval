@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/SEED-Bench-2
+dataset_path: lmms-lab-encoder/SEED-Bench-2
 dataset_kwargs:
   token: True
 task: "seedbench_2"

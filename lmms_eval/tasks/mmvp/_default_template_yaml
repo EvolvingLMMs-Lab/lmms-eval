@@ -1,0 +1,36 @@
+dataset_path: lmms-lab-eval/MMVP
+dataset_kwargs:
+  token: True
+test_split: train
+output_type: generate_until
+doc_to_visual: !function utils.mmvp_doc_to_visual
+doc_to_text: !function utils.mmvp_doc_to_text
+doc_to_target: !function utils.mmvp_doc_to_target
+
+process_results: !function utils.mmvp_process_results
+
+metric_list:
+  - metric: mmvp_accuracy
+    aggregation: !function utils.mmvp_aggregate_results
+    higher_is_better: true
+  - metric: mmvp_pair_accuracy
+    aggregation: !function utils.mmvp_aggregate_pair_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  do_sample: false
+
+metadata:
+  version: 0.1
+  # Ground truth corrections applied directly in lmms-lab-eval/MMVP dataset
+  # based on verification in https://github.com/EvolvingLMMs-Lab/lmms-eval/issues/1018
+  # Corrected pairs (answers were swapped in original MMVP/MMVP):
+  #   Indices 99-100: Elephant tusks long/short
+  #   Indices 279-280: Person standing/sitting

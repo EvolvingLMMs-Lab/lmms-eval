@@ -1,22 +1,44 @@
 name: Lint
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: write
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
-          submodules: true
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-      - name: Install pre-commit hook
+      - name: Install pre-commit
+        run: pip install pre-commit
+      - name: Run pre-commit (autofix)
+        run: pre-commit run --all-files || true
+      - name: Commit fixes if any
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
-          python -m pip install pre-commit
-          pre-commit install
-      - name: Linting
-        run: pre-commit run --all-files
+          git diff --quiet && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "style: auto-fix lint (black + isort)"
+          git push
+      - name: Ensure lint leaves clean tree
+        run: |
+          git diff --quiet && exit 0
+          echo "Lint generated changes that could not be auto-pushed in this context."
+          echo "Please run 'pre-commit run --all-files' locally and push the fixes."
+          git --no-pager diff --name-only
+          exit 1

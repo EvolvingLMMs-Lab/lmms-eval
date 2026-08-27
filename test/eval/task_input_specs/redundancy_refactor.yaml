@@ -1,0 +1,18 @@
+tasks:
+  - id: mmmu_generate_until_real
+    task: mmmu_val
+    limit: 2
+    max_requests: 2
+    capture_mode: text_and_structure
+
+  - id: mmlu_multiple_choice_real
+    task: mmlu_abstract_algebra
+    limit: 1
+    max_requests: 4
+    capture_mode: request_only
+
+  - id: mmlu_loglikelihood_real
+    task: mmlu_flan_n_shot_loglikelihood_abstract_algebra
+    limit: 1
+    max_requests: 4
+    capture_mode: request_only

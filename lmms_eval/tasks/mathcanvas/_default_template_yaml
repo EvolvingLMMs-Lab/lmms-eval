@@ -1,0 +1,26 @@
+dataset_path: shiwk24/MathCanvas-Bench
+dataset_kwargs:
+  token: False
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.mathcanvas_doc_to_visual
+doc_to_text: !function utils.mathcanvas_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 8192
+  temperature: 0
+  do_sample: false
+process_results: !function utils.mathcanvas_process_results
+metric_list:
+  - metric: mathcanvas_weighted_accuracy
+    aggregation: mean
+    higher_is_better: true
+  - metric: mathcanvas_complete_accuracy
+    aggregation: mean
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nYour task is to answer the question above. Give step by step reasoning, and conclude all the answers (include sub-questions) at the end of your solution. If there are multiple sub-questions, format the final answers as <1>answer1</1><2>answer2</2>..."
+metadata:
+  - version: 0.0

@@ -1,0 +1,8 @@
+# RealUnify GEU Task Group (Generation Enhances Understanding)
+# Evaluates bidirectional capability synergy in unified multimodal models
+# Paper: https://arxiv.org/abs/2509.24897
+group: realunify
+task:
+  - realunify_mental_tracking
+  - realunify_mental_reconstruction
+  - realunify_attentional_focusing

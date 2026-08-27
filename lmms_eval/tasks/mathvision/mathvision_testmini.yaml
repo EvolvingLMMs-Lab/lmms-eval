@@ -2,6 +2,8 @@ dataset_path: MathLLMs/MathVision
 dataset_kwargs:
   token: True
 task: "mathvision_testmini"
+tag:
+  - public_eval_seed2_family
 test_split: testmini
 output_type: generate_until
 doc_to_visual: !function utils.mathvision_doc_to_visual

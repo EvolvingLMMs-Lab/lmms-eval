@@ -10,8 +10,26 @@ generation_kwargs:
 output_type: generate_until
 doc_to_visual: !function utils.mindcube_doc_to_visual
 doc_to_text: !function utils.mindcube_doc_to_text
+doc_to_messages: !function utils.mindcube_doc_to_messages
 doc_to_target: "grounded_output"
 process_results: !function utils.mindcube_process_results
+
+lmms_eval_specific_kwargs:
+  neo_ov:
+    pre_prompt: ""
+    post_prompt: ""
+    prompt_format: neo_ov
+
+model_specific_generation_kwargs:
+  neo_ov:
+    patch_size: 16
+    min_pixels: 691200
+    max_pixels: 691200
+    downsample_ratio: 0.5
+    system_prompt: ""
+    temperature: null
+    top_p: null
+    repetition_penalty: null
 
 metric_list:
   - metric: overall_accuracy

@@ -1,0 +1,17 @@
+group: hipho
+task:
+  - hipho_apho_2025
+  - hipho_eupho_2024
+  - hipho_eupho_2025
+  - hipho_f_ma_2024
+  - hipho_f_ma_2025
+  - hipho_ipho_2024
+  - hipho_ipho_2025
+  - hipho_nbpho_2024
+  - hipho_nbpho_2025
+  - hipho_panmechanics_2024
+  - hipho_panmechanics_2025
+  - hipho_panpho_2024
+  - hipho_panpho_2025
+metadata:
+  version: 0.0

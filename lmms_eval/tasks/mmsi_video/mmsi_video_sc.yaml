@@ -1,0 +1,16 @@
+# MMSI-Video-Bench: Sufficient Coverage (SC) Mode - 300 Frames
+#
+# This config samples up to 300 frames uniformly across all video segments.
+# Provides sufficient coverage for complex spatial reasoning tasks.
+# Suitable for models with larger context windows.
+
+task: "mmsi_video_sc"
+doc_to_visual: !function utils.doc_to_visual_frames
+doc_to_text: !function utils.doc_to_text_frames
+doc_to_messages: !function utils.doc_to_messages_frames
+lmms_eval_specific_kwargs:
+  default:
+    max_frame: 300
+    post_prompt: ""
+  
+include: _default_template_yaml

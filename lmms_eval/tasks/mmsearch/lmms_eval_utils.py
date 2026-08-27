@@ -2,8 +2,6 @@ import json
 import os
 from pathlib import Path
 
-import ipdb
-import pandas as pd
 import yaml
 from loguru import logger as eval_logger
 from PIL import Image

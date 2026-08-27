@@ -1,0 +1,11 @@
+# OSI-Bench: Native Video Input
+# Evaluates models using native video as input
+
+task: osi_bench
+test_split: test
+
+include: _default_template_yaml
+
+doc_to_visual: !function utils.osi_bench_doc_to_visual_video
+doc_to_text: !function utils.osi_bench_doc_to_text_video
+doc_to_messages: !function utils.osi_bench_doc_to_messages_video

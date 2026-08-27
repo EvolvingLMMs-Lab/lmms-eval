@@ -1,0 +1,6 @@
+group: multi_crit
+task:
+  - multi_crit_open_ended
+  - multi_crit_reasoning
+metadata:
+  version: 1.0

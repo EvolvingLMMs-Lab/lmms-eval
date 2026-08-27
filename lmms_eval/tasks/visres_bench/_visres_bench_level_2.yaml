@@ -1,0 +1,14 @@
+group: visres_bench_level_2
+task:
+  - visres_bench_level_2_uniform_count
+  - visres_bench_level_2_count_progression
+  - visres_bench_level_2_uniform_orientation
+  - visres_bench_level_2_count_2_same_1_diff
+  - visres_bench_level_2_orientation_2same_1diff
+  - visres_bench_level_2_uniform_color
+  - visres_bench_level_2_count_arithmetic
+  - visres_bench_level_2_count_minmax
+  - visres_bench_level_2_orientation_3_diff
+  - visres_bench_level_2_color_2same_1diff
+  - visres_bench_level_2_color_3_diff
+  - visres_bench_level_2_count_3_diff

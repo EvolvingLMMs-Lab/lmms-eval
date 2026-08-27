@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/MP-DocVQA
+dataset_path: lmms-lab-encoder/MP-DocVQA
 task: "multidocvqa_test"
 test_split: test
 output_type: generate_until

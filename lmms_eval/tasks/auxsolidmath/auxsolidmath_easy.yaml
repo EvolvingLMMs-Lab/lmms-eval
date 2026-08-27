@@ -1,0 +1,24 @@
+dataset_path: shasha/AuxSolidMath
+dataset_name: test_easy
+task: auxsolidmath_easy
+test_split: test_easy
+output_type: generate_until
+
+doc_to_visual: !function utils.auxsolidmath_doc_to_visual
+doc_to_text: !function utils.auxsolidmath_doc_to_text
+doc_to_target: !function utils.auxsolidmath_doc_to_target
+
+process_results: !function utils.auxsolidmath_process_results
+
+generation_kwargs:
+  max_new_tokens: 4096
+  do_sample: false
+  temperature: 0.0
+
+metric_list:
+  - metric: auxsolidmath_accuracy
+    aggregation: !function utils.auxsolidmath_aggregate_accuracy
+    higher_is_better: true
+
+metadata:
+  version: 1.0

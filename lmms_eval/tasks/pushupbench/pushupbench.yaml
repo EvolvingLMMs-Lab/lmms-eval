@@ -1,0 +1,22 @@
+task: pushupbench
+dataset_name: default
+test_split: test
+output_type: generate_until
+include: _default_template_yaml
+doc_to_visual: !function utils.pushupbench_doc_to_visual
+doc_to_text: !function utils.pushupbench_doc_to_text
+doc_to_target: !function utils.pushupbench_doc_to_target
+process_results: !function utils.pushupbench_process_results
+metric_list:
+  - metric: exact_match
+    aggregation: !function utils.pushupbench_aggregate_exact_match
+    higher_is_better: true
+  - metric: mae
+    aggregation: !function utils.pushupbench_aggregate_mae
+    higher_is_better: false
+  - metric: obo
+    aggregation: !function utils.pushupbench_aggregate_obo
+    higher_is_better: true
+  - metric: r_squared
+    aggregation: !function utils.pushupbench_aggregate_r_squared
+    higher_is_better: true

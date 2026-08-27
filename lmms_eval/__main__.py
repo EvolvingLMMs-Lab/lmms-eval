@@ -1,9 +1,18 @@
+import sys
+
+# CLI dispatcher which handles subcommands (tasks, models, eval, ui, ...)
+# as well as the legacy flat-args form (--model X --tasks Y).
+if __name__ == "__main__":
+    from lmms_eval.cli.dispatch import main
+
+    main()
+    sys.exit(0)
+
 import argparse
 import datetime
 import importlib
 import json
 import os
-import sys
 import traceback
 import warnings
 from functools import partial
@@ -14,8 +23,6 @@ import yaml
 
 warnings.simplefilter("ignore", category=DeprecationWarning)
 
-import hashlib
-from pathlib import Path
 from typing import Union
 
 from accelerate import Accelerator
@@ -23,12 +30,14 @@ from accelerate.utils import InitProcessGroupKwargs
 from loguru import logger as eval_logger
 
 from lmms_eval import evaluator, utils
+from lmms_eval.api.metrics import power_analysis
 from lmms_eval.api.registry import ALL_TASKS
+from lmms_eval.cli.power_utils import collect_task_sizes
 from lmms_eval.evaluator import request_caching_arg_to_dict
-from lmms_eval.loggers import EvaluationTracker, WandbLogger
+from lmms_eval.loggers import EvaluationTracker, SwanLabLogger, WandbLogger
 from lmms_eval.tasks import TaskManager
 from lmms_eval.utils import (
-    handle_non_serializable,
+    get_eval_banner,
     make_table,
     simple_parse_args_string,
 )
@@ -53,7 +62,7 @@ def _int_or_none_list_arg_type(min_len: int, max_len: int, defaults: str, value:
     elif num_items < min_len or num_items > max_len:
         raise argparse.ArgumentTypeError(f"Argument requires {max_len} integers or None, separated by '{split_char}'")
     elif num_items != max_len:
-        logging.warning(f"Argument requires {max_len} integers or None, separated by '{split_char}'. " "Missing values will be filled with defaults.")
+        eval_logger.warning(f"Argument requires {max_len} integers or None, separated by '{split_char}'. " "Missing values will be filled with defaults.")
         default_items = [parse_value(v) for v in defaults.split(split_char)]
         items.extend(default_items[num_items:])  # extend items list with missing defaults
 
@@ -81,9 +90,68 @@ def _handle_non_serializable(o):
         return str(o)
 
 
-def parse_eval_args() -> argparse.Namespace:
+def _run_power_analysis(args: argparse.Namespace) -> None:
+    """Run power analysis to calculate minimum sample size for detecting a given effect."""
+    task_sizes = {}
+    if args.tasks and args.tasks not in ["list", "list_groups", "list_tags", "list_subtasks"]:
+        task_sizes = collect_task_sizes(args.tasks, verbosity=args.verbosity, include_path=args.include_path)
+
+    result = power_analysis(
+        effect_size=args.effect_size,
+        std_a=args.std_a,
+        std_b=args.std_b,
+        alpha=args.alpha,
+        power=args.power,
+        correlation=args.correlation,
+    )
+
+    print("\n" + "=" * 60)
+    print("POWER ANALYSIS RESULTS")
+    print("=" * 60)
+    print(f"\nParameters:")
+    print(f"  Effect size (delta):     {args.effect_size:.1%}")
+    print(f"  Std (model A):           {result['std_a']}")
+    print(f"  Std (model B):           {result['std_b']}")
+    print(f"  Significance level (α):  {args.alpha}")
+    print(f"  Desired power (1-β):     {args.power}")
+    print(f"  Correlation (ρ):         {args.correlation}")
+    print(f"\nResult:")
+    print(f"  Minimum sample size:     n = {result['min_n']}")
+    print(f"\nInterpretation:")
+    print(f"  To detect a {args.effect_size:.1%} difference with {args.power:.0%} power,")
+    print(f"  you need at least {result['min_n']} questions in your benchmark.")
+
+    if task_sizes:
+        print(f"\n" + "-" * 60)
+        print("TASK ANALYSIS")
+        print("-" * 60)
+        for task_name, n_samples in task_sizes.items():
+            task_result = power_analysis(
+                effect_size=args.effect_size,
+                std_a=args.std_a,
+                std_b=args.std_b,
+                alpha=args.alpha,
+                power=args.power,
+                correlation=args.correlation,
+                current_n=n_samples,
+            )
+            status = "✓ Sufficient" if n_samples >= result["min_n"] else "✗ Insufficient"
+            print(f"\n  {task_name}:")
+            print(f"    Sample size:         n = {n_samples}")
+            print(f"    Current power:       {task_result['current_power']:.1%}")
+            print(f"    Min detectable Δ:    {task_result['min_detectable_effect']:.1%}")
+            print(f"    Status:              {status}")
+
+    print("\n" + "=" * 60 + "\n")
+
+
+def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("--config", default="", help="Path to a yaml file specifying all eval arguments, will ignore cli arguments if specified")
+    parser.add_argument(
+        "--config",
+        default="",
+        help="Path to a yaml file specifying eval arguments. CLI arguments override YAML values.",
+    )
     parser.add_argument("--model", default="hf", help="Name of model e.g. `hf`")
     parser.add_argument(
         "--tasks",
@@ -138,15 +206,25 @@ def parse_eval_args() -> argparse.Namespace:
         "--limit",
         type=float,
         default=None,
-        help="Limit the number of examples per task. " "If <1, limit is a percentage of the total number of examples.",
+        help=("Limit examples per task: use -1 (or omit) for all samples, " "0 < limit < 1 for a fraction of the dataset, and limit >= 1 " "for an absolute sample count."),
+    )
+    parser.add_argument(
+        "--offset",
+        type=int,
+        default=0,
+        help="Start evaluation from this dataset index for each task.",
     )
     parser.add_argument(
         "--use_cache",
         "-c",
         type=str,
         default=None,
-        metavar="DIR",
-        help="A path to a sqlite db file for caching model responses. `None` if not caching.",
+        metavar="PATH",
+        help="Path to a response-cache root directory or SQLite .db file. "
+        "If PATH is a directory, or an explicit PATH/cache.db root file, lmms-eval keeps the shared root cache at "
+        "PATH/cache.db and writes each run into PATH/runs/<run_id>/ before auto-merging back into the root DB. "
+        "This avoids write contention across concurrent jobs while preserving cache reuse. "
+        "If PATH is a file, legacy single-target behavior is preserved. `None` disables response caching.",
     )
     parser.add_argument(
         "--cache_requests",
@@ -180,6 +258,12 @@ def parse_eval_args() -> argparse.Namespace:
         action="store_true",
         default=False,
         help="If True, write out all model outputs and documents for per-sample measurement and post-hoc analysis to Weights and Biases",
+    )
+    parser.add_argument(
+        "--swanlab_log_samples",
+        action="store_true",
+        default=False,
+        help="If True, write out all model outputs and documents for per-sample measurement and post-hoc analysis to SwanLab",
     )
     parser.add_argument(
         "--log_samples_suffix",
@@ -223,6 +307,12 @@ def parse_eval_args() -> argparse.Namespace:
         help=("String arguments for model generation on greedy_until tasks," " e.g. `temperature=0,top_k=0,top_p=0`"),
     )
     parser.add_argument(
+        "--reasoning_tags",
+        type=str,
+        default='[["<think>", "</think>"], ["<analysis>", "</analysis>"]]',
+        help="JSON string list of [start_tag, end_tag] pairs used for reasoning extraction.",
+    )
+    parser.add_argument(
         "--verbosity",
         type=str,
         default="INFO",
@@ -232,6 +322,11 @@ def parse_eval_args() -> argparse.Namespace:
         "--wandb_args",
         default="",
         help="Comma separated string arguments passed to wandb.init, e.g. `project=lmms-eval,job_type=eval",
+    )
+    parser.add_argument(
+        "--swanlab_args",
+        default="",
+        help="Comma separated string arguments passed to swanlab.init, e.g. `project=lmms-eval,exp_name=eval,mode=cloud`",
     )
     parser.add_argument(
         "--timezone",
@@ -272,22 +367,97 @@ def parse_eval_args() -> argparse.Namespace:
         action="store_true",
         help="Sets trust_remote_code to True to execute code to create HF Datasets from the Hub",
     )
-    parser.add_argument("--process_with_media", action="store_true", help="Whether you will process you dataset with audio, image. By default set to False" "In case some benchmarks need to be processed with media, set this flag to True.")
-    parser.add_argument("--force_simple", action="store_true", help="Force the evaluation to use the simple mode of the models")
+    parser.add_argument(
+        "--process_with_media",
+        action="store_true",
+        help="Whether you will process you dataset with audio, image. By default set to False" "In case some benchmarks need to be processed with media, set this flag to True.",
+    )
+    parser.add_argument(
+        "--agentic_trace_mode",
+        type=str,
+        default="basic",
+        choices=["basic", "full"],
+        help="Controls agentic trace logging level. 'basic' logs compact final trace payload, 'full' logs per-round input/output/state snapshots.",
+    )
+    parser.add_argument(
+        "--force_simple",
+        action="store_true",
+        help="Force the evaluation to use the simple mode of the models",
+    )
+    parser.add_argument(
+        "--tui",
+        action="store_true",
+        help="Launch interactive TUI mode for configuration",
+    )
+    parser.add_argument(
+        "-n",
+        "--repeats",
+        "--num_samples",
+        dest="repeats",
+        type=int,
+        default=1,
+        help=("Number of repeated generations per question for model stability " "measurement. Backward-compatible alias: --num_samples. " "When n > 1, enables k-samples " "mode and computes EA, CA, IV, CR metrics."),
+    )
+    parser.add_argument("--baseline", type=str, default=None, help="Baseline for paired t-test comparison. Accepts: local JSONL path, hf://user/repo, or preset name (e.g., qwen25vl).")
+
+    # Cost & Token Tracking
+    parser.add_argument(
+        "--max_tokens",
+        type=int,
+        default=None,
+        help="Maximum total tokens (input+output+reasoning). Evaluation stops gracefully when exceeded. Disabled by default.",
+    )
+
+    # Power Analysis arguments
+    parser.add_argument(
+        "--power-analysis",
+        action="store_true",
+        default=False,
+        help="Enable power analysis to calculate minimum sample size for detecting a given effect size.",
+    )
+    parser.add_argument(
+        "--effect-size",
+        type=float,
+        default=0.03,
+        help="Minimum effect size to detect (default: 0.03 = 3%%). Used with --power-analysis.",
+    )
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        default=0.05,
+        help="Significance level for power analysis (default: 0.05). Used with --power-analysis.",
+    )
+    parser.add_argument(
+        "--power",
+        type=float,
+        default=0.80,
+        help="Desired statistical power (default: 0.80). Used with --power-analysis.",
+    )
+    parser.add_argument(
+        "--correlation",
+        type=float,
+        default=0.5,
+        help="Expected correlation between paired samples (default: 0.5). Used with --power-analysis.",
+    )
+    parser.add_argument(
+        "--std-a",
+        type=float,
+        default=None,
+        help="Std deviation of model A scores (estimate from previous eval). Default: 0.5 for binary. Used with --power-analysis.",
+    )
+    parser.add_argument(
+        "--std-b",
+        type=float,
+        default=None,
+        help="Std deviation of model B scores (estimate from previous eval). If not set, assumes equal to --std-a. Used with --power-analysis.",
+    )
+
     args = parser.parse_args()
-    return args
+    return parser, args
 
 
 def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
-    default_args = parse_eval_args()
-
-    if args is None and len(sys.argv) == 1:
-        print("┌───────────────────────────────────────────────────────────────────────────────┐")
-        print("│ Please provide arguments to evaluate the model. e.g.                          │")
-        print("│ `lmms-eval --model llava --model_path liuhaotian/llava-v1.6-7b --tasks okvqa` │")
-        print("│ Use `lmms-eval --help` for more information.                                  │")
-        print("└───────────────────────────────────────────────────────────────────────────────┘")
-        sys.exit(1)
+    parser, default_args = parse_eval_args()
 
     # If args were provided, override the defaults
     if args:
@@ -296,12 +466,29 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
     args = default_args
 
+    # Handle power analysis mode (pre-evaluation planning)
+    if getattr(args, "power_analysis", False):
+        _run_power_analysis(args)
+        sys.exit(0)
+
     if args.wandb_args:
         if "name" not in args.wandb_args:
             name = f"{args.model}_{args.model_args}_{utils.get_datetime_str(timezone=args.timezone)}"
             name = utils.sanitize_long_string(name)
             args.wandb_args += f",name={name}"
         wandb_logger = WandbLogger(**simple_parse_args_string(args.wandb_args))
+
+    swanlab_logger = None
+    if args.swanlab_args:
+        if "exp_name" not in args.swanlab_args:
+            name = f"{args.model}_{args.model_args}_{utils.get_datetime_str(timezone=args.timezone)}"
+            name = utils.sanitize_long_string(name)
+            args.swanlab_args += f",exp_name={name}"
+        try:
+            swanlab_logger = SwanLabLogger(**simple_parse_args_string(args.swanlab_args))
+        except Exception as e:
+            eval_logger.warning(f"swanlab logger initialization failed; continuing without swanlab: {e}")
+            swanlab_logger = None
 
     # reset logger
     eval_logger.remove()
@@ -320,10 +507,39 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         with open(args.config, "r") as file:
             config_args = yaml.safe_load(file)
         config_args = [config_args] if type(config_args) != list else config_args
+
+        # Extract and apply env vars before validation (env is not a CLI arg)
+        for config in config_args:
+            env_config = config.pop("env", None)
+            if env_config:
+                if not isinstance(env_config, dict):
+                    raise ValueError(f"'env' in config must be a dict, got {type(env_config).__name__}")
+                for env_key, env_value in env_config.items():
+                    resolved = os.path.expandvars(str(env_value))
+                    os.environ[env_key] = resolved
+                    eval_logger.info(f"Config env: {env_key}={'*' * min(len(resolved), 8) if any(s in env_key.upper() for s in ('KEY', 'TOKEN', 'SECRET', 'PASSWORD')) else resolved}")
+
+        # Validate config keys
+        valid_keys = {action.dest for action in parser._actions}
+        for config in config_args:
+            unknown_keys = set(config.keys()) - valid_keys
+            if unknown_keys:
+                raise ValueError(f"Unknown keys in config file: {sorted(unknown_keys)}. " f"Valid keys are: {sorted(valid_keys - {'help'})}")
+
+        # Determine which CLI args were explicitly provided by the user.
+        default_config_args = parser.parse_args([])
+        cli_explicit = {}
+        for key, value in vars(args).items():
+            default_value = getattr(default_config_args, key, None)
+            if value != default_value:
+                cli_explicit[key] = value
+
         # multiple configs, create args list first
         for config in config_args:
-            args_copy = argparse.Namespace(**vars(args))
+            args_copy = argparse.Namespace(**vars(default_config_args))
             for key, value in config.items():
+                setattr(args_copy, key, value)
+            for key, value in cli_explicit.items():
                 setattr(args_copy, key, value)
             args_list.append(args_copy)
     else:
@@ -363,6 +579,15 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                     eval_logger.info(f"Logging to Weights and Biases failed due to {e}")
                 # wandb_logger.finish()
 
+            if is_main_process and args.swanlab_args and swanlab_logger is not None:
+                try:
+                    swanlab_logger.post_init(results)
+                    swanlab_logger.log_eval_result()
+                    if args.swanlab_log_samples and samples is not None:
+                        swanlab_logger.log_eval_samples(samples)
+                except Exception as e:
+                    eval_logger.info(f"Logging to SwanLab failed due to {e}")
+
         except Exception as e:
             if args.verbosity == "DEBUG":
                 raise e
@@ -374,13 +599,17 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     for args, results in zip(args_list, results_list):
         # cli_evaluate will return none if the process is not the main process (rank 0)
         if results is not None:
-            print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, num_fewshot: {args.num_fewshot}, " f"batch_size: {args.batch_size}")
+            print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), " f"limit: {args.limit}, offset: {args.offset}, num_fewshot: {args.num_fewshot}, " f"batch_size: {args.batch_size}")
+            print(get_eval_banner(branch=results.get("git_branch"), commit=results.get("git_hash")))
             print(make_table(results))
             if "groups" in results:
                 print(make_table(results, "groups"))
 
     if args.wandb_args:
         wandb_logger.run.finish()
+
+    if args.swanlab_args and swanlab_logger is not None:
+        swanlab_logger.finish()
 
 
 def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
@@ -426,8 +655,12 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     if "push_samples_to_hub" in evaluation_tracker_args and not args.log_samples:
         eval_logger.warning("Pushing samples to the Hub requires --log_samples to be set. Samples will not be pushed to the Hub.")
 
-    if args.limit:
+    if args.limit is not None and args.limit != -1:
         eval_logger.warning(" --limit SHOULD ONLY BE USED FOR TESTING." "REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.")
+    if args.limit is not None and args.limit < 0 and args.limit != -1:
+        raise ValueError("--limit must be -1 or non-negative")
+    if args.offset < 0:
+        raise ValueError("--offset must be >= 0")
 
     if os.environ.get("LMMS_EVAL_PLUGINS", None):
         args.include_path = [args.include_path] if args.include_path else []
@@ -439,7 +672,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         eval_logger.error("Need to specify task to evaluate.")
         sys.exit()
     elif args.tasks == "list":
-        eval_logger.info("Available Tasks:\n - {}".format(f"\n - ".join(sorted(task_manager.all_tasks))))
+        eval_logger.info("Available Tasks:\n - {}".format("\n - ".join(sorted(task_manager.all_tasks))))
         sys.exit()
     elif args.tasks == "list_groups":
         eval_logger.info(task_manager.list_all_tasks(list_subtasks=False, list_tags=False))
@@ -491,6 +724,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         device=args.device,
         use_cache=args.use_cache,
         limit=args.limit,
+        offset=args.offset,
         check_integrity=args.check_integrity,
         write_out=args.write_out,
         log_samples=args.log_samples,
@@ -511,6 +745,9 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         distributed_executor_backend="torchrun" if (torch.distributed.is_available() and torch.distributed.is_initialized()) else "accelerate",
         force_simple=args.force_simple,
         launcher_args=args.launcher_args,
+        repeats=args.repeats,
+        baseline=args.baseline,
+        max_tokens=args.max_tokens,
         **request_caching_args,
     )
 
@@ -519,13 +756,32 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
             samples = results.pop("samples")
         else:
             samples = None
+
+        # Print token usage summary if available
+        if results.get("usage") and "total" in results["usage"]:
+            u = results["usage"]["total"]
+            eval_logger.info(
+                "Token Usage - Input: {} | Output: {} | Reasoning: {} | Total: {} | API Calls: {}",
+                f"{u['input_tokens']:,}",
+                f"{u['output_tokens']:,}",
+                f"{u['reasoning_tokens']:,}",
+                f"{u['total_tokens']:,}",
+                f"{u['n_api_calls']:,}",
+            )
+            if results["usage"].get("budget_exceeded"):
+                eval_logger.warning("Evaluation stopped early: token budget exceeded. Results are partial.")
+
         dumped = json.dumps(results, indent=4, default=_handle_non_serializable)
         if args.show_config:
             print(dumped)
 
         batch_sizes = ",".join(map(str, results["config"]["batch_sizes"]))
 
-        evaluation_tracker.save_results_aggregated(results=results, samples=samples if args.log_samples else None, datetime_str=datetime_str)
+        evaluation_tracker.save_results_aggregated(
+            results=results,
+            samples=samples if args.log_samples else None,
+            datetime_str=datetime_str,
+        )
 
         if args.log_samples:
             for task_name, config in results["configs"].items():
@@ -539,7 +795,8 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
 
 def print_results(args, results):
-    print(f"{args.model} ({args.model_args}),\ngen_kwargs: ({args.gen_kwargs}),\nlimit: {args.limit},\nnum_fewshot: {args.num_fewshot},\nbatch_size: {args.batch_size}")
+    print(f"{args.model} ({args.model_args}),\n" f"gen_kwargs: ({args.gen_kwargs}),\n" f"limit: {args.limit},\n" f"offset: {args.offset},\n" f"num_fewshot: {args.num_fewshot},\n" f"batch_size: {args.batch_size}")
+    print(get_eval_banner(branch=results.get("git_branch"), commit=results.get("git_hash")))
     print(evaluator.make_table(results))
     if "groups" in results:
         print(evaluator.make_table(results, "groups"))

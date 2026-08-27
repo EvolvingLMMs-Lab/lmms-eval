@@ -1,42 +1,9 @@
 import logging
-import re
 from collections import defaultdict
-from pathlib import Path
 
-import yaml
+from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
 
 eval_logger = logging.getLogger("lmms-eval")
-
-with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
-    raw_data = f.readlines()
-    safe_data = []
-    for i, line in enumerate(raw_data):
-        # remove function definition since yaml load cannot handle it
-        if "!function" not in line:
-            safe_data.append(line)
-
-    config = yaml.safe_load("".join(safe_data))
-
-
-def _extract_answer_letter(text: str) -> str:
-    """
-    Extract the answer choice letter from a string.
-
-    Examples:
-    'A answer1' -> 'A'
-    'A) answer2' -> 'A'
-    '(B) answer' -> 'B'
-    'C' -> 'C'
-    '(C)' -> 'C'
-    'A.' -> 'A'
-
-    Return an empty string if no letter is found.
-    """
-    text = text.strip()
-    match = re.match(r"[\(\s]*([A-Z])[\)\.\s]*", text, flags=re.IGNORECASE)
-    if match:
-        return match.group(1).upper()
-    return ""
 
 
 def erqa_doc_to_text(doc: dict) -> str:
@@ -51,6 +18,12 @@ def erqa_doc_to_visual(doc: dict) -> list:
     return image_list
 
 
+def erqa_doc_to_messages(doc: dict, lmms_eval_specific_kwargs=None) -> list[dict]:
+    content = [{"type": "image", "url": image} for image in erqa_doc_to_visual(doc)]
+    content.append({"type": "text", "text": erqa_doc_to_text(doc)})
+    return [{"role": "user", "content": content}]
+
+
 def erqa_process_results(doc, results):
     key_name = "erqa_acc"
     # extract grounded answer
@@ -58,7 +31,7 @@ def erqa_process_results(doc, results):
     response = results[0]
 
     # extract predicted answer
-    pred_letter = _extract_answer_letter(response)
+    pred_letter = extract_mcq_answer(response, choices=["A", "B", "C", "D"])
     flag = pred_letter == grounded_output
 
     omnispatial_submission = {"id": doc["question_id"], "gt_content": grounded_output, "pred": response, "sub_task": doc["question_type"], "is_correct": flag}

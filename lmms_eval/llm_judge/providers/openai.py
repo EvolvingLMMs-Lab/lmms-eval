@@ -1,15 +1,32 @@
-import base64
 import os
 import time
-from io import BytesIO
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import requests
 from loguru import logger as eval_logger
 from PIL import Image
 
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
+from lmms_eval.models.model_utils.usage_metrics import log_usage
+
 from ..base import ServerInterface
 from ..protocol import Request, Response, ServerConfig
+
+
+def _is_reasoning_model(model_name: str) -> bool:
+    """Reasoning models (gpt-5*, o1/o3/o4*) require max_completion_tokens and reject an explicit temperature."""
+    return model_name.startswith(("gpt-5", "o1", "o3", "o4"))
+
+
+def build_sampling_kwargs(config: ServerConfig) -> Dict[str, Any]:
+    """Token-limit and temperature kwargs for a chat.completions payload.
+
+    Reasoning models use max_completion_tokens and reject a non-default temperature
+    (the API returns 400), so temperature is omitted for them.
+    """
+    if _is_reasoning_model(config.model_name):
+        return {"max_completion_tokens": config.max_tokens}
+    return {"max_tokens": config.max_tokens, "temperature": config.temperature}
 
 
 class OpenAIProvider(ServerInterface):
@@ -18,13 +35,13 @@ class OpenAIProvider(ServerInterface):
     def __init__(self, config: Optional[ServerConfig] = None):
         super().__init__(config)
         self.api_key = os.getenv("OPENAI_API_KEY", "")
-        self.api_url = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions/v1")
+        self.base_url = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1")
 
         # Initialize OpenAI client
         try:
             from openai import OpenAI
 
-            self.client = OpenAI(api_key=self.api_key, base_url=self.api_url)
+            self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
             self.use_client = True
         except ImportError:
             eval_logger.warning("OpenAI client not available, falling back to requests")
@@ -49,8 +66,7 @@ class OpenAIProvider(ServerInterface):
         payload = {
             "model": config.model_name,
             "messages": messages,
-            "temperature": config.temperature,
-            "max_tokens": config.max_tokens,
+            **build_sampling_kwargs(config),
         }
 
         if config.top_p is not None:
@@ -75,6 +91,26 @@ class OpenAIProvider(ServerInterface):
                     usage = response.get("usage")
                     raw_response = response
 
+                # Log usage for token tracking
+                if self.use_client and hasattr(response, "usage") and response.usage:
+                    log_usage(
+                        model_name=model_used or config.model_name,
+                        task_name=None,
+                        input_tokens=getattr(response.usage, "prompt_tokens", 0) or 0,
+                        output_tokens=getattr(response.usage, "completion_tokens", 0) or 0,
+                        reasoning_tokens=0,
+                        source="judge",
+                    )
+                elif not self.use_client and isinstance(usage, dict):
+                    log_usage(
+                        model_name=model_used or config.model_name,
+                        task_name=None,
+                        input_tokens=usage.get("prompt_tokens", 0) or 0,
+                        output_tokens=usage.get("completion_tokens", 0) or 0,
+                        reasoning_tokens=0,
+                        source="judge",
+                    )
+
                 return Response(content=content.strip(), model_used=model_used, usage=usage, raw_response=raw_response)
 
             except Exception as e:
@@ -92,11 +128,12 @@ class OpenAIProvider(ServerInterface):
             "Content-Type": "application/json",
         }
 
-        response = requests.post(self.api_url, headers=headers, json=payload, timeout=timeout)
+        url = self.base_url.rstrip("/") + "/chat/completions"
+        response = requests.post(url, headers=headers, json=payload, timeout=timeout)
         response.raise_for_status()
         return response.json()
 
-    def _add_images_to_messages(self, messages: List[Dict], images: List[Union[str, bytes]]) -> List[Dict]:
+    def _add_images_to_messages(self, messages: List[Dict], images: List[Union[str, bytes, Image.Image]]) -> List[Dict]:
         """Add images to the last user message"""
         # Find the last user message
         for i in range(len(messages) - 1, -1, -1):
@@ -107,7 +144,11 @@ class OpenAIProvider(ServerInterface):
 
                 # Add images
                 for image in images:
-                    if isinstance(image, str):
+                    if isinstance(image, Image.Image):
+                        # PIL Image object
+                        base64_image = encode_image_to_base64(image, image_format="JPEG", convert_rgb=True, quality=85)
+                        messages[i]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}})
+                    elif isinstance(image, str):
                         # File path
                         base64_image = self._encode_image(image)
                         messages[i]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}})
@@ -120,7 +161,10 @@ class OpenAIProvider(ServerInterface):
 
     def _encode_image(self, image_path: str) -> str:
         """Encode image to base64"""
-        img = Image.open(image_path).convert("RGB")
-        buffered = BytesIO()
-        img.save(buffered, format="JPEG")
-        return base64.b64encode(buffered.getvalue()).decode("utf-8")
+        return encode_image_to_base64(
+            image_path,
+            image_format="JPEG",
+            convert_rgb=True,
+            quality=85,
+            use_path_cache=True,
+        )

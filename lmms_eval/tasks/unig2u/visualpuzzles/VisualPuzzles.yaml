@@ -1,0 +1,7 @@
+group: unig2u_VisualPuzzles
+task:
+  - unig2u_VisualPuzzles_algorithmic
+  - unig2u_VisualPuzzles_analogical
+  - unig2u_VisualPuzzles_deductive
+  - unig2u_VisualPuzzles_inductive
+  - unig2u_VisualPuzzles_spatial

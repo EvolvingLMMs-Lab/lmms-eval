@@ -1,6 +1,6 @@
 task: refcoco_bbox_val_lite
 test_split: lite
-dataset_path: lmms-lab/LMMs-Eval-Lite
+dataset_path: lmms-lab-encoder/LMMs-Eval-Lite
 dataset_name: refcoco_bbox_val
 output_type: generate_until
 doc_to_visual: !function utils.refcoco_bbox_doc_to_visual

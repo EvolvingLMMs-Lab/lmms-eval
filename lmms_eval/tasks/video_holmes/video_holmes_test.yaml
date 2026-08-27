@@ -1,0 +1,3 @@
+task: video_holmes_test
+include: _default_template_yaml
+test_split: test

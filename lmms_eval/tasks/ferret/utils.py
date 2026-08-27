@@ -5,11 +5,9 @@ from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
-import openai
 import requests
 import yaml
 from loguru import logger as eval_logger
-from openai import OpenAI
 
 NUM_SECONDS_TO_SLEEP = 0.5
 

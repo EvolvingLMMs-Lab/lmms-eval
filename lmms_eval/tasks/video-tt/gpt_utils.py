@@ -208,7 +208,7 @@ def accuracy_process_results(doc, results):
         pred = pred[0]
 
     # return {f"videomme_percetion_score": data_dict for metric in matrices}
-    return {f"accuracy": pred == doc["answer"]}
+    return {"accuracy": pred == doc["answer"]}
 
 
 def doc_to_text_with_options(doc, lmms_eval_specific_kwargs=None):

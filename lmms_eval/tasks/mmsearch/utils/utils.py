@@ -1,6 +1,4 @@
 import asyncio
-import logging
-import math
 import os
 import random
 import tempfile
@@ -109,7 +107,7 @@ class DDGSQueryRun:
         try:
             output = self.api_wrapper.query(query, max_results=self.max_results + 20)  # account for error website
         except Exception as e:
-            eval_logger.error(f"DDGSQueryRun call failed:")
+            eval_logger.error("DDGSQueryRun call failed:")
             eval_logger.error(f"{e}")
             output = []
 
@@ -171,7 +169,7 @@ def search_url_full_result(urls, screenshot_dir):
         os.makedirs(save_dir_path, exist_ok=True)
         fullpage_success = take_fullpage_screenshot(url, f"{save_dir_path}/fullpage.png")
         if not fullpage_success:
-            eval_logger.info(f"take_fullpage_screenshot failed. Save a blank image")
+            eval_logger.info("take_fullpage_screenshot failed. Save a blank image")
             # Create a 512x512 pixel blank image
             fig, ax = plt.subplots(figsize=(512 / 100, 512 / 100), dpi=100)
             # Remove coordinate axes

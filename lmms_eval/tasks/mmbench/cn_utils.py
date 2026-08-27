@@ -100,7 +100,7 @@ def mmbench_process_results(doc, results):
 
 
 def mmbench_aggregate_dev_results_eval(results, args):
-    print(f"============= MMBench-CN(Dev) Detailed Results =============")
+    print("============= MMBench-CN(Dev) Detailed Results =============")
     overall_acc, category_acc, l2_category_acc = mmbench_evaluator.eval_result(results, eval_method="openai")
     file = generate_submission_file("mmbench_cn_dev_results.json", args)
     details_info = {

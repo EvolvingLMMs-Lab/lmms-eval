@@ -173,9 +173,9 @@ async def list_available_tasks():
 async def list_available_models():
     """List all available model types."""
     try:
-        from lmms_eval.models import AVAILABLE_MODELS
+        from lmms_eval.models import list_available_models as list_models
 
-        return {"models": list(AVAILABLE_MODELS.keys())}
+        return {"models": list_models()}
     except Exception as e:
         return {"models": [], "error": str(e)}
 

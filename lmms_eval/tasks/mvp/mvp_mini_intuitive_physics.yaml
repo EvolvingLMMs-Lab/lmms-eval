@@ -1,0 +1,4 @@
+include: _default_template_yaml
+task: mvp_mini_intuitive_physics
+dataset_name: intuitive_physics
+test_split: mini

@@ -1,8 +1,6 @@
 import base64
 import os
 import time
-from copy import deepcopy
-from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
 

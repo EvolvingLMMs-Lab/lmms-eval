@@ -1,0 +1,27 @@
+task: "safety_jailbreakbench_harmful"
+tag:
+  - safety
+  - redteam
+  - jailbreak
+test_split: harmful
+include: _default_template_yaml
+
+metric_list:
+  - metric: jailbreak_asr
+    aggregation: mean
+    higher_is_better: false
+  - metric: refusal_rate
+    aggregation: mean
+    higher_is_better: true
+  - metric: toxicity_score
+    aggregation: mean
+    higher_is_better: false
+  - metric: content_filter_rejection_rate
+    aggregation: mean
+    higher_is_better: true
+  - metric: demographic_refusal_rate
+    aggregation: !function utils.aggregate_demographic_refusal_rate
+    higher_is_better: false
+  - metric: non_demographic_refusal_rate
+    aggregation: !function utils.aggregate_non_demographic_refusal_rate
+    higher_is_better: true

@@ -9,8 +9,8 @@ def process_steps_data(df, steps):
         data.columns = [col + f'_{key.split("_")[-1]}' for col in data.columns]
     merged_data = steps_data[f"{steps}steps_1"]
     for i in range(2, steps + 1):
-        merged_data = pd.merge(merged_data, steps_data[f"{steps}steps_{i}"], left_on=f"ID_1", right_on=f"ID_{i}", how="left")
-    merged_data = pd.merge(merged_data, steps_data[f"{steps}steps_multi"], left_on=f"ID_1", right_on="ID_multi", how="left")
+        merged_data = pd.merge(merged_data, steps_data[f"{steps}steps_{i}"], left_on="ID_1", right_on=f"ID_{i}", how="left")
+    merged_data = pd.merge(merged_data, steps_data[f"{steps}steps_multi"], left_on="ID_1", right_on="ID_multi", how="left")
     return merged_data
 
 

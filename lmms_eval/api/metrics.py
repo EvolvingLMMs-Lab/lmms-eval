@@ -9,7 +9,6 @@ from typing import Any, List
 
 import numpy as np
 import sacrebleu
-from loguru import logger as eval_logger
 
 from lmms_eval.api.registry import register_aggregation, register_metric
 
@@ -339,7 +338,12 @@ def mean_stderr(arr):
 @register_metric(
     metric="bypass",
     higher_is_better=True,
-    output_type=["loglikelihood", "multiple_choice", "generate_until", "generate_until_multi_round"],
+    output_type=[
+        "loglikelihood",
+        "multiple_choice",
+        "generate_until",
+        "generate_until_multi_round",
+    ],
     aggregation="bypass",
 )
 def bypass(items):
@@ -550,19 +554,6 @@ def stderr_for_metric(metric, bootstrap_iters: int):
     if bootstrap_iters <= 0:
         # return no function (don't compute stderr) if bootstrap iters = 0
         return None
-    # for coco_cap_chair
-    # for amber_g
-    from lmms_eval.tasks.amber_g.utils import (
-        amber_g_aggregate_chair,
-        amber_g_aggregate_cog,
-        amber_g_aggregate_cover,
-        amber_g_aggregate_hal,
-    )
-    from lmms_eval.tasks.coco_cap_chair.utils import (
-        coco_cap_chair_aggregate_results_chair_i,
-        coco_cap_chair_aggregate_results_chair_s,
-        coco_cap_chair_aggregate_results_recall,
-    )
 
     bootstrappable = [
         median,
@@ -572,14 +563,46 @@ def stderr_for_metric(metric, bootstrap_iters: int):
         bleu,
         chrf,
         ter,
-        coco_cap_chair_aggregate_results_chair_i,
-        coco_cap_chair_aggregate_results_chair_s,
-        coco_cap_chair_aggregate_results_recall,
-        amber_g_aggregate_chair,
-        amber_g_aggregate_cover,
-        amber_g_aggregate_hal,
-        amber_g_aggregate_cog,
     ]
+
+    # Optional imports for tasks with extra dependencies (spacy, etc.).
+    # Catch Exception (not just ImportError) because transitive deps may raise
+    # ValueError/RuntimeError from binary incompatibilities (e.g. numpy/spacy).
+    try:
+        from lmms_eval.tasks.amber_g.utils import (
+            amber_g_aggregate_chair,
+            amber_g_aggregate_cog,
+            amber_g_aggregate_cover,
+            amber_g_aggregate_hal,
+        )
+
+        bootstrappable.extend(
+            [
+                amber_g_aggregate_chair,
+                amber_g_aggregate_cover,
+                amber_g_aggregate_hal,
+                amber_g_aggregate_cog,
+            ]
+        )
+    except Exception:
+        pass
+
+    try:
+        from lmms_eval.tasks.coco_cap_chair.utils import (
+            coco_cap_chair_aggregate_results_chair_i,
+            coco_cap_chair_aggregate_results_chair_s,
+            coco_cap_chair_aggregate_results_recall,
+        )
+
+        bootstrappable.extend(
+            [
+                coco_cap_chair_aggregate_results_chair_i,
+                coco_cap_chair_aggregate_results_chair_s,
+                coco_cap_chair_aggregate_results_recall,
+            ]
+        )
+    except Exception:
+        pass
 
     if metric in bootstrappable:
         return lambda x: bootstrap_stderr(metric, x, iters=bootstrap_iters)
@@ -647,6 +670,96 @@ def aggregate_subtask_metrics(metrics, sizes, weight_by_size=True):
     return sum([metric * size for metric, size in zip(metrics, sizes)]) / sum(sizes)
 
 
+def expected_accuracy(sample_scores: List[List[float]]) -> float:
+    """
+    Calculate Expected Accuracy (EA) - average accuracy over k samples.
+
+    Args:
+        sample_scores: List of lists, where each inner list contains k scores
+                       for a single question (e.g., [[0,1,1], [1,1,0], ...])
+
+    Returns:
+        EA: mean of all individual sample scores
+    """
+    if not sample_scores:
+        return float("nan")
+    all_scores = [s for scores in sample_scores for s in scores]
+    return sum(all_scores) / len(all_scores) if all_scores else float("nan")
+
+
+def consensus_accuracy(sample_scores: List[List[float]]) -> float:
+    """
+    Calculate Consensus Accuracy (CA) via majority voting.
+
+    For each question, take the majority vote across k samples.
+    CA = fraction of questions where majority vote is correct.
+
+    Args:
+        sample_scores: List of lists of 0/1 scores per question
+
+    Returns:
+        CA: accuracy after majority voting
+    """
+    if not sample_scores:
+        return float("nan")
+    correct = 0
+    for scores in sample_scores:
+        if not scores:
+            continue
+        # Majority vote: correct if more than half are 1
+        if sum(scores) > len(scores) / 2:
+            correct += 1
+    return correct / len(sample_scores) if sample_scores else float("nan")
+
+
+def internal_variance(sample_scores: List[List[float]]) -> float:
+    """
+    Calculate Internal Variance (IV) - average variance within each question.
+
+    Lower IV indicates more consistent/stable model behavior.
+
+    Args:
+        sample_scores: List of lists of scores per question
+
+    Returns:
+        IV: mean of per-question variances
+    """
+    if not sample_scores:
+        return float("nan")
+    variances = []
+    for scores in sample_scores:
+        if len(scores) < 2:
+            continue
+        mean_s = sum(scores) / len(scores)
+        var = sum((s - mean_s) ** 2 for s in scores) / (len(scores) - 1)
+        variances.append(var)
+    return sum(variances) / len(variances) if variances else float("nan")
+
+
+def consistency_rate(sample_scores: List[List[float]]) -> float:
+    """
+    Calculate Consistency Rate (CR) - fraction of questions with consistent answers.
+
+    A question is consistent if all k samples give the same answer.
+
+    Args:
+        sample_scores: List of lists of 0/1 scores per question
+
+    Returns:
+        CR: fraction of questions with all-same answers
+    """
+    if not sample_scores:
+        return float("nan")
+    consistent = 0
+    for scores in sample_scores:
+        if not scores:
+            continue
+        # Consistent if all scores are the same (all 0 or all 1)
+        if len(set(scores)) == 1:
+            consistent += 1
+    return consistent / len(sample_scores) if sample_scores else float("nan")
+
+
 def clustered_stderr(scores: List[float], cluster_ids: List[Any]) -> float:
     """
     Calculate clustered standard error for non-independent samples.
@@ -698,3 +811,143 @@ def clustered_stderr(scores: List[float], cluster_ids: List[Any]) -> float:
 
     # SE_clustered = sqrt(SE_CLT^2 + cross_term)
     return math.sqrt(se_clt_squared + cross_term)
+
+
+def paired_ttest(current_scores: List[float], baseline_scores: List[float]) -> dict:
+    """
+    Perform paired t-test comparing current model scores against baseline.
+
+    This implements a paired-differences test for model comparison, computing:
+    - Mean difference (current - baseline)
+    - Standard error of the difference
+    - 95% confidence interval
+    - t-statistic and p-value
+
+    Args:
+        current_scores: List of scores from the current model (per sample)
+        baseline_scores: List of scores from the baseline model (per sample)
+
+    Returns:
+        dict with keys: mean_diff, se_diff, ci_lower, ci_upper, t_stat, p_value, n
+    """
+    from scipy import stats
+
+    if len(current_scores) != len(baseline_scores):
+        raise ValueError(f"Score lists must have same length: current={len(current_scores)}, baseline={len(baseline_scores)}")
+
+    n = len(current_scores)
+    if n < 2:
+        return {
+            "mean_diff": float("nan"),
+            "se_diff": float("nan"),
+            "ci_lower": float("nan"),
+            "ci_upper": float("nan"),
+            "t_stat": float("nan"),
+            "p_value": float("nan"),
+            "n": n,
+        }
+
+    diffs = [c - b for c, b in zip(current_scores, baseline_scores)]
+    mean_diff = sum(diffs) / n
+    var_diff = sum((d - mean_diff) ** 2 for d in diffs) / (n - 1)
+    se_diff = math.sqrt(var_diff / n)
+
+    if se_diff == 0:
+        t_stat = float("inf") if mean_diff > 0 else float("-inf") if mean_diff < 0 else 0.0
+        p_value = 0.0 if mean_diff != 0 else 1.0
+    else:
+        t_stat = mean_diff / se_diff
+        p_value = 2 * (1 - stats.t.cdf(abs(t_stat), n - 1))
+
+    t_crit = stats.t.ppf(0.975, n - 1)
+    ci_lower = mean_diff - t_crit * se_diff
+    ci_upper = mean_diff + t_crit * se_diff
+
+    return {
+        "mean_diff": mean_diff,
+        "se_diff": se_diff,
+        "ci_lower": ci_lower,
+        "ci_upper": ci_upper,
+        "t_stat": t_stat,
+        "p_value": p_value,
+        "n": n,
+    }
+
+
+def power_analysis(
+    effect_size: float,
+    std_a: float = None,
+    std_b: float = None,
+    alpha: float = 0.05,
+    power: float = 0.80,
+    correlation: float = 0.5,
+    current_n: int = None,
+) -> dict:
+    """
+    Calculate minimum sample size for paired t-test power analysis.
+
+    For paired samples, the effective variance is:
+        Var(X - Y) = Var(X) + Var(Y) - 2*Cov(X,Y)
+                   = std_a^2 + std_b^2 - 2*rho*std_a*std_b
+
+    Formula (from Miller 2024, "Adding Error Bars to Evals"):
+        n = ((z_alpha + z_beta) / d)^2
+    where d = effect_size / std_diff is the standardized effect size.
+
+    Note: std_a and std_b should ideally be estimated from previous
+    evaluation data rather than using the default values.
+    See: https://arxiv.org/abs/2411.00640 Section 5 for details.
+
+    Args:
+        effect_size: Minimum detectable difference (e.g., 0.03 for 3%)
+        std_a: Std deviation of model A scores (estimate from previous eval)
+        std_b: Std deviation of model B scores (estimate from previous eval)
+               If only std_a provided, assumes std_b = std_a
+               If neither provided, defaults to 0.5 (binary 0/1 approximation)
+        alpha: Significance level (default 0.05)
+        power: Desired statistical power (default 0.80)
+        correlation: Expected correlation between paired samples (default 0.5)
+        current_n: If provided, also compute the power for this sample size
+
+    Returns:
+        Dictionary with min_n, current_power (if current_n provided), and other details
+    """
+    from scipy import stats
+
+    # Handle std defaults: if neither provided, use 0.5; if only std_a, assume equal
+    if std_a is None and std_b is None:
+        std_a = std_b = 0.5  # Default for binary (0/1) scores
+    elif std_a is not None and std_b is None:
+        std_b = std_a  # Assume equal variance if only one provided
+    elif std_a is None and std_b is not None:
+        std_a = std_b
+
+    z_alpha = stats.norm.ppf(1 - alpha / 2)  # Two-tailed
+    z_beta = stats.norm.ppf(power)
+
+    # General formula: Var(X-Y) = Var(X) + Var(Y) - 2*Cov(X,Y)
+    # where Cov(X,Y) = rho * std_a * std_b
+    var_diff = std_a**2 + std_b**2 - 2 * correlation * std_a * std_b
+    std_diff = math.sqrt(var_diff)
+    d = effect_size / std_diff
+    min_n = math.ceil(((z_alpha + z_beta) / d) ** 2)
+
+    result = {
+        "min_n": min_n,
+        "effect_size": effect_size,
+        "std_a": std_a,
+        "std_b": std_b,
+        "alpha": alpha,
+        "power": power,
+        "correlation": correlation,
+    }
+
+    if current_n is not None:
+        achieved_z_beta = d * math.sqrt(current_n) - z_alpha
+        achieved_power = stats.norm.cdf(achieved_z_beta)
+        result["current_n"] = current_n
+        result["current_power"] = round(achieved_power, 4)
+        mde = (z_alpha + z_beta) * std_diff / math.sqrt(current_n)
+        result["min_detectable_effect"] = round(mde, 4)
+
+    return result

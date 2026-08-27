@@ -1,0 +1,38 @@
+dataset_path: oscarqjh/3DSRBench_lmmseval
+
+generation_kwargs:
+  max_new_tokens: 4096
+  temperature: 0.0
+  top_p: 1.0
+  do_sample: false
+
+output_type: generate_until
+doc_to_visual: !function utils.doc_to_visual
+doc_to_text: !function utils.doc_to_text
+doc_to_messages: !function utils.doc_to_messages
+doc_to_target: "answer"
+process_results: !function utils.process_results
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "Please select the correct answer from the options above. \n"
+  neo_ov:
+    pre_prompt: ""
+    post_prompt: ""
+    prompt_format: neo_ov
+
+model_specific_generation_kwargs:
+  neo_ov:
+    patch_size: 16
+    min_pixels: 691200
+    max_pixels: 691200
+    downsample_ratio: 0.5
+    system_prompt: ""
+    max_new_tokens: 4096
+    temperature: null
+    top_p: null
+    repetition_penalty: null
+
+metadata:
+  - version: 0.0

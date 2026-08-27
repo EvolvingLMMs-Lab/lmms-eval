@@ -1,10 +1,16 @@
 import re
-from typing import Optional
 
-from loguru import logger as eval_logger
+# Mapping from question_type in dataset to metric key
+VIEWSPATIAL_QUESTION_TYPES = {
+    "Camera perspective - Relative Direction": "camera_perspective_relative_direction",
+    "Camera perspective - Object View Orientation": "camera_perspective_object_view_orientation",
+    "Person perspective - Relative Direction": "person_perspective_relative_direction",
+    "Person perspective - Object View Orientation": "person_perspective_object_view_orientation",
+    "Person perspective - Scene Simulation Relative Direction": "person_perspective_scene_simulation_relative_direction",
+}
 
 
-def viewspatial_doc_to_text(doc):
+def viewspatial_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     """Extracts the text prompt from a viewspatial dataset sample.
 
     Args:
@@ -40,6 +46,31 @@ def viewspatial_doc_to_visual(doc):
     return [visual.convert("RGB") for visual in doc["images"]]
 
 
+def _format_neo_ov_content(images, prompt):
+    if len(images) == 1:
+        return [{"type": "image", "url": images[0]}, {"type": "text", "text": prompt}]
+
+    content = []
+    for idx, image in enumerate(images, start=1):
+        content.append({"type": "text", "text": f"Image-{idx}: "})
+        content.append({"type": "image", "url": image})
+    content.append({"type": "text", "text": prompt})
+    return content
+
+
+def viewspatial_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    lmms_eval_specific_kwargs = lmms_eval_specific_kwargs or {}
+    images = viewspatial_doc_to_visual(doc)
+    prompt = viewspatial_doc_to_text(doc, lmms_eval_specific_kwargs)
+
+    if lmms_eval_specific_kwargs.get("prompt_format") == "neo_ov":
+        return [{"role": "user", "content": _format_neo_ov_content(images, prompt)}]
+
+    content = [{"type": "image", "url": image} for image in images]
+    content.append({"type": "text", "text": prompt})
+    return [{"role": "user", "content": content}]
+
+
 def extract_option(text):
     match = re.search(r"\b([A-D])\b", text, re.IGNORECASE)
     return match.group(1).upper() if match else None
@@ -59,28 +90,47 @@ def viewspatial_process_results(doc, results):
     # eval_logger.info(f"Predicted answer: {pred_answer}")
 
     score = 1.0 if pred_answer == grounded_option else 0.0
-    # eval_logger.info(f"Score: {score}")
 
-    return {"overall_accuracy": {"score": score}}
+    question_type = doc.get("question_type", "unknown")
+
+    result = {"overall_accuracy": {"score": score}}
+
+    # Per-subcategory metrics
+    for qt_name, metric_key in VIEWSPATIAL_QUESTION_TYPES.items():
+        result[f"{metric_key}_accuracy"] = {"score": score, "question_type": question_type, "target_type": qt_name}
+
+    return result
 
 
 def viewspatial_aggregate_results(results):
-    """Aggregates the 'overall_accuracy' results.
+    """Aggregates the 'overall_accuracy' results."""
+    if not results:
+        return 0.0
+    total_score = sum(res["score"] for res in results)
+    return total_score / len(results)
 
-    Calculates the mean score from a list of result dictionaries.
 
-    Args:
-        results (list[dict]): A list of dictionaries, where each dict has
-                              a 'score' key (e.g., [{'score': 1.0}, ...]).
+def _viewspatial_aggregate_by_type(results, target_type: str) -> float:
+    """Aggregate accuracy for a specific question type."""
+    scores = [r["score"] for r in results if r.get("question_type") == target_type]
+    return sum(scores) / len(scores) if scores else 0.0
 
-    Returns:
-        float: The average score (mean accuracy).
-    """
-    # --- Compute the total score across all results ---
-    total_score = 0.0
-    for res in results:
-        total_score += res["score"]
 
-    # --- Compute average score safely ---
-    avg_score = total_score / len(results) if results else 0.0
-    return avg_score
+def viewspatial_aggregate_camera_perspective_relative_direction(results):
+    return _viewspatial_aggregate_by_type(results, "Camera perspective - Relative Direction")
+
+
+def viewspatial_aggregate_camera_perspective_object_view_orientation(results):
+    return _viewspatial_aggregate_by_type(results, "Camera perspective - Object View Orientation")
+
+
+def viewspatial_aggregate_person_perspective_relative_direction(results):
+    return _viewspatial_aggregate_by_type(results, "Person perspective - Relative Direction")
+
+
+def viewspatial_aggregate_person_perspective_object_view_orientation(results):
+    return _viewspatial_aggregate_by_type(results, "Person perspective - Object View Orientation")
+
+
+def viewspatial_aggregate_person_perspective_scene_simulation_relative_direction(results):
+    return _viewspatial_aggregate_by_type(results, "Person perspective - Scene Simulation Relative Direction")

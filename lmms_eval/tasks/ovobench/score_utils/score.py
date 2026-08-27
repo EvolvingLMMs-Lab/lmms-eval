@@ -11,7 +11,7 @@ def calculate_score_backward_realtime(results):
 
     scores = {}
     for i in range(len(results)):
-        if not results[i]["task"] in scores.keys():
+        if results[i]["task"] not in scores.keys():
             scores[results[i]["task"]] = [results[i]["score"]]
         else:
             scores[results[i]["task"]].append(results[i]["score"])

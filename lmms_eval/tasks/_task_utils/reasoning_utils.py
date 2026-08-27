@@ -162,6 +162,10 @@ def format_reward(predict_str: str) -> float:
     if re.fullmatch(think_answer_pattern, predict_str):
         return 1.0
 
+    analysis_answer_pattern = re.compile(r"<analysis>.*</analysis>.*<answer>.*</answer>", re.DOTALL)
+    if re.fullmatch(analysis_answer_pattern, predict_str):
+        return 1.0
+
     # Check for \boxed{} format (common in mathematical solutions)
     if extract_boxed_answer(predict_str):
         return 1.0
@@ -339,9 +343,9 @@ def relax_exact_match(predict_str: str, ground_truth: str, relax_portion: float 
         float: 1.0 if the prediction matches the ground truth, otherwise 0.0.
     """
     # If the question is an mcq
-    if ground_truth in ["A", "B", "C", "D", "E", "F", "G", "H"]:
+    if parse_mcq(ground_truth) in ["A", "B", "C", "D", "E", "F", "G", "H"]:
         predict_str = parse_mcq(predict_str)
-        if predict_str == ground_truth:
+        if predict_str.lower().strip() == parse_mcq(ground_truth).lower().strip():
             return 1.0
         return 0.0
     if predict_str in ground_truth and len(predict_str) >= relax_portion * len(ground_truth):
@@ -371,6 +375,40 @@ def llm_as_judge_sync(predict_str, ground_truth, extra_info):
     return score
 
 
+def acc_reward(predict_str, ground_truth, extra_info=None, format_reward_score=0.0, solution_str=None):
+    """Compute the accuracy reward for a given prediction.
+
+    Args:
+        predict_str (str): The extracted prediction string.
+        ground_truth (str): The ground truth answer for comparison.
+        extra_info (dict, optional): Additional information that might be needed for scoring. Defaults to None.
+        format_reward_score (float): The format reward score for fallback logic.
+        solution_str (str, optional): The original solution string for fallback judgment.
+
+    Returns:
+        float: The accuracy score.
+    """
+    predict_str = simple_parse(predict_str)
+    gt = simple_parse(ground_truth)
+
+    acc_score = relax_exact_match(predict_str, gt)
+    if acc_score == 0.0:
+        try:
+            gold = parse(gt)
+            pred = parse(predict_str)
+            acc_score = int(verify(gold, pred))
+        except Exception:
+            acc_score = 0.0
+
+    if acc_score == 0.0 and USE_LLM_JUDGE == "True":
+        acc_score = llm_as_judge_sync(predict_str, ground_truth, extra_info)
+
+    if acc_score == 0.0 and USE_LLM_JUDGE == "True" and format_reward_score == 0.0 and solution_str is not None and len(solution_str) < 500:
+        acc_score = llm_as_judge_sync(solution_str, ground_truth, extra_info)
+
+    return acc_score
+
+
 def compute_score(data_source, solution_str, ground_truth, extra_info=None):
     """Compute the score for a given solution based on the data source.
 
@@ -389,26 +427,10 @@ def compute_score(data_source, solution_str, ground_truth, extra_info=None):
     format_reward_score = format_reward(solution_str)
 
     extracted_answer = extract_anwser_tag(solution_str).strip()
+
+    acc_score = acc_reward(extracted_answer, ground_truth, extra_info, format_reward_score, solution_str)
     predict_str = simple_parse(extracted_answer)
     gt = simple_parse(ground_truth)
-
-    acc_score = relax_exact_match(predict_str, gt)
-    if acc_score == 0.0:
-        try:
-            gold = parse(gt)
-            pred = parse(predict_str)
-            acc_score = int(verify(gold, pred))
-        except Exception:
-            acc_score = 0.0
-
-    if acc_score == 0.0 and USE_LLM_JUDGE == "True":
-        acc_score = llm_as_judge_sync(predict_str, ground_truth, extra_info)
-
-    # When the format reward score is 0.0, we directly judge the solution string with the ground truth
-    # and the solution string is not too long
-    if acc_score == 0.0 and USE_LLM_JUDGE == "True" and format_reward_score == 0.0 and len(solution_str) < 500:
-        # Direct judge the solution string with the ground truth
-        acc_score = llm_as_judge_sync(solution_str, ground_truth, extra_info)
 
     score = (1.0 - format_score) * acc_score + format_score * format_reward_score
     score_dict = {
@@ -420,3 +442,47 @@ def compute_score(data_source, solution_str, ground_truth, extra_info=None):
     }
 
     return score_dict
+
+
+DEFAULT_REASONING_SYSTEM_PROMPT = (
+    "You are a helpful assistant. When user asks a question, your response must include two parts: "
+    "first, reasoning process enclosed in <analysis>...</analysis> tags, then final answer enclosed in <answer>...</answer> tags."
+    "Please provide a clear, concise response within <answer> </answer> tags that directly addresses to question."
+)
+
+
+def make_reasoning_doc_to_messages(doc_to_visual_fn, doc_to_text_fn, system_prompt=None):
+    prompt = system_prompt or DEFAULT_REASONING_SYSTEM_PROMPT
+
+    def _doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+        question = doc_to_text_fn(doc, lmms_eval_specific_kwargs)
+        visuals = doc_to_visual_fn(doc)
+        system_messages = [{"role": "system", "content": [{"type": "text", "text": prompt}]}]
+        user_content = []
+        for visual in visuals:
+            user_content.append({"type": "image", "url": visual})
+        user_content.append({"type": "text", "text": question.strip()})
+        return system_messages + [{"role": "user", "content": user_content}]
+
+    return _doc_to_messages
+
+
+def make_reasoning_process_results(data_source, doc_to_text_fn, gt_key="answer", metrics_prefix="", extra_info_fn=None):
+    def _process_results(doc, results):
+        question = doc_to_text_fn(doc, None)
+        ground_truth = str(doc[gt_key])
+        extra_info = {"question": question}
+        if extra_info_fn:
+            extra_info.update(extra_info_fn(doc))
+
+        acc_score = 0
+        fmt_score = 0
+        for pred in results:
+            score_dict = compute_score(data_source=data_source, solution_str=pred.strip(), ground_truth=ground_truth, extra_info=extra_info)
+            acc_score += score_dict["acc_score"]
+            fmt_score += score_dict.get("format_reward_score", 0.0)
+
+        n = len(results) or 1
+        return {f"{metrics_prefix}acc_score": acc_score / n, f"{metrics_prefix}format_score": fmt_score / n}
+
+    return _process_results

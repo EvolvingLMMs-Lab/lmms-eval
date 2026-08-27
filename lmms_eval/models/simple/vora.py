@@ -1,8 +1,6 @@
-import base64
 import os
 import uuid
 import warnings
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
 warnings.simplefilter("ignore", category=DeprecationWarning)
@@ -19,6 +17,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_data_url
 
 
 @register_model("vora")
@@ -129,6 +128,15 @@ class VoRA(lmms):
                 new_list.append(j)
         return new_list
 
+    def _encode_image_data_url(self, image: Image.Image) -> str:
+        return encode_image_to_data_url(
+            image,
+            image_format="JPEG",
+            mime_type="image/jpeg",
+            convert_rgb=True,
+            quality=85,
+        )
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
 
@@ -188,21 +196,11 @@ class VoRA(lmms):
                     visual = visuals[i] if i < len(visuals) else None
 
                     if isinstance(visual, Image.Image):  # Single image
-                        base64_image = visual.convert("RGB")
-                        buffer = BytesIO()
-                        base64_image.save(buffer, format="JPEG")
-                        base64_bytes = base64.b64encode(buffer.getvalue())
-                        base64_string = base64_bytes.decode("utf-8")
-                        message.append({"role": "user", "content": [{"type": "image", "image": f"data:image/jpeg;base64,{base64_string}"}, {"type": "text", "text": context}]})
+                        message.append({"role": "user", "content": [{"type": "image", "image": self._encode_image_data_url(visual)}, {"type": "text", "text": context}]})
                     elif isinstance(visual, (list, tuple)) and all(isinstance(v, Image.Image) for v in visual):  # Multiple images
                         image_content = []
                         for v in visual:
-                            base64_image = v.convert("RGB")
-                            buffer = BytesIO()
-                            base64_image.save(buffer, format="JPEG")
-                            base64_bytes = base64.b64encode(buffer.getvalue())
-                            base64_string = base64_bytes.decode("utf-8")
-                            image_content.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}"})
+                            image_content.append({"type": "image", "image": self._encode_image_data_url(v)})
                         message.append({"role": "user", "content": image_content + [{"type": "text", "text": context}]})
                     else:
                         message.append({"role": "user", "content": [{"type": "text", "text": context}]})

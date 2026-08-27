@@ -2,13 +2,8 @@ import logging
 import os
 from typing import List, Tuple
 
-import numpy as np
 import torch
-import torchvision.transforms as T
 from accelerate import Accelerator, DistributedType
-from decord import VideoReader, cpu
-from PIL import Image
-from torchvision.transforms.functional import InterpolationMode
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 

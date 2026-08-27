@@ -1,16 +1,13 @@
 import copy
 import json
 import logging
-import math
-import re
 import warnings
 from datetime import timedelta
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import PIL
 import torch
-import transformers
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
@@ -22,7 +19,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video_pyav
+from lmms_eval.models.model_utils.load_video import read_video
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -124,16 +121,29 @@ class Llava_OneVision(lmms):
         overwrite_config = {}
         overwrite_config["mm_spatial_pool_stride"] = self.mm_spatial_pool_stride
         overwrite_config["mm_spatial_pool_mode"] = self.mm_spatial_pool_mode
+        overwrite_config.update(self._get_model_overwrite_config())
         cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
 
         llava_model_args["overwrite_config"] = overwrite_config
         try:
             # Try to load the model with the multimodal argument
-            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, device_map=self.device_map, **llava_model_args)
+            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(
+                pretrained,
+                None,
+                model_name,
+                device_map=self.device_map,
+                **llava_model_args,
+            )
         except TypeError:
             # for older versions of LLaVA that don't have multimodal argument
             llava_model_args.pop("multimodal", None)
-            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, device_map=self.device_map, **llava_model_args)
+            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(
+                pretrained,
+                None,
+                model_name,
+                device_map=self.device_map,
+                **llava_model_args,
+            )
 
         self._config = self._model.config
         self.model.eval()
@@ -145,7 +155,11 @@ class Llava_OneVision(lmms):
         assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
 
         if accelerator.num_processes > 1:
-            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+                DistributedType.DEEPSPEED,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
             # Also, you have to select zero stage 0 (equivalent to DDP) in order to make the prepare model works
             # I tried to set different parameters in the kwargs to let default zero 2 stage works, but it didn't work.
@@ -177,6 +191,10 @@ class Llava_OneVision(lmms):
             self.model.to(self._device)
             self._rank = 0
             self._world_size = 1
+
+    def _get_model_overwrite_config(self) -> Dict[str, object]:
+        """Return model-specific config overrides for subclasses."""
+        return {}
 
     @property
     def config(self):
@@ -295,8 +313,8 @@ class Llava_OneVision(lmms):
                         if self.video_decode_backend == "decord":
                             frames = self.load_video(visual, self.max_frames_num)
                         elif self.video_decode_backend == "pyav":
-                            frames = read_video_pyav(visual[0], num_frm=self.max_frames_num)
-                        frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().cuda()
+                            frames = read_video(visual[0], num_frm=self.max_frames_num)
+                        frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().to(self._device)
                         image_tensor.append(frames)
                     except Exception as e:
                         eval_logger.error(f"Error {e} in loading video")
@@ -346,7 +364,13 @@ class Llava_OneVision(lmms):
                 self._config.mm_spatial_pool_mode = self.mm_spatial_pool_mode
 
             with torch.inference_mode():
-                outputs = self.model(input_ids=full_input_ids, labels=labels, images=image_tensor, use_cache=True, **kwargs)
+                outputs = self.model(
+                    input_ids=full_input_ids,
+                    labels=labels,
+                    images=image_tensor,
+                    use_cache=True,
+                    **kwargs,
+                )
 
             loss = outputs["loss"]
             logits = outputs["logits"]
@@ -407,7 +431,14 @@ class Llava_OneVision(lmms):
         origin_image_aspect_ratio = getattr(self._config, "image_aspect_ratio", None)
 
         for chunk in chunks:
-            batched_contexts, all_gen_kwargs, batched_doc_to_visual, batched_doc_id, batched_task, batched_split = zip(*chunk)
+            (
+                batched_contexts,
+                all_gen_kwargs,
+                batched_doc_to_visual,
+                batched_doc_id,
+                batched_task,
+                batched_split,
+            ) = zip(*chunk)
             task = batched_task[0]
             split = batched_split[0]
             batched_visuals = [batched_doc_to_visual[0](self.task_dict[task][split][ids]) for ids in batched_doc_id]  # [B, N]
@@ -467,8 +498,8 @@ class Llava_OneVision(lmms):
                             if self.video_decode_backend == "decord":
                                 frames = self.load_video(visual, self.max_frames_num)
                             elif self.video_decode_backend == "pyav":
-                                frames = read_video_pyav(visual[0], num_frm=self.max_frames_num)
-                            frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().cuda()
+                                frames = read_video(visual[0], num_frm=self.max_frames_num)
+                            frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().to(self._device)
                             image_tensor.append(frames)
                         except Exception as e:
                             eval_logger.error(f"Error {e} in loading video")
@@ -550,7 +581,14 @@ class Llava_OneVision(lmms):
                 gen_kwargs.pop("top_k", None)
             try:
                 with torch.inference_mode():
-                    cont = self.model.generate(input_ids, attention_mask=attention_masks, pad_token_id=pad_token_ids, images=image_tensor, use_cache=self.use_cache, **gen_kwargs)
+                    cont = self.model.generate(
+                        input_ids,
+                        attention_mask=attention_masks,
+                        pad_token_id=pad_token_ids,
+                        images=image_tensor,
+                        use_cache=self.use_cache,
+                        **gen_kwargs,
+                    )
                     # cont = self.model.generate(qwen_input_ids, pad_token_id=pad_token_ids, images=image_tensor, use_cache=self.use_cache, **gen_kwargs)
 
                 text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)
@@ -592,7 +630,15 @@ class Llava_OneVision(lmms):
         origin_image_aspect_ratio = getattr(self._config, "image_aspect_ratio", None)
 
         for chunk in chunks:
-            batched_contexts, all_gen_kwargs, batched_doc_to_visual, batched_doc_to_text, batched_doc_id, batched_task, batched_split = zip(*chunk)
+            (
+                batched_contexts,
+                all_gen_kwargs,
+                batched_doc_to_visual,
+                batched_doc_to_text,
+                batched_doc_id,
+                batched_task,
+                batched_split,
+            ) = zip(*chunk)
             task = batched_task[0]
             split = batched_split[0]
             batched_visuals = [batched_doc_to_visual[0](self.task_dict[task][split][ids]) for ids in batched_doc_id]  # [B, N]
@@ -612,7 +658,13 @@ class Llava_OneVision(lmms):
                 question_input = []
 
                 if round_idx != 0:  # get current round visual and context from doc_to_text function
-                    batched_visuals, batched_contexts, batched_terminal_singal, batched_round_res, batched_previous_round_info = list(
+                    (
+                        batched_visuals,
+                        batched_contexts,
+                        batched_terminal_singal,
+                        batched_round_res,
+                        batched_previous_round_info,
+                    ) = list(
                         zip(
                             *[
                                 batched_doc_to_text[0](
@@ -676,8 +728,8 @@ class Llava_OneVision(lmms):
                                 if self.video_decode_backend == "decord":
                                     frames = self.load_video(visual, self.max_frames_num)
                                 elif self.video_decode_backend == "pyav":
-                                    frames = read_video_pyav(visual[0], num_frm=self.max_frames_num)
-                                frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().cuda()
+                                    frames = read_video(visual[0], num_frm=self.max_frames_num)
+                                frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().to(self._device)
                                 image_tensor.append(frames)
                             except Exception as e:
                                 eval_logger.error(f"Error {e} in loading video")
@@ -767,7 +819,14 @@ class Llava_OneVision(lmms):
                     gen_kwargs.pop("top_p", None)
                 try:
                     with torch.inference_mode():
-                        cont = self.model.generate(input_ids, attention_mask=attention_masks, pad_token_id=pad_token_ids, images=image_tensor, use_cache=self.use_cache, **gen_kwargs)
+                        cont = self.model.generate(
+                            input_ids,
+                            attention_mask=attention_masks,
+                            pad_token_id=pad_token_ids,
+                            images=image_tensor,
+                            use_cache=self.use_cache,
+                            **gen_kwargs,
+                        )
                         # cont = self.model.generate(qwen_input_ids, pad_token_id=pad_token_ids, images=image_tensor, use_cache=self.use_cache, **gen_kwargs)
 
                     text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)

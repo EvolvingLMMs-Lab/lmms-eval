@@ -1,0 +1,12 @@
+task: mmr_v_cot
+include: _default_template_yaml
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nWrite your thinking process first, then give the final correct option letter in the format \"[[X]]\". The final correct option letter MUST be put in the \"[[]]\"."

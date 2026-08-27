@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/MMBench
+dataset_path: lmms-lab-encoder/MMBench
 dataset_name: cc
 dataset_kwargs:
   token: True

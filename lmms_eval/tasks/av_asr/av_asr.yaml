@@ -1,0 +1,25 @@
+dataset_path: lmms-lab-eval/av_asr
+dataset_kwargs:
+  token: True
+  cache_dir: av_asr
+task: av_asr
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.av_asr_doc_to_visual
+doc_to_text: !function utils.av_asr_doc_to_text
+doc_to_target: !function utils.av_asr_doc_to_target
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  do_sample: false
+process_results: !function utils.av_asr_process_results
+metric_list:
+  - metric: wer
+    aggregation: !function utils.av_asr_wer
+    higher_is_better: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 0.0

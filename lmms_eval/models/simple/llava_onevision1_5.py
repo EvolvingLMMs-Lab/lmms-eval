@@ -1,6 +1,4 @@
-import base64
 import re
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
 import decord
@@ -16,10 +14,10 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 
-try:
-    from qwen_vl_utils import process_vision_info
-except ImportError:
+process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
+if not _has_qwen_vl:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
 
@@ -41,9 +39,6 @@ class Llava_OneVision1_5(lmms):
         min_pixels: int = 256 * 28 * 28,
         max_pixels: int = 1605632,
         max_num_frames: int = 32,
-        use_custom_video_loader: Optional[bool] = False,
-        fps: Optional[float] = None,  # Only applicable if use_custom_video_loader is True
-        max_image_size: Optional[int] = None,  # Only applicable if use_custom_video_loader is True
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
         image_first: Optional[bool] = True,
@@ -52,6 +47,13 @@ class Llava_OneVision1_5(lmms):
         **kwargs,
     ) -> None:
         super().__init__()
+
+        # Extract revision from kwargs
+        # Allows for specifying a particular model revision from Hugging Face Hub
+        # when the official repo havent updated to be compatible with the latest transformers.
+        # e.g. revision='6b3d97091777ae511438186d60270089515adc0d' to be used with transformers==4.57.6
+        revision = kwargs.pop("revision", None)
+
         if kwargs:
             eval_logger.warning(f"Ignoring unexpected kwargs: {list(kwargs.keys())}")
 
@@ -59,14 +61,6 @@ class Llava_OneVision1_5(lmms):
         valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
         if attn_implementation not in valid_attn_implementations:
             raise ValueError(f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}")
-
-        self.use_custom_video_loader = use_custom_video_loader
-        self.fps = fps
-        # if self.fps and not self.use_custom_video_loader:
-        #     raise ValueError("FPS is only applicable if use_custom_video_loader is True")
-        self.max_image_size = max_image_size
-        if self.max_image_size and not self.use_custom_video_loader:
-            raise ValueError("max_image_size is only applicable if use_custom_video_loader is True")
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
@@ -77,7 +71,15 @@ class Llava_OneVision1_5(lmms):
             self.device_map = device_map if device_map else device
 
         # Prepare model loading arguments
-        model_kwargs = {"torch_dtype": "auto", "device_map": self.device_map, "trust_remote_code": True}
+        model_kwargs = {
+            "torch_dtype": "auto",
+            "device_map": self.device_map,
+            "trust_remote_code": True,
+        }
+
+        # Add revision if specified
+        if revision is not None:
+            model_kwargs["revision"] = revision
 
         # Add attention implementation if specified
         if attn_implementation is not None:
@@ -92,7 +94,12 @@ class Llava_OneVision1_5(lmms):
             self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
         else:
             self.reasoning_prompt = None
-        self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels, trust_remote_code=True)
+        self.processor = AutoProcessor.from_pretrained(
+            pretrained,
+            max_pixels=max_pixels,
+            min_pixels=min_pixels,
+            trust_remote_code=True,
+        )
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=True)
         self.system_prompt = system_prompt
         self.interleave_visuals = interleave_visuals
@@ -232,7 +239,14 @@ class Llava_OneVision1_5(lmms):
                         first_frame = vr[0].asnumpy()
                         height, width = first_frame.shape[:2]
                         # max_pixels = height * width
-                        processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                        processed_visuals.append(
+                            {
+                                "type": "video",
+                                "video": visual,
+                                "max_pixels": self.max_pixels,
+                                "min_pixels": self.min_pixels,
+                            }
+                        )
                     elif isinstance(visual, Image.Image):
                         processed_visuals.append({"type": "image", "image": visual.convert("RGB")})
 
@@ -284,7 +298,13 @@ class Llava_OneVision1_5(lmms):
                 if total_frames - 1 not in indices:
                     indices = np.append(indices, total_frames - 1)
                 video_inputs[0] = video_inputs[0][indices]
-            inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
+            inputs = self.processor(
+                text=texts,
+                images=image_inputs,
+                videos=video_inputs,
+                padding=True,
+                return_tensors="pt",
+            )
 
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
@@ -320,7 +340,11 @@ class Llava_OneVision1_5(lmms):
                 cont = self.model.generate(**gen_args)
 
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
-            answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+            answers = self.processor.batch_decode(
+                generated_ids_trimmed,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=False,
+            )
             for i, ans in enumerate(answers):
                 for term in until:
                     if len(term) > 0:

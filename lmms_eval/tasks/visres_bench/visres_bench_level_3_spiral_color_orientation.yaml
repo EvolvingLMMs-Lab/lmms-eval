@@ -1,0 +1,3 @@
+task: visres_bench_level_3_spiral_color_orientation
+dataset_name: level_3_spiral_color_orientation
+include: _default_template_visres_bench_yaml

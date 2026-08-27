@@ -1,0 +1,21 @@
+dataset_path: lmms-lab-eval/UniMMMU
+dataset_name: sliding
+task: "uni_mmmu_sliding"
+test_split: test
+output_type: generate_until
+
+doc_to_visual: !function utils.sliding_doc_to_visual
+doc_to_text: !function utils.sliding_doc_to_text
+doc_to_target: "steps_words"
+
+process_results: !function utils.sliding_process_results
+
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+  - metric: frame_accuracy
+    aggregation: mean
+    higher_is_better: true
+
+include: _default_template.yaml

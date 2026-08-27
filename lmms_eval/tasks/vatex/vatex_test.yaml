@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/VATEX
+dataset_path: lmms-eval/VATEX
 dataset_name: vatex_test
 task: vatex_test
 test_split: test

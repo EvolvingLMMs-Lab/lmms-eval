@@ -5,7 +5,7 @@ from io import BytesIO
 import requests
 from loguru import logger as eval_logger
 from PIL import Image
-from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge, Spice
+from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge
 from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from pycocotools.coco import COCO
 
@@ -28,7 +28,7 @@ def coco_doc_to_visual_karpathy(doc):
 
 
 def coco_doc_to_text(doc):
-    return f"Provide a one-sentence caption for the provided image."
+    return "Provide a one-sentence caption for the provided image."
 
 
 def coco_process_result_karpathy(doc, result):

@@ -1,12 +1,9 @@
 import os
 import re
-import signal
 from collections import Counter
 from typing import Dict, List, Optional
 
 import datasets
-
-from lmms_eval.utils import eval_logger
 
 if os.getenv("PROMPTSTEP") is not None:
     QUERY_TEMPLATE = "{Question}\n\nThink for up to " + os.getenv("PROMPTSTEP") + " steps."
@@ -130,7 +127,6 @@ def extract_answer_idx(sampler, options: List[str], attempt: str):
 
 
 import time
-from typing import Any
 
 import openai
 from openai import OpenAI

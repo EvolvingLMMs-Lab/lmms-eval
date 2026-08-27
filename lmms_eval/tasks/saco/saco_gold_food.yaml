@@ -1,0 +1,3 @@
+task: "saco_gold_food"
+test_split: food
+include: _default_template_saco_gold_yaml

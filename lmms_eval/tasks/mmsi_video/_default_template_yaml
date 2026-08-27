@@ -1,0 +1,63 @@
+dataset_path: oscarqjh/MMSI-Video-Bench_lmmseval
+dataset_kwargs:
+  token: True
+  cache_dir: mmsi_video
+  video: True
+test_split: test
+output_type: generate_until
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+doc_to_target: "ground_truth"
+process_results: !function utils.process_results
+
+metric_list:
+  - metric: overall_accuracy
+    aggregation: !function utils.aggregate_overall_accuracy
+    higher_is_better: true
+  - metric: cross_video_memory_update
+    aggregation: !function utils.aggregate_cross_video_memory_update
+    higher_is_better: true
+  - metric: cross_video_multi_view
+    aggregation: !function utils.aggregate_cross_video_multi_view
+    higher_is_better: true
+  - metric: motion_camera
+    aggregation: !function utils.aggregate_motion_camera
+    higher_is_better: true
+  - metric: motion_instance
+    aggregation: !function utils.aggregate_motion_instance
+    higher_is_better: true
+  - metric: motion_interactive
+    aggregation: !function utils.aggregate_motion_interactive
+    higher_is_better: true
+  - metric: spatial_camera_instance
+    aggregation: !function utils.aggregate_spatial_camera_instance
+    higher_is_better: true
+  - metric: spatial_camera_scene
+    aggregation: !function utils.aggregate_spatial_camera_scene
+    higher_is_better: true
+  - metric: spatial_instance_instance
+    aggregation: !function utils.aggregate_spatial_instance_instance
+    higher_is_better: true
+  - metric: spatial_instance_scene
+    aggregation: !function utils.aggregate_spatial_instance_scene
+    higher_is_better: true
+  - metric: spatial_attribute
+    aggregation: !function utils.aggregate_spatial_attribute
+    higher_is_better: true
+  - metric: spatial_scene_scene
+    aggregation: !function utils.aggregate_spatial_scene_scene
+    higher_is_better: true
+  - metric: planning
+    aggregation: !function utils.aggregate_planning
+    higher_is_better: true
+  - metric: prediction
+    aggregation: !function utils.aggregate_prediction
+    higher_is_better: true
+
+metadata:
+  version: 0.1

@@ -11,16 +11,16 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 
-try:
-    from peft import PeftModel
-    from transformers import Qwen2_5_VLForConditionalGeneration, Qwen2_5_VLProcessor
-except ImportError:
+PeftModel, _has_peft = optional_import("peft", "PeftModel")
+Qwen2_5_VLForConditionalGeneration, _ = optional_import("transformers", "Qwen2_5_VLForConditionalGeneration")
+Qwen2_5_VLProcessor, _ = optional_import("transformers", "Qwen2_5_VLProcessor")
+if not _has_peft:
     eval_logger.warning("Failed to import transformers or peft; Please install via `pip install transformers peft`")
 
-try:
-    from qwen_vl_utils import process_vision_info
-except ImportError:
+process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
+if not _has_qwen_vl:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install via `pip install qwen-vl-utils`")
 
 

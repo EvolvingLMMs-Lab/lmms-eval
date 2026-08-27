@@ -1,0 +1,3 @@
+task: robo_spatial_configuration
+include: _default_template.yaml
+test_split: configuration

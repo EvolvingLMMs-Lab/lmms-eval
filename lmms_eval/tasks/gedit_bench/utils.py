@@ -5,11 +5,7 @@ Image editing evaluation task using VIEScore
 
 import json
 import math
-import os
-import shutil
 from collections import defaultdict
-from pathlib import Path
-from typing import Dict, List, Optional
 
 import numpy as np
 from loguru import logger as eval_logger

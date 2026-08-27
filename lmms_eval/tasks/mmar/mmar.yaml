@@ -1,0 +1,35 @@
+dataset_path: ngqtrung/mmar
+dataset_kwargs:
+  token: true
+task: "mmar"
+test_split: test
+output_type: generate_until
+
+doc_to_visual: !function utils.mmar_doc_to_audio
+doc_to_text: !function utils.mmar_doc_to_text
+doc_to_target: !function utils.mmar_doc_to_target
+
+generation_kwargs:
+  max_new_tokens: 128
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+process_results: !function utils.mmar_process_results
+
+metric_list:
+  - metric: mmar_accuracy
+    aggregation: !function utils.mmar_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "The best answer is:"
+  qwen2_audio:
+    pre_prompt: ""
+    post_prompt: " <|en|>"
+
+metadata:
+  version: 0.0

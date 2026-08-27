@@ -1,0 +1,11 @@
+# OSI-Bench: Frame-based Input (Multi-Image)
+# Evaluates models using uniformly sampled frames as images
+
+task: osi_bench_frames
+test_split: test
+
+include: _default_template_yaml
+
+doc_to_visual: !function utils.osi_bench_doc_to_visual_frames
+doc_to_text: !function utils.osi_bench_doc_to_text_frames
+doc_to_messages: !function utils.osi_bench_doc_to_messages_frames

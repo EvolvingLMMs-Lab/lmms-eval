@@ -1,0 +1,26 @@
+dataset_path: csv
+dataset_kwargs:
+  data_files:
+    test: https://openaipublic.blob.core.windows.net/simple-evals/browse_comp_test_set.csv
+  token: false
+output_type: generate_until
+doc_to_visual: !function utils.browsecomp_doc_to_visual
+doc_to_text: !function utils.browsecomp_doc_to_text
+doc_to_target: !function utils.browsecomp_doc_to_target
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 1.0
+  do_sample: false
+process_results: !function utils.browsecomp_process_results
+metric_list:
+  - metric: browsecomp_acc
+    aggregation: !function utils.browsecomp_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  version: 0.0
+  use_lmms_judge: true

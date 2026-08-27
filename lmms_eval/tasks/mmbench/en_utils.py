@@ -107,9 +107,24 @@ def mmbench_process_results(doc, results):
 
 
 def mmbench_aggregate_dev_results_eval(results, args):
-    print(f"============= MMBench-EN(Dev) Detailed Results =============")
+    print("============= MMBench-EN(Dev) Detailed Results =============")
     overall_acc, category_acc, l2_category_acc = mmbench_evaluator.eval_result(results, eval_method="openai")
     file = generate_submission_file("mmbench_en_dev_results.json", args)
+    details_info = {
+        "overall_acc": overall_acc,
+        "category_acc": category_acc,
+        "l2_category_acc": l2_category_acc,
+    }
+    with open(file, "w") as f:
+        json.dump(details_info, f)
+    return overall_acc * 100
+
+
+def mmbench_aggregate_dev_results_static(results, args):
+    """Static eval using regex/substring MCQ extraction — no OpenAI API needed."""
+    print("============= MMBench-EN(Dev) Static Eval =============")
+    overall_acc, category_acc, l2_category_acc = mmbench_evaluator.eval_result(results, eval_method="static")
+    file = generate_submission_file("mmbench_en_dev_static_results.json", args)
     details_info = {
         "overall_acc": overall_acc,
         "category_acc": category_acc,

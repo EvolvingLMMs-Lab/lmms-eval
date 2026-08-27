@@ -1,0 +1,38 @@
+dataset_path: etri-vilab/holisafe-bench
+dataset_kwargs:
+  token: True
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.holisafe_doc_to_visual
+doc_to_text: !function utils.holisafe_doc_to_text
+doc_to_target: "{{type}}"
+process_results: !function utils.holisafe_process_results
+generation_kwargs:
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metric_list:
+  - metric: holisafe_avg_asr
+    aggregation: !function utils.holisafe_aggregate_avg_asr
+    higher_is_better: false
+  - metric: holisafe_rr
+    aggregation: !function utils.holisafe_aggregate_rr
+    higher_is_better: false
+  - metric: holisafe_asr_ssu
+    aggregation: !function utils.holisafe_aggregate_asr_ssu
+    higher_is_better: false
+  - metric: holisafe_asr_usu
+    aggregation: !function utils.holisafe_aggregate_asr_usu
+    higher_is_better: false
+  - metric: holisafe_asr_uuu
+    aggregation: !function utils.holisafe_aggregate_asr_uuu
+    higher_is_better: false
+  - metric: holisafe_asr_suu
+    aggregation: !function utils.holisafe_aggregate_asr_suu
+    higher_is_better: false

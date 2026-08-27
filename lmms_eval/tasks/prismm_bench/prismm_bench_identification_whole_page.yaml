@@ -1,0 +1,8 @@
+include: _default_template_yaml
+
+task: "prismm_bench_identification_whole_page"
+doc_to_visual: !function utils.prismm_doc_to_visual_whole_page
+doc_to_text: !function utils.prismm_doc_to_text
+doc_to_target: "answer"
+doc_to_messages: !function utils.prismm_doc_to_messages_whole_page
+process_results: !function utils.prismm_process_results

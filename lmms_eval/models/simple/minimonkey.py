@@ -219,9 +219,7 @@ class MiniMonkey(lmms):
         raise NotImplementedError("TODO: Implement multi-round generation")
 
 
-import numpy as np
 import torchvision.transforms as T
-from PIL import Image
 from torchvision.transforms.functional import InterpolationMode
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)

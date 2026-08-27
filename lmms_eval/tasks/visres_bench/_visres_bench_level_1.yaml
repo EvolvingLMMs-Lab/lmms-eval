@@ -1,0 +1,10 @@
+group: visres_bench_level_1
+task:
+  - visres_bench_level_1_global_occlusion_50
+  - visres_bench_level_1_global_occlusion_70
+  - visres_bench_level_1_global_occlusion_80
+  - visres_bench_level_1_edges
+  - visres_bench_level_1_brightness
+  - visres_bench_level_1_blur
+  - visres_bench_level_1_rotation
+  - visres_bench_level_1_location

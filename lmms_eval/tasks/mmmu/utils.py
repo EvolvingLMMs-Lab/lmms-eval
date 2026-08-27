@@ -1,17 +1,23 @@
 import ast
 import json
 import os
-import random
 import re
+import threading
 from collections import defaultdict
 from pathlib import Path
 
-import numpy as np
 import yaml
 from loguru import logger as eval_logger
 
-from lmms_eval.llm_judge import ServerConfig, get_server
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from lmms_eval.tasks._task_utils.mmmu_mcq_utils import (
+    get_multi_choice_info as shared_get_multi_choice_info,
+)
+from lmms_eval.tasks._task_utils.mmmu_mcq_utils import (
+    parse_mmmu_multi_choice_response,
+)
+from lmms_eval.verifiers import VerificationPipeline
+from lmms_eval.verifiers.openai import OpenAIVerifier
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -26,11 +32,28 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 API_TYPE = os.getenv("API_TYPE", "openai")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 
-# Initialize the judge server
-server_config = ServerConfig(
-    model_name=MODEL_VERSION,
-)
-server = get_server(server_name=API_TYPE, config=server_config)
+# ---------------------------------------------------------------------------
+# Lazy VerificationPipeline singleton for reasoning evaluation
+# ---------------------------------------------------------------------------
+
+_reasoning_pipeline = None
+_reasoning_pipeline_lock = threading.Lock()
+
+
+def _get_reasoning_pipeline() -> VerificationPipeline:
+    global _reasoning_pipeline
+    if _reasoning_pipeline is None:
+        with _reasoning_pipeline_lock:
+            if _reasoning_pipeline is None:  # double-check
+                _reasoning_pipeline = VerificationPipeline(
+                    extractors=[],
+                    verifier=OpenAIVerifier(
+                        model=MODEL_VERSION,
+                        api_type=API_TYPE,
+                        judge_type="binary",
+                    ),
+                )
+    return _reasoning_pipeline
 
 
 def replace_images_tokens(input_string):
@@ -155,6 +178,18 @@ def mmmu_doc_to_visual(doc):
     return visual
 
 
+def to_submission_answer(parsed_pred):
+    """
+    Collapse a parsed prediction into the single answer the submission file expects.
+
+    A multiple-choice prediction is already a single option letter, while an open-ended
+    prediction is a list of answer candidates whose first element is the primary answer.
+    """
+    if isinstance(parsed_pred, list):
+        return str(parsed_pred[0]) if parsed_pred else ""
+    return str(parsed_pred)
+
+
 def mmmu_process_results(doc, results):
     parsed_preds = []
     for pred in results:
@@ -162,47 +197,33 @@ def mmmu_process_results(doc, results):
             index2ans, all_choices = get_multi_choice_info(ast.literal_eval(doc["options"]))
             parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
         else:
+            # Keep the full candidate list: eval_open iterates over the candidates, so
+            # collapsing it to a string here would make it iterate over single characters.
             parsed_pred = parse_open_response(pred)
-            parsed_pred = str(parsed_pred[0]) if parsed_pred else ""
         parsed_preds.append(parsed_pred)
-    mmmu_submission = {doc["id"]: parsed_preds[0]}
+    mmmu_submission = {doc["id"]: to_submission_answer(parsed_preds[0])}
     mmmu_exact_acc = {"id": doc["id"], "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "parsed_pred": parsed_preds}
     return {"mmmu_acc": mmmu_exact_acc, "mmmu_acc_pass_at_k": mmmu_exact_acc, "submission": mmmu_submission}
 
 
 def mmmu_reasoning_process_results(doc, results):
-    parsed_preds = []
+    pipeline = _get_reasoning_pipeline()
+    formatted_question = construct_prompt(doc)
+    answer = str(doc["answer"])
+
     scores = []
     for pred in results:
-        formatted_question = construct_prompt(doc)
         # Extract content from <answer> tags if present, handling potential spaces
-        answer = doc["answer"]
         if isinstance(pred, str):
             match = re.search(r"<answer>\s*([\s\S]*?)\s*</answer>", pred)
             if match:
                 pred = match.group(1).strip()
 
-        try:
-            # Use the llm_judge API for binary evaluation
-            result = server.evaluate_binary(question=formatted_question, answer=str(answer), prediction=pred, output_format="0/1")
-
-            # Parse the result
-            if result["success"]:
-                judge_response = result["result"]
-                judge_score = int(judge_response) if type(judge_response) == str else judge_response
-            else:
-                eval_logger.error(f"Judge evaluation failed: {result.get('raw_response', 'Unknown error')}")
-                judge_score = 0
-
-        except Exception as e:
-            eval_logger.error(f"Error getting judge response: {e}")
-            judge_score = 0
-
-        scores.append(judge_score)
-        parsed_preds.append(pred)
+        result = pipeline(question=formatted_question, prediction=pred, ground_truth=answer)
+        scores.append(1 if result.is_correct else 0)
 
     # Calculate the average score for this document
-    avg_score = sum(1 if score == 1 else 0 for score in scores) / len(scores) if scores else 0
+    avg_score = sum(scores) / len(scores) if scores else 0
     return {"llm_as_judge_eval": avg_score}
 
 
@@ -400,59 +421,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     Return the predicted index e.g., A, B, C, D.
     https://github.com/MMMU-Benchmark/MMMU/blob/51ce7f3e829c16bb44bc5445782686b4c3508794/eval/eval_utils.py#L10
     """
-    for char in [",", ".", "!", "?", ";", ":", "'"]:
-        response = response.strip(char)
-    response = " " + response + " "  # add space to avoid partial match
-
-    index_ans = True
-    ans_with_brack = False
-    candidates = []
-    for choice in all_choices:  # e.g., (A) (B) (C) (D)
-        if f"({choice})" in response:
-            candidates.append(choice)
-            ans_with_brack = True
-
-    if len(candidates) == 0:
-        for choice in all_choices:  # e.g., A B C D
-            if f"{choice} " in response:
-                candidates.append(choice)
-
-    if len(candidates) == 0:
-        for choice in all_choices:  # e.g., A. B. C. D.
-            if f"{choice}." in response:
-                candidates.append(choice)
-
-    # if all above doesn't get candidates, check if the content is larger than 5 tokens and try to parse the example
-    if len(candidates) == 0 and len(response.split()) > 5:
-        for index, ans in index2ans.items():
-            if ans.lower() in response.lower():
-                candidates.append(index)
-                index_ans = False  # it's content ans.
-
-    if len(candidates) == 0:  # still not get answer, randomly choose one.
-        pred_index = random.choice(all_choices)
-    elif len(candidates) > 1:
-        start_indexes = []
-        if index_ans:
-            if ans_with_brack:
-                for can in candidates:
-                    index = response.rfind(f"({can})")
-                    start_indexes.append(index)  # -1 will be ignored anyway
-                # start_indexes = [generated_response.index(f'({can})') for can in candidates]
-            else:
-                for can in candidates:
-                    index = response.rfind(f" {can} ")
-                    start_indexes.append(index)
-        else:
-            for can in candidates:
-                index = response.lower().rfind(index2ans[can].lower())
-                start_indexes.append(index)
-        # get the last one
-        pred_index = candidates[np.argmax(start_indexes)]
-    else:  # if only one candidate, use it.
-        pred_index = candidates[0]
-
-    return pred_index
+    return parse_mmmu_multi_choice_response(response, all_choices, index2ans)
 
 
 def extract_numbers(string):
@@ -597,11 +566,4 @@ def get_multi_choice_info(options):
     https://github.com/MMMU-Benchmark/MMMU/blob/51ce7f3e829c16bb44bc5445782686b4c3508794/eval/data_utils.py#L54
     """
 
-    start_chr = "A"
-    all_choices = []
-    index2ans = {}
-    for i, option in enumerate(options):
-        index2ans[chr(ord(start_chr) + i)] = option
-        all_choices.append(chr(ord(start_chr) + i))
-
-    return index2ans, all_choices
+    return shared_get_multi_choice_info(options)

@@ -1,0 +1,11 @@
+dataset_path: Lin-Chen/MMStar
+task: "mmstar_qwen"
+doc_to_visual: !function utils.mmstar_doc_to_visual
+doc_to_text: !function utils.mmstar_doc_to_text
+process_results: !function utils.mmstar_process_results
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "Question: "
+    post_prompt: "Answer with the option letter only."
+include: _default_template_yaml

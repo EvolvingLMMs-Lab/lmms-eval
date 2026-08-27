@@ -1,0 +1,4 @@
+include: _default_template_yaml
+task: tvbench_moving_direction
+dataset_name: moving_direction
+test_split: train

@@ -1,4 +1,8 @@
 test_split: validation
+tag:
+  - public_eval_qwen3_5_family
+  - public_eval_seed2_family
+  - public_eval_gemini3_family
 doc_to_messages: !function utils.charxiv_reasoning_doc_to_messages_cot
 doc_to_text: !function utils.charxiv_reasoning_doc_to_text_cot
 doc_to_target: "reasoning_a"

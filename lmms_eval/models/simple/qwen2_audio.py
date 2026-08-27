@@ -1,8 +1,5 @@
-import base64
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
-import decord
 import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
@@ -236,7 +233,7 @@ class Qwen2_Audio(lmms):
             else:
                 text = ["<|audio_bos|><|AUDIO|><|audio_eos|>" + context for context in contexts]
 
-            inputs = self.processor(text=text, audios=audios, return_tensors="pt", padding=True, sampling_rate=self.processor.feature_extractor.sampling_rate)
+            inputs = self.processor(text=text, audio=audios, return_tensors="pt", padding=True, sampling_rate=self.processor.feature_extractor.sampling_rate)
 
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")

@@ -1,0 +1,6 @@
+group: infovqa_reasoning
+task:
+  - infovqa_val_reasoning
+  - infovqa_test_reasoning
+metadata:
+  version: 0.0

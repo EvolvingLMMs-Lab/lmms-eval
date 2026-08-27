@@ -1,0 +1,10 @@
+task: "kaleidoscope_multimodal_cot"
+task_alias: "Kaleidoscope (zero-shot CoT, multimodal)"
+process_docs: !function utils.kaleidoscope_filter_multimodal
+process_results: !function utils.kaleidoscope_process_results_cot
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt_type: "cot"
+
+include: _default_template_yaml

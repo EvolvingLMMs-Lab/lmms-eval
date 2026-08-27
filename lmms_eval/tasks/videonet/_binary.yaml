@@ -1,0 +1,17 @@
+include: _default.yaml
+doc_to_visual: !function binary_utils.videonet_binary_doc_to_visual
+doc_to_text: !function binary_utils.videonet_binary_doc_to_text
+doc_to_messages: !function binary_utils.videonet_binary_doc_to_messages
+generation_kwargs:
+  temperature: 0
+  do_sample: False
+  max_new_tokens: 8192
+process_results: !function binary_utils.videonet_binary_process_results
+metric_list:
+  - metric: binary_acc
+    aggregation: !function binary_utils.videonet_binary_aggregate_results
+    higher_is_better: True
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""

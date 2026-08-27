@@ -1,0 +1,3 @@
+task: "saco_gold_sport"
+test_split: sport
+include: _default_template_saco_gold_yaml

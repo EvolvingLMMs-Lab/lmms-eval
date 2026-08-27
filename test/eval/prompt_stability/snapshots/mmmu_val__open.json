@@ -1,0 +1,9 @@
+{
+  "task": "mmmu_val",
+  "variant": "open-ended",
+  "doc_id": "validation_Math_30",
+  "prompt_text": "What is the area of the shaded region in the figure shown?\n\nAnswer the question using a single word or phrase.",
+  "gen_kwargs": {
+    "max_new_tokens": 128
+  }
+}

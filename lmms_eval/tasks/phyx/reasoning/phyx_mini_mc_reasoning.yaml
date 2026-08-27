@@ -1,0 +1,6 @@
+task: "phyx_mini_mc_reasoning"
+test_split: phyx_mini_mc
+include: _default_template_phyx_reasoning_yaml
+process_results: !function utils.phyx_process_results_mc
+metadata:
+  version: 0.0

@@ -44,10 +44,13 @@ def save_to_cache(file_name, obj):
     serializable_obj = []
 
     for item in obj:
+        serializable_item = []
         for subitem in item:
             if hasattr(subitem, "arguments"):  # we need to handle the arguments specially since doc_to_visual is callable method and not serializable
                 serializable_arguments = tuple(arg if not callable(arg) else None for arg in subitem.arguments)
                 subitem.arguments = serializable_arguments
+            serializable_item.append(subitem)
+        serializable_obj.append(serializable_item)
 
     eval_logger.debug(f"Saving {file_path} to cache...")
     try:

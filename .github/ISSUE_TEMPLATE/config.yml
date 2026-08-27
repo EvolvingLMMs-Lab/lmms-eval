@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 5-Minute Quick Start
+    url: https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/quickstart.md
+    about: Run your first evaluation in a few minutes
+  - name: Contributing Guide
+    url: https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/CONTRIBUTING.md
+    about: Read contribution workflow, labels, and review expectations
+  - name: Discord Community
+    url: https://discord.gg/zdkwKUqrPy
+    about: Join our Discord for questions and discussions

@@ -21,7 +21,6 @@ from typing import (
     Literal,
     Optional,
     Tuple,
-    Type,
     Union,
 )
 
@@ -77,7 +76,7 @@ def escaped_split(text, sep_char, maxsplit=-1):
         return text
     maxsplit = max(0, maxsplit)
 
-    return re.split(r"(?<!\\)" + sep_char, text, maxsplit)
+    return re.split(r"(?<!\\)" + sep_char, text, maxsplit=maxsplit)
 
 
 def handle_arg_string(arg):
@@ -128,6 +127,18 @@ def is_multimodal_content(value: Any) -> bool:
     except ImportError:
         pass
     return False
+
+
+def resolve_cache_dir(cache_dir: str, base_dir: Optional[str] = None) -> str:
+    """Resolve cache paths while allowing env vars and absolute paths.
+
+    Relative values are resolved against ``base_dir`` when provided.
+    Absolute values are preserved after ``$VAR``/``~`` expansion.
+    """
+    resolved = os.path.expanduser(os.path.expandvars(cache_dir))
+    if base_dir is not None and not os.path.isabs(resolved):
+        return os.path.join(base_dir, resolved)
+    return resolved
 
 
 def sanitize_list(sub):
@@ -270,7 +281,7 @@ class MultiChoice:
     def __contains__(self, values) -> bool:
         for value in values.split(","):
             if len(fnmatch.filter(self.choices, value)) == 0:
-                eval_logger.info(f"Available tasks to choose:")
+                eval_logger.info("Available tasks to choose:")
                 for choice in self.choices:
                     eval_logger.info(f"  - {choice}")
                 raise ValueError("'{}' is not in task list".format(value))
@@ -527,7 +538,11 @@ class Grouper:
 
 
 def make_table(result_dict, column: str = "results", sort_results: bool = False):
-    """Generate table of results."""
+    """Generate table of results.
+
+    Automatically hides columns that are all N/A (e.g., stability metrics when
+    repeats=1, or baseline comparison when --baseline is not provided).
+    """
     from pytablewriter import LatexTableWriter, MarkdownTableWriter
 
     if column == "results":
@@ -537,7 +552,6 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
 
     all_headers = [
         column_name,
-        "Version",
         "Filter",
         "n-shot",
         "Metric",
@@ -547,12 +561,30 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
         "Stderr",
         "Stderr_CLT",
         "Stderr_Clustered",
+        "EA",
+        "CA",
+        "IV",
+        "CR",
+        "Baseline",
+        "Diff",
+        "CI",
+        "P_Value",
     ]
 
-    md_writer = MarkdownTableWriter()
-    latex_writer = LatexTableWriter()
-    md_writer.headers = all_headers
-    latex_writer.headers = all_headers
+    # Optional columns (index 9+) are hidden if all values are N/A
+    optional_col_indices = list(range(8, len(all_headers)))
+
+    # Helper to format stderr value
+    def fmt_se(se_val):
+        if se_val is None or se_val == "N/A":
+            return "N/A"
+        # Handle empty list/array safely (numpy array comparison is ambiguous)
+        if hasattr(se_val, "__len__") and len(se_val) == 0:
+            return "N/A"
+        try:
+            return "%.4f" % se_val
+        except Exception:
+            return "N/A"
 
     values = []
 
@@ -564,7 +596,6 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
         keys = sorted(keys)
     for k in keys:
         dic = result_dict[column][k]
-        version = result_dict["versions"].get(k, "    N/A")
         n = str(result_dict.get("n-shot", " ").get(k, " "))
         higher_is_better = result_dict.get("higher_is_better", {}).get(k, {})
 
@@ -576,27 +607,24 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
 
         for (mf), v in metric_items:
             m, _, f = mf.partition(",")
-            # Skip stderr variants - they'll be shown as columns
+            # Skip stderr and stability metric variants - they'll be shown as columns
             if m.endswith("_stderr") or m.endswith("_stderr_clt") or m.endswith("_stderr_clustered"):
+                continue
+            if m.endswith("_expected_accuracy") or m.endswith("_consensus_accuracy"):
+                continue
+            if m.endswith("_internal_variance") or m.endswith("_consistency_rate"):
+                continue
+            # Skip paired t-test fields - they'll be shown as columns, not separate rows
+            if m.startswith("paired_"):
                 continue
 
             hib = HIGHER_IS_BETTER_SYMBOLS.get(higher_is_better.get(m), "")
 
+            # Save original numeric value for diff calculation
+            v_numeric = v if isinstance(v, (int, float)) else None
             v = "%.4f" % v if isinstance(v, float) else v
             if v == "" or v is None:
                 v = "N/A"
-
-            # Helper to format stderr value
-            def fmt_se(se_val):
-                if se_val is None or se_val == "N/A":
-                    return "N/A"
-                # Handle empty list/array safely (numpy array comparison is ambiguous)
-                if hasattr(se_val, "__len__") and len(se_val) == 0:
-                    return "N/A"
-                try:
-                    return "%.4f" % se_val
-                except:
-                    return "N/A"
 
             # Bootstrap stderr (original)
             se = fmt_se(dic.get(m + "_stderr," + f))
@@ -604,20 +632,95 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
             se_clt = fmt_se(dic.get(m + "_stderr_clt," + f))
             # Clustered stderr
             se_clustered = fmt_se(dic.get(m + "_stderr_clustered," + f))
+            # Stability metrics (EA, CA, IV, CR)
+            ea = fmt_se(dic.get(m + "_expected_accuracy," + f))
+            ca = fmt_se(dic.get(m + "_consensus_accuracy," + f))
+            iv = fmt_se(dic.get(m + "_internal_variance," + f))
+            cr = fmt_se(dic.get(m + "_consistency_rate," + f))
+
+            # Baseline comparison columns (using paired_ prefix from JSON)
+            baseline_name = dic.get("paired_baseline")
+            baseline_str = str(baseline_name) if baseline_name else "N/A"
+            # Diff column: computed from current value - baseline_score (e.g., -25.0%)
+            baseline_score = dic.get("paired_baseline_score")
+            if v_numeric is not None and isinstance(baseline_score, (int, float)):
+                diff = v_numeric - baseline_score
+                diff_str = "%+.1f%%" % diff
+            else:
+                diff_str = "N/A"
+            # CI column: confidence interval (e.g., [-63.7%, +13.7%])
+            ci_lower = dic.get("paired_ci_lower")
+            ci_upper = dic.get("paired_ci_upper")
+            if isinstance(ci_lower, (int, float)) and isinstance(ci_upper, (int, float)):
+                ci_str = "[%+.1f%%, %+.1f%%]" % (ci_lower, ci_upper)
+            else:
+                ci_str = "N/A"
+            # P_Value column
+            pval = dic.get("paired_pvalue")
+            pval_str = "%.4f*" % pval if isinstance(pval, (int, float)) and pval < 0.05 else ("%.4f" % pval if isinstance(pval, (int, float)) else "N/A")
 
             # Check if v is not empty (handle numpy array safely)
             is_empty = hasattr(v, "__len__") and not isinstance(v, str) and len(v) == 0
             if not is_empty:
-                values.append([k, version, f, n, m, hib, v, "±", se, se_clt, se_clustered])
-            # k = ""
-            # version = ""
-    md_writer.value_matrix = values
-    latex_writer.value_matrix = values
+                values.append([k, f, n, m, hib, v, "±", se, se_clt, se_clustered, ea, ca, iv, cr, baseline_str, diff_str, ci_str, pval_str])
+
+    # Determine which optional columns to hide (all values are N/A)
+    cols_to_hide = set()
+    for col_idx in optional_col_indices:
+        all_na = all(row[col_idx] == "N/A" for row in values) if values else True
+        if all_na:
+            cols_to_hide.add(col_idx)
+
+    # Filter headers and values to exclude hidden columns
+    final_headers = [h for i, h in enumerate(all_headers) if i not in cols_to_hide]
+    final_values = [[v for i, v in enumerate(row) if i not in cols_to_hide] for row in values]
+
+    md_writer = MarkdownTableWriter()
+    latex_writer = LatexTableWriter()
+    md_writer.headers = final_headers
+    latex_writer.headers = final_headers
+    md_writer.value_matrix = final_values
+    latex_writer.value_matrix = final_values
 
     # todo: make latex table look good
     # print(latex_writer.dumps())
 
-    return md_writer.dumps()
+    output_tables = [md_writer.dumps()]
+
+    if column == "results":
+        throughput = result_dict.get("throughput", {})
+        if isinstance(throughput, dict) and throughput:
+            preferred_order = ["total_gen_tokens", "total_elapsed_time", "avg_latency", "avg_speed"]
+            ordered_keys = preferred_order + sorted([k for k in throughput.keys() if k not in preferred_order])
+
+            def get_unit(metric_name: str) -> str:
+                if metric_name == "total_gen_tokens":
+                    return "tokens"
+                if metric_name == "total_elapsed_time":
+                    return "seconds"
+                if metric_name == "avg_latency":
+                    return "seconds/request"
+                if metric_name == "avg_speed":
+                    return "tokens/s"
+                return "varies"
+
+            throughput_summary = MarkdownTableWriter()
+            throughput_summary.headers = ["Metric", "Value", "Unit"]
+            throughput_values = []
+
+            for metric_name in ordered_keys:
+                if metric_name not in throughput:
+                    continue
+                metric_value = throughput.get(metric_name)
+                display_value = f"{metric_value:.4f}" if isinstance(metric_value, float) else str(metric_value)
+                unit = get_unit(metric_name)
+                throughput_values.append([metric_name, display_value, unit])
+
+            throughput_summary.value_matrix = throughput_values
+
+            output_tables.extend(["Throughput Summary", throughput_summary.dumps()])
+
+    return "\n\n".join(output_tables)
 
 
 def positional_deprecated(fn):
@@ -672,18 +775,137 @@ def run_task_tests(task_list: List[str]):
         raise ValueError(f"Not all tests for the specified tasks ({task_list}) ran successfully! Error code: {pytest_return_val}")
 
 
+def _lmms_eval_repo_root() -> pathlib.Path:
+    return pathlib.Path(__file__).resolve().parents[1]
+
+
+def _git_output(*args: str) -> str:
+    return (
+        subprocess.check_output(
+            ["git", "-C", str(_lmms_eval_repo_root()), *args],
+            stderr=subprocess.DEVNULL,
+        )
+        .strip()
+        .decode()
+    )
+
+
+def _first_env(*names: str) -> str | None:
+    for name in names:
+        value = os.environ.get(name, "").strip()
+        if value:
+            return value
+    return None
+
+
+def _normalize_branch_name(branch: str) -> str:
+    return branch.removeprefix("remotes/origin/")
+
+
+def _is_exact_git_ref_name(branch: str) -> bool:
+    return bool(branch and branch != "undefined" and "^" not in branch and "~" not in branch)
+
+
 def get_git_commit_hash():
-    """
-    Gets the git commit hash of your current repo (if it exists).
-    Source: https://github.com/EleutherAI/gpt-neox/blob/b608043be541602170bfcfb8ec9bf85e8a0799e0/megatron/neox_arguments/neox_args.py#L42
-    """
     try:
-        git_hash = subprocess.check_output(["git", "describe", "--always"]).strip()
-        git_hash = git_hash.decode()
+        git_hash = _git_output("describe", "--always")
     except (subprocess.CalledProcessError, FileNotFoundError):
-        # FileNotFoundError occurs when git not installed on system
-        git_hash = None
+        git_hash = _first_env("LMMS_EVAL_GIT_COMMIT", "GIT_COMMIT", "GITHUB_SHA")
     return git_hash
+
+
+def get_git_branch_name():
+    try:
+        branch = _git_output("branch", "--show-current")
+        if branch:
+            return _normalize_branch_name(branch)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+
+    branch = _first_env("LMMS_EVAL_GIT_BRANCH", "GIT_BRANCH", "BRANCH_NAME", "GITHUB_REF_NAME")
+    if branch:
+        return _normalize_branch_name(branch)
+
+    try:
+        branch = _git_output("name-rev", "--name-only", "--exclude=tags/*", "HEAD")
+        if _is_exact_git_ref_name(branch):
+            return _normalize_branch_name(branch)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+
+    return "detached" if get_git_commit_hash() else None
+
+
+def get_lmms_eval_version_string():
+    """Return a compact version string like 'branch@short_sha'."""
+    branch = get_git_branch_name() or "unknown"
+    commit = get_git_commit_hash() or "unknown"
+    return f"{branch}@{commit[:8]}"
+
+
+def get_lmms_eval_cache_version() -> str:
+    """Return a version string for cache key isolation.
+
+    For dev/editable installs the git commit hash is preferred because the
+    PyPI version stays constant while the code changes.  For pip installs
+    (no git repo) we fall back to ``importlib.metadata.version``.
+    """
+    commit = get_git_commit_hash()
+    if commit:
+        return commit
+    try:
+        import importlib.metadata
+
+        return importlib.metadata.version("lmms-eval")
+    except Exception:
+        return "unknown"
+
+
+# ---------------------------------------------------------------------------
+# Evaluation banner: printed above the results table
+# ---------------------------------------------------------------------------
+
+LMMS_EVAL_MOTTOS = [
+    "We build trusted evaluation for probing real intelligence.",
+    "Better evals lead to better models.",
+    "Mapping the border of model capabilities.",
+    "Shaping what we build next, one benchmark at a time.",
+    "The unified evaluation toolkit for frontier models.",
+    "Probing abilities in the real world.",
+    "Good evaluation shapes what we build next.",
+    "Measure twice, train once.",
+    "Evaluation is the compass of progress.",
+    "Where rigorous benchmarks meet real-world intelligence.",
+]
+
+
+def get_eval_banner(branch: str = None, commit: str = None) -> str:
+    """Build a branded banner printed above the results table.
+
+    Example output::
+
+        LMMs-Eval: Probing Intelligence in the Real World
+        > Better evals lead to better models.
+
+        branch: dev-v0d7
+        commit: 25a430ee
+    """
+    import random
+
+    motto = random.choice(LMMS_EVAL_MOTTOS)
+    branch = branch or get_git_branch_name() or "unknown"
+    commit = commit or get_git_commit_hash() or "unknown"
+
+    lines = [
+        "",
+        "LMMs-Eval: Probing Intelligence in the Real World",
+        f"> {motto}",
+        "",
+        f"branch: {branch}",
+        f"commit: {commit}",
+        "",
+    ]
+    return "\n".join(lines)
 
 
 def get_datetime_str(timezone="Asia/Singapore"):
@@ -735,6 +957,58 @@ def import_function(loader, node):
         raise ImportError(f"Failed to import function '{function_name}' from module '{module_name}'. " f"Tried relative path '{module_path}' and absolute import.") from ex
 
 
+_LOCAL_BUILDERS = frozenset({"csv", "json", "parquet", "text", "pandas", "arrow"})
+
+
+def _looks_like_url(value: str) -> bool:
+    return value.startswith(("http://", "https://", "s3://", "gs://", "ftp://", "ftps://"))
+
+
+def _resolve_local_data_files(value, yaml_dir: str):
+    """Rewrite relative ``data_files`` paths to absolute paths anchored at ``yaml_dir``.
+
+    Conservative: only rewrites a string when it's a relative path AND the
+    resolved absolute path exists on disk. Leaves absolute paths, URLs, and
+    non-existent relatives untouched. Recurses into dict/list to handle the
+    ``data_files: {train: <path>, validation: <path>}`` and ``data_files:
+    [<path>, <path>]`` shapes that ``datasets.load_dataset`` accepts.
+    """
+    if isinstance(value, str):
+        if not value or _looks_like_url(value) or os.path.isabs(value):
+            return value
+        candidate = os.path.join(yaml_dir, value)
+        if os.path.isfile(candidate):
+            return candidate
+        return value
+    if isinstance(value, dict):
+        return {k: _resolve_local_data_files(v, yaml_dir) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_resolve_local_data_files(v, yaml_dir) for v in value]
+    return value
+
+
+def _maybe_resolve_yaml_local_data_files(yaml_config: dict, yaml_dir: str) -> dict:
+    """Resolve ``dataset_kwargs.data_files`` relative paths against ``yaml_dir``.
+
+    Only applied for the generic local builders (``csv``, ``json``,
+    ``parquet``, ``text``, ``pandas``, ``arrow``). For HF hub dataset
+    paths (e.g. ``lmms-lab-eval/ssv2``) ``data_files`` is left as-is to
+    preserve the upstream behavior of letting HF resolve relative paths
+    against the dataset's hub root.
+    """
+    dataset_path = yaml_config.get("dataset_path")
+    if not isinstance(dataset_path, str) or dataset_path not in _LOCAL_BUILDERS:
+        return yaml_config
+    dataset_kwargs = yaml_config.get("dataset_kwargs")
+    if not isinstance(dataset_kwargs, dict) or "data_files" not in dataset_kwargs:
+        return yaml_config
+    resolved = _resolve_local_data_files(dataset_kwargs["data_files"], yaml_dir)
+    if resolved is dataset_kwargs["data_files"]:
+        return yaml_config
+    new_kwargs = {**dataset_kwargs, "data_files": resolved}
+    return {**yaml_config, "dataset_kwargs": new_kwargs}
+
+
 def load_yaml_config(yaml_path=None, yaml_config=None, yaml_dir=None, mode="full"):
     if mode == "simple":
         constructor_fn = ignore_constructor
@@ -778,8 +1052,8 @@ def load_yaml_config(yaml_path=None, yaml_config=None, yaml_dir=None, mode="full
                 raise ex
 
         final_yaml_config.update(yaml_config)
-        return final_yaml_config
-    return yaml_config
+        return _maybe_resolve_yaml_local_data_files(final_yaml_config, yaml_dir)
+    return _maybe_resolve_yaml_local_data_files(yaml_config, yaml_dir)
 
 
 def regex_replace(string, pattern, repl, count: int = 0):
@@ -796,13 +1070,35 @@ def apply_template(template: str, doc: dict) -> str:
     return rtemplate.render(**doc)
 
 
-def create_iterator(raw_iterator, rank, world_size, limit=None):
+def create_iterator(raw_iterator, rank, world_size, limit=None, offset=0):
     """
     Method for creating a (potentially) sliced and limited
     iterator from a raw document iterator. Used for splitting data
-    among ranks in multigpu setting or only pulling a sample of documents
+    among ranks in multigpu setting or only pulling a sample of documents.
+    Offset applies before rank sharding.
     """
-    return islice(raw_iterator, rank, limit, world_size)
+    if offset is None:
+        offset = 0
+
+    rank = int(rank)
+    world_size = int(world_size)
+    offset = int(offset)
+
+    if offset < 0:
+        raise ValueError(f"offset must be >= 0, got {offset}")
+
+    if limit is not None:
+        if isinstance(limit, float) and not limit.is_integer():
+            raise ValueError(
+                f"limit passed to create_iterator must be an integer count after normalization, got fractional value: {limit}",
+            )
+        limit = int(limit)
+        if limit < 0:
+            raise ValueError(f"limit must be >= 0, got {limit}")
+
+    start = rank + offset
+    stop = None if limit is None else offset + limit
+    return islice(raw_iterator, start, stop, world_size)
 
 
 def pad_and_concat(

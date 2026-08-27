@@ -1,0 +1,8 @@
+task: rvos_reasonvos
+dataset_path: kcz358/RVOS-ReasonVOS
+dataset_kwargs:
+  token: True
+  video: True
+  cache_dir: rvos_reasonvos
+test_split: test
+include: _default_template_yaml

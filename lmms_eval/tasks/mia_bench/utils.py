@@ -1,16 +1,10 @@
-import json
 import os
-import random
 import time
-from collections import defaultdict
 from pathlib import Path
 
-import numpy as np
 import requests
 import yaml
 from loguru import logger as eval_logger
-
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 
 def mia_bench_doc_to_visual(doc):

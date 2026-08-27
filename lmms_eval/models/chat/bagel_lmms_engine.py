@@ -1,7 +1,5 @@
 import json
 import os
-import sys
-from pathlib import Path
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -15,7 +13,6 @@ from PIL import Image
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
-from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
@@ -23,7 +20,6 @@ from lmms_eval.protocol import ChatMessages
 
 try:
     from lmms_engine.datasets.processor import BagelDataProcessor, ProcessorConfig
-    from lmms_engine.models.bagel import Bagel
     from lmms_engine.models.bagel.inferencer import InterleaveInferencer
 except Exception as e:
     eval_logger.error(f"Failed to import Bagel dependencies. {e}")
@@ -66,8 +62,6 @@ class BagelLmmsEngine(lmms):
         text_temperature: float = 0.3,
         seed: int = 0,
         image_ratio: str = "1:1",
-        continual_mode: bool = True,
-        response_persistent_folder: Optional[str] = None,
         device: Optional[str] = "cuda",
         device_map: Optional[str] = None,
         **kwargs,
@@ -78,7 +72,6 @@ class BagelLmmsEngine(lmms):
         self.load_in_4bit = load_in_4bit
         self.load_in_8bit = load_in_8bit
         self.show_thinking = show_thinking
-        self.continual_mode = continual_mode
 
         # Generation hyperparameters
         self.cfg_text_scale = cfg_text_scale
@@ -110,7 +103,7 @@ class BagelLmmsEngine(lmms):
             self.image_shapes = (1024, 1024)
 
         if output_image_dir is None:
-            self.output_image_dir = os.path.join(self.response_persistent_folder, "bagel_generated_images")
+            self.output_image_dir = "./logs/bagel_generated_images"
         else:
             self.output_image_dir = output_image_dir
 

@@ -1,5 +1,5 @@
 from PIL import ImageDraw
-from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge, Spice
+from pycocoevalcap.eval import Cider, COCOEvalCap
 from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from pycocotools.coco import COCO
 
@@ -14,7 +14,8 @@ def screenspot_bbox_doc_to_visual(doc):
     bbox = doc["bbox"]
     image = doc["image"].convert("RGB")
     draw = ImageDraw.Draw(image)
-    bbox_xy = [bbox[0], bbox[1], bbox[2], bbox[3]]
+    width, height = image.size
+    bbox_xy = [bbox[0] * width, bbox[1] * height, bbox[2] * width, bbox[3] * height]
     draw.rectangle(bbox_xy, outline="red", width=3)
     return [image.convert("RGB")]
 

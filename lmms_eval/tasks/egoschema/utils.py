@@ -2,34 +2,26 @@ import datetime
 import json
 import os
 import random
+import re
 import sys
-from pathlib import Path
+import time
 
 import numpy as np
-import yaml
-from decord import VideoReader, cpu
+import requests
+from loguru import logger as eval_logger
 
 import lmms_eval.tasks._task_utils.file_utils as file_utils
+from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
 
-with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
-    raw_data = f.readlines()
-    safe_data = []
-    for i, line in enumerate(raw_data):
-        # remove function definition since yaml load cannot handle it
-        if "!function" not in line:
-            safe_data.append(line)
-
-    config = yaml.safe_load("".join(safe_data))
+config = load_default_template_yaml(__file__)
 
 # We will unzip all the zip files
 # To HF HOME cache dir
 # And load it here
-HF_HOME = os.environ["HF_HOME"] if "HF_HOME" in os.environ else os.path.expanduser("~/.cache/huggingface/hub")
+HF_HOME = os.environ["HF_HOME"] if "HF_HOME" in os.environ else os.path.expanduser("~/.cache/huggingface")
 cache_dir = config["dataset_kwargs"]["cache_dir"]
 cache_dir = os.path.join(HF_HOME, cache_dir)
 cache_dir = os.path.join(cache_dir, "videos")
-
-from loguru import logger as eval_logger
 
 
 # Pass in video path here
@@ -109,27 +101,21 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     response = " " + response + " "  # add space to avoid partial match
 
     index_ans = True
-    ans_with_brack = False
-    ans_with_space = False
-    ans_with_dot = False
     candidates = []
     # import pdb; pdb.set_trace()
     for choice in all_choices:  # e.g., (A) (B) (C) (D)
         if f"({choice})" in response:
             candidates.append(f"({choice})")
-            ans_with_brack = True
 
     # if len(candidates) == 0:
     for choice in all_choices:  # e.g., A B C D
         if f"{choice} " in response:
             candidates.append(f"{choice} ")
-            ans_with_space = True
 
     # if len(candidates) == 0:
     for choice in all_choices:  # e.g., A. B. C. D.
         if f"{choice}." in response:
             candidates.append(f"{choice}.")
-            ans_with_dot = True
 
     # if all above doesn't get candidates, check if the content is larger than 5 tokens and try to parse the example
     if len(candidates) == 0 and len(response.split()) > 5:
@@ -201,19 +187,52 @@ def egoschema_aggregate_submissions(results, args, task):
     for submission_dict in results:
         combined_submission.update(submission_dict)
 
+    # Save the submission first so the predictions are never lost if scoring fails.
     with open(path, "w") as f:
         json.dump(combined_submission, f, indent=4)
-
     eval_logger.info(f"Submission file saved to {path}")
+
+    # Score by POSTing to EgoSchema's public validation server (the full test
+    # set's labels aren't public). That host is free-tier: it cold-starts and
+    # returns 5xx for ~a minute while waking, so retry with backoff + a per-
+    # request timeout — but bounded, and fail loudly on persistent failure
+    # rather than spinning forever (the old `while True`) or recording a bogus 0.
+    url = "https://validation-server.onrender.com/api/upload/"
+    headers = {"Content-Type": "application/json"}
+    pattern = r"Total result: \d+ correct, \d+ wrong, \d+ missing, \d+ invalid, accuracy: ([\d.]+)"
+    max_attempts = 8
+    last_err = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            response = requests.post(url, headers=headers, json=combined_submission, timeout=60)
+        except requests.exceptions.RequestException as e:
+            last_err = f"{type(e).__name__}: {e}"
+            eval_logger.warning(f"EgoSchema submission attempt {attempt}/{max_attempts} errored: {last_err}")
+        else:
+            if response.status_code == 200:
+                eval_logger.info(f"Submission successful: {response.text}")
+                match = re.search(pattern, response.text)
+                if match:
+                    total_accuracy = float(match.group(1)) * 100
+                    eval_logger.info(f"Total accuracy: {total_accuracy}")
+                    return total_accuracy
+                # 200 but unexpected format — retrying won't help, fail loudly.
+                raise RuntimeError(f"EgoSchema server returned HTTP 200 but no parseable accuracy. Response: {response.text[:300]}. Submission saved at {path}.")
+            last_err = f"HTTP {response.status_code}: {response.text[:200]}"
+            eval_logger.warning(f"EgoSchema submission attempt {attempt}/{max_attempts} failed: {last_err}")
+        if attempt < max_attempts:
+            time.sleep(min(30, 5 * attempt))  # linear backoff, capped at 30s
+
+    raise RuntimeError(f"EgoSchema validation-server scoring failed after {max_attempts} attempts (last: {last_err}). " f"Submission saved at {path} — score it manually.")
 
 
 # Factory into different aggregate
 def egoschema_aggregate_mc(results, args):
-    egoschema_aggregate_submissions(results, args, "MC")
+    return egoschema_aggregate_submissions(results, args, "MC")
 
 
 def egoschema_aggregate_mc_ppl(results, args):
-    egoschema_aggregate_submissions(results, args, "MC_PPL")
+    return egoschema_aggregate_submissions(results, args, "MC_PPL")
 
 
 def egoschema_aggregate_score(results, args):

@@ -1,5 +1,3 @@
-import glob
-import math
 import os
 from datetime import timedelta
 from typing import List, Optional, Tuple, Union
@@ -352,11 +350,12 @@ class CambrianS(lmms):
                                     real_qs += DEFAULT_IMAGE_TOKEN + "\n"
                         qs = real_qs
                     elif isinstance(qs, str):
+                        num_images = len(visual_sizes)
                         if self.model_config.mm_use_im_start_end:
-                            qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + "\n" + qs
+                            image_tokens = (DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + "\n") * num_images
+                            qs = image_tokens + qs
                         else:
-                            assert len(visual_tensors) == 1, "This should not happen."
-                            qs = DEFAULT_IMAGE_TOKEN * len(visual_tensors) + "\n" + qs
+                            qs = DEFAULT_IMAGE_TOKEN * num_images + "\n" + qs
                     else:
                         raise NotImplementedError
 

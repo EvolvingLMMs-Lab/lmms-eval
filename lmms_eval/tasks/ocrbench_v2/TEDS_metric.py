@@ -12,14 +12,11 @@
 import ast
 import json
 import re
-import string
 from collections import deque
 from itertools import product
-from typing import Any, Callable, Optional, Sequence
 
 import distance
 import editdistance
-import ipdb
 import Levenshtein
 import numpy as np
 from apted import APTED, Config

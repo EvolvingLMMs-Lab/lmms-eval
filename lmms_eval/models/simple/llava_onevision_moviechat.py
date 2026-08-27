@@ -3,7 +3,6 @@ import json
 import logging
 import math
 import os
-import re
 import warnings
 from datetime import timedelta
 from typing import List, Optional, Tuple, Union
@@ -12,7 +11,6 @@ import av
 import numpy as np
 import PIL
 import torch
-import transformers
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu

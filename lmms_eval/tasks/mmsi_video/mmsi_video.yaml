@@ -1,0 +1,16 @@
+# MMSI-Video-Bench: Native Video Input Mode
+# https://huggingface.co/datasets/rbler/MMSI-Video-Bench
+#
+# The dataset will be automatically downloaded and zip files will be extracted
+# to $HF_HOME/mmsi_video/ by lmms-eval.
+
+task: "mmsi_video"
+doc_to_visual: !function utils.doc_to_visual_video
+doc_to_text: !function utils.doc_to_text_video
+doc_to_messages: !function utils.doc_to_messages_video
+lmms_eval_specific_kwargs:
+  default:
+    post_prompt: ""
+  gemini_api:
+    pre_prompt: ""
+include: _default_template_yaml

@@ -1,15 +1,11 @@
 import base64
-import datetime
 import io
-import json
 import os
 import string
 from collections import defaultdict
 
 from loguru import logger as eval_logger
 from PIL import Image
-
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
@@ -76,39 +72,21 @@ def mmstar_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def exact_match(pred, gt):
-    """Brought from MMStar"""
-    answer = gt.lower().replace("\n", " ").strip()
-    predict = pred.lower().replace("\n", " ").strip()
-    try:
-        if answer == predict[0]:
-            return 1.0
-        elif predict[0] == "(" and answer == predict[1]:
-            return 1.0
-        elif predict[0:7] == "option " and answer == predict[7]:
-            return 1.0
-        elif predict[0:14] == "the answer is " and answer == predict[14]:
-            return 1.0
-    except Exception as e:
-        return 0.0
-    return 0.0
+    """Extract MCQ letter from prediction and compare to ground truth."""
+    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+    gt_letter = gt.strip().upper()
+    pred_letter = extract_mcq_answer(pred, choices=["A", "B", "C", "D"])
+    return 1.0 if pred_letter == gt_letter else 0.0
 
 
 def exact_match_ko(pred, gt):
-    """Brought from MMStar"""
-    answer = gt.lower().replace("\n", " ").strip()
-    predict = pred.lower().replace("\n", " ").strip()
-    try:
-        if answer == predict[0]:
-            return 1.0
-        elif predict[0] == "(" and answer == predict[1]:
-            return 1.0
-        elif predict[0:3] == "옵션 " and answer == predict[3]:
-            return 1.0
-        elif predict[0:4] == "정답은 " and answer == predict[4]:
-            return 1.0
-    except Exception as e:
-        return 0.0
-    return 0.0
+    """Extract MCQ letter from Korean prediction and compare to ground truth."""
+    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+    gt_letter = gt.strip().upper()
+    pred_letter = extract_mcq_answer(pred, choices=["A", "B", "C", "D"])
+    return 1.0 if pred_letter == gt_letter else 0.0
 
 
 def mmstar_process_results_ko(doc, results):

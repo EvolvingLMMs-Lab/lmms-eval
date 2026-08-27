@@ -1,22 +1,18 @@
 import os
-import sys
 import time
-from concurrent.futures import ThreadPoolExecutor
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 from tqdm import tqdm
 from transformers import AutoModel
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.gen_metrics import log_metrics
+from lmms_eval.imports import optional_import
 from lmms_eval.models.simple.vllm import VLLM as VLLMSimple
 from lmms_eval.protocol import ChatMessages
 
-try:
-    from vllm import LLM, SamplingParams
-except ImportError:
-    vllm = None
+LLM, _ = optional_import("vllm", "LLM")
+SamplingParams, _ = optional_import("vllm", "SamplingParams")
 
 WORKERS = int(os.getenv("WORKERS", "32"))
 
@@ -72,7 +68,18 @@ class LongVila(VLLMSimple):
             device_map=device_map,
             llm_only_need_embed=True,
         )
-        super().__init__(llm_path, tensor_parallel_size, data_parallel_size, gpu_memory_utilization, batch_size, max_frame_num, trust_remote_code, chat_template, min_image_pixels, **kwargs)
+        super().__init__(
+            llm_path,
+            tensor_parallel_size,
+            data_parallel_size,
+            gpu_memory_utilization,
+            batch_size,
+            max_frame_num,
+            trust_remote_code,
+            chat_template,
+            min_image_pixels,
+            **kwargs,
+        )
 
     def _to_remote_conversation(self, chat_messages: ChatMessages) -> list:
         """
@@ -127,7 +134,14 @@ class LongVila(VLLMSimple):
             self.model_encoder.config.fps = 0
         media = self.extract_media(conversation, self.model_encoder.config)
         if "video" in media and media["video"] is not None:
-            media["video"] = [self.process_images(images, self.model_encoder.vision_tower.image_processor, self.model_encoder.config).half() for images in media["video"]]
+            media["video"] = [
+                self.process_images(
+                    images,
+                    self.model_encoder.vision_tower.image_processor,
+                    self.model_encoder.config,
+                ).half()
+                for images in media["video"]
+            ]
 
         # Tokenize conversation and move to CUDA for embedding
         input_ids = self.tokenize_conversation(conversation, self.model_encoder.tokenizer, add_generation_prompt=True).unsqueeze(0).cuda()
@@ -135,7 +149,7 @@ class LongVila(VLLMSimple):
         # Create prompt embeddings using the model encoder
         try:
             inputs_embeds, _, _ = self.model_encoder._embed(input_ids, media, {"video": {}}, None, None)
-        except Exception as e:
+        except Exception:
             # 128 runs no problem, but other may have some issue, if encounter error, try to set to 128, then set back
             self.max_frame_num = 128
             old_fps = self.fps
@@ -148,13 +162,11 @@ class LongVila(VLLMSimple):
 
     def generate_until(self, requests) -> List[str]:
         res = []
-        self.load_cache()
-        res, requests = self.get_response_from_cache(requests)
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         batch_size = self.batch_size_per_gpu
         batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
-        e2e_latency = 0
+        total_elapsed_time = 0
         for batch_requests in batched_requests:
             prompt_embeds_list = []
             params_list = []
@@ -172,11 +184,9 @@ class LongVila(VLLMSimple):
             end_time = time.time()
 
             response_text = [o.outputs[0].text for o in response]
-            for req, text in zip(batch_requests, response_text):
-                self.add_request_response_to_cache(req, text)
 
             # Calculate timing metrics for batch
-            e2e_latency += end_time - start_time
+            total_elapsed_time += end_time - start_time
 
             assert len(response_text) == len(batch_requests)
             res.extend(response_text)

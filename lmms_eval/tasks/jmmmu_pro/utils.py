@@ -8,6 +8,12 @@ from pathlib import Path
 import yaml
 
 from lmms_eval.loggers.evaluation_tracker import GeneralConfigTracker
+from lmms_eval.tasks._task_utils.mmmu_mcq_utils import (
+    get_multi_choice_info as shared_get_multi_choice_info,
+)
+from lmms_eval.tasks._task_utils.mmmu_mcq_utils import (
+    parse_jmmmu_pro_multi_choice_response,
+)
 from lmms_eval.utils import sanitize_model_name
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
@@ -396,108 +402,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     Parse the prediction from the generated response using answer_parser logic.
     Return the predicted index e.g., A, B, C, D, or "X" if not parsed.
     """
-    from typing import Optional
-
-    # Precompile commonly used regex patterns
-    FULLWIDTH_MAP = {chr(ord("Ａ") + i): chr(ord("A") + i) for i in range(26)}
-    FULLWIDTH_TRANS = str.maketrans(FULLWIDTH_MAP)
-
-    OPTION_LINE_RE = re.compile(
-        r"""^\s*
-            (?:[-*・>\u2022]\s*)?      # bullets
-            [A-ZＡ-Ｚ]                 # option label
-            [\.\)\u3001\u3002：:]      # separators: . ) 、 。 : ：
-        """,
-        re.VERBOSE | re.IGNORECASE,
-    )
-
-    EXPLICIT_RE = re.compile(
-        r"""(?ix)
-        (?:answer|final|correct|solution|ans
-          |正解(?:は)?
-          |答え(?:は)?
-          |解答(?:は)?
-        )                                   # cue words
-        \s*[:：]?\s*
-        [【\[\(\u3010\u3011\*_-]*            # optional brackets/emphasis start
-        ([A-Z])                             # capture the letter
-        [】\]\)\*_-]*                       # optional brackets/emphasis end
-        \b
-        """
-    )
-
-    MARKDOWN_LETTER_RE = re.compile(
-        r"""
-        [【\[\(\*]*([A-Z])[】\]\)\*]*   # plain or emphasized letter
-        \b
-        """,
-        re.IGNORECASE | re.VERBOSE,
-    )
-
-    def _normalize(text: str) -> str:
-        # Normalize full-width letters and strip obvious bold markers.
-        text = text.translate(FULLWIDTH_TRANS)
-        return text
-
-    def _is_option_line(line: str) -> bool:
-        return bool(OPTION_LINE_RE.match(line))
-
-    def _explicit_in_line(line: str) -> Optional[str]:
-        m = EXPLICIT_RE.search(line)
-        if m:
-            return m.group(1).upper()
-        return None
-
-    def _last_standalone_letter(lines: list[str]) -> Optional[str]:
-        """Fallback: pick the last standalone letter (A–Z) not on an option line."""
-        candidates: list[str] = []
-        for line in lines:
-            if _is_option_line(line):
-                continue
-            for m in MARKDOWN_LETTER_RE.finditer(line):
-                letter = m.group(1).upper()
-                candidates.append(letter)
-        return candidates[-1] if candidates else None
-
-    def parse_answer(text: str) -> Optional[str]:
-        """
-        Parse a model free-form response and return an answer letter (A–Z) or None.
-        Priority:
-          1) Explicit marker ("Answer/正解/Final/...") on the first non-empty line.
-          2) Explicit marker anywhere in the text.
-          3) Last standalone letter (A–Z) that is not on an option line.
-        """
-        if not text:
-            return None
-
-        norm = _normalize(text)
-        lines = [ln.strip() for ln in norm.splitlines() if ln.strip()]
-        if not lines:
-            return None
-
-        # 1) First non-empty line explicit marker
-        first_line = lines[0]
-        hit = _explicit_in_line(first_line)
-        if hit:
-            return hit
-
-        # 2) Explicit marker anywhere
-        hit_any = _explicit_in_line(norm)
-        if hit_any:
-            return hit_any
-
-        # 3) Last standalone letter outside option lines
-        return _last_standalone_letter(lines)
-
-    # Use answer_parser logic
-    parsed_letter = parse_answer(response)
-
-    # Validate that the parsed letter is in all_choices
-    if parsed_letter and parsed_letter in all_choices:
-        return parsed_letter
-
-    # If not found or not valid, return "X"
-    return "X"
+    return parse_jmmmu_pro_multi_choice_response(response, all_choices)
 
 
 def get_multi_choice_info(options):
@@ -507,11 +412,4 @@ def get_multi_choice_info(options):
     https://github.com/MMMU-Benchmark/MMMU/blob/51ce7f3e829c16bb44bc5445782686b4c3508794/eval/data_utils.py#L54
     """
 
-    start_chr = "A"
-    all_choices = []
-    index2ans = {}
-    for i, option in enumerate(options):
-        index2ans[chr(ord(start_chr) + i)] = option
-        all_choices.append(chr(ord(start_chr) + i))
-
-    return index2ans, all_choices
+    return shared_get_multi_choice_info(options)

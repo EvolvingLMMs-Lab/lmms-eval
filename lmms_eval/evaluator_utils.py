@@ -4,7 +4,7 @@ import inspect
 import math
 import pathlib
 import sys
-from typing import List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -12,6 +12,11 @@ from lmms_eval.api.group import ConfigurableGroup
 from lmms_eval.api.metrics import (
     aggregate_subtask_metrics,
     clustered_stderr,
+    consensus_accuracy,
+    consistency_rate,
+    expected_accuracy,
+    internal_variance,
+    paired_ttest,
     pooled_sample_stderr,
     stderr_for_metric,
 )
@@ -70,6 +75,7 @@ class TaskOutput:
         self.logged_samples = []
         self.sample_len = None
         self.sample_metrics = collections.defaultdict(list)
+        self.per_sample_metrics = collections.defaultdict(list)  # Per-sample scores for stability metrics
         self.agg_metrics = collections.defaultdict(list)
         self.args = None
 
@@ -155,6 +161,55 @@ class TaskOutput:
             else:
                 self.agg_metrics[f"{metric}_stderr_clustered,{filter_key}"] = "N/A"
 
+    def calculate_stability_metrics(self) -> None:
+        """Calculate model stability metrics (EA, CA, IV, CR) when repeats > 1.
+
+        These metrics measure model consistency across multiple samples per question.
+        Only computed when repeats > 1 (k-samples mode).
+
+        Uses per_sample_metrics which contains per-sample scores grouped by doc_id.
+        Each entry in per_sample_metrics is a list of k scores for one question.
+        """
+        repeats = self.task_config.get("repeats", 1) if self.task_config else 1
+        if repeats <= 1:
+            return  # Skip if not in k-samples mode
+
+        score_key = self.task_config.get("score_key", "score") if self.task_config else "score"
+
+        for (metric, filter_key), items in self.per_sample_metrics.items():
+            if metric not in self.task.aggregation():
+                continue
+
+            # items is already grouped by doc_id, each element is a list of k scores
+            scores_per_question = []
+            for sample_scores in items:
+                if not isinstance(sample_scores, list):
+                    # Fallback: if not a list, skip with warning
+                    eval_logger.warning(f"Stability metrics: expected list of scores per question, " f"got {type(sample_scores)}. Skipping.")
+                    continue
+
+                question_scores = []
+                for x in sample_scores:
+                    if isinstance(x, (int, float)):
+                        question_scores.append(float(x))
+                    elif isinstance(x, dict) and score_key in x:
+                        question_scores.append(float(x[score_key]))
+                    else:
+                        eval_logger.debug(f"Stability metrics: cannot extract score from " f"{type(x)}: {x}")
+
+                if question_scores:
+                    scores_per_question.append(question_scores)
+
+            if not scores_per_question:
+                eval_logger.warning(f"Stability metrics: no valid scores found for metric {metric}. " "Skipping.")
+                continue
+
+            # Calculate stability metrics
+            self.agg_metrics[f"{metric}_expected_accuracy,{filter_key}"] = expected_accuracy(scores_per_question)
+            self.agg_metrics[f"{metric}_consensus_accuracy,{filter_key}"] = consensus_accuracy(scores_per_question)
+            self.agg_metrics[f"{metric}_internal_variance,{filter_key}"] = internal_variance(scores_per_question)
+            self.agg_metrics[f"{metric}_consistency_rate,{filter_key}"] = consistency_rate(scores_per_question)
+
     def __repr__(self):
         return f"TaskOutput(task_name={self.task_name}, " f"group_name={self.group_name}, " f"version={self.version}, " f"n_shot={self.n_shot}, " f"task_alias={self.task_alias}, " f"group_alias={self.group_alias})"
 
@@ -230,10 +285,14 @@ def print_writeout(task) -> None:
             eval_logger.info(f"Request: {str(inst)}")
 
 
-def get_sample_size(task, limit: Optional[int]) -> Union[int, None]:
-    if limit is not None:
-        limit = int(math.ceil(len(task.eval_docs) * limit)) if limit < 1.0 else int(limit)
-    return limit
+def get_sample_size(task, limit: Optional[Union[int, float]]) -> Union[int, None]:
+    if limit is None or limit == -1:
+        return None
+    if limit < 0:
+        raise ValueError(f"limit must be -1 or non-negative, got {limit}")
+    if 0 < limit < 1.0:
+        return int(math.ceil(len(task.eval_docs) * limit))
+    return int(limit)
 
 
 def prepare_print_tasks(
@@ -387,6 +446,16 @@ def consolidate_results(
             clustered_key = f"{metric}_stderr_clustered,{filter_key}"
             if clustered_key in task_output.agg_metrics:
                 results[task_output.task_name][clustered_key] = task_output.agg_metrics[clustered_key]
+            # Output stability metrics (EA, CA, IV, CR) when in k-samples mode
+            for stat_suffix in [
+                "expected_accuracy",
+                "consensus_accuracy",
+                "internal_variance",
+                "consistency_rate",
+            ]:
+                stat_key = f"{metric}_{stat_suffix},{filter_key}"
+                if stat_key in task_output.agg_metrics:
+                    results[task_output.task_name][stat_key] = task_output.agg_metrics[stat_key]
     return results, samples, configs, versions, num_fewshot, higher_is_better
 
 
@@ -537,3 +606,16 @@ def run_task_tests(task_list: List[str]):
     pytest_return_val = pytest.main(args)
     if pytest_return_val:
         raise ValueError(f"Not all tests for the specified tasks ({task_list}) ran successfully! Error code: {pytest_return_val}")
+
+
+def compute_baseline_comparison(
+    current_scores: List[float],
+    baseline_scores: List[float],
+    baseline_name: str,
+) -> Dict[str, Any]:
+    """Compute paired t-test comparison between current and baseline."""
+    result = paired_ttest(current_scores, baseline_scores)
+    result["baseline_name"] = baseline_name
+    result["baseline_mean"] = sum(baseline_scores) / len(baseline_scores) if baseline_scores else float("nan")
+    result["current_mean"] = sum(current_scores) / len(current_scores) if current_scores else float("nan")
+    return result

@@ -8,7 +8,7 @@ from typing import List, Tuple
 import aiohttp
 import numpy as np
 import requests
-from accelerate import Accelerator, DistributedType
+from accelerate import Accelerator
 from loguru import logger as eval_logger
 from scipy.io import wavfile
 from tqdm import tqdm

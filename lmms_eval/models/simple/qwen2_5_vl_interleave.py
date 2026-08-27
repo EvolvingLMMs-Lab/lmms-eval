@@ -1,12 +1,9 @@
 import base64
 import json
-import os
 from io import BytesIO
-from re import I
 from typing import List, Optional, Tuple, Union
 
 import decord
-import numpy as np
 import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
@@ -22,11 +19,11 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.load_video import read_video_pyav_base64
 
-try:
-    from qwen_vl_utils import process_vision_info
-except ImportError:
+process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
+if not _has_qwen_vl:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
 
@@ -289,13 +286,44 @@ class Qwen2_5_VL_Interleave(lmms):
                                     message.append(
                                         {
                                             "role": "user",
-                                            "content": [{"type": "video", "video": image_contents[:-1]}, {"type": "text", "text": context[0]}, {"type": "image", "image": image_contents[-1]}, {"type": "text", "text": context[1]}],
+                                            "content": [
+                                                {
+                                                    "type": "video",
+                                                    "video": image_contents[:-1],
+                                                },
+                                                {"type": "text", "text": context[0]},
+                                                {
+                                                    "type": "image",
+                                                    "image": image_contents[-1],
+                                                },
+                                                {"type": "text", "text": context[1]},
+                                            ],
                                         }
                                     )
                                 else:
-                                    message.append({"role": "user", "content": [{"type": "text", "text": context[0]}, {"type": "image", "image": image_contents[-1]}, {"type": "text", "text": context[1]}]})
+                                    message.append(
+                                        {
+                                            "role": "user",
+                                            "content": [
+                                                {"type": "text", "text": context[0]},
+                                                {
+                                                    "type": "image",
+                                                    "image": image_contents[-1],
+                                                },
+                                                {"type": "text", "text": context[1]},
+                                            ],
+                                        }
+                                    )
                             else:
-                                message.append({"role": "user", "content": [{"type": "video", "video": image_contents}, {"type": "text", "text": context}]})
+                                message.append(
+                                    {
+                                        "role": "user",
+                                        "content": [
+                                            {"type": "video", "video": image_contents},
+                                            {"type": "text", "text": context},
+                                        ],
+                                    }
+                                )
                             # with open("alb.json", "w") as f:
                             #     json.dump(message, f, indent=4)
                         else:
@@ -303,14 +331,37 @@ class Qwen2_5_VL_Interleave(lmms):
                             first_frame = vr[0].asnumpy()
                             height, width = first_frame.shape[:2]
                             # max_pixels = height * width
-                            message.append({"role": "user", "content": [{"type": "video", "video": visual, "max_pixels": self.max_pixels}, {"type": "text", "text": context}]})
+                            message.append(
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {
+                                            "type": "video",
+                                            "video": visual,
+                                            "max_pixels": self.max_pixels,
+                                        },
+                                        {"type": "text", "text": context},
+                                    ],
+                                }
+                            )
                     elif isinstance(visual, Image.Image):  # Single image
                         base64_image = visual.convert("RGB")
                         buffer = BytesIO()
                         base64_image.save(buffer, format="JPEG")
                         base64_bytes = base64.b64encode(buffer.getvalue())
                         base64_string = base64_bytes.decode("utf-8")
-                        message.append({"role": "user", "content": [{"type": "image", "image": f"data:image/jpeg;base64,{base64_string}"}, {"type": "text", "text": context}]})
+                        message.append(
+                            {
+                                "role": "user",
+                                "content": [
+                                    {
+                                        "type": "image",
+                                        "image": f"data:image/jpeg;base64,{base64_string}",
+                                    },
+                                    {"type": "text", "text": context},
+                                ],
+                            }
+                        )
                     elif isinstance(visual, (list, tuple)) and all(isinstance(v, Image.Image) for v in visual):  # Multiple images
                         image_content = []
                         i = 0
@@ -320,7 +371,12 @@ class Qwen2_5_VL_Interleave(lmms):
                             base64_image.save(buffer, format="JPEG")
                             base64_bytes = base64.b64encode(buffer.getvalue())
                             base64_string = base64_bytes.decode("utf-8")
-                            image_content.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}"})
+                            image_content.append(
+                                {
+                                    "type": "image",
+                                    "image": f"data:image/jpeg;base64,{base64_string}",
+                                }
+                            )
                             v.save(f"test_{i}.jpg")
                             i += 1
                         # message.append({"role": "user", "content": image_content + [{"type": "text", "text": context}]})
@@ -332,7 +388,12 @@ class Qwen2_5_VL_Interleave(lmms):
                         content.append({"type": "text", "text": context[-1]})
                         # print("content", content)
                     else:
-                        message.append({"role": "user", "content": [{"type": "text", "text": context}]})
+                        message.append(
+                            {
+                                "role": "user",
+                                "content": [{"type": "text", "text": context}],
+                            }
+                        )
                 else:
                     message.append({"role": "user", "content": [{"type": "text", "text": context}]})
 
@@ -381,7 +442,11 @@ class Qwen2_5_VL_Interleave(lmms):
             # cont = self.model.generate(**inputs, max_new_tokens=1024)
 
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
-            answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+            answers = self.processor.batch_decode(
+                generated_ids_trimmed,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=False,
+            )
             for i, ans in enumerate(answers):
                 answers[i] = ans
 

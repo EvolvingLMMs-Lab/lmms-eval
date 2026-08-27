@@ -9,11 +9,11 @@ config = load_defualt_config()
 
 # Load video paths
 video_base_dir = config["plm_fgqa"]["video_base_dir"]
-assert video_base_dir is not None, f"video_base_dir is not set. Please double check if you have downloaded the videos and set the correct path in _default_template_yaml."
+assert video_base_dir is not None, "video_base_dir is not set. Please double check if you have downloaded the videos and set the correct path in _default_template_yaml."
 
 # Load the number of video frames
 num_video_frames = config["plm_stc"]["num_video_frames"]
-assert num_video_frames is not None, f"num_video_frames must not be None."
+assert num_video_frames is not None, "num_video_frames must not be None."
 
 
 def qa_template(entry):
