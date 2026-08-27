@@ -1,0 +1,4 @@
+task: vbench2_motion_rationality
+dataset_name: vbench2_motion_rationality
+test_split: test
+include: _default_template_yaml

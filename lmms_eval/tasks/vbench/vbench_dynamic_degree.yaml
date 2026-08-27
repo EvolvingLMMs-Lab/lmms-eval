@@ -1,0 +1,4 @@
+task: vbench_dynamic_degree
+dataset_name: vbench_dynamic_degree
+test_split: test
+include: _default_template_yaml

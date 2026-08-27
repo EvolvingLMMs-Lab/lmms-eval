@@ -1,0 +1,4 @@
+task: vbench2_complex_landscape
+dataset_name: vbench2_complex_landscape
+test_split: test
+include: _default_template_yaml

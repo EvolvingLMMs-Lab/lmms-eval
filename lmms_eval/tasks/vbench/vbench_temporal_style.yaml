@@ -1,0 +1,4 @@
+task: vbench_temporal_style
+dataset_name: vbench_temporal_style
+test_split: test
+include: _default_template_yaml

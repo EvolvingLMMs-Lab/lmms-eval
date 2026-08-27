@@ -1,0 +1,4 @@
+task: vbench2_human_anatomy
+dataset_name: vbench2_human_anatomy
+test_split: test
+include: _default_template_yaml

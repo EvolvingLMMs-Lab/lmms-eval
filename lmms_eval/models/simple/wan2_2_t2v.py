@@ -16,7 +16,7 @@ Usage::
       --log_samples
 """
 
-from typing import Union
+from typing import Optional, Union
 
 from loguru import logger as eval_logger
 
@@ -45,6 +45,9 @@ class Wan2_2_T2V(DiffusersWMBase):
         width: int = 832,
         num_inference_steps: int = 50,
         guidance_scale: float = 5.0,
+        guidance_scale_2: Optional[float] = None,
+        negative_prompt: Optional[str] = None,
+        flow_shift: Optional[float] = None,
         fps: int = 16,
         seed: int = 42,
         dtype: str = "bfloat16",
@@ -67,6 +70,9 @@ class Wan2_2_T2V(DiffusersWMBase):
         self.width = int(width)
         self.num_inference_steps = int(num_inference_steps)
         self.guidance_scale = float(guidance_scale)
+        self.guidance_scale_2 = None if guidance_scale_2 is None else float(guidance_scale_2)
+        self.negative_prompt = None if negative_prompt is None else str(negative_prompt)
+        self.flow_shift = None if flow_shift is None else float(flow_shift)
         # Attention kernel override. Empty = default SDPA. Supported values
         # per diffusers main's attention_dispatch: "flash" (FA2),
         # "_flash_3"/"_flash_3_hub" (FA3 Hopper-native, requires kernels pkg),
@@ -75,20 +81,31 @@ class Wan2_2_T2V(DiffusersWMBase):
         # whole call in try/except and falls back to default on failure.
         self.attn_backend = str(attn_backend).strip()
 
+    def _post_to_device(self, pipe, device: str) -> None:
+        if self.flow_shift is not None:
+            pipe.scheduler.register_to_config(flow_shift=self.flow_shift)
+            eval_logger.info(f"Overrode scheduler flow_shift={self.flow_shift}")
+
     def _generation_signature(self, prompt, visuals, extras):
-        return f"{self.pretrained}:{self.seed}:{self.num_inference_steps}:{self.guidance_scale}:{self.num_frames}:{self.height}x{self.width}:{prompt[:200]}"
+        request_seed = int(extras.get("_lmms_eval_seed", self.seed))
+        return f"{self.pretrained}:{request_seed}:{self.num_inference_steps}:{self.guidance_scale}:{self.guidance_scale_2}:{self.flow_shift}:{self.num_frames}:{self.height}x{self.width}:{self.negative_prompt}:{prompt[:200]}"
 
     def _invoke_pipeline(self, prompt, visuals, generator, **extras):
         def _run():
-            return self._pipe(
-                prompt=prompt,
-                num_frames=self.num_frames,
-                height=self.height,
-                width=self.width,
-                num_inference_steps=self.num_inference_steps,
-                guidance_scale=self.guidance_scale,
-                generator=generator,
-            )
+            pipeline_kwargs = {
+                "prompt": prompt,
+                "num_frames": self.num_frames,
+                "height": self.height,
+                "width": self.width,
+                "num_inference_steps": self.num_inference_steps,
+                "guidance_scale": self.guidance_scale,
+                "generator": generator,
+            }
+            if self.negative_prompt is not None:
+                pipeline_kwargs["negative_prompt"] = self.negative_prompt
+            if self.guidance_scale_2 is not None:
+                pipeline_kwargs["guidance_scale_2"] = self.guidance_scale_2
+            return self._pipe(**pipeline_kwargs)
 
         if self.attn_backend:
             try:

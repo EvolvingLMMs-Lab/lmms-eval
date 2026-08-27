@@ -8,7 +8,6 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 import numpy as np
 import torch.distributed as dist
 from accelerate import Accelerator, DistributedType
-from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from PIL import Image
 
@@ -18,6 +17,10 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 from lmms_eval.models.model_utils.progress import make_progress
+
+# decord has no wheels for some platforms (e.g. macOS); defer the import so the wrapper stays importable and only video-decoding paths require it.
+VideoReader, _HAS_DECORD = optional_import("decord", "VideoReader")
+cpu, _ = optional_import("decord", "cpu")
 
 NUM_SECONDS_TO_SLEEP = int(os.getenv("NUM_SECONDS_TO_SLEEP", "5"))
 WORKERS = int(os.getenv("WORKERS", "32"))
