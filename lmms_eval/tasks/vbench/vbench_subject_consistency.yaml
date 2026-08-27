@@ -1,6 +1,4 @@
 task: vbench_subject_consistency
-dataset_kwargs:
-  data_files:
-    test: lmms_eval/tasks/vbench/data/subject_consistency.jsonl
+dataset_name: vbench_subject_consistency
 test_split: test
 include: _default_template_yaml

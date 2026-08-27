@@ -1,6 +1,4 @@
 task: vbench2_mechanics
-dataset_kwargs:
-  data_files:
-    test: lmms_eval/tasks/vbench/data/mechanics.jsonl
+dataset_name: vbench2_mechanics
 test_split: test
 include: _default_template_yaml

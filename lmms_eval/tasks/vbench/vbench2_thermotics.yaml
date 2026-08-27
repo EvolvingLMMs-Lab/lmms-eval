@@ -1,6 +1,4 @@
 task: vbench2_thermotics
-dataset_kwargs:
-  data_files:
-    test: lmms_eval/tasks/vbench/data/thermotics.jsonl
+dataset_name: vbench2_thermotics
 test_split: test
 include: _default_template_yaml

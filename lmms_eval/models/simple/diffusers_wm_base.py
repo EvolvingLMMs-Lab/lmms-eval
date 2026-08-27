@@ -21,8 +21,11 @@ Required (methods):
 
 Optional overrides:
     ``_patch_pipeline_cls_before_load()``   class-level monkeypatch hook.
+    ``_pipeline_load_kwargs(dtype)``        custom ``from_pretrained`` inputs.
     ``_post_to_device(pipe, device)``       extra per-pipeline device fixups.
     ``_extract_visuals(req)``               I2V / V2V conditioning extraction.
+    ``_request_extras(req, gen_kwargs)``    Per-document generation metadata.
+    ``_output_path(...)``                   Benchmark-specific file naming.
     ``_export(output, out_path)``           swap MP4 export for images / other.
 
 Parallelism
@@ -39,6 +42,7 @@ import hashlib
 import os
 import threading
 import traceback
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar, List, Optional, Tuple, Union
@@ -177,6 +181,7 @@ class DiffusersWMBase(lmms):
         *,
         pretrained: str,
         output_dir: str,
+        revision: Optional[str] = None,
         seed: int = 42,
         dtype: str = "bfloat16",
         fps: int = 16,
@@ -193,6 +198,7 @@ class DiffusersWMBase(lmms):
             raise NotImplementedError(f"{type(self).__name__}: tp_size={self.plan.tp_size} not yet supported. " "DiffusersWMBase is DP-only; TP support is planned in a follow-up PR.")
 
         self.pretrained = str(pretrained)
+        self.revision = str(revision) if revision else None
         self.output_dir = str(output_dir)
         self.seed = int(seed)
         self.dtype_name = str(dtype)
@@ -208,6 +214,7 @@ class DiffusersWMBase(lmms):
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
         eval_logger.info(
             f"{type(self).__name__} init: pretrained={self.pretrained}, "
+            f"revision={self.revision}, "
             f"rank={self.plan.global_rank}/{self.plan.world_size}, "
             f"device={self.plan.device_str()}, dtype={self.dtype_name}, "
             f"seed={self.seed}, output_dir={self.output_dir}"
@@ -242,7 +249,7 @@ class DiffusersWMBase(lmms):
         device = self.plan.device_str()
         dtype = _resolve_torch_dtype(self.dtype_name)
         eval_logger.info(f"Loading {self._pipeline_cls.__name__} from {self.pretrained} on {device}")
-        self._pipe = self._pipeline_cls.from_pretrained(self.pretrained, torch_dtype=dtype)
+        self._pipe = self._pipeline_cls.from_pretrained(self.pretrained, **self._pipeline_load_kwargs(dtype))
         _move_pipeline_to_device(self._pipe, device)
         _patch_scheduler_keep_device(self._pipe, device)
         self._post_to_device(self._pipe, device)
@@ -259,6 +266,13 @@ class DiffusersWMBase(lmms):
         """Apply class-level monkeypatches before ``from_pretrained``. No-op by default."""
         return
 
+    def _pipeline_load_kwargs(self, dtype) -> dict:
+        """Return keyword arguments for the pipeline's ``from_pretrained`` call."""
+        kwargs = {"torch_dtype": dtype}
+        if self.revision is not None:
+            kwargs["revision"] = self.revision
+        return kwargs
+
     def _post_to_device(self, pipe, device: str) -> None:
         """Extra per-pipeline device fixups. No-op by default."""
         return
@@ -270,6 +284,39 @@ class DiffusersWMBase(lmms):
         """
         return []
 
+    def _request_extras(self, req: Instance, gen_kwargs: Optional[dict]) -> dict:
+        """Merge static generation kwargs with supported per-row metadata.
+
+        VBench requires a different random seed for each sample and prescribes
+        scorer-readable filenames. Its Hugging Face dataset carries that
+        information in each row, while lmms-eval's request tuple only carries
+        the row index. Keep this adaptation in the generation base so every
+        diffusers-backed T2V model follows the same protocol.
+        """
+
+        extras = dict(gen_kwargs or {})
+        _ctx, _kwargs, _doc_to_visual, doc_id, task, split = req.args
+        try:
+            doc = self.task_dict[task][split][doc_id]
+        except Exception as exc:
+            if str(task).startswith("vbench"):
+                raise RuntimeError(f"Could not read required VBench row metadata for {task}/{split}/{doc_id}") from exc
+            eval_logger.debug(f"Could not read task row metadata for {task}/{split}/{doc_id}: {exc}")
+            return extras
+
+        if not isinstance(doc, Mapping) or doc.get("suite") not in {"vbench", "vbench2"}:
+            if str(task).startswith("vbench"):
+                raise ValueError(f"Task row {task}/{split}/{doc_id} does not contain VBench Hugging Face metadata")
+            return extras
+
+        extras["_lmms_eval_seed"] = int(doc["seed"])
+        extras["_lmms_eval_vbench"] = {
+            "suite": str(doc["suite"]),
+            "sample_index": int(doc["sample_index"]),
+            "official_dimensions": list(doc.get("official_dimensions") or []),
+        }
+        return extras
+
     def _generation_signature(self, prompt: str, visuals: List, extras: dict) -> str:
         """Return a deterministic string used for the cache key."""
         raise NotImplementedError(f"{type(self).__name__} must implement _generation_signature")
@@ -277,6 +324,29 @@ class DiffusersWMBase(lmms):
     def _invoke_pipeline(self, prompt: str, visuals: List, generator, **extras):
         """Call the diffusers pipeline; return the raw output object."""
         raise NotImplementedError(f"{type(self).__name__} must implement _invoke_pipeline")
+
+    def _output_path(self, prompt: str, doc_id, task: str, signature: str, extras: dict) -> Path:
+        """Return the artifact path, including VBench scorer conventions."""
+
+        metadata = extras.get("_lmms_eval_vbench")
+        if not isinstance(metadata, Mapping):
+            return _cache_path(self.output_dir, task, doc_id, signature, ext=self._output_ext)
+
+        suite = metadata["suite"]
+        sample_index = int(metadata["sample_index"])
+        filename_prompt = prompt if suite == "vbench" else prompt[:180]
+        filename = f"{filename_prompt}-{sample_index}.{self._output_ext}"
+        if Path(filename).name != filename:
+            raise ValueError(f"VBench prompt cannot be represented as a filename: {prompt!r}")
+
+        output_dir = Path(self.output_dir) / suite
+        dimensions = metadata.get("official_dimensions") or []
+        if suite == "vbench2" and task != "vbench2" and len(dimensions) == 1:
+            dimension = str(dimensions[0])
+            if Path(dimension).name != dimension:
+                raise ValueError(f"Invalid VBench 2.0 dimension directory: {dimension!r}")
+            output_dir /= dimension
+        return output_dir / filename
 
     def _export(self, output_obj, out_path: Path) -> None:
         """Default: export first video frames to MP4. Override for image outputs."""
@@ -296,26 +366,29 @@ class DiffusersWMBase(lmms):
     ) -> str:
         import torch
 
-        extras = extras or {}
-        self._ensure_loaded()
-
+        extras = dict(extras or {})
         sig = self._generation_signature(prompt, visuals, extras)
-        out_path = _cache_path(self.output_dir, task, doc_id, sig, ext=self._output_ext)
-        if out_path.exists():
+        out_path = self._output_path(prompt, doc_id, task, sig, extras)
+        if out_path.exists() and out_path.stat().st_size > 0:
             eval_logger.debug(f"Cache hit: {out_path}")
             return str(out_path)
 
+        self._ensure_loaded()
+        partial_path = out_path.with_name(f".{out_path.name}.{os.getpid()}.partial{out_path.suffix}")
         try:
-            generator = torch.Generator(device=self.plan.device_str()).manual_seed(self.seed)
-            output = self._invoke_pipeline(prompt, visuals, generator, **extras)
+            request_seed = int(extras.get("_lmms_eval_seed", self.seed))
+            generator = torch.Generator(device=self.plan.device_str()).manual_seed(request_seed)
+            pipeline_extras = {key: value for key, value in extras.items() if not key.startswith("_lmms_eval_")}
+            output = self._invoke_pipeline(prompt, visuals, generator, **pipeline_extras)
             out_path.parent.mkdir(parents=True, exist_ok=True)
-            self._export(output, out_path)
-            if out_path.exists():
-                eval_logger.info(f"Generated: {out_path} ({out_path.stat().st_size} bytes)")
-            else:
-                eval_logger.error(f"Output NOT on disk after export: {out_path}")
+            self._export(output, partial_path)
+            if not partial_path.exists() or partial_path.stat().st_size == 0:
+                raise RuntimeError(f"Output is missing or empty after export: {partial_path}")
+            partial_path.replace(out_path)
+            eval_logger.info(f"Generated: {out_path} ({out_path.stat().st_size} bytes)")
             return str(out_path)
         except Exception as exc:
+            partial_path.unlink(missing_ok=True)
             eval_logger.error(f"Generation failed: task={task} doc_id={doc_id}: {exc}\n" f"{traceback.format_exc()}")
             return f"[GENERATION_FAILED] {exc}"
 
@@ -330,7 +403,8 @@ class DiffusersWMBase(lmms):
                 pbar.update(1)
                 continue
             visuals = self._extract_visuals(req)
-            results[i] = self._generate_one(prompt, visuals, doc_id, task, extras=gen_kwargs or {})
+            extras = self._request_extras(req, gen_kwargs)
+            results[i] = self._generate_one(prompt, visuals, doc_id, task, extras=extras)
             pbar.update(1)
         pbar.close()
         ok = sum(1 for r in results if r and not r.startswith("["))

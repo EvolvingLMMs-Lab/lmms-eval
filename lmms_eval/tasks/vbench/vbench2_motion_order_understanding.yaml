@@ -1,6 +1,4 @@
 task: vbench2_motion_order_understanding
-dataset_kwargs:
-  data_files:
-    test: lmms_eval/tasks/vbench/data/motion_order_understanding.jsonl
+dataset_name: vbench2_motion_order_understanding
 test_split: test
 include: _default_template_yaml

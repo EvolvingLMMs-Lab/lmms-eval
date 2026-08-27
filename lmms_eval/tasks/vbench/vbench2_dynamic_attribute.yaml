@@ -1,6 +1,4 @@
 task: vbench2_dynamic_attribute
-dataset_kwargs:
-  data_files:
-    test: lmms_eval/tasks/vbench/data/dynamic_attribute.jsonl
+dataset_name: vbench2_dynamic_attribute
 test_split: test
 include: _default_template_yaml

@@ -1,6 +1,4 @@
 task: vbench_spatial_relationship
-dataset_kwargs:
-  data_files:
-    test: lmms_eval/tasks/vbench/data/spatial_relationship.jsonl
+dataset_name: vbench_spatial_relationship
 test_split: test
 include: _default_template_yaml

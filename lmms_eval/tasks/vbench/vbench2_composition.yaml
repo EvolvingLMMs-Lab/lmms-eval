@@ -1,6 +1,4 @@
 task: vbench2_composition
-dataset_kwargs:
-  data_files:
-    test: lmms_eval/tasks/vbench/data/composition.jsonl
+dataset_name: vbench2_composition
 test_split: test
 include: _default_template_yaml

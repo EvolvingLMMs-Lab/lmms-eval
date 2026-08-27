@@ -1,6 +1,4 @@
 task: vbench_dynamic_degree
-dataset_kwargs:
-  data_files:
-    test: lmms_eval/tasks/vbench/data/dynamic_degree.jsonl
+dataset_name: vbench_dynamic_degree
 test_split: test
 include: _default_template_yaml

@@ -1,6 +1,4 @@
 task: vbench2_complex_landscape
-dataset_kwargs:
-  data_files:
-    test: lmms_eval/tasks/vbench/data/complex_landscape.jsonl
+dataset_name: vbench2_complex_landscape
 test_split: test
 include: _default_template_yaml

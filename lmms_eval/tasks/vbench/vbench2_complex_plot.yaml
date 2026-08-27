@@ -1,6 +1,4 @@
 task: vbench2_complex_plot
-dataset_kwargs:
-  data_files:
-    test: lmms_eval/tasks/vbench/data/complex_plot.jsonl
+dataset_name: vbench2_complex_plot
 test_split: test
 include: _default_template_yaml

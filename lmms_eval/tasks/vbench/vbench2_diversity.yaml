@@ -1,6 +1,4 @@
 task: vbench2_diversity
-dataset_kwargs:
-  data_files:
-    test: lmms_eval/tasks/vbench/data/diversity.jsonl
+dataset_name: vbench2_diversity
 test_split: test
 include: _default_template_yaml

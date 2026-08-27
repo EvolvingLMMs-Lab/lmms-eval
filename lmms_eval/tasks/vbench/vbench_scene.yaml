@@ -1,6 +1,4 @@
 task: vbench_scene
-dataset_kwargs:
-  data_files:
-    test: lmms_eval/tasks/vbench/data/scene.jsonl
+dataset_name: vbench_scene
 test_split: test
 include: _default_template_yaml
