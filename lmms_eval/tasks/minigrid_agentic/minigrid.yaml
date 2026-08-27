@@ -1,0 +1,50 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/minigrid_agentic/data/minigrid.jsonl
+task: "minigrid"
+test_split: test
+output_type: generate_until_game
+doc_to_visual: !function utils.minigrid_doc_to_visual
+doc_to_text: !function utils.minigrid_doc_to_text
+doc_to_target: !function utils.minigrid_doc_to_target
+# The environment implementation and parser functions stay with this task.
+# Model-side serving stays a CLI choice:
+#   --agentic_model_server openai --agentic_model_server_args model=...,base_url=...
+game_env: minigrid
+model_specific_parsers:
+  default:
+    observation: !function parsers.minigrid_observation_parser
+    action: !function parsers.minigrid_action_parser
+  "*Qwen*":
+    action:
+      - !function parsers.minigrid_qwen_output_parser
+      - !function parsers.minigrid_action_parser
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+  max_game_steps: 40
+process_results: !function utils.minigrid_process_results
+metric_list:
+  - metric: minigrid_success
+    aggregation: !function utils.minigrid_aggregate_mean
+    higher_is_better: true
+  - metric: minigrid_steps
+    aggregation: !function utils.minigrid_aggregate_mean
+    higher_is_better: false
+  - metric: minigrid_invalid_actions
+    aggregation: !function utils.minigrid_aggregate_mean
+    higher_is_better: false
+  - metric: minigrid_env_error
+    aggregation: !function utils.minigrid_aggregate_mean
+    higher_is_better: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  version: 0.2
+  description: "MiniGrid game loop with task-local environment and model-specific parser pipelines"

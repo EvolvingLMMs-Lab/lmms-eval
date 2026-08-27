@@ -21,6 +21,8 @@ from lmms_eval.agentic.servers import (
     OpenAIModelServer,
 )
 from lmms_eval.agentic.types import (
+    ActionDef,
+    ActionSpec,
     AgentInput,
     AgentOutput,
     ContentBlock,
@@ -36,6 +38,8 @@ from lmms_eval.agentic.types import (
 
 __all__ = [
     "REGISTRY",
+    "ActionDef",
+    "ActionSpec",
     "AgentInput",
     "AgentOutput",
     "ContentBlock",
