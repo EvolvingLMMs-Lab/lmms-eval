@@ -62,7 +62,7 @@ def _build_mcp_client(server_path: str) -> "MCPClient":
     try:
         from lmms_eval.mcp.client import MCPClient
     except ImportError as exc:
-        raise ImportError("MCP support requires the optional 'mcp' dependency. " "Install with: pip install 'lmms_eval[mcp]'") from exc
+        raise ImportError("MCP support requires the optional 'mcp' dependency. Install with: pip install 'lmms_eval[mcp]'") from exc
     return MCPClient(server_path)
 
 

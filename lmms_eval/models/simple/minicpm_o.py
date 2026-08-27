@@ -366,7 +366,7 @@ class MiniCPM_O(lmms):
                 if isinstance(until, str):
                     until = [until]
                 elif not isinstance(until, list):
-                    raise ValueError(f"Expected `gen_kwargs['until']` to be of type " f"Union[str,list] but got {type(until)}")
+                    raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
 
             for i, context in enumerate(contexts):
                 visual = visuals[i] if i < len(visuals) else None

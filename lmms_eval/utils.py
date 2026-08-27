@@ -732,7 +732,7 @@ def positional_deprecated(fn):
     @functools.wraps(fn)
     def _wrapper(*args, **kwargs):
         if len(args) != 1 if inspect.ismethod(fn) else 0:
-            print(f"WARNING: using {fn.__name__} with positional arguments is " "deprecated and will be disallowed in a future version of " "lmms-evaluation-harness!")
+            print(f"WARNING: using {fn.__name__} with positional arguments is deprecated and will be disallowed in a future version of lmms-evaluation-harness!")
         return fn(*args, **kwargs)
 
     return _wrapper
@@ -954,7 +954,7 @@ def import_function(loader, node):
         return function
     except Exception as ex:
         # Re-raise with context to aid debugging
-        raise ImportError(f"Failed to import function '{function_name}' from module '{module_name}'. " f"Tried relative path '{module_path}' and absolute import.") from ex
+        raise ImportError(f"Failed to import function '{function_name}' from module '{module_name}'. Tried relative path '{module_path}' and absolute import.") from ex
 
 
 _LOCAL_BUILDERS = frozenset({"csv", "json", "parquet", "text", "pandas", "arrow"})

@@ -92,7 +92,7 @@ def multimodal_rewardbench_aggregate_results(results):
         accs[category].append(score)
 
     for task in accs:
-        eval_logger.info(f"{task}: {sum(accs[task])} / {len(accs[task])} = {(sum(accs[task])/len(accs[task])):.2f}")
+        eval_logger.info(f"{task}: {sum(accs[task])} / {len(accs[task])} = {(sum(accs[task]) / len(accs[task])):.2f}")
 
     total_score = sum(accs["all"]) / len(accs["all"])  # TODO: micro or macro-avg? currently: micro-avg.
     return total_score

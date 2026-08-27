@@ -11,7 +11,7 @@ from loguru import logger
 from lmms_eval.models.registry_v2 import ModelManifest, ModelRegistryV2
 
 logger.remove()
-log_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | " "<level>{level: <8}</level> | " "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - " "<level>{message}</level>"
+log_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
 logger.add(sys.stdout, level="WARNING", format=log_format)
 
 
@@ -202,7 +202,7 @@ def _merge_legacy_plugin_models(registry: ModelRegistryV2) -> None:
         return
 
     warnings.warn(
-        "LMMS_EVAL_PLUGINS is deprecated. Prefer Python entry-points group " "'lmms_eval.models' for plugin model registration.",
+        "LMMS_EVAL_PLUGINS is deprecated. Prefer Python entry-points group 'lmms_eval.models' for plugin model registration.",
         DeprecationWarning,
         stacklevel=2,
     )

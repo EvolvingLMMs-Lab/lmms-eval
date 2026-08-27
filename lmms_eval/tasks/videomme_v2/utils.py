@@ -91,7 +91,7 @@ def videomme_v2_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs and lmms_eval_specific_kwargs.get("format") == "qwen3_vl":
         return _doc_to_text_qwen3vl(doc, lmms_eval_specific_kwargs)
 
-    instruct_prompt = "Select the best answer to the following multiple-choice question based on the video. " "Respond with only the letter (A, B, C, D, E, F, G, or H) of the correct option."
+    instruct_prompt = "Select the best answer to the following multiple-choice question based on the video. Respond with only the letter (A, B, C, D, E, F, G, or H) of the correct option."
     question = doc["question"]
     options = doc["options"]  # already "A. ...\nB. ...\n...H. ..."
 
@@ -141,7 +141,7 @@ def videomme_v2_doc_to_text_subtitle(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs and lmms_eval_specific_kwargs.get("format") == "qwen3_vl":
         return _doc_to_text_subtitle_qwen3vl(doc, lmms_eval_specific_kwargs)
 
-    instruct_prompt = "Select the best answer to the following multiple-choice question based on the video. " "Respond with only the letter (A, B, C, D, E, F, G, or H) of the correct option."
+    instruct_prompt = "Select the best answer to the following multiple-choice question based on the video. Respond with only the letter (A, B, C, D, E, F, G, or H) of the correct option."
     question = doc["question"]
     options = doc["options"]
 

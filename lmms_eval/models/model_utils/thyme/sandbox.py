@@ -294,7 +294,6 @@ class CropCoordinateTransformer(ast.NodeTransformer):
             # For now, any 4-tuple assignment to 4 variables is considered.
             and len(node.value.elts) == 4
         ):
-
             target_names = [t.id.lower() for t in node.targets[0].elts]
             # A heuristic: if names like 'x1', 'y1', 'x2', 'y2' or 'left',
             # 'top', 'right', 'bottom' are used
@@ -329,7 +328,6 @@ class CropCoordinateTransformer(ast.NodeTransformer):
             and isinstance(node.value, ast.Tuple)
             and len(node.value.elts) == 4
         ):
-
             raw_coords_from_code = [self._get_numeric_value(v) for v in node.value.elts]
 
             if all(c is not None for c in raw_coords_from_code):
@@ -358,7 +356,6 @@ class CropCoordinateTransformer(ast.NodeTransformer):
             and len(node.value.slice.value.elts) == 2
             and all(isinstance(s, ast.Slice) for s in node.value.slice.value.elts)
         ):  # both are Slices
-
             slice_tuple_node = node.value.slice.value
             y_slice_node = slice_tuple_node.elts[0]  # First slice is y-dim
             x_slice_node = slice_tuple_node.elts[1]  # Second slice is x-dim
@@ -608,7 +605,7 @@ def _sandboxed_execution_target(
                 if hasattr(ast, "unparse"):
                     code_to_execute = ast.unparse(new_tree)
                 else:
-                    print("Warning: ast.unparse not available (requires Python 3.9+). " "Code for image_path replacement not updated. Consider installing" "'astor' for older Python versions or upgrading Python.")
+                    print("Warning: ast.unparse not available (requires Python 3.9+). Code for image_path replacement not updated. Consider installing'astor' for older Python versions or upgrading Python.")
         except SyntaxError as e:
             print(f"Syntax error when parsing code for image_path replacement: {e}")
         except Exception as e:
@@ -626,7 +623,7 @@ def _sandboxed_execution_target(
 
     if actual_image_width is not None and actual_image_height is not None:
         if actual_image_width == 0 or actual_image_height == 0:
-            print(f"WARNING: Input image '{input_image_path}' has zero width or height" f"({actual_image_width}x{actual_image_height}). Clamping might result in zero-size crops.")
+            print(f"WARNING: Input image '{input_image_path}' has zero width or height({actual_image_width}x{actual_image_height}). Clamping might result in zero-size crops.")
         try:
             crop_ast_tree = ast.parse(code_to_execute)
             crop_transformer = CropCoordinateTransformer(actual_image_width, actual_image_height)
@@ -635,7 +632,7 @@ def _sandboxed_execution_target(
                 if hasattr(ast, "unparse"):
                     code_to_execute = ast.unparse(new_crop_ast_tree)
                 else:
-                    print("WARNING: ast.unparse not available (Python 3.9+)." "Crop coordinate clamping not fully updated in code string.")
+                    print("WARNING: ast.unparse not available (Python 3.9+).Crop coordinate clamping not fully updated in code string.")
         except SyntaxError:
             # print(f"ERROR: Syntax error when parsing code for crop coordinate clamping: {e}")
             pass
@@ -714,10 +711,10 @@ def _sandboxed_execution_target(
             if isinstance(processed_path_from_code, str) and processed_path_from_code.startswith(temp_output_dir) and os.path.isfile(processed_path_from_code):
                 processed_paths_list.append(processed_path_from_code)
             elif isinstance(processed_path_from_code, str) and processed_path_from_code.startswith(temp_output_dir) and not os.path.exists(processed_path_from_code):
-                error_msg = f"Sandbox for {item_id}: 'processed_path' variable set to " f"'{processed_path_from_code}', but file does not exist."
+                error_msg = f"Sandbox for {item_id}: 'processed_path' variable set to '{processed_path_from_code}', but file does not exist."
                 processed_path_from_code = None
             elif processed_path_from_code is not None:
-                error_msg = f"Sandbox for {item_id}: 'processed_path' variable was " f"'{processed_path_from_code}', which is not a valid file path in {temp_output_dir}."
+                error_msg = f"Sandbox for {item_id}: 'processed_path' variable was '{processed_path_from_code}', which is not a valid file path in {temp_output_dir}."
                 processed_path_from_code = None
         # print(full_print_output)
         if full_print_output:
@@ -732,7 +729,7 @@ def _sandboxed_execution_target(
                     if potential_path_from_print not in processed_paths_list:
                         processed_paths_list.append(potential_path_from_print)
                 elif not error_msg:
-                    possible_error_msg = f"Sandbox for {item_id}: Path '{potential_path_from_print}' " "found in print, but file does not exist or is not a file."
+                    possible_error_msg = f"Sandbox for {item_id}: Path '{potential_path_from_print}' found in print, but file does not exist or is not a file."
             if len(processed_paths_list) == 0:
                 if num_parse_images == len(possible_image_path_list):
                     processed_paths_list = possible_image_path_list
@@ -751,11 +748,11 @@ def _sandboxed_execution_target(
                     pass
 
     except ImportError as e:
-        error_msg = f"Sandbox for {item_id}: Code execution failed due to ImportError. " f"Ensure all required modules are available and correctly named: {e}"
+        error_msg = f"Sandbox for {item_id}: Code execution failed due to ImportError. Ensure all required modules are available and correctly named: {e}"
         if "cv2" in str(e).lower() and not cv2:
             error_msg += f"(Note: cv2 was not available in the sandbox host environment): {e}"
     except MemoryError as e:
-        error_msg = f"Sandbox for {item_id}: Code execution failed due to MemoryError. " f"The operation likely consumed too much memory: {e}"
+        error_msg = f"Sandbox for {item_id}: Code execution failed due to MemoryError. The operation likely consumed too much memory: {e}"
     except SyntaxError as e:  # Catch syntax errors from exec itself
         error_msg = f"Sandbox for {item_id}: Code execution failed due to SyntaxError: {e}"
     except Exception as e:
@@ -823,7 +820,7 @@ def execute_code_in_sandbox(
         return (
             [],
             "",
-            (f"Sandbox for {item_id}: Code contains potentially dangerous system operations " "such as remove. Execution denied.",),
+            (f"Sandbox for {item_id}: Code contains potentially dangerous system operations such as remove. Execution denied.",),
             None,
         )
 

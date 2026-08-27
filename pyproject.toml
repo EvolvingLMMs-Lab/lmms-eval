@@ -1,5 +1,8 @@
-[tool.black]
+[tool.ruff]
 line-length = 240
+
+[tool.ruff.format]
+exclude = ["*.ipynb", "*.md"]
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]
@@ -22,7 +25,7 @@ classifiers = [
 requires-python = ">=3.10"
 dependencies = [
     "accelerate>=0.29.1",
-    "black>=24.1.0",
+    "ruff>=0.16.4",
     "isort>=5.13.2",
     "datasets>=2.19.0",
     "evaluate>=0.4.0",

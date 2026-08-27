@@ -161,11 +161,9 @@ def split_gt_equation_arrays(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     for item in data:
         # 只处理满足条件的字典
         if item.get("category_type") == "equation_isolated" and "\\begin{array" in item.get("latex", ""):
-
             # 抽取 array 内部内容
             match = ARRAY_RE.search(item["latex"])
             if match:
-
                 spec = match.group("spec")
                 if not is_all_l(spec):
                     # 若列里混有 r / c / p{…} 等，直接保留原条目
@@ -207,7 +205,6 @@ def split_equation_arrays(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
     for item in data:
         if item.get("category_type") == "equation_isolated" and "\\begin{array" in item.get("content", ""):
-
             content = item["content"]
             m = ARRAY_RE.search(content)
             if not m:
@@ -390,7 +387,6 @@ def match_gt2pred_quick(gt_items, pred_items, line_type, img_name):
     merged_ignore_results = []
 
     if len(ignore_gt_lines) > 0:
-
         ignore_matches_dict = {}
 
         ignore_matrix = compute_edit_distance_matrix_new(ignore_gt_lines, norm_pred_lines)

@@ -364,7 +364,7 @@ class MathVistaEvaluator:
                 if "choices" in example:
                     texts = ["Choices:"]
                     for i, choice in enumerate(example["choices"]):
-                        texts.append(f"({chr(ord('A')+i)}) {choice}")
+                        texts.append(f"({chr(ord('A') + i)}) {choice}")
                     prompt += "\n" + "\n".join(texts)
 
                 # caption
@@ -511,13 +511,13 @@ class MathVistaEvaluator:
             if shot_type == "format-prompt":
                 texts = []
                 for i, choice in enumerate(choices):
-                    texts.append(f"{chr(ord('A')+i)}. {choice}")
+                    texts.append(f"{chr(ord('A') + i)}. {choice}")
                 choices_text = "\n".join(texts)
             else:
                 # choices: (A) 1.2 (B) 1.3 (C) 1.4 (D) 1.5
                 texts = ["Choices:"]
                 for i, choice in enumerate(choices):
-                    texts.append(f"({chr(ord('A')+i)}) {choice}")
+                    texts.append(f"({chr(ord('A') + i)}) {choice}")
                 choices_text = "\n".join(texts)
         else:
             choices_text = ""

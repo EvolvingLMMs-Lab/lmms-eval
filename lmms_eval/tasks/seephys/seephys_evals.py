@@ -174,7 +174,6 @@ class SeephysEvaluator:
                     continue
 
                 if not content:
-
                     textual = json.dumps(resp_dict, ensure_ascii=False)[:8000]
                     return textual
 
@@ -377,7 +376,6 @@ Now please provide your judgement (0 or 1), DONNOT output explanation:
 
         extracted_answer = self._extract_answer_by_rule(line)
         if extracted_answer == "":
-
             log += "No extracted answer from model output.\n"
             return dict(log=log, res=0, extracted=extracted_answer)
 

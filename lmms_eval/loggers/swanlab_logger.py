@@ -45,7 +45,7 @@ class SwanLabLogger:
         try:
             import swanlab
         except ImportError as e:
-            raise ImportError("To use the SwanLab logging functionality please install swanlab.\n" "Run `pip install swanlab` (or `pip install lmms-eval[swanlab]`).") from e
+            raise ImportError("To use the SwanLab logging functionality please install swanlab.\nRun `pip install swanlab` (or `pip install lmms-eval[swanlab]`).") from e
 
         # `exp_name` is the user-facing knob (mirrors wandb's `name`); map it to
         # SwanLab's `experiment_name`.

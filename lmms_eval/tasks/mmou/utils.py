@@ -237,7 +237,7 @@ def _log_breakdown(results):
 
 def mmou_aggregate_submission(results, args):
     path = _write_submission(results, "mmou_submission.json", args)
-    eval_logger.info(f"MMOU submission saved to {path} ({len(results)} predictions). " "Upload to https://huggingface.co/spaces/nvidia/MMOU-Eval for scoring.")
+    eval_logger.info(f"MMOU submission saved to {path} ({len(results)} predictions). Upload to https://huggingface.co/spaces/nvidia/MMOU-Eval for scoring.")
     _log_breakdown(results)
     return len(results)
 
@@ -268,6 +268,6 @@ def mmou_aggregate_accuracy(results, args):
         for k in DURATION_BUCKETS + ["Unknown"]:
             scores = per_bucket.get(k, [])
             if scores:
-                eval_logger.info(f"  {k} min: {sum(scores)/len(scores)*100:.2f}% [{len(scores)}]")
+                eval_logger.info(f"  {k} min: {sum(scores) / len(scores) * 100:.2f}% [{len(scores)}]")
 
     return acc

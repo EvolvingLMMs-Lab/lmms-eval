@@ -76,13 +76,13 @@ def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
             response_data = response.json()
             return response_data["choices"][0]["message"]["content"]
         except requests.exceptions.RequestException as e:
-            eval_logger.warning(f"Request failed on attempt {attempt+1}: {e}")
+            eval_logger.warning(f"Request failed on attempt {attempt + 1}: {e}")
             time.sleep(wait_time)
             if attempt == max_retries - 1:
                 eval_logger.error(f"Failed to get response after {max_retries} attempts")
                 return ""
         except Exception as e:
-            eval_logger.error(f"Error on attempt {attempt+1}: {e}")
+            eval_logger.error(f"Error on attempt {attempt + 1}: {e}")
             return ""
 
 

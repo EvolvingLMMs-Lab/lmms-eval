@@ -1,7 +1,8 @@
 ---
 name: lmms-eval-guide
-version: v0.7
 description: Guides AI coding agents through the lmms-eval codebase - a unified evaluation framework for Large Multimodal Models (LMMs). Use when integrating new models, adding evaluation tasks/benchmarks, running YAML config-driven evaluations, orchestrating non-blocking training-time evaluation via the HTTP eval server, or navigating the evaluation pipeline architecture.
+metadata:
+  version: v0.7
 ---
 
 # lmms-eval Codebase Guide
@@ -54,11 +55,11 @@ Use this skill when requests include any of the following intents:
 ## Setup
 
 ```bash
-uv sync && pre-commit install
+uv sync && uv run pre-commit install
 # Quick eval test
 python -m lmms_eval --model qwen2_5_vl --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct --tasks mme --batch_size 1 --limit 8
 # Lint
-pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 
 ## Architecture
@@ -209,6 +210,6 @@ export PERSPECTIVE_API_KEY="..."                # Toxicity scoring (optional, fa
 ## Constraints
 
 - **Package manager**: `uv` only, never `pip`
-- **Formatting**: Black (line-length=240) + isort (profile=black). Run `pre-commit run --all-files`
+- **Formatting**: Ruff formatter (line-length=240) + isort (profile=black). Run `uv run pre-commit run --all-files`
 - **Testing**: Always use `--limit 5` or `--limit 8` when testing changes
 - **Follow patterns**: Match the style of neighboring files exactly

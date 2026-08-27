@@ -325,7 +325,7 @@ def doc_to_text_visual_cot(
         question = question + "\nChoices:\n" + format_choices(doc["options"])
 
     # Add auxiliary image notice
-    question = "In addition to the original image, you are also given an auxiliary " "visualization image that highlights key visual elements.\n\n" + question
+    question = "In addition to the original image, you are also given an auxiliary visualization image that highlights key visual elements.\n\n" + question
 
     # Add pre_prompt and post_prompt
     if lmms_eval_specific_kwargs:

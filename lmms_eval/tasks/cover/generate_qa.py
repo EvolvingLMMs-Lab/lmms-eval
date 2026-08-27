@@ -31,7 +31,7 @@ def main():
         "--output",
         type=str,
         default="",
-        help="Output JSON file path (optional). If set, writes a flat " "QA JSON with all samples.",
+        help="Output JSON file path (optional). If set, writes a flat QA JSON with all samples.",
     )
     parser.add_argument(
         "--cache-dir",

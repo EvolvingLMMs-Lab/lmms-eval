@@ -51,7 +51,7 @@ class AsyncHFModel(lmms):
         super().__init__()
 
         if int(os.environ.get("WORLD_SIZE", "1")) > 1:
-            raise ValueError("async_hf_model manages multi-GPU dispatch internally. " "Please run without accelerate/torchrun multi-process launch.")
+            raise ValueError("async_hf_model manages multi-GPU dispatch internally. Please run without accelerate/torchrun multi-process launch.")
 
         valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
         if attn_implementation not in valid_attn_implementations:

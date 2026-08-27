@@ -23,7 +23,7 @@ def is_number(s):
 
 def save_jsonl(path: str, data: list, t_stamp=True) -> None:
     if t_stamp:
-        file_name = f"{path.replace('.jsonl','')}{timestamp()}.jsonl"
+        file_name = f"{path.replace('.jsonl', '')}{timestamp()}.jsonl"
     else:
         file_name = path
     with open(file_name, "w", encoding="utf-8") as f:

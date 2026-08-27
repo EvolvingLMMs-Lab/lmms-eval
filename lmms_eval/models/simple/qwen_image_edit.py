@@ -65,7 +65,7 @@ class QwenImageEdit(lmms):
         stage2_max_new_tokens: int = 512,
         stage2_temperature: float = 0.0,
         stage2_do_sample: bool = False,
-        generation_prompt_template: str = ("Based on this image and question, generate an annotated " "or highlighted version that helps answer: {question}"),
+        generation_prompt_template: str = ("Based on this image and question, generate an annotated or highlighted version that helps answer: {question}"),
         save_intermediate: bool = False,
         intermediate_dir: Optional[str] = None,
         fail_gracefully: bool = True,
@@ -300,7 +300,7 @@ class QwenImageEdit(lmms):
 
         # Ensure we have both editing and understanding capabilities
         if self.mode != "editing":
-            raise ValueError("Uni-MMMU interleaved mode requires editing mode. " "Use: --model_args mode=editing")
+            raise ValueError("Uni-MMMU interleaved mode requires editing mode. Use: --model_args mode=editing")
 
         # We need understanding model for text generation
         # Load it temporarily if not already loaded
@@ -364,7 +364,7 @@ class QwenImageEdit(lmms):
                 eval_logger.info(f"Saved jigsaw image 1: {img1_path}")
 
             # Generate final answer using understanding model
-            final_prompt = f"{prompt}\n\n" f"Two completion images have been generated. " f'Now output EXACTLY ONE <FINAL_ANSWER_JSON>{{"choice": 0 or 1, "rationale": "≤30 words"}}</FINAL_ANSWER_JSON>'
+            final_prompt = f'{prompt}\n\nTwo completion images have been generated. Now output EXACTLY ONE <FINAL_ANSWER_JSON>{{"choice": 0 or 1, "rationale": "≤30 words"}}</FINAL_ANSWER_JSON>'
 
             # Load generated images
             completion_images = []
@@ -462,7 +462,7 @@ class QwenImageEdit(lmms):
                     eval_logger.info(f"Saved step {i} image: {img_path}")
 
             # Generate final answer
-            final_prompt = f"{accumulated_text}\n\n" f"After the images, emit EXACTLY ONE LINE containing ONLY the final move list " f"as <ANSWER_JSON>[...]</ANSWER_JSON>."
+            final_prompt = f"{accumulated_text}\n\nAfter the images, emit EXACTLY ONE LINE containing ONLY the final move list as <ANSWER_JSON>[...]</ANSWER_JSON>."
 
             all_step_images = [Image.open(p).convert("RGB") for p in generated_images if os.path.exists(p)]
             all_images = (input_images if input_images else []) + all_step_images
@@ -883,7 +883,7 @@ class QwenImageEdit(lmms):
         Note: This is not typically applicable for diffusion-based image editing models.
         Returns dummy values.
         """
-        eval_logger.warning("loglikelihood is not supported for Qwen-Image-Edit (diffusion model). " "Returning dummy values.")
+        eval_logger.warning("loglikelihood is not supported for Qwen-Image-Edit (diffusion model). Returning dummy values.")
         return [(0.0, False) for _ in requests]
 
     def generate_until_multi_round(self, requests) -> List[str]:

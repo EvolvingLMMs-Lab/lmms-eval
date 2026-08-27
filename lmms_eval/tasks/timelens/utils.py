@@ -115,7 +115,7 @@ TIMELENS_METRICS = ["IOU@3", "IOU@5", "IOU@7", "mIOU"]
 def timelens_process_results(doc, result):
     pred = result[0]
 
-    key = f'{doc["video_path"]}>>>{doc["query"]}>>>{doc["span"]}'
+    key = f"{doc['video_path']}>>>{doc['query']}>>>{doc['span']}"
 
     data_dict = {key: pred}
 
@@ -154,7 +154,7 @@ def _timelens_compute_metrics(results, args=None):
     metrics = {}
     for thr in [0.3, 0.5, 0.7]:
         count = sum(1 for v in ious if v >= thr)
-        metrics[f"IOU@{int(thr*10)}"] = count * 100 / num_annos if num_annos > 0 else 0
+        metrics[f"IOU@{int(thr * 10)}"] = count * 100 / num_annos if num_annos > 0 else 0
 
     metrics["mIOU"] = sum(ious) * 100 / num_annos if num_annos > 0 else 0
 

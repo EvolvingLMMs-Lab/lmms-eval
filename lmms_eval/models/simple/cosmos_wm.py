@@ -272,7 +272,7 @@ class CosmosWorldModel(lmms):
         # Force sequential generation for in-process model backends to avoid
         # racing a single loaded model from multiple Python threads.
         if backend in ("local", "transformers_reasoner") and self.num_concurrent > 1:
-            eval_logger.info(f"{backend} backend: overriding num_concurrent={self.num_concurrent}->1 " f"(in-process generation is not thread-safe)")
+            eval_logger.info(f"{backend} backend: overriding num_concurrent={self.num_concurrent}->1 (in-process generation is not thread-safe)")
             self.num_concurrent = 1
 
         if backend == "nim":
@@ -303,10 +303,10 @@ class CosmosWorldModel(lmms):
                 f"reasoner_endpoint={self.reasoner_endpoint}"
             )
         elif backend == "transformers_reasoner":
-            eval_logger.info(f"Transformers Reasoner backend selected. model={self.nim_model}, " f"video_fps={self.reasoner_video_fps}, max_num_frames={self.reasoner_max_num_frames}, " f"max_pixels={self.reasoner_max_pixels}")
+            eval_logger.info(f"Transformers Reasoner backend selected. model={self.nim_model}, video_fps={self.reasoner_video_fps}, max_num_frames={self.reasoner_max_num_frames}, max_pixels={self.reasoner_max_pixels}")
 
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
-        eval_logger.info(f"CosmosWM initialized: backend={backend}, model={nim_model}, " f"v2_5={self._is_v2_5}, v3={self._is_v3}, output_dir={self.output_dir}")
+        eval_logger.info(f"CosmosWM initialized: backend={backend}, model={nim_model}, v2_5={self._is_v2_5}, v3={self._is_v3}, output_dir={self.output_dir}")
 
     # ------------------------------------------------------------------
     # Version detection
@@ -510,9 +510,7 @@ class CosmosWorldModel(lmms):
                 load_kwargs["revision"] = self.revision
 
         variant_name = "Cosmos3" if self._is_v3 else ("Cosmos-Predict2.5" if self._is_v2_5 else "Cosmos-Predict2")
-        eval_logger.info(
-            f"Loading {variant_name} pipeline: {self.nim_model} " f"(dtype={dtype}, device={actual_device}, " f"token={'set' if hf_token else 'NOT SET'}" f"{', revision=' + self.revision if load_kwargs.get('revision') else ''})"
-        )
+        eval_logger.info(f"Loading {variant_name} pipeline: {self.nim_model} (dtype={dtype}, device={actual_device}, token={'set' if hf_token else 'NOT SET'}{', revision=' + self.revision if load_kwargs.get('revision') else ''})")
         # Resolve local snapshot path to bypass Xet CDN 403 in containers.
         local_snapshot = self._find_local_snapshot(self.nim_model)
 
@@ -551,7 +549,7 @@ class CosmosWorldModel(lmms):
                     if p.device.type == "meta":
                         meta_params.append(f"{comp_name}.{pname}")
         if meta_params:
-            eval_logger.error(f"{len(meta_params)} parameters still on meta device after .to({actual_device}). " f"First 5: {meta_params[:5]}. Retrying with device_map...")
+            eval_logger.error(f"{len(meta_params)} parameters still on meta device after .to({actual_device}). First 5: {meta_params[:5]}. Retrying with device_map...")
             del self._pipe
             import gc
 
@@ -1107,7 +1105,7 @@ class CosmosWorldModel(lmms):
         try:
             from transformers import AutoProcessor, Cosmos3OmniForConditionalGeneration
         except ImportError as exc:
-            raise ImportError("backend='transformers_reasoner' requires transformers>=5.11.0, " "where Cosmos3OmniForConditionalGeneration is available.") from exc
+            raise ImportError("backend='transformers_reasoner' requires transformers>=5.11.0, where Cosmos3OmniForConditionalGeneration is available.") from exc
 
         dtype = getattr(torch, self._torch_dtype_str, torch.bfloat16)
         actual_device = self.device
@@ -1125,7 +1123,7 @@ class CosmosWorldModel(lmms):
         model_source = local_snapshot or self.nim_model
         local_only = bool(local_snapshot)
 
-        eval_logger.info(f"Loading Cosmos3 Reasoner with Transformers: {model_source} " f"(dtype={dtype}, device={actual_device}, token={'set' if hf_token else 'NOT SET'})")
+        eval_logger.info(f"Loading Cosmos3 Reasoner with Transformers: {model_source} (dtype={dtype}, device={actual_device}, token={'set' if hf_token else 'NOT SET'})")
         self._transformers_reasoner_processor = AutoProcessor.from_pretrained(
             model_source,
             trust_remote_code=True,
@@ -1301,7 +1299,7 @@ class CosmosWorldModel(lmms):
             frame_bytes = video_frames[0].tobytes()[:512] + video_frames[-1].tobytes()[:512]
             v2v_tag = f":v2v:{len(video_frames)}:{hashlib.sha256(frame_bytes).hexdigest()[:8]}"
         content_hash = hashlib.sha256(
-            f"{self.backend}:{self.nim_model}:{self.revision}:{self.seed}:" f"{self.guidance_scale}:{self.num_frames}:{self.num_inference_steps}:" f"{prompt}:{image.size}:{image.tobytes()[:1024]}{v2v_tag}".encode()
+            f"{self.backend}:{self.nim_model}:{self.revision}:{self.seed}:{self.guidance_scale}:{self.num_frames}:{self.num_inference_steps}:{prompt}:{image.size}:{image.tobytes()[:1024]}{v2v_tag}".encode()
         ).hexdigest()[:12]
         output_path = os.path.join(self.output_dir, safe_task, f"{safe_task}_{doc_id}_{content_hash}.mp4")
 
@@ -1332,7 +1330,7 @@ class CosmosWorldModel(lmms):
 
                 if self.backend == "nim":
                     if video_frames is not None:
-                        raise NotImplementedError("NIM backend does not support V2V (video conditioning). " "Use backend='local' for V2V tasks like physics_iq_v2v.")
+                        raise NotImplementedError("NIM backend does not support V2V (video conditioning). Use backend='local' for V2V tasks like physics_iq_v2v.")
                     image_b64 = _image_to_base64(image)
                     result = self._nim_submit(image_b64, prompt)
 
@@ -1348,7 +1346,7 @@ class CosmosWorldModel(lmms):
             except Exception as exc:
                 last_error = exc
                 tb = traceback.format_exc()
-                eval_logger.warning(f"Attempt {attempt}/{self.max_retries} failed: " f"task={task} doc_id={doc_id}: {exc}\n{tb}")
+                eval_logger.warning(f"Attempt {attempt}/{self.max_retries} failed: task={task} doc_id={doc_id}: {exc}\n{tb}")
                 if attempt < self.max_retries:
                     time.sleep(min(attempt * 5, 30))
 
@@ -1460,7 +1458,7 @@ class CosmosWorldModel(lmms):
 
         generated = sum(1 for r in results if r and not r.startswith("["))
         failed = len(results) - generated
-        eval_logger.info(f"Cosmos WM complete: {generated} succeeded, {failed} failed, " f"output_dir={self.output_dir}")
+        eval_logger.info(f"Cosmos WM complete: {generated} succeeded, {failed} failed, output_dir={self.output_dir}")
 
         return [r if r is not None else "[ERROR] Unknown" for r in results]
 

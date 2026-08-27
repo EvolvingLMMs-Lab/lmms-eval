@@ -91,7 +91,7 @@ def videott_doc_to_text_audio(doc, lmms_eval_specific_kwargs=None):
         eval_logger.warning("AUDIO_PATH environment variable not set, skipping audio subtitles")
         subtitle = ""
     else:
-        audio_path = os.path.join(AUDIO_PATH, f'{doc["video_id"]}.txt')
+        audio_path = os.path.join(AUDIO_PATH, f"{doc['video_id']}.txt")
     try:
         with open(audio_path) as f:
             subtitle = f.read()
@@ -215,14 +215,14 @@ def videott_aggregate_results(results):
             if category in k:
                 total_correct += v["correct"]
                 total_answered += v["answered"]
-        eval_logger.info(f"Evaluation on capability: {category}: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+        eval_logger.info(f"Evaluation on capability: {category}: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%")
 
     total_correct = 0
     total_answered = 0
     for k, v in category2score.items():
         total_correct += v["correct"]
         total_answered += v["answered"]
-    eval_logger.info(f"Overall Performance: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+    eval_logger.info(f"Overall Performance: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%")
     return 100 * total_correct / total_answered if total_answered > 0 else 0
 
 
@@ -250,12 +250,12 @@ def videott_aggregate_oe_results(results):
             if category in k:
                 total_correct += v["correct"]
                 total_answered += v["answered"]
-        eval_logger.info(f"Evaluation on capability: {category}: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+        eval_logger.info(f"Evaluation on capability: {category}: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%")
 
     total_correct = 0
     total_answered = 0
     for k, v in category2score.items():
         total_correct += v["correct"]
         total_answered += v["answered"]
-    eval_logger.info(f"Overall Performance: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+    eval_logger.info(f"Overall Performance: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%")
     return 100 * total_correct / total_answered if total_answered > 0 else 0

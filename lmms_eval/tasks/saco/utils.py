@@ -89,7 +89,7 @@ def mask_nms(masks: List[np.ndarray], iou_threshold: float = 0.9) -> List[np.nda
 
     filtered = [masks[k] for k in sorted(keep)]
     if len(masks) != len(filtered):
-        eval_logger.debug(f"Mask NMS: {len(masks)} -> {len(filtered)} " f"(removed {len(masks) - len(filtered)})")
+        eval_logger.debug(f"Mask NMS: {len(masks)} -> {len(filtered)} (removed {len(masks) - len(filtered)})")
     return filtered
 
 

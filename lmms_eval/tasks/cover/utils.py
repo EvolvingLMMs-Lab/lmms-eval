@@ -62,7 +62,7 @@ def _ensure_videos():
             zf.extractall(cache_dir)
         eval_logger.info("COVER: extraction complete.")
     else:
-        eval_logger.warning(f"COVER: VIDEO.zip not found at {video_zip}. " f"Videos must be placed manually in {video_dir}.")
+        eval_logger.warning(f"COVER: VIDEO.zip not found at {video_zip}. Videos must be placed manually in {video_dir}.")
     _videos_ready = True
 
 

@@ -52,7 +52,7 @@ def load_baseline(baseline_arg: str, task_name: str) -> Tuple[Dict[int, Any], Op
     if os.path.exists(baseline_arg):
         return _load_baseline_from_local(baseline_arg, task_name)
 
-    raise ValueError(f"Cannot load baseline '{baseline_arg}'. " f"Available presets: {list(BASELINE_REGISTRY.keys())}")
+    raise ValueError(f"Cannot load baseline '{baseline_arg}'. Available presets: {list(BASELINE_REGISTRY.keys())}")
 
 
 def _load_from_registry(model_name: str, task_name: str, baseline_arg: str) -> Tuple[Dict[int, Any], Optional[Dict[str, Any]]]:
@@ -62,7 +62,7 @@ def _load_from_registry(model_name: str, task_name: str, baseline_arg: str) -> T
     # Check if task exists for this model
     if task_name not in model_entry:
         available_tasks = [k for k in model_entry.keys() if not k.startswith("_")]
-        raise ValueError(f"No baseline for model '{model_name}' on task '{task_name}'. " f"Available tasks: {available_tasks}")
+        raise ValueError(f"No baseline for model '{model_name}' on task '{task_name}'. Available tasks: {available_tasks}")
 
     task_entry = model_entry[task_name]
     eval_logger.info(f"[Baseline] Using preset '{model_name}' for task '{task_name}'")

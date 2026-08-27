@@ -65,7 +65,7 @@ def test_cgbench_subtitles_are_aligned_to_decoded_video_frames(monkeypatch, tmp_
     subtitle_dir.mkdir()
     _write_test_video(video_dir / "demo-video.mp4")
     (subtitle_dir / "demo-video.srt").write_text(
-        "1\n00:00:00,000 --> 00:00:01,000\nFirst caption\n\n" "2\n00:00:01,000 --> 00:00:02,000\nSecond caption\n",
+        "1\n00:00:00,000 --> 00:00:01,000\nFirst caption\n\n2\n00:00:01,000 --> 00:00:02,000\nSecond caption\n",
         encoding="utf-8",
     )
     monkeypatch.setenv("CGBENCH_ROOT", str(tmp_path))

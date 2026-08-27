@@ -27,7 +27,7 @@ if USE_GPT_PARSER:
         OpenAI,
     )
 
-    eval_logger.info(f"Using GPT parser for TOMATO task. The max iteration is set to {MAX_ITER}. " "If the response is not a valid answer, it will try to use GPT to parse the response.")
+    eval_logger.info(f"Using GPT parser for TOMATO task. The max iteration is set to {MAX_ITER}. If the response is not a valid answer, it will try to use GPT to parse the response.")
     API_TYPE = os.getenv("API_TYPE", "azure")
     if API_TYPE == "openai":
         endpoint = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")

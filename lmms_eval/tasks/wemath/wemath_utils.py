@@ -6,7 +6,7 @@ def process_steps_data(df, steps):
     steps_data = {f"{steps}steps_{i}": df[df["key"] == f"{steps}steps_{i}"] for i in range(1, steps + 1)}
     steps_data[f"{steps}steps_multi"] = df[df["key"] == f"{steps}steps_multi"]
     for key, data in steps_data.items():
-        data.columns = [col + f'_{key.split("_")[-1]}' for col in data.columns]
+        data.columns = [col + f"_{key.split('_')[-1]}" for col in data.columns]
     merged_data = steps_data[f"{steps}steps_1"]
     for i in range(2, steps + 1):
         merged_data = pd.merge(merged_data, steps_data[f"{steps}steps_{i}"], left_on="ID_1", right_on=f"ID_{i}", how="left")

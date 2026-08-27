@@ -23,7 +23,7 @@ def _install_vllm_stubs() -> None:
             Instance=object,
             TokenCounts=object,
         ),
-        "lmms_eval.api.registry": types.SimpleNamespace(register_model=lambda _name: (lambda cls: cls)),
+        "lmms_eval.api.registry": types.SimpleNamespace(register_model=lambda _name: lambda cls: cls),
         "lmms_eval.imports": types.SimpleNamespace(optional_import=lambda *_args: (None, False)),
         "lmms_eval.models.model_utils.gen_metrics": types.SimpleNamespace(log_metrics=lambda **_kwargs: None),
         "lmms_eval.models.simple.vllm": types.SimpleNamespace(VLLM=_FakeVLLMSimple),

@@ -274,7 +274,7 @@ class MovieChat(lmms):
 
         current_max_len = embs.shape[1] + max_new_tokens
         if current_max_len - max_length > 0:
-            print("Warning: The number of tokens in current conversation exceeds the max length. " "The model will not see the contexts outside the range.")
+            print("Warning: The number of tokens in current conversation exceeds the max length. The model will not see the contexts outside the range.")
         begin_idx = max(0, current_max_len - max_length)
 
         embs = embs[:, begin_idx:]

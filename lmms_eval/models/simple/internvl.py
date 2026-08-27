@@ -265,7 +265,7 @@ class InternVLChat(lmms):
             int(c / (scale_factor * scale_factor)),
         )
         if self.ps_version == "v1":
-            warnings.warn("In ps_version 'v1', the height and width have not been swapped back, " "which results in a transposed image.")
+            warnings.warn("In ps_version 'v1', the height and width have not been swapped back, which results in a transposed image.")
         else:
             x = x.permute(0, 2, 1, 3).contiguous()
         return x

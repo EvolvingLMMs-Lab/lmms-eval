@@ -18,7 +18,7 @@ _RUNTIME_INSTALL = "llava[runtime] @ git+https://github.com/Hai-chao-Zhang/VQTok
 
 def _validate_cluster_config(selection_method: str, min_clusters: int, max_clusters: int) -> None:
     if selection_method not in _SUPPORTED_SELECTION_METHODS:
-        raise ValueError("vqtoken_selection_method must be one of " f"{sorted(_SUPPORTED_SELECTION_METHODS)}, got {selection_method!r}")
+        raise ValueError(f"vqtoken_selection_method must be one of {sorted(_SUPPORTED_SELECTION_METHODS)}, got {selection_method!r}")
     if isinstance(min_clusters, bool) or not isinstance(min_clusters, int) or min_clusters < 1:
         raise ValueError("vqtoken_min_clusters must be a positive integer")
     if isinstance(max_clusters, bool) or not isinstance(max_clusters, int) or max_clusters < 1:
@@ -33,7 +33,7 @@ def _validate_attention_frame_budget(selection_method: str, min_clusters: int, m
 
     guaranteed_clusters = max_clusters if selection_method == "fixed" else min_clusters
     if max_frames_num > guaranteed_clusters:
-        raise ValueError("released VQ-Attention requires max_frames_num <= selected K; " f"set max_frames_num <= {guaranteed_clusters} for {selection_method!r} selection")
+        raise ValueError(f"released VQ-Attention requires max_frames_num <= selected K; set max_frames_num <= {guaranteed_clusters} for {selection_method!r} selection")
 
 
 def _require_vqtoken_runtime() -> object:
@@ -45,7 +45,7 @@ def _require_vqtoken_runtime() -> object:
     modes = set(capabilities.get("modes", ()))
     methods = set(capabilities.get("selection_methods", ()))
     if "attention" not in modes or not _SUPPORTED_SELECTION_METHODS.issubset(methods):
-        raise ImportError("The installed VQToken runtime is too old for lmms-eval. " f"Upgrade with: uv pip install --upgrade '{_RUNTIME_INSTALL}'")
+        raise ImportError(f"The installed VQToken runtime is too old for lmms-eval. Upgrade with: uv pip install --upgrade '{_RUNTIME_INSTALL}'")
     return runtime
 
 
@@ -56,7 +56,7 @@ def _require_released_attention_weights(pretrained: str, runtime: object) -> Non
         return
     detector = getattr(runtime, "has_released_vq_attention_weights", None)
     if not callable(detector) or not detector(pretrained):
-        raise ValueError("VQToken attention requires the released paper checkpoint or a local " "checkpoint containing its complete learned cross_attention weights")
+        raise ValueError("VQToken attention requires the released paper checkpoint or a local checkpoint containing its complete learned cross_attention weights")
 
 
 @register_model("vqtoken")

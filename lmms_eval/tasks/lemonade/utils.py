@@ -100,7 +100,7 @@ def lemonade_doc_to_visual(doc: dict[str, Any]) -> list[Image.Image]:
         end = int(doc["End"])
         frames = load_video(video_path, start, end, max_num_frames=max_num_frames)
     else:
-        raise FileNotFoundError(f"Video file not found: {video_path}. " f"Expected video for clip '{doc['Clip']}' at {video_path}")
+        raise FileNotFoundError(f"Video file not found: {video_path}. Expected video for clip '{doc['Clip']}' at {video_path}")
     return frames
 
 

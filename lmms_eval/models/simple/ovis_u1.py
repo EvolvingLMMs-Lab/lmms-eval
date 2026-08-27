@@ -94,7 +94,7 @@ class OvisU1(lmms):
         stage2_max_new_tokens: int = 512,
         stage2_temperature: float = 0.0,
         stage2_do_sample: bool = False,
-        generation_prompt_template: str = ("Generate a detailed visual diagram or illustration to help " "answer this question: {question}"),
+        generation_prompt_template: str = ("Generate a detailed visual diagram or illustration to help answer this question: {question}"),
         # Output and debugging
         output_dir: Optional[str] = None,
         save_intermediate: bool = False,
@@ -151,7 +151,7 @@ class OvisU1(lmms):
         # Validate attention implementation
         valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
         if attn_implementation not in valid_attn_implementations:
-            raise ValueError(f"attn_implementation must be one of " f"{valid_attn_implementations}, got {attn_implementation}")
+            raise ValueError(f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}")
 
         # Prepare model loading arguments
         model_kwargs = {
@@ -780,7 +780,7 @@ class OvisU1(lmms):
                 self._save_intermediate_artifacts(
                     doc_id=str(doc_id[0]),
                     task=task,
-                    generation_prompt=(f"Interleaved: " f"{bagel_interleaved.get('task_type', 'unknown')}"),
+                    generation_prompt=(f"Interleaved: {bagel_interleaved.get('task_type', 'unknown')}"),
                     stage1_text="",
                     generated_images=generated_imgs,
                     question=context,
@@ -863,7 +863,7 @@ class OvisU1(lmms):
         if task_type == "jigsaw":
             # Generate 2 completed images then final answer
             for cand_idx in range(2):
-                suffix = f"Output ONLY a single image with Candidate {cand_idx} " f"placed in the bottom-right cell. No text."
+                suffix = f"Output ONLY a single image with Candidate {cand_idx} placed in the bottom-right cell. No text."
                 gen_prompt = prompt + "\n\n" + suffix
                 _, img_paths = self._stage1_generate_image(
                     generation_prompt=gen_prompt,
@@ -876,7 +876,7 @@ class OvisU1(lmms):
                     generated_images.extend(img_paths)
 
             # Final answer with all generated images
-            final_suffix = "Now output EXACTLY ONE <FINAL_ANSWER_JSON>" '{"choice": 0 or 1, "rationale": "<=30 words"}' "</FINAL_ANSWER_JSON>\n" "Do not output any additional images."
+            final_suffix = 'Now output EXACTLY ONE <FINAL_ANSWER_JSON>{"choice": 0 or 1, "rationale": "<=30 words"}</FINAL_ANSWER_JSON>\nDo not output any additional images.'
             final_text = self._answer_with_multiple_images(
                 prompt + "\n\n" + final_suffix,
                 original_image,
@@ -886,9 +886,9 @@ class OvisU1(lmms):
             # Maze/Sliding: iterative generation
             for i in range(1, num_images + 1):
                 if task_type == "maze":
-                    plan_suffix = f"Step {i}: Generate an image showing the next move " f"(one step up/down/left/right)."
+                    plan_suffix = f"Step {i}: Generate an image showing the next move (one step up/down/left/right)."
                 else:
-                    plan_suffix = f"Step {i}: Generate an image showing which tile " f"to move and in which direction."
+                    plan_suffix = f"Step {i}: Generate an image showing which tile to move and in which direction."
                 gen_prompt = prompt + "\n\n" + plan_suffix
                 _, img_paths = self._stage1_generate_image(
                     generation_prompt=gen_prompt,
@@ -900,7 +900,7 @@ class OvisU1(lmms):
                 if img_paths:
                     generated_images.extend(img_paths)
 
-            final_suffix = "After the images, emit EXACTLY ONE LINE containing ONLY " "the final move list as <ANSWER_JSON>[...]</ANSWER_JSON>. " "No other text."
+            final_suffix = "After the images, emit EXACTLY ONE LINE containing ONLY the final move list as <ANSWER_JSON>[...]</ANSWER_JSON>. No other text."
             final_text = self._answer_with_multiple_images(
                 prompt + "\n\n" + final_suffix,
                 original_image,

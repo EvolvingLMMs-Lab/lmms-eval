@@ -25,7 +25,7 @@ except ImportError:
     Glm4vForConditionalGeneration = None
 
 if Glm4vMoeForConditionalGeneration is None and Glm4vForConditionalGeneration is None:
-    eval_logger.warning("Failed to import GLM4V model classes. " "Please install transformers>=5.0.0: pip install transformers>=5.0.0")
+    eval_logger.warning("Failed to import GLM4V model classes. Please install transformers>=5.0.0: pip install transformers>=5.0.0")
 
 
 @register_model("glm4v")
@@ -63,12 +63,12 @@ class GLM4V(lmms):
 
         if is_moe_model:
             if Glm4vMoeForConditionalGeneration is None:
-                raise ImportError("Glm4vMoeForConditionalGeneration not available. " "Please install transformers>=5.0.0: pip install transformers>=5.0.0")
+                raise ImportError("Glm4vMoeForConditionalGeneration not available. Please install transformers>=5.0.0: pip install transformers>=5.0.0")
             model_class = Glm4vMoeForConditionalGeneration
             eval_logger.info(f"Loading GLM-4.6V MoE model from {pretrained}")
         else:
             if Glm4vForConditionalGeneration is None:
-                raise ImportError("Glm4vForConditionalGeneration not available. " "Please install transformers>=5.0.0: pip install transformers>=5.0.0")
+                raise ImportError("Glm4vForConditionalGeneration not available. Please install transformers>=5.0.0: pip install transformers>=5.0.0")
             model_class = Glm4vForConditionalGeneration
             eval_logger.info(f"Loading GLM-4.6V Flash model from {pretrained}")
 

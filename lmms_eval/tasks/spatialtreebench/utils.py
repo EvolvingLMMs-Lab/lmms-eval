@@ -120,7 +120,7 @@ def _ensure_local_media_path(path_or_url: str) -> str:
         return cached
 
     raise FileNotFoundError(
-        f"Media file not found for '{path_or_url}'. Tried: {candidate} and HF datasets cache under {hf_datasets_cache_dir}. " "Set SPATREEBENCH_MEDIA_ROOT to a folder containing images/ and videos/ if your media is stored elsewhere."
+        f"Media file not found for '{path_or_url}'. Tried: {candidate} and HF datasets cache under {hf_datasets_cache_dir}. Set SPATREEBENCH_MEDIA_ROOT to a folder containing images/ and videos/ if your media is stored elsewhere."
     )
 
 

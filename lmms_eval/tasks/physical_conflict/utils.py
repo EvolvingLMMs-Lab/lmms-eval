@@ -512,7 +512,7 @@ class PhysicalConflictTask(ConfigurableTask):
         if self.config.process_docs is not None:
             self.dataset[split] = self.config.process_docs(self.dataset[split])
         self.dataset_no_image = self.dataset.copy()
-        eval_logger.info("Loaded GoodVision Task C atomic v1 " f"({len(selected_sample_ids)} samples, {len(rows)} questions, strict={strict}, " f"main_sha256={main_sha}, sidecar_sha256={sidecar_sha}, split_sha256={split_sha}).")
+        eval_logger.info(f"Loaded GoodVision Task C atomic v1 ({len(selected_sample_ids)} samples, {len(rows)} questions, strict={strict}, main_sha256={main_sha}, sidecar_sha256={sidecar_sha}, split_sha256={split_sha}).")
 
 
 def physical_conflict_process_docs(dataset: Dataset) -> Dataset:

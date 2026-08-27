@@ -15,7 +15,7 @@ def omni_bench_original_doc_to_text(doc, lmms_eval_specific_kwargs):
     options = doc["options"]
     letters = ["A", "B", "C", "D"]
     enumerated_opts = [f"{letters[i]}. {opt}" for i, opt in enumerate(options)]
-    prompt_text = f"{pre_prompt}" f"Question:\n{question}\n\n" f"Options:\n" + "\n".join(enumerated_opts) + f"\n\n{post_prompt}"
+    prompt_text = f"{pre_prompt}Question:\n{question}\n\nOptions:\n" + "\n".join(enumerated_opts) + f"\n\n{post_prompt}"
     return prompt_text
 
 
@@ -31,7 +31,7 @@ def omni_bench_image_caption_doc_to_text(doc, lmms_eval_specific_kwargs):
     options = doc["options"]
     letters = ["A", "B", "C", "D"]
     enumerated_opts = [f"{letters[i]}. {opt}" for i, opt in enumerate(options)]
-    prompt_text = f"{pre_prompt}" f"Visual Context for the audio:\n{image_caption}\n\n" f"Question:\n{question}\n\n" f"Options:\n" + "\n".join(enumerated_opts) + "\n\n" f"{post_prompt}"
+    prompt_text = f"{pre_prompt}Visual Context for the audio:\n{image_caption}\n\nQuestion:\n{question}\n\nOptions:\n" + "\n".join(enumerated_opts) + f"\n\n{post_prompt}"
     return prompt_text
 
 
@@ -47,7 +47,7 @@ def omni_bench_audio_transcript_doc_to_text(doc, lmms_eval_specific_kwargs):
     options = doc["options"]
     letters = ["A", "B", "C", "D"]
     enumerated_opts = [f"{letters[i]}. {opt}" for i, opt in enumerate(options)]
-    prompt_text = f"{pre_prompt}" f"Audio context for the images:\n{audio_transcript}\n\n" f"Question:\n{question}\n\n" f"Options:\n" + "\n".join(enumerated_opts) + "\n\n" f"{post_prompt}"
+    prompt_text = f"{pre_prompt}Audio context for the images:\n{audio_transcript}\n\nQuestion:\n{question}\n\nOptions:\n" + "\n".join(enumerated_opts) + f"\n\n{post_prompt}"
     return prompt_text
 
 

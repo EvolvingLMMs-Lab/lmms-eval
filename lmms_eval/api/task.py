@@ -385,7 +385,7 @@ class Task(abc.ABC):
             return self.validation_docs()
         else:
             if self.config.num_fewshot is not None:
-                eval_logger.warning("has_training_docs and has_validation_docs are False" ", using test_docs as fewshot_docs but this is not recommended.")
+                eval_logger.warning("has_training_docs and has_validation_docs are False, using test_docs as fewshot_docs but this is not recommended.")
             return self.test_docs()
 
     def _process_doc(self, doc):
@@ -950,13 +950,13 @@ class ConfigurableTask(Task):
                 else:
                     INV_AGG_REGISTRY = {v: k for k, v in AGGREGATION_REGISTRY.items()}
                     metric_agg = get_metric_aggregation(metric_name)
-                    eval_logger.warning(f"[Task: {self._config.task}] metric {metric_name} is defined, but aggregation is not. " f"using default " f"aggregation={INV_AGG_REGISTRY[metric_agg]}")
+                    eval_logger.warning(f"[Task: {self._config.task}] metric {metric_name} is defined, but aggregation is not. using default aggregation={INV_AGG_REGISTRY[metric_agg]}")
                     self._aggregation_list[metric_name] = metric_agg
 
                 if "higher_is_better" in metric_config:
                     self._higher_is_better[metric_name] = metric_config["higher_is_better"]
                 else:
-                    eval_logger.warning(f"[Task: {self._config.task}] metric {metric_name} is defined, but higher_is_better is not. " f"using default " f"higher_is_better={is_higher_better(metric_name)}")
+                    eval_logger.warning(f"[Task: {self._config.task}] metric {metric_name} is defined, but higher_is_better is not. using default higher_is_better={is_higher_better(metric_name)}")
                     self._higher_is_better[metric_name] = is_higher_better(metric_name)
 
     @retry(stop=(stop_after_attempt(5) | stop_after_delay(60)), wait=wait_fixed(2))
@@ -1237,7 +1237,7 @@ class ConfigurableTask(Task):
             return self.dataset[self.config.fewshot_split]
         else:
             if (self.config.num_fewshot is not None) and (self.config.num_fewshot > 0):
-                eval_logger.warning(f"Task '{self.config.task}': " "num_fewshot > 0 but fewshot_split is None. " "using preconfigured rule.")
+                eval_logger.warning(f"Task '{self.config.task}': num_fewshot > 0 but fewshot_split is None. using preconfigured rule.")
             return super().fewshot_docs()
 
     @utils.positional_deprecated
@@ -1645,7 +1645,7 @@ class ConfigurableTask(Task):
                     gold_index_error = True
 
             if gold_index_error:
-                eval_logger.warning(f"Label index was not in within range of available choices," f"Sample:\n\n{doc}\n\n")
+                eval_logger.warning(f"Label index was not in within range of available choices,Sample:\n\n{doc}\n\n")
 
             if self.multiple_target:
                 acc = 1.0 if pred in gold else 0.0
@@ -1749,7 +1749,7 @@ class ConfigurableTask(Task):
         return getattr(self.config, "task", None)
 
     def __repr__(self):
-        return f"ConfigurableTask(task_name={getattr(self.config, 'task', None)}," f"output_type={self.OUTPUT_TYPE}," f"num_fewshot={getattr(self.config, 'num_fewshot', None)}," f"repeats={getattr(self.config, 'repeats', None)})"
+        return f"ConfigurableTask(task_name={getattr(self.config, 'task', None)},output_type={self.OUTPUT_TYPE},num_fewshot={getattr(self.config, 'num_fewshot', None)},repeats={getattr(self.config, 'repeats', None)})"
 
 
 class ConfigurableMessagesTask(ConfigurableTask):
@@ -1865,4 +1865,4 @@ class ConfigurableMessagesTask(ConfigurableTask):
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, task_name=self.config.task, doc_id=doc_id, **kwargs)
 
     def __repr__(self):
-        return f"ConfigurableMessagesTask(task_name={getattr(self.config, 'task', None)}," f"output_type={self.OUTPUT_TYPE}," f"num_fewshot={getattr(self.config, 'num_fewshot', None)}," f"repeats={getattr(self.config, 'repeats', None)})"
+        return f"ConfigurableMessagesTask(task_name={getattr(self.config, 'task', None)},output_type={self.OUTPUT_TYPE},num_fewshot={getattr(self.config, 'num_fewshot', None)},repeats={getattr(self.config, 'repeats', None)})"

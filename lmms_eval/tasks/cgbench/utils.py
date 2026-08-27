@@ -32,7 +32,7 @@ def cgbench_doc_to_visual(doc: Document) -> list[str]:
     """Resolve the local video for one CG-Bench example."""
     video_path = _resolve_video(doc)
     if not os.path.exists(video_path):
-        raise FileNotFoundError(f"CG-Bench video not found: {video_path}. Accept the dataset terms on Hugging Face " "and set CGBENCH_VIDEO_DIR to the extracted video directory if needed.")
+        raise FileNotFoundError(f"CG-Bench video not found: {video_path}. Accept the dataset terms on Hugging Face and set CGBENCH_VIDEO_DIR to the extracted video directory if needed.")
     return [video_path]
 
 
@@ -109,7 +109,7 @@ def cgbench_doc_to_text_subtitle(doc: Document, lmms_eval_specific_kwargs: TaskK
     kwargs = lmms_eval_specific_kwargs or {}
     subtitles = _sampled_subtitles(doc, kwargs.get("frame_num", 32))
     instruction = "Select the best answer to the following multiple-choice question based on the video and subtitles."
-    return f"{kwargs.get('pre_prompt', '')}This video's subtitles are listed below:\n{subtitles}\n" f"{instruction}\n{_format_question(doc)}{kwargs.get('post_prompt', '')}"
+    return f"{kwargs.get('pre_prompt', '')}This video's subtitles are listed below:\n{subtitles}\n{instruction}\n{_format_question(doc)}{kwargs.get('post_prompt', '')}"
 
 
 def extract_characters_regex(response: str) -> str:

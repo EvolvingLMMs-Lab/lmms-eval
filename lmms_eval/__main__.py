@@ -62,7 +62,7 @@ def _int_or_none_list_arg_type(min_len: int, max_len: int, defaults: str, value:
     elif num_items < min_len or num_items > max_len:
         raise argparse.ArgumentTypeError(f"Argument requires {max_len} integers or None, separated by '{split_char}'")
     elif num_items != max_len:
-        eval_logger.warning(f"Argument requires {max_len} integers or None, separated by '{split_char}'. " "Missing values will be filled with defaults.")
+        eval_logger.warning(f"Argument requires {max_len} integers or None, separated by '{split_char}'. Missing values will be filled with defaults.")
         default_items = [parse_value(v) for v in defaults.split(split_char)]
         items.extend(default_items[num_items:])  # extend items list with missing defaults
 
@@ -206,7 +206,7 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         "--limit",
         type=float,
         default=None,
-        help=("Limit examples per task: use -1 (or omit) for all samples, " "0 < limit < 1 for a fraction of the dataset, and limit >= 1 " "for an absolute sample count."),
+        help=("Limit examples per task: use -1 (or omit) for all samples, 0 < limit < 1 for a fraction of the dataset, and limit >= 1 for an absolute sample count."),
     )
     parser.add_argument(
         "--offset",
@@ -304,7 +304,7 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
     parser.add_argument(
         "--gen_kwargs",
         default="",
-        help=("String arguments for model generation on greedy_until tasks," " e.g. `temperature=0,top_k=0,top_p=0`"),
+        help=("String arguments for model generation on greedy_until tasks, e.g. `temperature=0,top_k=0,top_p=0`"),
     )
     parser.add_argument(
         "--reasoning_tags",
@@ -370,7 +370,7 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
     parser.add_argument(
         "--process_with_media",
         action="store_true",
-        help="Whether you will process you dataset with audio, image. By default set to False" "In case some benchmarks need to be processed with media, set this flag to True.",
+        help="Whether you will process you dataset with audio, image. By default set to FalseIn case some benchmarks need to be processed with media, set this flag to True.",
     )
     parser.add_argument(
         "--agentic_trace_mode",
@@ -396,7 +396,7 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         dest="repeats",
         type=int,
         default=1,
-        help=("Number of repeated generations per question for model stability " "measurement. Backward-compatible alias: --num_samples. " "When n > 1, enables k-samples " "mode and computes EA, CA, IV, CR metrics."),
+        help=("Number of repeated generations per question for model stability measurement. Backward-compatible alias: --num_samples. When n > 1, enables k-samples mode and computes EA, CA, IV, CR metrics."),
     )
     parser.add_argument("--baseline", type=str, default=None, help="Baseline for paired t-test comparison. Accepts: local JSONL path, hf://user/repo, or preset name (e.g., qwen25vl).")
 
@@ -493,7 +493,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     # reset logger
     eval_logger.remove()
     # Configure logger with detailed format including file path, function name, and line number
-    log_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | " "<level>{level: <8}</level> | " "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - " "<level>{message}</level>"
+    log_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
     eval_logger.add(sys.stdout, colorize=True, level=args.verbosity, format=log_format)
     eval_logger.info(f"Verbosity set to {args.verbosity}")
     os.environ["VERBOSITY"] = args.verbosity
@@ -524,7 +524,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         for config in config_args:
             unknown_keys = set(config.keys()) - valid_keys
             if unknown_keys:
-                raise ValueError(f"Unknown keys in config file: {sorted(unknown_keys)}. " f"Valid keys are: {sorted(valid_keys - {'help'})}")
+                raise ValueError(f"Unknown keys in config file: {sorted(unknown_keys)}. Valid keys are: {sorted(valid_keys - {'help'})}")
 
         # Determine which CLI args were explicitly provided by the user.
         default_config_args = parser.parse_args([])
@@ -599,7 +599,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     for args, results in zip(args_list, results_list):
         # cli_evaluate will return none if the process is not the main process (rank 0)
         if results is not None:
-            print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), " f"limit: {args.limit}, offset: {args.offset}, num_fewshot: {args.num_fewshot}, " f"batch_size: {args.batch_size}")
+            print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, offset: {args.offset}, num_fewshot: {args.num_fewshot}, batch_size: {args.batch_size}")
             print(get_eval_banner(branch=results.get("git_branch"), commit=results.get("git_hash")))
             print(make_table(results))
             if "groups" in results:
@@ -656,7 +656,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         eval_logger.warning("Pushing samples to the Hub requires --log_samples to be set. Samples will not be pushed to the Hub.")
 
     if args.limit is not None and args.limit != -1:
-        eval_logger.warning(" --limit SHOULD ONLY BE USED FOR TESTING." "REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.")
+        eval_logger.warning(" --limit SHOULD ONLY BE USED FOR TESTING.REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.")
     if args.limit is not None and args.limit < 0 and args.limit != -1:
         raise ValueError("--limit must be -1 or non-negative")
     if args.offset < 0:
@@ -704,7 +704,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
             if task_missing:
                 missing = ", ".join(task_missing)
                 eval_logger.error(
-                    f"Tasks were not found: {missing}\n" f"{utils.SPACING}Try `lmms-eval --tasks list` for list of available tasks",
+                    f"Tasks were not found: {missing}\n{utils.SPACING}Try `lmms-eval --tasks list` for list of available tasks",
                 )
                 raise ValueError(
                     f"Tasks not found: {missing}. Try `lmms-eval --tasks {{list_groups,list_subtasks,list_tags,list}}` to list out all available names for task groupings; only (sub)tasks; tags; or all of the above, or pass '--verbosity DEBUG' to troubleshoot task registration issues."
@@ -795,7 +795,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
 
 def print_results(args, results):
-    print(f"{args.model} ({args.model_args}),\n" f"gen_kwargs: ({args.gen_kwargs}),\n" f"limit: {args.limit},\n" f"offset: {args.offset},\n" f"num_fewshot: {args.num_fewshot},\n" f"batch_size: {args.batch_size}")
+    print(f"{args.model} ({args.model_args}),\ngen_kwargs: ({args.gen_kwargs}),\nlimit: {args.limit},\noffset: {args.offset},\nnum_fewshot: {args.num_fewshot},\nbatch_size: {args.batch_size}")
     print(get_eval_banner(branch=results.get("git_branch"), commit=results.get("git_hash")))
     print(evaluator.make_table(results))
     if "groups" in results:

@@ -36,7 +36,7 @@ def get_nlp():
         except OSError:
             continue
 
-    raise OSError("No spaCy model found. Please install one:\n" "  pip install spacy\n" "  python -m spacy download en_core_web_sm\n" "or for better accuracy:\n" "  python -m spacy download en_core_web_md")
+    raise OSError("No spaCy model found. Please install one:\n  pip install spacy\n  python -m spacy download en_core_web_sm\nor for better accuracy:\n  python -m spacy download en_core_web_md")
 
 
 def load_metadata():

@@ -15,7 +15,7 @@ def get_website_information(result_brief):
     """
     website_information, input_image_list = [], []
     for idx, inst in enumerate(result_brief):
-        template = f"Website {idx+1} Title: {inst['title']};\nWebsite {idx+1} snippet: {inst['snippet']};\nWebsite {idx+1} Screenshot: {DEFAULT_IMAGE_TOKEN}"
+        template = f"Website {idx + 1} Title: {inst['title']};\nWebsite {idx + 1} snippet: {inst['snippet']};\nWebsite {idx + 1} Screenshot: {DEFAULT_IMAGE_TOKEN}"
         website_information.append(template)
         input_image_list.append(inst["screenshot_path"])
 
@@ -59,7 +59,7 @@ def get_full_website_information(result_full, image_dir="", fullpage_split_dict=
 
     # here, we split the fullpage to maximum 10 images, each with 512 height (the width depends on the website itself)
     screenshot_fullpage_split_list = crop_and_split(fullpage_path=save_path, fullpage_split_dict=fullpage_split_dict, save_slice_path=save_slice_path)
-    template += f"Website Screenshot: {DEFAULT_IMAGE_TOKEN*len(screenshot_fullpage_split_list)};\n"
+    template += f"Website Screenshot: {DEFAULT_IMAGE_TOKEN * len(screenshot_fullpage_split_list)};\n"
     input_image_list.extend(screenshot_fullpage_split_list)
 
     website_information = template

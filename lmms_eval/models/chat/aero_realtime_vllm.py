@@ -339,7 +339,7 @@ class AeroRealtimeVLLM(lmms):
         # vs. ``aero_realtime_chat`` which is strict, to match how other vLLM
         # wrappers behave.
         if AsyncOmni is None or AeroRealtimeForConditionalGeneration is None:
-            raise ImportError("vllm-omni is required for aero_realtime_vllm_chat. " "Install vllm-omni and ensure it is importable.")
+            raise ImportError("vllm-omni is required for aero_realtime_vllm_chat. Install vllm-omni and ensure it is importable.")
         if fetch_video is None:
             raise ImportError("qwen_vl_utils is required (`pip install qwen-vl-utils`)")
         if librosa is None:

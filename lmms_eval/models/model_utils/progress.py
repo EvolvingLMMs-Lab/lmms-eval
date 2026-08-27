@@ -80,14 +80,14 @@ class SlurmProgress:
         speed = self.n / elapsed if elapsed > 0 else 0
         eta = (self.total - self.n) / speed if speed > 0 else 0
         pct = 100 * self.n / self.total if self.total > 0 else 0
-        eval_logger.info(f"[rank {self._rank}] {self.desc}: {self.n}/{self.total} ({pct:.1f}%) | " f"{speed:.2f} it/s | elapsed {_format_time(elapsed)} | ETA {_format_time(eta)}")
+        eval_logger.info(f"[rank {self._rank}] {self.desc}: {self.n}/{self.total} ({pct:.1f}%) | {speed:.2f} it/s | elapsed {_format_time(elapsed)} | ETA {_format_time(eta)}")
 
     def close(self) -> None:
         if self.disable:
             return
         elapsed = time.monotonic() - self._start_time
         speed = self.n / elapsed if elapsed > 0 else 0
-        eval_logger.info(f"[rank {self._rank}] {self.desc}: done {self.n}/{self.total} " f"in {_format_time(elapsed)} ({speed:.2f} it/s)")
+        eval_logger.info(f"[rank {self._rank}] {self.desc}: done {self.n}/{self.total} in {_format_time(elapsed)} ({speed:.2f} it/s)")
 
     def __enter__(self):
         return self

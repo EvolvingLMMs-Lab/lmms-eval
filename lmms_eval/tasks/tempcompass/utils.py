@@ -151,8 +151,7 @@ def tempcompass_process_results_multi_choice(doc, result):
                 "chatgpt_response": chatgpt_response,
                 "dim": doc["dim"],
             },
-            doc["dim"]
-            + "_accuracy": {
+            doc["dim"] + "_accuracy": {
                 "video_id": doc["video_id"],
                 "question": doc["question"],
                 "gt-answer": doc["answer"],
@@ -204,8 +203,7 @@ def tempcompass_process_results_yes_no(doc, result):
                 "chatgpt_response": chatgpt_response,
                 "dim": doc["dim"],
             },
-            doc["dim"]
-            + "_accuracy": {
+            doc["dim"] + "_accuracy": {
                 "video_id": doc["video_id"],
                 "question": doc["question"],
                 "gt-answer": doc["answer"],
@@ -257,8 +255,7 @@ def tempcompass_process_results_caption_matching(doc, result):
                 "chatgpt_response": chatgpt_response,
                 "dim": doc["dim"],
             },
-            doc["dim"]
-            + "_accuracy": {
+            doc["dim"] + "_accuracy": {
                 "video_id": doc["video_id"],
                 "question": doc["question"],
                 "gt-answer": doc["answer"],
@@ -336,8 +333,7 @@ def tempcompass_process_results_captioning(doc, result):
             "rating": eval_result["rating"],
             "dim": doc["dim"],
         },
-        doc["dim"]
-        + "_accuracy": {
+        doc["dim"] + "_accuracy": {
             "video_id": doc["video_id"],
             "question": doc["question"],
             "chatgpt-reasoning": eval_result["chatgpt-reasoning"],

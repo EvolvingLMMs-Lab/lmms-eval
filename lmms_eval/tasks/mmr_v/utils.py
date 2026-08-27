@@ -69,7 +69,7 @@ def mmr_v_doc_to_visual(doc: Document) -> list[str]:
         extra_subdirs=("videos", "videos_extracted"),
     )
     if not os.path.exists(video_path):
-        raise FileNotFoundError(f"MMR-V video not found: {doc['video']}. Concatenate the videos.tar.part.* archives of JokerJan/MMR-VBench " "and set MMR_V_VIDEO_DIR to the extracted video directory if needed.")
+        raise FileNotFoundError(f"MMR-V video not found: {doc['video']}. Concatenate the videos.tar.part.* archives of JokerJan/MMR-VBench and set MMR_V_VIDEO_DIR to the extracted video directory if needed.")
     return [video_path]
 
 
@@ -80,7 +80,7 @@ def _format_question(doc: Document) -> str:
 def mmr_v_doc_to_text(doc: Document, lmms_eval_specific_kwargs: TaskKwargs | None = None) -> str:
     """Format the multiple-choice prompt; the answer format comes from post_prompt."""
     kwargs = lmms_eval_specific_kwargs or {}
-    instruction = "Please select the best answer to the following multiple-choice question based on the video. " "Only one option is the most accurate answer in relation to the question and the video."
+    instruction = "Please select the best answer to the following multiple-choice question based on the video. Only one option is the most accurate answer in relation to the question and the video."
     return f"{kwargs.get('pre_prompt', '')}{instruction}\n{_format_question(doc)}{kwargs.get('post_prompt', '')}"
 
 

@@ -101,7 +101,7 @@ def perceptioncomp_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
     question = doc["question"]
     options = _build_options_str(doc)
-    instruct_prompt = "Select the best answer to the following multiple-choice " "question based on the video. Respond with only the letter " "(A, B, C, D, or E) of the correct option."
+    instruct_prompt = "Select the best answer to the following multiple-choice question based on the video. Respond with only the letter (A, B, C, D, or E) of the correct option."
     return f"Question: {question}\n{options}\n{instruct_prompt}"
 
 

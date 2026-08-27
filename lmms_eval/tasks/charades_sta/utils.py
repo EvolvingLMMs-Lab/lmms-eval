@@ -74,7 +74,7 @@ def temporal_grounding_doc_to_answer(doc):
 # Process result for mcq answer generation
 def temporal_grounding_process_results_generation(doc, result):
     pred = result[0]
-    data_dict = {f'{doc["video"]}>>>{doc["caption"]}>>>{doc["timestamp"]}': pred}
+    data_dict = {f"{doc['video']}>>>{doc['caption']}>>>{doc['timestamp']}": pred}
     return {f"charades_sta_{metric}": data_dict for metric in CHARADES_STA_METRICS}
 
 

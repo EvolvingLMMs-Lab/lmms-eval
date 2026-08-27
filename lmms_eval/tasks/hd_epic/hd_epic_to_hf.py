@@ -82,7 +82,7 @@ def _build_choices(q: dict, rng: random.Random) -> tuple[list, int]:
         all_opts = incorrect[:insert_pos] + [correct] + incorrect[insert_pos:]
         return all_opts, insert_pos
 
-    raise KeyError(f"Question {q.get('question_id', '?')} has neither (choices, correct_idx) " f"nor (correct, incorrect) -- cannot build MCQ.")
+    raise KeyError(f"Question {q.get('question_id', '?')} has neither (choices, correct_idx) nor (correct, incorrect) -- cannot build MCQ.")
 
 
 def _iter_question_file(path: str, seed: int) -> Iterator[dict]:

@@ -357,12 +357,12 @@ class JobScheduler:
 
         if returncode != 0:
             tail = self._tail_log(log_path)
-            raise RuntimeError(f"Evaluation failed with return code {returncode}. " f"Last lines of {log_path}:\n{tail}")
+            raise RuntimeError(f"Evaluation failed with return code {returncode}. Last lines of {log_path}:\n{tail}")
 
         result = self._parse_output_directory(output_path)
         if not result:
             tail = self._tail_log(log_path)
-            raise RuntimeError("Evaluation produced no parsed results. " f"Last lines of {log_path}:\n{tail}")
+            raise RuntimeError(f"Evaluation produced no parsed results. Last lines of {log_path}:\n{tail}")
 
         return result
 

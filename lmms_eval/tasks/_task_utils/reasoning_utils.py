@@ -309,8 +309,8 @@ def parse_mcq(predict_str: str) -> str:
 
     # Pattern 12: Look for choices with numbers (e.g., "1. A", "2. B")
     for i, choice in enumerate(all_choices):
-        if f"{i+1}. {choice}" in response:
-            candidates.append((choice, response.rfind(f"{i+1}. {choice}"), "numbered"))
+        if f"{i + 1}. {choice}" in response:
+            candidates.append((choice, response.rfind(f"{i + 1}. {choice}"), "numbered"))
 
     # If no candidates found, try to extract from the entire response
     if not candidates:

@@ -32,7 +32,7 @@ if os.path.exists(mmada_path):
     sys.path.insert(0, mmada_path)
     eval_logger.info(f"Added MMaDA path to sys.path: {mmada_path}")
 else:
-    eval_logger.warning(f"MMaDA repository not found at {mmada_path}. " f"Please clone it: cd {wd} && git clone https://github.com/Gen-Verse/MMaDA.git")
+    eval_logger.warning(f"MMaDA repository not found at {mmada_path}. Please clone it: cd {wd} && git clone https://github.com/Gen-Verse/MMaDA.git")
 
 
 @register_model("mmada")
@@ -137,7 +137,7 @@ class MMaDA(lmms):
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
             if self.continual_mode:
-                eval_logger.warning("Continual mode is not supported for distributed inference. " "Automatically disabling continual_mode.")
+                eval_logger.warning("Continual mode is not supported for distributed inference. Automatically disabling continual_mode.")
                 self.continual_mode = False
             self.accelerator = accelerator
             self._rank = self.accelerator.local_process_index
@@ -162,7 +162,7 @@ class MMaDA(lmms):
 
             # Use accelerator's device for proper distributed inference
             self.device = self.accelerator.device
-            eval_logger.info(f"Using device: {self.device} " f"(rank {self._rank}/{self._world_size})")
+            eval_logger.info(f"Using device: {self.device} (rank {self._rank}/{self._world_size})")
 
             # Load tokenizer
             eval_logger.info("Loading tokenizer...")
@@ -210,7 +210,7 @@ class MMaDA(lmms):
             eval_logger.info("Model loaded successfully")
 
         except ImportError as e:
-            raise ImportError(f"Failed to import MMaDA dependencies. " f"Please ensure:\n" f"  1. MMaDA repository is cloned at lmms-eval root\n" f"  2. Required dependencies are installed\n" f"Error: {e}")
+            raise ImportError(f"Failed to import MMaDA dependencies. Please ensure:\n  1. MMaDA repository is cloned at lmms-eval root\n  2. Required dependencies are installed\nError: {e}")
 
     @property
     def rank(self):

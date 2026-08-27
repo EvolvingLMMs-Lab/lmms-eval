@@ -102,7 +102,7 @@ def _make_montage(source_imgs: list, choice_imgs: list) -> Image.Image:
     y0 = PAD
     for i, img in enumerate(all_sources):
         x = PAD + i * (CELL + PAD)
-        draw.text((x + 2, y0), f"Source {i+1}" if n_src > 1 else "Source", fill=(0, 0, 0))
+        draw.text((x + 2, y0), f"Source {i + 1}" if n_src > 1 else "Source", fill=(0, 0, 0))
         canvas.paste(img, (x, y0 + LABEL_H))
 
     # Row 1: choice images with A/B/C/D labels
@@ -158,7 +158,7 @@ def wm_abench_doc_to_text(doc: dict, lmms_eval_specific_kwargs: Optional[dict] =
         n_choices = len(doc["image_choices"])
         choice_labels = ", ".join(chr(65 + i) for i in range(n_choices))
 
-        text = f"{prompt}\n\n" f"The image shows the source (top row) and answer options {choice_labels} (bottom row). " f"Which option correctly shows what happens next?" f"{IMAGE_CHOICE_PROMPT_SUFFIX}"
+        text = f"{prompt}\n\nThe image shows the source (top row) and answer options {choice_labels} (bottom row). Which option correctly shows what happens next?{IMAGE_CHOICE_PROMPT_SUFFIX}"
         return text
 
     if _has_letter_choices(doc):
@@ -172,7 +172,7 @@ def wm_abench_doc_to_text(doc: dict, lmms_eval_specific_kwargs: Optional[dict] =
         if not base_prompt:
             base_prompt = prompt
 
-        text = f"{base_prompt}\n{choices_letter}\n" f"Answer with the option's letter from the given choices directly."
+        text = f"{base_prompt}\n{choices_letter}\nAnswer with the option's letter from the given choices directly."
         return text
 
     # Open-ended: use prompt as-is

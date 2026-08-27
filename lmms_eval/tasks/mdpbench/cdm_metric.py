@@ -235,7 +235,7 @@ class CDM:
             matched_idxes, inliers = self._match_boxes(box_gt, box_pred, img_gt, img_pred)
             t4 = time.time()
             if (t4 - t0) > 5:
-                eval_logger.warning(f"CDM slow [{img_id}]: generate={t1-t0:.1f}s load_bbox={t2-t1:.1f}s load_img={t3-t2:.1f}s match={t4-t3:.1f}s total={t4-t0:.1f}s")
+                eval_logger.warning(f"CDM slow [{img_id}]: generate={t1 - t0:.1f}s load_bbox={t2 - t1:.1f}s load_img={t3 - t2:.1f}s match={t4 - t3:.1f}s total={t4 - t0:.1f}s")
         except Exception as e:
             eval_logger.warning(f"CDM evaluation failed for img_id={img_id}: {type(e).__name__}: {e}")
             self._cleanup_files(img_id)

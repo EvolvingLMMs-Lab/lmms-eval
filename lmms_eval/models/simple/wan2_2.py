@@ -109,7 +109,7 @@ class Wan2_2(DiffusersWMBase):
         return []
 
     def _generation_signature(self, prompt, visuals, extras):
-        return f"{self.pretrained}:{self.seed}:{self.num_inference_steps}:" f"{self.guidance_scale}:{self.num_frames}:{self.height}x{self.width}:" f"{len(visuals)}:{prompt[:100]}"
+        return f"{self.pretrained}:{self.seed}:{self.num_inference_steps}:{self.guidance_scale}:{self.num_frames}:{self.height}x{self.width}:{len(visuals)}:{prompt[:100]}"
 
     def _invoke_pipeline(self, prompt, visuals, generator, **extras):
         if not visuals:

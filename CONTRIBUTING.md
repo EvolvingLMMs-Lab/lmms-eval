@@ -36,9 +36,8 @@ python -m lmms_eval \
 3. **Make changes** and test locally
 4. **Run linting** before committing:
    ```bash
-   pip install pre-commit
-   pre-commit install
-   pre-commit run --all-files
+   uv run pre-commit install
+   uv run pre-commit run --all-files
    ```
 5. **Commit** with a descriptive message (see [Commit Style](#commit-style))
 6. **Open a pull request** against `main`
@@ -98,11 +97,11 @@ refactor: extract shared flatten() to model_utils
 
 ### Code Style
 
-- **Formatter**: Black (line length 240) + isort (handled by pre-commit)
+- **Formatter**: Ruff formatter (line length 240) + isort (handled by pre-commit)
 - **Naming**: PEP 8 - `snake_case` for functions/variables, `PascalCase` for classes
 - **Type hints**: Required for all new code
 - **Docstrings**: Required for public APIs
-- **Line length**: 88 characters recommended, 240 max (enforced by Black)
+- **Line length**: 88 characters recommended, with a 240-character Ruff formatting target
 - **Imports**: Use `from lmms_eval.imports import optional_import` for model-specific packages
 
 ## How to Contribute

@@ -661,7 +661,7 @@ def simple_evaluate(
                             task_results["paired_ci_lower"] = comparison["ci_lower"] * 100
                             task_results["paired_ci_upper"] = comparison["ci_upper"] * 100
                             task_results["paired_pvalue"] = comparison["p_value"]
-                            eval_logger.info(f"[Baseline] {task_name}: diff={comparison['mean_diff']*100:.2f}%, p={comparison['p_value']:.4f}")
+                            eval_logger.info(f"[Baseline] {task_name}: diff={comparison['mean_diff'] * 100:.2f}%, p={comparison['p_value']:.4f}")
                         else:
                             eval_logger.debug(f"[Baseline] Skipping {task_name}: no valid scores found with score_key='{score_key}'")
                 except Exception as e:

@@ -159,8 +159,8 @@ def postprocess_descriptive_grading_queries(queries):
         resp_keys = query["resp_keys"]
         for i, resp_key in enumerate(resp_keys):
             # extract the answer and score for each response key
-            extracted_answer = query[f"extract_answer_T{i+1}"]
-            score = query[f"score_T{i+1}"]
+            extracted_answer = query[f"extract_answer_T{i + 1}"]
+            score = query[f"score_T{i + 1}"]
             # store the extracted answer and score
             scores[resp_key] = {
                 "resp_id": resp_key,

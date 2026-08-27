@@ -220,7 +220,7 @@ def vrbench_doc_to_visual(doc: Document) -> list[str]:
     video_path = _resolve_video(doc)
     if not os.path.exists(video_path):
         raise FileNotFoundError(
-            f"VRBench video not found: {video_path}. Download the split archives from " "https://huggingface.co/datasets/OpenGVLab/VRBench, extract them, and point " "VRBENCH_VIDEO_DIR at the directory that holds the .mp4 files."
+            f"VRBench video not found: {video_path}. Download the split archives from https://huggingface.co/datasets/OpenGVLab/VRBench, extract them, and point VRBENCH_VIDEO_DIR at the directory that holds the .mp4 files."
         )
     return [video_path]
 

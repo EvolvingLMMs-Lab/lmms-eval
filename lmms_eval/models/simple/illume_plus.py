@@ -92,7 +92,7 @@ class ILLUMEPlus(lmms):
         stage2_top_p: Optional[float] = None,
         stage2_num_beams: int = 1,
         # Generation prompt template
-        generation_prompt_template: str = ("Generate a detailed visual diagram or illustration to help answer " "this question: {question}"),
+        generation_prompt_template: str = ("Generate a detailed visual diagram or illustration to help answer this question: {question}"),
         # Output and debugging
         output_dir: Optional[str] = None,
         save_intermediate: bool = False,
@@ -216,9 +216,7 @@ class ILLUMEPlus(lmms):
         }
 
         if not self.enable_image_decoding:
-            eval_logger.warning(
-                "Image decoding is DISABLED. Generated images will be blank placeholders. " "To enable actual image generation, set enable_image_decoding=True and provide " "tokenizer_config_path and diffusion_decoder_path."
-            )
+            eval_logger.warning("Image decoding is DISABLED. Generated images will be blank placeholders. To enable actual image generation, set enable_image_decoding=True and provide tokenizer_config_path and diffusion_decoder_path.")
         else:
             eval_logger.info("Image decoding is enabled. Vision decoder will be loaded on-demand to save memory.")
 
@@ -281,9 +279,7 @@ class ILLUMEPlus(lmms):
 
                     # If index file exists but no weight files, model is incomplete
                     if index_files and not weight_files:
-                        raise ValueError(
-                            f"Model directory {pretrained} contains index file but " f"no weight files!\nPlease download the complete model " f"weights or use HuggingFace Hub: " f"pretrained=ILLUME-MLLM/illume_plus-qwen2_5-7b-hf"
-                        )
+                        raise ValueError(f"Model directory {pretrained} contains index file but no weight files!\nPlease download the complete model weights or use HuggingFace Hub: pretrained=ILLUME-MLLM/illume_plus-qwen2_5-7b-hf")
                 except Exception as e:
                     if "index file but no weight files" in str(e):
                         raise
@@ -374,7 +370,7 @@ class ILLUMEPlus(lmms):
             eval_logger.info("ILLUME+ model loaded successfully")
 
         except ImportError as e:
-            raise ImportError(f"Failed to import transformers. Please install it:\n" f"  pip install transformers\n" f"Error: {e}")
+            raise ImportError(f"Failed to import transformers. Please install it:\n  pip install transformers\nError: {e}")
         except Exception as e:
             eval_logger.error(f"Failed to load model: {e}")
             import traceback
@@ -455,7 +451,7 @@ class ILLUMEPlus(lmms):
             eval_logger.info("ILLUME+ generation components initialized successfully")
 
         except ImportError as e:
-            eval_logger.error(f"Failed to import ILLUME+ generation utilities: {e}. " f"Image generation will not work properly.")
+            eval_logger.error(f"Failed to import ILLUME+ generation utilities: {e}. Image generation will not work properly.")
             self.InterleavedLogitsProcessor = None
             self.special_tokens_dict = None
             self._processor_supports_image_sizes = False
@@ -495,7 +491,7 @@ class ILLUMEPlus(lmms):
 
             mapped_w, mapped_h = RESOLUTION_MAPPING.get((w, h), (w, h))
             if (mapped_w, mapped_h) != (w, h):
-                eval_logger.warning(f"RESOLUTION_MAPPING changed resolution from ({w}, {h}) to ({mapped_w}, {mapped_h}). " f"This may cause OOM. Forcing original resolution.")
+                eval_logger.warning(f"RESOLUTION_MAPPING changed resolution from ({w}, {h}) to ({mapped_w}, {mapped_h}). This may cause OOM. Forcing original resolution.")
                 # MEMORY OPTIMIZATION: Don't use mapped resolution, use original
                 mapped_w, mapped_h = w, h
         except ImportError:
@@ -744,8 +740,8 @@ class ILLUMEPlus(lmms):
             w2 = w // 16
             expected_pixel = h2 * w2
 
-            eval_logger.debug(f"Expected tokens - semantic: {expected_semantic} ({h1}x{w1}), " f"pixel: {expected_pixel} ({h2}x{w2})")
-            eval_logger.debug(f"Got tokens - semantic: {len(semantic_tokens)}, " f"pixel: {len(pixel_tokens)}")
+            eval_logger.debug(f"Expected tokens - semantic: {expected_semantic} ({h1}x{w1}), pixel: {expected_pixel} ({h2}x{w2})")
+            eval_logger.debug(f"Got tokens - semantic: {len(semantic_tokens)}, pixel: {len(pixel_tokens)}")
 
             # Convert to tensors and reshape
             semantic_code = torch.as_tensor([semantic_tokens])
@@ -756,7 +752,7 @@ class ILLUMEPlus(lmms):
                 semantic_code = semantic_code.view(1, h1, w1)
                 pixel_code = pixel_code.view(1, h2, w2)
             except RuntimeError as e:
-                eval_logger.error(f"Failed to reshape tokens: {e}. " f"Semantic: {len(semantic_tokens)} -> (1, {h1}, {w1}), " f"Pixel: {len(pixel_tokens)} -> (1, {h2}, {w2})")
+                eval_logger.error(f"Failed to reshape tokens: {e}. Semantic: {len(semantic_tokens)} -> (1, {h1}, {w1}), Pixel: {len(pixel_tokens)} -> (1, {h2}, {w2})")
                 return None
 
             # Decode using diffusion decoder if available
@@ -1001,11 +997,11 @@ class ILLUMEPlus(lmms):
             # Similar to MIO's approach, we make it clear that an image MUST be generated
             if images:
                 # Image editing mode - explicitly request edited image output
-                full_prompt = f"{resolution_tag}\n" f"Edit the image according to this instruction: {generation_prompt_cleaned}"
+                full_prompt = f"{resolution_tag}\nEdit the image according to this instruction: {generation_prompt_cleaned}"
                 uncond_prompt = f"{resolution_tag}\nReconstruct the image according to the given image\n"
             else:
                 # Image generation mode - explicitly request image output
-                full_prompt = f"{resolution_tag}\n" f"Generate an image with the following content: {generation_prompt_cleaned}"
+                full_prompt = f"{resolution_tag}\nGenerate an image with the following content: {generation_prompt_cleaned}"
                 uncond_prompt = f"Generate a random image of {resolution_tag}\n"
 
             eval_logger.info(f"Generation prompt: {full_prompt}")
@@ -1150,7 +1146,7 @@ class ILLUMEPlus(lmms):
                 eval_logger.info(f"Using image GENERATION mode with BALANCED optimization (max_tokens={max_tokens}, expected={expected_image_tokens})")
 
             if self.InterleavedLogitsProcessor is None:
-                raise RuntimeError("InterleavedLogitsProcessor is not available. " "Image generation requires the ILLUME+ generation utilities. " "Please ensure the ILLUME_plus directory is properly set up.")
+                raise RuntimeError("InterleavedLogitsProcessor is not available. Image generation requires the ILLUME+ generation utilities. Please ensure the ILLUME_plus directory is properly set up.")
 
             try:
                 processor_kwargs = {
@@ -1624,7 +1620,7 @@ class ILLUMEPlus(lmms):
                 eval_logger.info(f"Saved jigsaw image 1: {img_paths_1[0]}")
 
             # Final answer using stage 2 with all generated images
-            final_suffix = 'Now output EXACTLY ONE <FINAL_ANSWER_JSON>{"choice": 0 or 1, "rationale": "≤30 words"}</FINAL_ANSWER_JSON>\n' "Do not output any additional images."
+            final_suffix = 'Now output EXACTLY ONE <FINAL_ANSWER_JSON>{"choice": 0 or 1, "rationale": "≤30 words"}</FINAL_ANSWER_JSON>\nDo not output any additional images.'
             final_question = prompt + "\n\n" + final_suffix
 
             # Use optimized stage 2 method
@@ -1660,7 +1656,7 @@ class ILLUMEPlus(lmms):
                     eval_logger.info(f"Saved step {i} image: {img_paths[0]}")
 
             # Final answer using all generated step images
-            final_suffix = "After the images, emit EXACTLY ONE LINE containing ONLY the final move list " "as <ANSWER_JSON>[...]</ANSWER_JSON>. No other text."
+            final_suffix = "After the images, emit EXACTLY ONE LINE containing ONLY the final move list as <ANSWER_JSON>[...]</ANSWER_JSON>. No other text."
             final_question = prompt + "\n\n" + final_suffix
 
             # Use optimized stage 2 method

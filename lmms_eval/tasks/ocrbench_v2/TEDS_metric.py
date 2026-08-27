@@ -843,41 +843,41 @@ def draw_SCRM_table(
             -----------------------------------------------------------\n
             |  Metrics   |  Sim_threshold  |  Tolerance  |    Value    |\n
             -----------------------------------------------------------\n
-            |             |                 |   strict    |    {'%.4f' % map_strict}    |     \n
+            |             |                 |   strict    |    {"%.4f" % map_strict}    |     \n
             |             |                 ----------------------------\n
-            |  mPrecison  |  0.5:0.05:0.95  |   slight    |    {'%.4f' % map_slight}    |\n
+            |  mPrecison  |  0.5:0.05:0.95  |   slight    |    {"%.4f" % map_slight}    |\n
             |             |                  ---------------------------\n
-            |             |                 |    high     |    {'%.4f' % map_high}    |\n
+            |             |                 |    high     |    {"%.4f" % map_high}    |\n
             -----------------------------------------------------------\n
-            |             |                 |   strict    |    {'%.4f' % ap_50_strict}    |\n
+            |             |                 |   strict    |    {"%.4f" % ap_50_strict}    |\n
             |             |                  ---------------------------\n
-            |  Precison   |       0.5       |   slight    |    {'%.4f' % ap_50_slight }    |\n
+            |  Precison   |       0.5       |   slight    |    {"%.4f" % ap_50_slight}    |\n
             |             |                  ---------------------------\n
-            |             |                 |    high     |    {'%.4f' % ap_50_high }    |\n
+            |             |                 |    high     |    {"%.4f" % ap_50_high}    |\n
             -----------------------------------------------------------\n
-            |             |                 |   strict    |    {'%.4f' % ap_75_strict}    |\n
+            |             |                 |   strict    |    {"%.4f" % ap_75_strict}    |\n
             |             |                  ---------------------------\n
-            |  Precison   |      0.75       |   slight    |    {'%.4f' % ap_75_slight}    |\n
+            |  Precison   |      0.75       |   slight    |    {"%.4f" % ap_75_slight}    |\n
             |             |                  ---------------------------\n
-            |             |                 |    high     |    {'%.4f' % ap_75_high}    |\n
+            |             |                 |    high     |    {"%.4f" % ap_75_high}    |\n
             -----------------------------------------------------------\n
-            |             |                 |   strict    |    {'%.4f' % ap_90_strict}    |\n
+            |             |                 |   strict    |    {"%.4f" % ap_90_strict}    |\n
             |             |                  ---------------------------\n
-            |  Precison   |       0.9       |   slight    |    {'%.4f' % ap_90_slight }    |\n
+            |  Precison   |       0.9       |   slight    |    {"%.4f" % ap_90_slight}    |\n
             |             |                  ---------------------------\n
-            |             |                 |    high     |    {'%.4f' % ap_90_high}    |\n
+            |             |                 |    high     |    {"%.4f" % ap_90_high}    |\n
             -----------------------------------------------------------\n
-            |Precison(EM) |                                    {'%.4f' % em}    |\n
+            |Precison(EM) |                                    {"%.4f" % em}    |\n
             -----------------------------------------------------------\n
-            |Title(EM)    |                                    {'%.4f' % title_ocr_socre}    |\n
+            |Title(EM)    |                                    {"%.4f" % title_ocr_socre}    |\n
             -----------------------------------------------------------\n
-            |Source(EM)   |                                    {'%.4f' % source_ocr_socre}    |\n
+            |Source(EM)   |                                    {"%.4f" % source_ocr_socre}    |\n
             -----------------------------------------------------------\n
-            |X_title(EM)  |                                    {'%.4f' % x_title_ocr_socre}    |\n
+            |X_title(EM)  |                                    {"%.4f" % x_title_ocr_socre}    |\n
             -----------------------------------------------------------\n
-            |Y_title(EM)  |                                    {'%.4f' % y_title_ocr_socre}    |\n
+            |Y_title(EM)  |                                    {"%.4f" % y_title_ocr_socre}    |\n
             -----------------------------------------------------------\n
-            |structure_acc|                                    {'%.4f' % structure_accuracy}    |\n
+            |structure_acc|                                    {"%.4f" % structure_accuracy}    |\n
             -----------------------------------------------------------\n
 
 

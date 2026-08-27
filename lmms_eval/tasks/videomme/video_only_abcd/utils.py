@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 from lmms_eval.tasks.videomme.utils import videomme_doc_to_visual
 
-_DEFAULT_SYSTEM_PROMPT = "You will receive ONLY a video. There is no question. " "Guess which option letter (A, B, C, or D) is correct. " "Output exactly one capital letter: A, B, C, or D."
+_DEFAULT_SYSTEM_PROMPT = "You will receive ONLY a video. There is no question. Guess which option letter (A, B, C, or D) is correct. Output exactly one capital letter: A, B, C, or D."
 
 
 def doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs: Optional[dict] = None) -> str:

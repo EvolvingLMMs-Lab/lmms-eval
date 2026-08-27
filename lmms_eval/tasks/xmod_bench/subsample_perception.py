@@ -134,9 +134,9 @@ def main():
     for sub in ("finegrained", "general_activities"):
         # Only consider clips that appear in ALL 6 target files
         eligible = [cid for cid, files in clip_docs[sub].items() if len(files) == len(TARGET_FILES)]
-        print(f"{sub}: {len(clip_docs[sub])} unique clips, " f"{len(eligible)} in all {len(TARGET_FILES)} modality files")
+        print(f"{sub}: {len(clip_docs[sub])} unique clips, {len(eligible)} in all {len(TARGET_FILES)} modality files")
         if len(eligible) < N_INSTANCES:
-            raise ValueError(f"Only {len(eligible)} eligible clips for {sub}; " f"need {N_INSTANCES}")
+            raise ValueError(f"Only {len(eligible)} eligible clips for {sub}; need {N_INSTANCES}")
         selected[sub] = set(rng.sample(eligible, N_INSTANCES))
         print(f"  → sampled {N_INSTANCES} clips (seed={args.seed})")
 
@@ -181,7 +181,7 @@ def main():
 
         out_lines = kept_other + deduped
         before, after = len(all_lines), len(out_lines)
-        print(f"  {fname:35s}  {before:,} → {after:,} rows  " f"({len(deduped):,} target kept)")
+        print(f"  {fname:35s}  {before:,} → {after:,} rows  ({len(deduped):,} target kept)")
 
         if not args.dry_run:
             with open(path, "w") as f:

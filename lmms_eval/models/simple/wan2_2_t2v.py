@@ -76,7 +76,7 @@ class Wan2_2_T2V(DiffusersWMBase):
         self.attn_backend = str(attn_backend).strip()
 
     def _generation_signature(self, prompt, visuals, extras):
-        return f"{self.pretrained}:{self.seed}:{self.num_inference_steps}:" f"{self.guidance_scale}:{self.num_frames}:{self.height}x{self.width}:" f"{prompt[:200]}"
+        return f"{self.pretrained}:{self.seed}:{self.num_inference_steps}:{self.guidance_scale}:{self.num_frames}:{self.height}x{self.width}:{prompt[:200]}"
 
     def _invoke_pipeline(self, prompt, visuals, generator, **extras):
         def _run():
