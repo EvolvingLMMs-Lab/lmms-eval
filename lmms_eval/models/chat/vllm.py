@@ -37,6 +37,7 @@ class VLLM(VLLMSimple):
         fps: Optional[int] = None,
         nframes: Optional[int] = 32,
         max_new_tokens: int = 4096,
+        is_qwen3_vl: bool = False,
         **kwargs,
     ):
         super().__init__(
@@ -53,6 +54,9 @@ class VLLM(VLLMSimple):
             **kwargs,
         )
         self.fps = fps
+        # Qwen3-VL-family models need `<t seconds>` markers before video frames to perceive the clip as temporal input
+        # (see to_qwen3_vl_openai_messages and issue #1404); other models take bare frames.
+        self.is_qwen3_vl = is_qwen3_vl
         self.max_pixels = max_pixels
         self.nframes = nframes
 
@@ -80,7 +84,10 @@ class VLLM(VLLMSimple):
             video_kwargs["fps"] = self.fps
         else:
             video_kwargs["nframes"] = self.nframes
-        messages = chat_messages.to_openai_messages(video_kwargs=video_kwargs)
+        if self.is_qwen3_vl:
+            messages = chat_messages.to_qwen3_vl_openai_messages(video_kwargs)
+        else:
+            messages = chat_messages.to_openai_messages(video_kwargs=video_kwargs)
         return messages, params
 
     def generate_until(self, requests) -> List[GenerationResult]:
@@ -165,6 +172,8 @@ class VLLM(VLLMSimple):
             video_kwargs["fps"] = self.fps
         else:
             video_kwargs["nframes"] = self.nframes
+        if self.is_qwen3_vl:
+            return chat_messages.to_qwen3_vl_openai_messages(video_kwargs)
         return chat_messages.to_openai_messages(video_kwargs=video_kwargs)
 
     def _chat_once(self, messages: list[dict], params: dict) -> str:

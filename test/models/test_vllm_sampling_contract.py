@@ -17,6 +17,7 @@ def _model():
     model.max_frame_num = 32
     model.fps = None
     model.nframes = 32
+    model.is_qwen3_vl = False
     return model
 
 
