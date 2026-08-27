@@ -1,0 +1,8 @@
+task: rvos_ref_davis17
+dataset_path: kcz358/RVOS-Ref-DAVIS17
+dataset_kwargs:
+  token: True
+  video: True
+  cache_dir: rvos_ref_davis17
+test_split: valid
+include: _default_template_yaml

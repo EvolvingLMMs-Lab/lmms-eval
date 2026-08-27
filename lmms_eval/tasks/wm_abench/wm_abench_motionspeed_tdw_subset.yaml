@@ -1,0 +1,4 @@
+dataset_name: "MotionSpeed_tdw_subset"
+tag: "wm_abench_subtasks"
+task: "wm_abench_motionspeed_tdw_subset"
+include: _default_template_yaml

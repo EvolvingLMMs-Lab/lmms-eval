@@ -392,7 +392,7 @@ uv run --with pylance --with pyarrow python -m lmms_eval \
   --limit 8
 ```
 
-MINERVA remains reproducible in two modes: fully local video files or remote Lance blobs from the Hub.
+In v0.7, MINERVA supported two evaluation modes: fully local video files or remote Lance blobs from the Hub.
 
 ---
 

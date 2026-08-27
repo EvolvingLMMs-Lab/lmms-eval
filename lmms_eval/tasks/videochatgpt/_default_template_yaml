@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/VideoChatGPT
+dataset_path: lmms-eval/VideoChatGPT
 dataset_kwargs:
   token: True
   video: True

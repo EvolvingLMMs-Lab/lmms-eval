@@ -56,6 +56,7 @@ class Huggingface(lmms):
         system_prompt: Optional[str] = None,
         interleave_visuals: Optional[bool] = False,
         reasoning_prompt: Optional[str] = None,
+        trust_remote_code: Optional[bool] = False,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -86,7 +87,8 @@ class Huggingface(lmms):
         if attn_implementation is not None:
             model_kwargs["attn_implementation"] = attn_implementation
 
-        config = AutoConfig.from_pretrained(pretrained)
+        self.trust_remote_code = trust_remote_code
+        config = AutoConfig.from_pretrained(pretrained, trust_remote_code=trust_remote_code)
         if config.model_type in AutoModelForCausalLM._model_mapping.keys():
             model_cls = AutoModelForCausalLM
         elif config.model_type in AutoModelForImageTextToText._model_mapping.keys():
@@ -94,7 +96,7 @@ class Huggingface(lmms):
         else:
             model_cls = AutoModel
 
-        self._model = model_cls.from_pretrained(pretrained, **model_kwargs).eval()
+        self._model = model_cls.from_pretrained(pretrained, trust_remote_code=trust_remote_code, **model_kwargs).eval()
         self.max_num_frames = max_num_frames
 
         raw_prompt = reasoning_prompt or system_prompt
@@ -102,8 +104,8 @@ class Huggingface(lmms):
             self.system_prompt = self._resolve_system_prompt(raw_prompt.replace("\\n", "\n"))
         else:
             self.system_prompt = None
-        self.processor = AutoProcessor.from_pretrained(pretrained)
-        self._tokenizer = AutoTokenizer.from_pretrained(pretrained)
+        self.processor = AutoProcessor.from_pretrained(pretrained, trust_remote_code=trust_remote_code)
+        self._tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=trust_remote_code)
         self.interleave_visuals = interleave_visuals
 
         self._config = self.model.config

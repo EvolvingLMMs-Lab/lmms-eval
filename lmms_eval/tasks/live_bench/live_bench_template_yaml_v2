@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/LiveBench
+dataset_path: lmms-eval/LiveBench
 dataset_kwargs:
   token: True
 test_split: test

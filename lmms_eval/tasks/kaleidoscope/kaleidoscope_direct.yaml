@@ -1,0 +1,9 @@
+task: "kaleidoscope_direct"
+task_alias: "Kaleidoscope (direct, all)"
+process_results: !function utils.kaleidoscope_process_results
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt_type: "direct"
+
+include: _default_template_yaml

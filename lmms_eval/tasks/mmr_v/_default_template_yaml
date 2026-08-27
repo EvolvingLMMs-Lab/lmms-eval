@@ -1,0 +1,65 @@
+dataset_path: JokerJan/MMR-VBench
+dataset_kwargs:
+  cache_dir: mmr_v
+  video: true
+test_split: test
+output_type: generate_until
+cluster_key: video
+doc_to_visual: !function utils.mmr_v_doc_to_visual
+doc_to_text: !function utils.mmr_v_doc_to_text
+doc_to_target: correctAnswer
+process_results: !function utils.mmr_v_process_results
+metric_list:
+  - metric: mmr_v_overall_accuracy
+    aggregation: !function utils.mmr_v_aggregate_overall
+    higher_is_better: true
+  - metric: mmr_v_theme_understanding_accuracy
+    aggregation: !function utils.mmr_v_aggregate_theme_understanding
+    higher_is_better: true
+  - metric: mmr_v_metaphor_understanding_accuracy
+    aggregation: !function utils.mmr_v_aggregate_metaphor_understanding
+    higher_is_better: true
+  - metric: mmr_v_emotion_recognition_accuracy
+    aggregation: !function utils.mmr_v_aggregate_emotion_recognition
+    higher_is_better: true
+  - metric: mmr_v_implicit_symbol_accuracy
+    aggregation: !function utils.mmr_v_aggregate_implicit_symbol
+    higher_is_better: true
+  - metric: mmr_v_causal_reasoning_accuracy
+    aggregation: !function utils.mmr_v_aggregate_causal_reasoning
+    higher_is_better: true
+  - metric: mmr_v_counterintuitive_reasoning_accuracy
+    aggregation: !function utils.mmr_v_aggregate_counterintuitive_reasoning
+    higher_is_better: true
+  - metric: mmr_v_video_type_and_intent_accuracy
+    aggregation: !function utils.mmr_v_aggregate_video_type_and_intent
+    higher_is_better: true
+  - metric: mmr_v_sequential_structure_reasoning_accuracy
+    aggregation: !function utils.mmr_v_aggregate_sequential_structure_reasoning
+    higher_is_better: true
+  - metric: mmr_v_cross_modal_creative_transfer_accuracy
+    aggregation: !function utils.mmr_v_aggregate_cross_modal_creative_transfer
+    higher_is_better: true
+  - metric: mmr_v_comment_matching_accuracy
+    aggregation: !function utils.mmr_v_aggregate_comment_matching
+    higher_is_better: true
+  - metric: mmr_v_animation_video_accuracy
+    aggregation: !function utils.mmr_v_aggregate_animation_video
+    higher_is_better: true
+  - metric: mmr_v_movie_video_accuracy
+    aggregation: !function utils.mmr_v_aggregate_movie_video
+    higher_is_better: true
+  - metric: mmr_v_tv_video_accuracy
+    aggregation: !function utils.mmr_v_aggregate_tv_video
+    higher_is_better: true
+  - metric: mmr_v_life_video_accuracy
+    aggregation: !function utils.mmr_v_aggregate_life_video
+    higher_is_better: true
+  - metric: mmr_v_art_video_accuracy
+    aggregation: !function utils.mmr_v_aggregate_art_video
+    higher_is_better: true
+  - metric: mmr_v_philosophy_video_accuracy
+    aggregation: !function utils.mmr_v_aggregate_philosophy_video
+    higher_is_better: true
+metadata:
+  version: 1.0

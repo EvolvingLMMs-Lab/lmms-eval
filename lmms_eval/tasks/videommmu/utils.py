@@ -84,7 +84,6 @@ def videommmu_doc_to_visual_question_only(doc):
 def videommmu_doc_to_text_adaptation(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
-    pre_prompt = ""
 
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
     question = doc["question"]
@@ -93,10 +92,11 @@ def videommmu_doc_to_text_adaptation(doc, lmms_eval_specific_kwargs=None):
         pre_prompt += lmms_eval_specific_kwargs["mcq_prompt"]
         parsed_options = parse_options(doc["options"])
         question += "\n" + parsed_options
+        post_prompt = lmms_eval_specific_kwargs.get("mcq_post_prompt", "")
+        return f"{pre_prompt}{question}{post_prompt}"
     else:
         pre_prompt += lmms_eval_specific_kwargs["open_ended_prompt"]
-
-    return f"{pre_prompt}{question}"
+        return f"{pre_prompt}{question}"
 
 
 def videommmu_doc_to_text_no_preprompt(doc, lmms_eval_specific_kwargs=None):
@@ -113,13 +113,13 @@ def videommmu_doc_to_text_no_preprompt(doc, lmms_eval_specific_kwargs=None):
 def videommmu_doc_to_text_perception_comprehension(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
-    post_prompt = ""
-    post_prompt += lmms_eval_specific_kwargs["perception_and_comprehension_prompt"]
+    post_prompt = lmms_eval_specific_kwargs.get("perception_and_comprehension_prompt", "")
+    mcq_post = lmms_eval_specific_kwargs.get("mcq_post_prompt", "")
     question = doc["question"]
     parsed_options = parse_options(doc["options"])
     question += "\n" + parsed_options
 
-    return f"{question}{post_prompt}"
+    return f"{question}{post_prompt}{mcq_post}"
 
 
 def parse_options(options):
@@ -327,12 +327,80 @@ def evaluate_videommmu(samples):
     return judge_dict, {"acc": pred_correct / len(samples)}
 
 
+def _extract_from_reasoning(response, all_choices):
+    """Extract the most likely answer from a long reasoning chain.
+
+    When the model generates verbose reasoning without a clear conclusion,
+    scan for which option is discussed most favorably using weighted signals:
+    - Explicit conclusions: "the answer is X", "correct answer is X" (weight 10)
+    - Favorable mentions: "X is correct", "option X" near positive context (weight 3)
+    - Option letter near key indicators: "therefore", "so", "thus" (weight 5)
+    - Raw frequency in the last third of output (weight 1)
+    """
+    scores = {ch: 0.0 for ch in all_choices}
+    resp_lower = response.lower()
+
+    # 1. Explicit answer statements (highest weight)
+    for ch in all_choices:
+        ch_lower = ch.lower()
+        patterns = [
+            rf"(?:the\s+)?answer\s+is\s+{ch}(?:\b|\.)",
+            rf"correct\s+answer\s+is\s+{ch}(?:\b|\.)",
+            rf"(?:therefore|thus|hence|so),?\s+{ch}(?:\b|\.)",
+            rf"(?:i\s+(?:choose|select|pick))\s+{ch}(?:\b|\.)",
+        ]
+        for pat in patterns:
+            for m in re.finditer(pat, resp_lower):
+                # Later matches get a small bonus (recency)
+                recency = 1.0 + m.start() / max(len(resp_lower), 1)
+                scores[ch] += 10.0 * recency
+
+    # 2. Option discussed near conclusion indicators (medium weight)
+    indicators = ["therefore", "thus", "hence", "so the", "this means", "which gives", "we get", "the result is", "confirms"]
+    for indicator in indicators:
+        idx = resp_lower.rfind(indicator)
+        if idx == -1:
+            continue
+        # Look for option letters within 200 chars after indicator
+        window = response[idx : idx + 200]
+        for ch in all_choices:
+            if ch in window:
+                scores[ch] += 5.0
+
+    # 3. Favorable context patterns (lower weight)
+    for ch in all_choices:
+        # "option X" mentions
+        scores[ch] += len(re.findall(rf"option\s+{ch}\b", resp_lower)) * 2.0
+        # "X." at start of a line (model listing its reasoning about X)
+        scores[ch] += len(re.findall(rf"^\s*{ch}\.", response, re.MULTILINE)) * 1.5
+
+    # 4. Frequency in last third (tiebreaker)
+    last_third = response[len(response) * 2 // 3 :]
+    for ch in all_choices:
+        count = len(re.findall(rf"\b{ch}\b", last_third))
+        scores[ch] += count * 0.5
+
+    # Pick the highest scoring option
+    best = max(scores, key=scores.get)
+    if scores[best] > 0:
+        return best
+    return None
+
+
 def parse_multi_choice_response(response, all_choices, index2ans):
     """
     Parse the prediction from the generated response.
     Return the predicted index e.g., A, B, C, D.
+
+    Uses the shared MCQ extractor for robust extraction across all output formats.
+    Falls back to the legacy parser if the shared extractor is unavailable.
     """
-    return parse_videommmu_multi_choice_response(response, all_choices, index2ans)
+    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+    result = extract_mcq_answer(response, choices=all_choices)
+    if result:
+        return result
+    return "No Answer Found."
 
 
 # Exact all forms of numbers from a string with regex.

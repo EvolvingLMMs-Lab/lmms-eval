@@ -12,6 +12,11 @@ def strip_reasoning_tags(text: str, tag_pairs: List[List[str]]) -> str:
 
     Returns:
         Cleaned text with reasoning blocks removed.
+
+    Note:
+        Tag matching is case-sensitive (``<THINK>`` is not treated as ``<think>``),
+        and an unclosed opening tag with no matching closing tag is left untouched
+        and passes through unstripped.
     """
     result = text
     for start_tag, end_tag in tag_pairs:

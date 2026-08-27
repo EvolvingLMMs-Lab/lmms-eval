@@ -1,0 +1,4 @@
+dataset_name: "Compositionality_tdw_two_sphere_2_14_subset"
+tag: "wm_abench_subtasks"
+task: "wm_abench_compositionality_tdw_two_sphere_2_14_subset"
+include: _default_template_yaml

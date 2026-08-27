@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/TempCompass
+dataset_path: lmms-eval/TempCompass
 dataset_kwargs:
   token: True
   video: True

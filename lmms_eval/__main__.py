@@ -34,7 +34,7 @@ from lmms_eval.api.metrics import power_analysis
 from lmms_eval.api.registry import ALL_TASKS
 from lmms_eval.cli.power_utils import collect_task_sizes
 from lmms_eval.evaluator import request_caching_arg_to_dict
-from lmms_eval.loggers import EvaluationTracker, WandbLogger
+from lmms_eval.loggers import EvaluationTracker, SwanLabLogger, WandbLogger
 from lmms_eval.tasks import TaskManager
 from lmms_eval.utils import (
     get_eval_banner,
@@ -260,6 +260,12 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         help="If True, write out all model outputs and documents for per-sample measurement and post-hoc analysis to Weights and Biases",
     )
     parser.add_argument(
+        "--swanlab_log_samples",
+        action="store_true",
+        default=False,
+        help="If True, write out all model outputs and documents for per-sample measurement and post-hoc analysis to SwanLab",
+    )
+    parser.add_argument(
         "--log_samples_suffix",
         type=str,
         default="model_outputs",
@@ -316,6 +322,11 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         "--wandb_args",
         default="",
         help="Comma separated string arguments passed to wandb.init, e.g. `project=lmms-eval,job_type=eval",
+    )
+    parser.add_argument(
+        "--swanlab_args",
+        default="",
+        help="Comma separated string arguments passed to swanlab.init, e.g. `project=lmms-eval,exp_name=eval,mode=cloud`",
     )
     parser.add_argument(
         "--timezone",
@@ -467,6 +478,18 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
             args.wandb_args += f",name={name}"
         wandb_logger = WandbLogger(**simple_parse_args_string(args.wandb_args))
 
+    swanlab_logger = None
+    if args.swanlab_args:
+        if "exp_name" not in args.swanlab_args:
+            name = f"{args.model}_{args.model_args}_{utils.get_datetime_str(timezone=args.timezone)}"
+            name = utils.sanitize_long_string(name)
+            args.swanlab_args += f",exp_name={name}"
+        try:
+            swanlab_logger = SwanLabLogger(**simple_parse_args_string(args.swanlab_args))
+        except Exception as e:
+            eval_logger.warning(f"swanlab logger initialization failed; continuing without swanlab: {e}")
+            swanlab_logger = None
+
     # reset logger
     eval_logger.remove()
     # Configure logger with detailed format including file path, function name, and line number
@@ -556,6 +579,15 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                     eval_logger.info(f"Logging to Weights and Biases failed due to {e}")
                 # wandb_logger.finish()
 
+            if is_main_process and args.swanlab_args and swanlab_logger is not None:
+                try:
+                    swanlab_logger.post_init(results)
+                    swanlab_logger.log_eval_result()
+                    if args.swanlab_log_samples and samples is not None:
+                        swanlab_logger.log_eval_samples(samples)
+                except Exception as e:
+                    eval_logger.info(f"Logging to SwanLab failed due to {e}")
+
         except Exception as e:
             if args.verbosity == "DEBUG":
                 raise e
@@ -575,6 +607,9 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
     if args.wandb_args:
         wandb_logger.run.finish()
+
+    if args.swanlab_args and swanlab_logger is not None:
+        swanlab_logger.finish()
 
 
 def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:

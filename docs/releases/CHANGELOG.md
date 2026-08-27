@@ -66,7 +66,6 @@
 
 - **Lance table distribution**: MINERVA videos stored as `video_blob` in a Lance table on Hugging Face (`lmms-lab-eval/minerva`). Single-package reproducible distribution. ([Release notes §4](lmms-eval-0.7.md#4-lance-backed-video-mode))
 - **Resolution priority**: local file (`MINERVA_VIDEO_DIR`) > Lance blob (`MINERVA_LANCE_VIDEO_URI`) > YouTube URL fallback.
-- **Build tooling**: `tools/minerva_to_lance.py` converts local video files to Lance tables. `tools/bench_minerva_video_resolution.py` and `tools/bench_minerva_pipeline_latency.py` for latency benchmarking.
 
 ### Safety and Red-Teaming Baseline
 

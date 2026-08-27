@@ -10,6 +10,18 @@ from lmms_eval.utils import eval_logger
 _VIDEO_EXTENSIONS = ("mp4", "MP4", "mkv", "webm", "mov")
 
 
+def _parse_video_ref(ref: str):
+    """Parse 'uuid_start_end' → (uid, start, end) or None."""
+    parts = ref.rsplit("_", 2)
+    if len(parts) != 3:
+        return None
+    uid, start_s, end_s = parts
+    try:
+        return uid, float(start_s), float(end_s)
+    except ValueError:
+        return None
+
+
 def _normalize_text(text: Any) -> str:
     if text is None:
         return ""
@@ -116,15 +128,46 @@ def _resolve_video_path(clip_id: str) -> str | None:
 
 
 def egotempo_doc_to_visual(doc):
-    for key in ["video", "video_path", "media_path", "clip_path", "path", "file"]:
-        value = doc.get(key)
-        if value:
-            resolved = resolve_media_reference(value, media_type="video", cache_dir="egotempo", env_vars=("EGOTEMPO_VIDEO_DIR", "EGOTEMPO_CACHE_DIR"))
+    video_ref = str(doc.get("video", "")).strip()
+
+    # 1. Try to find a pre-existing file (pre-trimmed or full clip)
+    if video_ref:
+        resolved = resolve_media_reference(
+            video_ref,
+            media_type="video",
+            cache_dir="egotempo",
+            env_vars=("EGOTEMPO_VIDEO_DIR", "EGOTEMPO_CACHE_DIR"),
+        )
+        if isinstance(resolved, str) and os.path.exists(resolved):
             return [resolved]
 
+    # 2. Check other doc keys
+    for key in ["video_path", "media_path", "clip_path", "path", "file"]:
+        value = doc.get(key)
+        if value:
+            resolved = resolve_media_reference(
+                value,
+                media_type="video",
+                cache_dir="egotempo",
+                env_vars=("EGOTEMPO_VIDEO_DIR", "EGOTEMPO_CACHE_DIR"),
+            )
+            if isinstance(resolved, str) and os.path.exists(resolved):
+                return [resolved]
+
+    # 3. Try full clip by UID (without timestamp suffix)
+    parsed = _parse_video_ref(video_ref) if video_ref else None
+    if parsed:
+        uid, start, end = parsed
+        full_clip = _resolve_video_path(uid)
+        if full_clip:
+            # Return dict with temporal range — our media module handles slicing
+            return [{"type": "video", "path": full_clip, "video_start": start, "video_end": end}]
+
+    # 4. Last resort: clip_id fallback
     clip_id = str(doc.get("clip_id", "")).strip()
     video_path = _resolve_video_path(clip_id)
     if video_path is None:
+        eval_logger.warning("EgoTempo: no video found for ref={}", video_ref)
         return []
     return [video_path]
 

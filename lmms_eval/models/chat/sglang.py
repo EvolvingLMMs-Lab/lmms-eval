@@ -296,9 +296,11 @@ class Sglang(lmms):
             video_data = [vids for _, _, vids in prepared]
             has_video = any(len(vids) > 0 for vids in video_data)
 
-            # Extract generation parameters
-            ctx, doc_to_messages, gen_kwargs, doc_id, task, split = batch_requests[0].arguments
-            params = self._extract_gen_params(gen_kwargs)
+            # Extract generation parameters. Sampling settings belong to the
+            # individual request, so build one entry per request instead of
+            # reusing the first one for the whole batch. SGLang's Engine
+            # accepts a list of sampling_params aligned with the prompts.
+            params = [self._extract_gen_params(request.arguments[2]) for request in batch_requests]
 
             # Apply chat template
             texts = self.processor.apply_chat_template(
@@ -494,9 +496,13 @@ class Sglang(lmms):
         )
 
     def req_level_generate(self, input_ids, image_data, sampling_params, batched_messages):
-        """Per-request generation with tool calling support."""
+        """Per-request generation with tool calling support.
+
+        ``sampling_params`` is a list holding one entry per request, aligned
+        with ``input_ids`` / ``batched_messages``.
+        """
         loop = asyncio.get_event_loop()
-        text_list = loop.run_until_complete(asyncio.gather(*[self.async_a_request(iid, img, sampling_params, msgs) for iid, img, msgs in zip(input_ids, image_data, batched_messages)]))
+        text_list = loop.run_until_complete(asyncio.gather(*[self.async_a_request(iid, img, params, msgs) for iid, img, params, msgs in zip(input_ids, image_data, sampling_params, batched_messages)]))
         return [{"text": text} for text in text_list]
 
     def batch_level_generate(self, input_ids, image_data, sampling_params):

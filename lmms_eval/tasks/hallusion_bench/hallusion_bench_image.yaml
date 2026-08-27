@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/HallusionBench
+dataset_path: lmms-lab-encoder/HallusionBench
 dataset_kwargs:
   token: True
 task: "hallusion_bench_image"

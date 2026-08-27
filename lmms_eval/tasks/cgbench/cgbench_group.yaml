@@ -1,0 +1,6 @@
+group: cgbench_all
+task:
+  - cgbench
+  - cgbench_subtitles
+metadata:
+  - version: 1.0

@@ -13,10 +13,44 @@ generation_kwargs:
 output_type: generate_until
 doc_to_visual: !function utils.viewspatial_doc_to_visual
 doc_to_text: !function utils.viewspatial_doc_to_text
+doc_to_messages: !function utils.viewspatial_doc_to_messages
 doc_to_target: "answer"
 process_results: !function utils.viewspatial_process_results
+
+lmms_eval_specific_kwargs:
+  neo_ov:
+    pre_prompt: ""
+    post_prompt: ""
+    prompt_format: neo_ov
+
+model_specific_generation_kwargs:
+  neo_ov:
+    patch_size: 16
+    min_pixels: 691200
+    max_pixels: 691200
+    downsample_ratio: 0.5
+    system_prompt: ""
+    max_new_tokens: 4096
+    temperature: null
+    top_p: null
+    repetition_penalty: null
 
 metric_list:
   - metric: overall_accuracy
     aggregation: !function utils.viewspatial_aggregate_results
+    higher_is_better: true
+  - metric: camera_perspective_relative_direction_accuracy
+    aggregation: !function utils.viewspatial_aggregate_camera_perspective_relative_direction
+    higher_is_better: true
+  - metric: camera_perspective_object_view_orientation_accuracy
+    aggregation: !function utils.viewspatial_aggregate_camera_perspective_object_view_orientation
+    higher_is_better: true
+  - metric: person_perspective_relative_direction_accuracy
+    aggregation: !function utils.viewspatial_aggregate_person_perspective_relative_direction
+    higher_is_better: true
+  - metric: person_perspective_object_view_orientation_accuracy
+    aggregation: !function utils.viewspatial_aggregate_person_perspective_object_view_orientation
+    higher_is_better: true
+  - metric: person_perspective_scene_simulation_relative_direction_accuracy
+    aggregation: !function utils.viewspatial_aggregate_person_perspective_scene_simulation_relative_direction
     higher_is_better: true

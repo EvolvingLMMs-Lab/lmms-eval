@@ -14,9 +14,19 @@ Categories = {
     "counting & existence",
     "spatial relationship reasoning",
     "object localization & positioning",
-    "depth & 3d understanding",
-    "movement navigation & intent prediction",
+    "3d information understanding",
+    "movement prediction & navigation",
     "multi-view & cross-image reasoning",
+}
+
+# Mapping from category name to metric key suffix
+CATEGORY_TO_METRIC_KEY = {
+    "3d information understanding": "3d_information_understanding",
+    "counting & existence": "counting_and_existence",
+    "movement prediction & navigation": "movement_prediction_and_navigation",
+    "multi-view & cross-image reasoning": "multiview_and_crossimage_reasoning",
+    "object localization & positioning": "object_localization_and_positioning",
+    "spatial relationship reasoning": "spatial_relationship_reasoning",
 }
 
 # Get the cache directory from the config file
@@ -118,27 +128,93 @@ def spatial_doc_to_text_image(doc, lmmseval_specific_kwargs=None):
     return prompt
 
 
-def spatial_doc_to_text_video(doc, lmmseval_specific_kwargs=None):
+def _format_neo_ov_content(images, prompt):
+    if len(images) == 1:
+        return [{"type": "image", "url": images[0]}, {"type": "text", "text": prompt}]
+
+    content = []
+    for idx, image in enumerate(images, start=1):
+        content.append({"type": "text", "text": f"Image-{idx}: "})
+        content.append({"type": "image", "url": image})
+    content.append({"type": "text", "text": prompt})
+    return content
+
+
+def _get_specific_kwarg(lmms_eval_specific_kwargs, key, default=None):
+    if not lmms_eval_specific_kwargs:
+        return default
+    if key in lmms_eval_specific_kwargs:
+        return lmms_eval_specific_kwargs[key]
+    nested_default = lmms_eval_specific_kwargs.get("default", {})
+    return nested_default.get(key, default) if isinstance(nested_default, dict) else default
+
+
+def _sitebench_image_neo_ov_prompt(doc):
+    question = doc["question"].strip()
+    options = doc["options"]
+    option_text = "\n".join(f"{UpperLetters[i]}: {options[i]}" for i in range(len(options)))
+
+    raw_prompt = ""
+    if "<image>" not in question and "<image>" not in option_text:
+        raw_prompt += "<image>" * len(doc["visual"]) + "\n"
+
+    raw_prompt += "Question: " + question + "\n"
+    raw_prompt += "Options:\n" + option_text + "\n"
+    raw_prompt += "Give me the answer letter directly. The best answer is:"
+
+    parts = raw_prompt.split("<image>")
+    prompt = ""
+    image_idx = 1
+    for part_idx, part in enumerate(parts):
+        text = part.strip()
+        if text:
+            prompt += text
+        if part_idx != len(parts) - 1 and image_idx <= len(doc["visual"]):
+            prompt += f"<Image-{image_idx}>"
+            image_idx += 1
+
+    images_to_remove = "".join(f"<Image-{idx + 1}>" for idx in range(len(doc["visual"])))
+    return prompt.replace(images_to_remove, "")
+
+
+def sitebench_video_prompt(doc, lmmseval_specific_kwargs=None):
     pre_prompt = "Select the best answer to the following multiple-choice question based on the video. Respond with only the letter of the correct option."
 
     question = doc["question"].strip()
     options = doc["options"]
     option_text = "\n".join(f"{UpperLetters[i]}: {options[i]}" for i in range(len(options)))
+    post_prompt = _get_specific_kwarg(lmmseval_specific_kwargs, "post_prompt", "Give me the answer letter directly. The best answer is:")
 
-    prompt = pre_prompt + "\n"
+    return f"{pre_prompt}\nQuestion: {question}\nOptions:\n{option_text}\n{post_prompt}"
 
-    # check the pre_prompt
-    if lmmseval_specific_kwargs:
-        prompt += lmmseval_specific_kwargs.get("default", {}).get("pre_prompt", "")
 
-    prompt += "Question: " + question + "\n"
-    prompt += "Options:\n" + option_text + "\n"
+def _sitebench_video_frames(doc, lmms_eval_specific_kwargs=None):
+    from decord import VideoReader, cpu
 
-    # Append post prompt if provided
-    if lmmseval_specific_kwargs:
-        prompt += lmmseval_specific_kwargs.get("default", {}).get("post_prompt", "")
+    video_path = os.path.join(cache_dir, doc["visual"][0])
+    if not os.path.exists(video_path):
+        raise FileNotFoundError(f"Video path: {video_path} does not exist.")
 
-    return prompt
+    num_frames = int(_get_specific_kwarg(lmms_eval_specific_kwargs, "num_frames", 32))
+    vr = VideoReader(video_path, ctx=cpu(0))
+    total_frames = len(vr)
+    num_frames = min(num_frames, total_frames)
+    indices = np.linspace(0, total_frames - 1, num_frames, dtype=int)
+    frames = vr.get_batch(indices).asnumpy()
+    return [Image.fromarray(frame) for frame in frames]
+
+
+def _format_neo_ov_video_content(frames, prompt):
+    content = []
+    for idx, frame in enumerate(frames, start=1):
+        content.append({"type": "text", "text": f"Frame-{idx}: "})
+        content.append({"type": "image", "url": frame})
+    content.append({"type": "text", "text": prompt})
+    return content
+
+
+def spatial_doc_to_text_video(doc, lmmseval_specific_kwargs=None):
+    return sitebench_video_prompt(doc, lmmseval_specific_kwargs)
 
 
 def spatial_doc_to_messages_image(doc, lmms_eval_specific_kwargs=None):
@@ -151,6 +227,11 @@ def spatial_doc_to_messages_image(doc, lmms_eval_specific_kwargs=None):
         If 'interleave_visuals' is set to False in the 'default' section,
         the function will generate non-interleaved messages.
     """
+    if lmms_eval_specific_kwargs and lmms_eval_specific_kwargs.get("prompt_format") == "neo_ov":
+        question = _sitebench_image_neo_ov_prompt(doc)
+        visuals = spatial_doc_to_visual_image(doc)
+        return [{"role": "user", "content": _format_neo_ov_content(visuals, question)}]
+
     if lmms_eval_specific_kwargs and lmms_eval_specific_kwargs.get("default", {}).get("interleave_visuals", True) is False:
         # Fallback to non-interleaved format - content must be a list for ChatMessages
         question = spatial_doc_to_text_image(doc, lmms_eval_specific_kwargs)
@@ -194,6 +275,11 @@ def spatial_doc_to_messages_video(doc, lmms_eval_specific_kwargs=None):
     Builds video-text messages for chat-based models.
     """
     question = spatial_doc_to_text_video(doc, lmms_eval_specific_kwargs)
+
+    if lmms_eval_specific_kwargs and lmms_eval_specific_kwargs.get("prompt_format") == "neo_ov":
+        frames = _sitebench_video_frames(doc, lmms_eval_specific_kwargs)
+        return [{"role": "user", "content": _format_neo_ov_video_content(frames, question)}]
+
     visuals = spatial_doc_to_visual_video(doc)
 
     # Video uses a simpler format - video first, then the question text
@@ -228,10 +314,17 @@ def spatial_process_results(doc, results):
         "total": 1.0 - 1.0 / len(all_choices),
     }
 
-    return {
+    result = {
         "accuracy": accuracy_dict,
         "chance_adjusted_acc": chance_adjusted_accuracy_dict,
     }
+
+    # Per-category accuracy and chance-adjusted accuracy
+    for cat_name, metric_key in CATEGORY_TO_METRIC_KEY.items():
+        result[f"{metric_key}_acc"] = {"score": score, "category": category, "target_category": cat_name}
+        result[f"{metric_key}_caa"] = {"score": adjusted_score, "category": category, "target_category": cat_name, "total": 1.0 - 1.0 / len(all_choices)}
+
+    return result
 
 
 def spatial_aggregate_results(results):
@@ -275,3 +368,71 @@ def spatial_aggregate_results(results):
     #     f.write("=" * 50 + "\n")
 
     return round(overall_accuracy, 5)
+
+
+def _aggregate_category_acc(results, target_category: str) -> float:
+    total_correct = 0
+    total_examples = 0
+    for r in results:
+        if r["category"] == target_category:
+            total_correct += r["score"]
+            total_examples += 1
+    return round((total_correct / total_examples) * 100, 5) if total_examples > 0 else 0.0
+
+
+def _aggregate_category_caa(results, target_category: str) -> float:
+    total_adjusted = 0.0
+    total_baseline = 0.0
+    for r in results:
+        if r["category"] == target_category:
+            total_adjusted += r["score"]
+            total_baseline += r["total"]
+    return round((total_adjusted / total_baseline) * 100, 5) if total_baseline > 0 else 0.0
+
+
+def aggregate_3d_information_understanding_acc(results):
+    return _aggregate_category_acc(results, "3d information understanding")
+
+
+def aggregate_3d_information_understanding_caa(results):
+    return _aggregate_category_caa(results, "3d information understanding")
+
+
+def aggregate_counting_and_existence_acc(results):
+    return _aggregate_category_acc(results, "counting & existence")
+
+
+def aggregate_counting_and_existence_caa(results):
+    return _aggregate_category_caa(results, "counting & existence")
+
+
+def aggregate_movement_prediction_and_navigation_acc(results):
+    return _aggregate_category_acc(results, "movement prediction & navigation")
+
+
+def aggregate_movement_prediction_and_navigation_caa(results):
+    return _aggregate_category_caa(results, "movement prediction & navigation")
+
+
+def aggregate_multiview_and_crossimage_reasoning_acc(results):
+    return _aggregate_category_acc(results, "multi-view & cross-image reasoning")
+
+
+def aggregate_multiview_and_crossimage_reasoning_caa(results):
+    return _aggregate_category_caa(results, "multi-view & cross-image reasoning")
+
+
+def aggregate_object_localization_and_positioning_acc(results):
+    return _aggregate_category_acc(results, "object localization & positioning")
+
+
+def aggregate_object_localization_and_positioning_caa(results):
+    return _aggregate_category_caa(results, "object localization & positioning")
+
+
+def aggregate_spatial_relationship_reasoning_acc(results):
+    return _aggregate_category_acc(results, "spatial relationship reasoning")
+
+
+def aggregate_spatial_relationship_reasoning_caa(results):
+    return _aggregate_category_caa(results, "spatial relationship reasoning")

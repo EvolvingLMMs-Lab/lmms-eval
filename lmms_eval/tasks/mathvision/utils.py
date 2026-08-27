@@ -1,8 +1,11 @@
 import os
+import threading
 
 from loguru import logger as eval_logger
 
-from lmms_eval.llm_judge import ServerConfig, get_server
+from lmms_eval.verifiers import VerificationPipeline
+from lmms_eval.verifiers.extractors import StripReasoningExtractor
+from lmms_eval.verifiers.openai import OpenAIVerifier
 
 try:
     from lmms_eval.tasks.mathvision.eval_utils import (
@@ -16,14 +19,27 @@ except ImportError as e:
 
 NUM_SECONDS_TO_SLEEP = 5
 
-# Initialize the judge server
-API_TYPE = os.getenv("API_TYPE", "openai")
-GPT_MODEL = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
+# Lazy pipeline singleton for GPT-based evaluation
+_pipeline = None
+_pipeline_lock = threading.Lock()
 
-server_config = ServerConfig(
-    model_name=GPT_MODEL,
-)
-server = get_server(server_name=API_TYPE, config=server_config)
+
+def _get_pipeline() -> VerificationPipeline:
+    global _pipeline
+    if _pipeline is None:
+        with _pipeline_lock:
+            if _pipeline is None:  # double-check
+                API_TYPE = os.getenv("API_TYPE", "openai")
+                GPT_MODEL = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
+                _pipeline = VerificationPipeline(
+                    extractors=[StripReasoningExtractor()],
+                    verifier=OpenAIVerifier(
+                        model=GPT_MODEL,
+                        api_type=API_TYPE,
+                        judge_type="binary",
+                    ),
+                )
+    return _pipeline
 
 
 def mathvision_doc_to_visual(doc):
@@ -50,23 +66,15 @@ def mathvision_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 def mathvision_gpt_eval_process_results(doc, results):
     correct_list = []
+    pipeline = _get_pipeline()
     for pred in results:
         model_answer = pred.strip()
         gt_answer = str(doc["answer"])
         question = doc["question"]
 
         try:
-            # Use the llm_judge API for binary evaluation
-            result = server.evaluate_binary(question=question, answer=gt_answer, prediction=model_answer, output_format="0/1")
-
-            # Parse the result
-            if result["success"]:
-                judge_response = result["result"]
-                correct_list.append(judge_response)
-            else:
-                eval_logger.error(f"Judge evaluation failed: {result.get('raw_response', 'Unknown error')}")
-                correct_list.append(False)
-
+            result = pipeline(question=question, prediction=model_answer, ground_truth=gt_answer)
+            correct_list.append(result.is_correct)
         except Exception as e:
             eval_logger.error(f"Error getting judge response: {e}")
             correct_list.append(False)

@@ -7,7 +7,7 @@ metric_list:
   - metric: submission
     higher_is_better: true
     aggregation: !function cn_utils.mmbench_aggregate_dev_results
-dataset_path: lmms-lab/LMMs-Eval-Lite
+dataset_path: lmms-lab-encoder/LMMs-Eval-Lite
 dataset_name: mmbench_cn_dev
 dataset_kwargs:
   token: True

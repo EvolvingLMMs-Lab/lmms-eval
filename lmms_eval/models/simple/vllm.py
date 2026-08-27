@@ -8,7 +8,6 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 import numpy as np
 import torch.distributed as dist
 from accelerate import Accelerator, DistributedType
-from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from PIL import Image
 
@@ -18,6 +17,10 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 from lmms_eval.models.model_utils.progress import make_progress
+
+# decord has no wheels for some platforms (e.g. macOS); defer the import so the wrapper stays importable and only video-decoding paths require it.
+VideoReader, _HAS_DECORD = optional_import("decord", "VideoReader")
+cpu, _ = optional_import("decord", "cpu")
 
 NUM_SECONDS_TO_SLEEP = int(os.getenv("NUM_SECONDS_TO_SLEEP", "5"))
 WORKERS = int(os.getenv("WORKERS", "32"))
@@ -337,6 +340,42 @@ class VLLM(lmms):
             return self.max_new_tokens
         return max(request_max_new_tokens, self.max_new_tokens)
 
+    @staticmethod
+    def _normalize_top_p_for_vllm(top_p: Any) -> Any:
+        if isinstance(top_p, bool):
+            return top_p
+        try:
+            numeric_top_p = float(top_p)
+        except (TypeError, ValueError):
+            return top_p
+        if numeric_top_p == 0.0:
+            return 1.0
+        return top_p
+
+    def _build_sampling_params_dict(self, gen_kwargs: dict[str, Any]) -> dict[str, Any]:
+        n = gen_kwargs.get("n")
+        if n is not None and (isinstance(n, bool) or not isinstance(n, int) or n != 1):
+            raise ValueError("generation parameter n must be the integer 1 because the vLLM backends consume exactly one output")
+
+        params = {
+            "max_tokens": gen_kwargs["max_new_tokens"],
+            "temperature": gen_kwargs["temperature"],
+            "top_p": self._normalize_top_p_for_vllm(gen_kwargs["top_p"]),
+        }
+        optional_params = (
+            "n",
+            "seed",
+            "top_k",
+            "min_p",
+            "repetition_penalty",
+            "presence_penalty",
+            "frequency_penalty",
+        )
+        for key in optional_params:
+            if gen_kwargs.get(key) is not None:
+                params[key] = gen_kwargs[key]
+        return params
+
     def _run_tp_synced(
         self,
         local_inputs: list[Any],
@@ -456,13 +495,7 @@ class VLLM(lmms):
                     gen_kwargs["max_new_tokens"] = self._select_max_new_tokens(gen_kwargs.get("max_new_tokens"))
                     gen_kwargs.setdefault("temperature", 0)
                     gen_kwargs.setdefault("top_p", 0.95)
-
-                    params = {
-                        "max_tokens": gen_kwargs["max_new_tokens"],
-                        "temperature": gen_kwargs["temperature"],
-                        "top_p": gen_kwargs["top_p"],
-                    }
-                    sampling_params = SamplingParams(**params)
+                    sampling_params = SamplingParams(**self._build_sampling_params_dict(gen_kwargs))
 
                     visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
                     if None in visuals:

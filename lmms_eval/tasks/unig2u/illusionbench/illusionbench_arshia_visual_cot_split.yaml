@@ -1,0 +1,8 @@
+group: unig2u_illusionbench_arshia_visual_cot_split
+task:
+  - unig2u_illusionbench_arshia_icon_shape_visual_cot
+  - unig2u_illusionbench_arshia_icon_scene_visual_cot
+  - unig2u_illusionbench_arshia_logo_shape_visual_cot
+  - unig2u_illusionbench_arshia_logo_scene_visual_cot
+  - unig2u_illusionbench_arshia_in_shape_visual_cot
+  - unig2u_illusionbench_arshia_in_scene_visual_cot

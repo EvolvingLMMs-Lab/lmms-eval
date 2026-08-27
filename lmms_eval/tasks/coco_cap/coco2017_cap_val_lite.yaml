@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/LMMs-Eval-Lite
+dataset_path: lmms-lab-encoder/LMMs-Eval-Lite
 dataset_kwargs:
   token: True
 task: "coco2017_cap_val_lite"

@@ -1,0 +1,100 @@
+dataset_path: Delores-Lin/MDPBench-VLMEvalKit
+task: mdpbench
+test_split: train
+output_type: generate_until
+doc_to_visual: !function utils.mdpbench_doc_to_visual
+doc_to_text: !function utils.mdpbench_doc_to_text
+doc_to_messages: !function utils.mdpbench_doc_to_messages
+doc_to_target: !function utils.mdpbench_doc_to_target
+generation_kwargs:
+  max_new_tokens: 2048
+  temperature: 0
+  do_sample: false
+  until: []
+process_results: !function utils.mdpbench_process_results
+metric_list:
+  # ── Overall (All / Digital / Photo) ───────────────────────────────────────
+  - metric: mdpbench_overall
+    aggregation: !function utils.mdpbench_aggregate_overall
+    higher_is_better: true
+  - metric: mdpbench_overall_digital
+    aggregation: !function utils.mdpbench_aggregate_overall_digital
+    higher_is_better: true
+  - metric: mdpbench_overall_photo
+    aggregation: !function utils.mdpbench_aggregate_overall_photo
+    higher_is_better: true
+  # ── Latin — group average + per language ──────────────────────────────────
+  - metric: mdpbench_overall_latin
+    aggregation: !function utils.mdpbench_aggregate_overall_latin
+    higher_is_better: true
+  - metric: mdpbench_overall_de
+    aggregation: !function utils.mdpbench_aggregate_overall_de
+    higher_is_better: true
+  - metric: mdpbench_overall_en
+    aggregation: !function utils.mdpbench_aggregate_overall_en
+    higher_is_better: true
+  - metric: mdpbench_overall_es
+    aggregation: !function utils.mdpbench_aggregate_overall_es
+    higher_is_better: true
+  - metric: mdpbench_overall_fr
+    aggregation: !function utils.mdpbench_aggregate_overall_fr
+    higher_is_better: true
+  - metric: mdpbench_overall_id
+    aggregation: !function utils.mdpbench_aggregate_overall_id
+    higher_is_better: true
+  - metric: mdpbench_overall_it
+    aggregation: !function utils.mdpbench_aggregate_overall_it
+    higher_is_better: true
+  - metric: mdpbench_overall_nl
+    aggregation: !function utils.mdpbench_aggregate_overall_nl
+    higher_is_better: true
+  - metric: mdpbench_overall_pt
+    aggregation: !function utils.mdpbench_aggregate_overall_pt
+    higher_is_better: true
+  - metric: mdpbench_overall_vi
+    aggregation: !function utils.mdpbench_aggregate_overall_vi
+    higher_is_better: true
+  # ── Non-Latin — group average + per language ──────────────────────────────
+  - metric: mdpbench_overall_nonlatin
+    aggregation: !function utils.mdpbench_aggregate_overall_nonlatin
+    higher_is_better: true
+  - metric: mdpbench_overall_ar
+    aggregation: !function utils.mdpbench_aggregate_overall_ar
+    higher_is_better: true
+  - metric: mdpbench_overall_hi
+    aggregation: !function utils.mdpbench_aggregate_overall_hi
+    higher_is_better: true
+  - metric: mdpbench_overall_jp
+    aggregation: !function utils.mdpbench_aggregate_overall_jp
+    higher_is_better: true
+  - metric: mdpbench_overall_ko
+    aggregation: !function utils.mdpbench_aggregate_overall_ko
+    higher_is_better: true
+  - metric: mdpbench_overall_ru
+    aggregation: !function utils.mdpbench_aggregate_overall_ru
+    higher_is_better: true
+  - metric: mdpbench_overall_th
+    aggregation: !function utils.mdpbench_aggregate_overall_th
+    higher_is_better: true
+  - metric: mdpbench_overall_zh
+    aggregation: !function utils.mdpbench_aggregate_overall_zh
+    higher_is_better: true
+  - metric: mdpbench_overall_zh_t
+    aggregation: !function utils.mdpbench_aggregate_overall_zh_t
+    higher_is_better: true
+  # ── Element-level task metrics ────────────────────────────────────────────
+  - metric: mdpbench_text_edit
+    aggregation: !function utils.mdpbench_aggregate_text_edit
+    higher_is_better: false
+  - metric: mdpbench_formula_cdm
+    aggregation: !function utils.mdpbench_aggregate_formula_cdm
+    higher_is_better: true
+  - metric: mdpbench_table_teds
+    aggregation: !function utils.mdpbench_aggregate_table_teds
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 1.0

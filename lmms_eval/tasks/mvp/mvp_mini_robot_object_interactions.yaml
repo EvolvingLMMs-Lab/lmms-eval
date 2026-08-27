@@ -1,0 +1,4 @@
+include: _default_template_yaml
+task: mvp_mini_robot_object_interactions
+dataset_name: robot_object_interactions
+test_split: mini

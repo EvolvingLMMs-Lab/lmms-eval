@@ -35,7 +35,7 @@ class Request:
     """Standard request format for judge evaluation"""
 
     messages: List[Dict[str, Any]]
-    images: Optional[List[Union[str, bytes]]] = None  # Image paths or base64 encoded
+    images: Optional[List[Union[str, bytes, "Image.Image"]]] = None  # Image paths, base64 bytes, or PIL images
     config: Optional[ServerConfig] = None
 
     # Structured input for specific judge types

@@ -1,13 +1,10 @@
 # MMSI-Video-Bench: A Holistic Benchmark for Video-Based Spatial Intelligence
 # https://huggingface.co/datasets/rbler/MMSI-Video-Bench
 
-import json
 import os
 import re
-from collections import defaultdict
 from pathlib import Path
 
-import datasets
 import yaml
 from loguru import logger as eval_logger
 from PIL import Image
@@ -153,6 +150,21 @@ def is_nan_or_none(value) -> bool:
 
 
 ##################
+# Dataset filtering (process_docs)
+##################
+def process_docs_single_input_only(dataset):
+    """Restrict to the single-visual-input subset used by Cambrian-P's reported MMSI-Video protocol.
+
+    Drops samples that carry reference images or are "Cross-Video" type, leaving only
+    samples with a single video input.
+
+    ``ref_images`` is a (possibly empty) list/ndarray per sample; the ``or []`` guard also
+    covers a None value defensively.
+    """
+    return dataset.filter(lambda x: len(x.get("ref_images", []) or []) == 0 and "Cross-Video" not in x["type"])
+
+
+##################
 # doc_to_visual functions
 ##################
 def doc_to_visual_video(doc):
@@ -213,7 +225,7 @@ def doc_to_visual_frames(doc, lmms_eval_specific_kwargs=None):
     # Load sampled frames as PIL Images
     pil_images = []
     eval_logger.debug(f"[doc_to_visual_frames] sampled_frames_list has {len(sampled_frames_list)} segments")
-    for seg_idx, frames in enumerate(sampled_frames_list):
+    for frames in sampled_frames_list:
         for frame_path in frames:
             full_path = os.path.join(cache_dir, "frames", frame_path)
             if not os.path.exists(full_path):

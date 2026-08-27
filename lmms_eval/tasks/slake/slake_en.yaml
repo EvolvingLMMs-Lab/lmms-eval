@@ -1,0 +1,8 @@
+include: _default_template_yaml
+task: slake_en
+process_docs: !function utils.slake_process_docs_en
+metadata:
+  version: 0.0
+  dataset: BoKelvin/SLAKE
+  license: cc-by-4.0
+  language: en

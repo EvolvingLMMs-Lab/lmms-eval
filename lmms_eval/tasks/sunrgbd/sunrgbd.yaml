@@ -1,0 +1,25 @@
+task: sunrgbd
+output_type: generate_until
+test_split: test
+dataset_path: kcz358/SUNRGBD-3D
+process_docs: !function utils.sunrgbd_process_docs
+doc_to_visual: !function utils.sunrgbd_doc_to_visual
+doc_to_text: !function utils.sunrgbd_doc_to_text
+doc_to_target: ""
+generation_kwargs:
+  max_new_tokens: 8192
+  temperature: 0.0
+  do_sample: false
+process_results: !function utils.sunrgbd_process_results
+metric_list:
+  - metric: sunrgbd_mAP
+    aggregation: !function utils.sunrgbd_map
+    higher_is_better: true
+  - metric: sunrgbd_mAP25
+    aggregation: !function utils.sunrgbd_map25
+    higher_is_better: true
+  - metric: sunrgbd_mAP50
+    aggregation: !function utils.sunrgbd_map50
+    higher_is_better: true
+metadata:
+  version: '0.0'

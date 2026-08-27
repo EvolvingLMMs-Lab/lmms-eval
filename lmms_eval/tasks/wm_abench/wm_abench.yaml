@@ -1,0 +1,50 @@
+group: wm_abench
+task:
+  # Known-bad subtasks are intentionally excluded here so the group remains runnable:
+  # - wm_abench_visualattribute_color_tdw_subset
+  # - wm_abench_transitivity_habitat_lab_trans_ver_2_noback_subset
+  - wm_abench_compositionality_maniskill_lift_subset
+  - wm_abench_compositionality_maniskill_push_subset
+  - wm_abench_compositionality_maniskill_rotate_subset
+  - wm_abench_compositionality_tdw_two_sphere_2_14_subset
+  - wm_abench_discretecounting_tdw_top_subset
+  - wm_abench_mechanisticknowledge_maniskill_drop_subset
+  - wm_abench_mechanisticknowledge_maniskill_lift_subset
+  - wm_abench_mechanisticknowledge_maniskill_push_subset
+  - wm_abench_mechanisticknowledge_maniskill_rotate_subset
+  - wm_abench_mechanisticknowledge_physion_type_collision_v2_subset
+  - wm_abench_mechanisticknowledge_physion_type_drop_subset
+  - wm_abench_mechanisticknowledge_physion_type_slide_subset
+  - wm_abench_motiondirection_maniskill_subtask_subset
+  - wm_abench_motiondirection_maniskill_towards_subset
+  - wm_abench_motiondirection_tdw_subset
+  - wm_abench_motiondirection_tdw_subtask_subset
+  - wm_abench_motionspeed_maniskill_subset
+  - wm_abench_motionspeed_tdw_subset
+  - wm_abench_motiontrajectory_maniskill_path_choices_subset
+  - wm_abench_motiontrajectory_path_choices_subset
+  - wm_abench_multiview_maniskill_subset
+  - wm_abench_multiview_tdw_subset
+  - wm_abench_predictionnextstate_carla_next_state_prediction_02_08_subset
+  - wm_abench_quantitycontinuous_tdw_continuous_subset
+  - wm_abench_relativecounting_maniskill_subset
+  - wm_abench_relativecounting_tdw_color_letter_subset
+  - wm_abench_relativeposition_front_top_subset
+  - wm_abench_relativeposition_front_top_tdw_subset
+  - wm_abench_spatialoccupancy_maniskill_subset
+  - wm_abench_spatialoccupancy_occupancy_fitting_tdw_top_subset
+  - wm_abench_spatialoccupancy_occupancy_size_tdw_front_large_subset
+  - wm_abench_spatialoccupancy_volume_object_only_unfloat_top_subset
+  - wm_abench_speed_tdw_subset
+  - wm_abench_temporalextension_temporal_tdw_yjx_01_05_subset
+  - wm_abench_temporalpositioning_maniskill_subset
+  - wm_abench_visualattribute_color_subset
+  - wm_abench_visualattribute_material_diff_tdw_subset
+  - wm_abench_visualattribute_shape_tdw_subset
+aggregate_metric_list:
+  - metric: wm_abench_acc
+    aggregation: !function utils.wm_abench_aggregate_results
+  - metric: wm_abench_acc_clean
+    aggregation: !function utils.wm_abench_aggregate_results_clean
+  - metric: wm_abench_blocked_rate
+    aggregation: !function utils.wm_abench_aggregate_blocked_rate

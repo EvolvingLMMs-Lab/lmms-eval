@@ -1,0 +1,18 @@
+# MDPBench evaluation dependencies
+
+# Core metric libraries
+python-Levenshtein>=0.27.0       # edit distance computation
+apted>=1.0.3                      # tree edit distance for TEDS
+lxml>=4.9.0                       # HTML/XML parsing for TEDS
+scipy>=1.9.0                      # Hungarian algorithm (linear_sum_assignment)
+func-timeout>=4.3.5               # reference 30s matcher timeout and fallback
+
+# Prediction parsing
+beautifulsoup4>=4.12.0            # HTML table parsing in md_tex_filter
+pylatexenc>=2.10                  # LaTeX-to-text normalization (textblock2unicode)
+
+# CDM (Character Detection Metric) — formula visual evaluation
+# The reference CDM runtime is vendored with this task. It additionally needs
+# the xelatex, magick (ImageMagick 7), and node system commands.
+scikit-image>=0.19.0              # RANSAC for CDM box matching
+Pillow>=9.0.0                     # image I/O for CDM rendering

@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/worldqa
+dataset_path: lmms-eval/worldqa
 dataset_kwargs:
   token: True
   video: True

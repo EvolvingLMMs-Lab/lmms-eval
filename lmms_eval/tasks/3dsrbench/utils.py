@@ -101,6 +101,47 @@ def doc_to_text(doc, lmms_eval_specific_kwargs=None):
     return prompt
 
 
+def _format_neo_ov_content(images, prompt):
+    if len(images) == 1:
+        return [{"type": "image", "url": images[0]}, {"type": "text", "text": prompt}]
+
+    content = []
+    for idx, image in enumerate(images, start=1):
+        content.append({"type": "text", "text": f"Image-{idx}: "})
+        content.append({"type": "image", "url": image})
+    content.append({"type": "text", "text": prompt})
+    return content
+
+
+def _doc_to_neo_ov_prompt(doc):
+    question = doc["question"].replace("<image>", "").strip()
+
+    for cand in string.ascii_uppercase:
+        if cand in doc and doc[cand] is not None:
+            val = doc[cand]
+            if isinstance(val, str) and val.lower() == "nan":
+                continue
+            if pd.isna(val):
+                continue
+            question += f"\n{cand}. {val}"
+
+    return question + "\nAnswer with the option's letter from the given choices directly."
+
+
+def doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    lmms_eval_specific_kwargs = lmms_eval_specific_kwargs or {}
+    images = doc_to_visual(doc)
+
+    if lmms_eval_specific_kwargs.get("prompt_format") == "neo_ov":
+        prompt = _doc_to_neo_ov_prompt(doc)
+        return [{"role": "user", "content": _format_neo_ov_content(images, prompt)}]
+
+    prompt = doc_to_text(doc, lmms_eval_specific_kwargs)
+    content = [{"type": "image", "url": image} for image in images]
+    content.append({"type": "text", "text": prompt})
+    return [{"role": "user", "content": content}]
+
+
 def extract_answer(text: str) -> Optional[str]:
     """Extract the answer letter (A, B, C, D) from the model's response.
 
@@ -215,64 +256,28 @@ def process_results(doc, results):
     index = doc["index"]
     qid = doc.get("qid", index)  # Fall back to index if qid not present
 
-    result_dict = {
-        "vanilla_accuracy": {
-            "index": index,
-            "qid": qid,
-            "score": score,
-            "category": category,
-            "main_category": main_category,
-        },
-        "flip_accuracy": {
-            "index": index,
-            "qid": qid,
-            "score": score,
-            "category": category,
-            "main_category": main_category,
-        },
-        "circular_accuracy": {
-            "index": index,
-            "qid": qid,
-            "score": score,
-            "category": category,
-            "main_category": main_category,
-        },
-        "flip_circular_accuracy": {
-            "index": index,
-            "qid": qid,
-            "score": score,
-            "category": category,
-            "main_category": main_category,
-        },
-        f"height_accuracy": {
-            "index": index,
-            "qid": qid,
-            "score": score,
-            "category": category,
-            "main_category": main_category,
-        },
-        f"location_accuracy": {
-            "index": index,
-            "qid": qid,
-            "score": score,
-            "category": category,
-            "main_category": main_category,
-        },
-        f"orientation_accuracy": {
-            "index": index,
-            "qid": qid,
-            "score": score,
-            "category": category,
-            "main_category": main_category,
-        },
-        f"multi_object_accuracy": {
-            "index": index,
-            "qid": qid,
-            "score": score,
-            "category": category,
-            "main_category": main_category,
-        },
+    base_entry = {
+        "index": index,
+        "qid": qid,
+        "score": score,
+        "category": category,
+        "main_category": main_category,
     }
+
+    result_dict = {
+        "vanilla_accuracy": base_entry,
+        "flip_accuracy": base_entry,
+        "circular_accuracy": base_entry,
+        "flip_circular_accuracy": base_entry,
+        "height_accuracy": base_entry,
+        "location_accuracy": base_entry,
+        "orientation_accuracy": base_entry,
+        "multi_object_accuracy": base_entry,
+    }
+
+    # Per-detailed-category metrics
+    for cat_name in CATEGORY_MAPPING:
+        result_dict[f"{cat_name}_accuracy"] = base_entry
 
     return result_dict
 
@@ -486,6 +491,60 @@ def aggregate_multi_object_accuracy(results):
     if not scores:
         return 0.0
     return sum(scores) / len(scores)
+
+
+def _aggregate_detailed_category(results, target_category: str) -> float:
+    """Aggregate accuracy for a specific detailed category."""
+    scores = [r["score"] for r in results if r.get("category") == target_category]
+    return sum(scores) / len(scores) if scores else 0.0
+
+
+def aggregate_height_higher_accuracy(results):
+    return _aggregate_detailed_category(results, "height_higher")
+
+
+def aggregate_location_above_accuracy(results):
+    return _aggregate_detailed_category(results, "location_above")
+
+
+def aggregate_location_closer_to_camera_accuracy(results):
+    return _aggregate_detailed_category(results, "location_closer_to_camera")
+
+
+def aggregate_location_next_to_accuracy(results):
+    return _aggregate_detailed_category(results, "location_next_to")
+
+
+def aggregate_orientation_in_front_of_accuracy(results):
+    return _aggregate_detailed_category(results, "orientation_in_front_of")
+
+
+def aggregate_orientation_on_the_left_accuracy(results):
+    return _aggregate_detailed_category(results, "orientation_on_the_left")
+
+
+def aggregate_orientation_viewpoint_accuracy(results):
+    return _aggregate_detailed_category(results, "orientation_viewpoint")
+
+
+def aggregate_multi_object_closer_to_accuracy(results):
+    return _aggregate_detailed_category(results, "multi_object_closer_to")
+
+
+def aggregate_multi_object_facing_accuracy(results):
+    return _aggregate_detailed_category(results, "multi_object_facing")
+
+
+def aggregate_multi_object_parallel_accuracy(results):
+    return _aggregate_detailed_category(results, "multi_object_parallel")
+
+
+def aggregate_multi_object_same_direction_accuracy(results):
+    return _aggregate_detailed_category(results, "multi_object_same_direction")
+
+
+def aggregate_multi_object_viewpoint_towards_object_accuracy(results):
+    return _aggregate_detailed_category(results, "multi_object_viewpoint_towards_object")
 
 
 def aggregate_category_accuracy(results):

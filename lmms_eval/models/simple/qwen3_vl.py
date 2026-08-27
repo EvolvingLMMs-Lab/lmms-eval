@@ -2,6 +2,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Tuple, Union
 
+import decord
 import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
@@ -18,6 +19,12 @@ from lmms_eval.imports import optional_import
 process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
 if not _has_qwen_vl:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
+
+_VIDEO_EXTENSIONS = (".mp4", ".avi", ".mov", ".mkv", ".webm", ".mpeg", ".mpg")
+
+
+def _is_video_path(value) -> bool:
+    return isinstance(value, str) and value.lower().endswith(_VIDEO_EXTENSIONS)
 
 
 def _resolve_model_class(pretrained: str, is_moe: bool):
@@ -304,12 +311,18 @@ class Qwen3_VL(lmms):
             processed_visuals = []
             if visual_list[i] is not None:
                 for visual in visual_list[i]:
-                    if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):
+                    if _is_video_path(visual):
+                        # Cap nframes to actual video frame count to avoid ValueError
+                        # when video has fewer frames than max_num_frames
+                        per_video_kwargs = {**video_kwargs}
+                        if "nframes" in per_video_kwargs:
+                            vr = decord.VideoReader(visual)
+                            per_video_kwargs["nframes"] = min(per_video_kwargs["nframes"], len(vr))
                         processed_visuals.append(
                             {
                                 "type": "video",
                                 "video": visual,
-                                **video_kwargs,
+                                **per_video_kwargs,
                             }
                         )
                     elif isinstance(visual, Image.Image):

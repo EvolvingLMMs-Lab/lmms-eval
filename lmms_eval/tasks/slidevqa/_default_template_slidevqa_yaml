@@ -1,0 +1,19 @@
+dataset_path: NTT-hil-insight/SlideVQA
+dataset_kwargs:
+  token: True
+output_type: generate_until
+doc_to_visual: !function utils.slidevqa_doc_to_visual
+doc_to_text: !function utils.slidevqa_doc_to_text
+doc_to_target: answer
+doc_to_messages: !function utils.slidevqa_doc_to_messages
+process_results: !function utils.slidevqa_process_results
+generation_kwargs:
+  max_new_tokens: 128
+  temperature: 0
+  do_sample: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer using only the short answer, without explanation."
+metadata:
+  version: 0.0

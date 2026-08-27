@@ -1,0 +1,5 @@
+# PhyX Visual CoT Task Group
+group: unig2u_phyx_cot
+task:
+  - unig2u_phyx_optics100_visual_cot
+  - unig2u_phyx_mechanics100_visual_cot

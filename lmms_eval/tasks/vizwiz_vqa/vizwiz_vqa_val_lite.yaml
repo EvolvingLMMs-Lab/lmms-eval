@@ -1,6 +1,6 @@
 task: vizwiz_vqa_val_lite
 test_split: lite 
-dataset_path: lmms-lab/LMMs-Eval-Lite
+dataset_path: lmms-lab-encoder/LMMs-Eval-Lite
 dataset_name: vizwiz_vqa_val
 output_type: generate_until
 doc_to_visual: !function utils.vizwiz_vqa_doc_to_visual

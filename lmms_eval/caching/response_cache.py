@@ -407,14 +407,21 @@ class ResponseCache:
             cache_root = os.path.dirname(os.path.abspath(cache_root))
         cache_root = os.path.abspath(cache_root)
 
-        # Task fingerprints
+        # Task fingerprints — recursively process nested groups so subtasks
+        # get proper fingerprints instead of falling back to empty strings.
         task_fingerprints = {}
         if task_dict:
-            for tname, tobj in task_dict.items():
-                if hasattr(tobj, "dump_config"):
-                    cfg_str = json.dumps(tobj.dump_config(), sort_keys=True, default=str)
-                    cfg_str = _FUNC_ADDR_RE.sub(">", cfg_str)
-                    task_fingerprints[tname] = hash_string(cfg_str)[:16]
+
+            def _collect_fingerprints(d):
+                for tname, tobj in d.items():
+                    if hasattr(tobj, "dump_config"):
+                        cfg_str = json.dumps(tobj.dump_config(), sort_keys=True, default=str)
+                        cfg_str = _FUNC_ADDR_RE.sub(">", cfg_str)
+                        task_fingerprints[tname] = hash_string(cfg_str)[:16]
+                    elif isinstance(tobj, dict):
+                        _collect_fingerprints(tobj)
+
+            _collect_fingerprints(task_dict)
 
         # Model fingerprint
         if isinstance(model_args, dict):
