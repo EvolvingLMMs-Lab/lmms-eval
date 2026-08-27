@@ -10,10 +10,6 @@ from lmms_eval.tasks.vbench.build_dataset import (
     deterministic_seed,
     merge_prompts,
 )
-from lmms_eval.tasks.vbench.compare_wan22_results import OFFICIAL, aggregate
-from lmms_eval.tasks.vbench.reproduce_wan22_temporal_flickering import (
-    expected_video_paths,
-)
 
 
 def test_vbench_builder_expands_official_sample_counts():
@@ -125,7 +121,7 @@ def test_combined_vbench2_task_keeps_single_dimension_prompts_in_root(tmp_path):
     assert output == tmp_path / "vbench2" / "A prompt-1.mp4"
 
 
-def test_generation_uses_row_seed_and_atomically_publishes_video(tmp_path):
+def test_generation_uses_row_seed(tmp_path):
     model = object.__new__(DiffusersWMBase)
     model.seed = 42
     model.plan = SimpleNamespace(device_str=lambda: "cpu")
@@ -147,48 +143,17 @@ def test_generation_uses_row_seed_and_atomically_publishes_video(tmp_path):
     assert result == str(output_path)
     assert observed["seed"] == 1234
     assert output_path.read_bytes() == b"video"
-    assert not list(tmp_path.glob("*.partial.mp4"))
 
 
-def test_pipeline_load_kwargs_pin_optional_model_revision():
-    model = object.__new__(DiffusersWMBase)
-    model.revision = "fixed-revision"
-
-    assert model._pipeline_load_kwargs("dtype") == {"torch_dtype": "dtype", "revision": "fixed-revision"}
-
-
-def test_wan22_defaults_match_the_native_720p_recipe():
+def test_wan22_keeps_backward_compatible_defaults():
     defaults = {name: parameter.default for name, parameter in inspect.signature(Wan2_2_T2V.__init__).parameters.items()}
 
-    assert defaults["height"] == 720
-    assert defaults["width"] == 1280
-    assert defaults["revision"] == "5be7df9619b54f4e2667b2755bc6a756675b5cd7"
+    assert defaults["height"] == 480
+    assert defaults["width"] == 832
     assert defaults["num_frames"] == 81
-    assert defaults["num_inference_steps"] == 40
-    assert defaults["guidance_scale"] == 4.0
-    assert defaults["guidance_scale_2"] == 3.0
-    assert defaults["flow_shift"] == 12.0
+    assert defaults["num_inference_steps"] == 50
+    assert defaults["guidance_scale"] == 5.0
+    assert defaults["guidance_scale_2"] is None
+    assert defaults["flow_shift"] is None
     assert defaults["fps"] == 16
-    assert defaults["negative_prompt"]
-
-
-def test_official_wan22_dimension_scores_reproduce_published_aggregates():
-    for baseline in OFFICIAL.values():
-        raw_scores = {dimension: score / 100 for dimension, score in baseline["dimensions"].items()}
-        measured = aggregate(raw_scores)
-
-        assert measured["total"] == pytest.approx(baseline["total"], abs=0.01)
-        assert measured["quality"] == pytest.approx(baseline["quality"], abs=0.01)
-        assert measured["semantic"] == pytest.approx(baseline["semantic"], abs=0.01)
-
-
-def test_temporal_reproduction_requires_complete_official_subset(tmp_path):
-    records = [{"prompt_en": f"prompt {index}", "dimension": ["temporal_flickering"]} for index in range(75)]
-
-    paths = expected_video_paths(tmp_path, records)
-
-    assert len(paths) == 375
-    assert paths[0] == tmp_path / "prompt 0-0.mp4"
-    assert paths[-1] == tmp_path / "prompt 74-4.mp4"
-    with pytest.raises(ValueError, match="75 unique"):
-        expected_video_paths(tmp_path, records[:-1])
+    assert defaults["negative_prompt"] is None

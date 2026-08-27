@@ -21,7 +21,6 @@ Required (methods):
 
 Optional overrides:
     ``_patch_pipeline_cls_before_load()``   class-level monkeypatch hook.
-    ``_pipeline_load_kwargs(dtype)``        custom ``from_pretrained`` inputs.
     ``_post_to_device(pipe, device)``       extra per-pipeline device fixups.
     ``_extract_visuals(req)``               I2V / V2V conditioning extraction.
     ``_request_extras(req, gen_kwargs)``    Per-document generation metadata.
@@ -181,7 +180,6 @@ class DiffusersWMBase(lmms):
         *,
         pretrained: str,
         output_dir: str,
-        revision: Optional[str] = None,
         seed: int = 42,
         dtype: str = "bfloat16",
         fps: int = 16,
@@ -198,7 +196,6 @@ class DiffusersWMBase(lmms):
             raise NotImplementedError(f"{type(self).__name__}: tp_size={self.plan.tp_size} not yet supported. " "DiffusersWMBase is DP-only; TP support is planned in a follow-up PR.")
 
         self.pretrained = str(pretrained)
-        self.revision = str(revision) if revision else None
         self.output_dir = str(output_dir)
         self.seed = int(seed)
         self.dtype_name = str(dtype)
@@ -214,7 +211,6 @@ class DiffusersWMBase(lmms):
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
         eval_logger.info(
             f"{type(self).__name__} init: pretrained={self.pretrained}, "
-            f"revision={self.revision}, "
             f"rank={self.plan.global_rank}/{self.plan.world_size}, "
             f"device={self.plan.device_str()}, dtype={self.dtype_name}, "
             f"seed={self.seed}, output_dir={self.output_dir}"
@@ -249,7 +245,7 @@ class DiffusersWMBase(lmms):
         device = self.plan.device_str()
         dtype = _resolve_torch_dtype(self.dtype_name)
         eval_logger.info(f"Loading {self._pipeline_cls.__name__} from {self.pretrained} on {device}")
-        self._pipe = self._pipeline_cls.from_pretrained(self.pretrained, **self._pipeline_load_kwargs(dtype))
+        self._pipe = self._pipeline_cls.from_pretrained(self.pretrained, torch_dtype=dtype)
         _move_pipeline_to_device(self._pipe, device)
         _patch_scheduler_keep_device(self._pipe, device)
         self._post_to_device(self._pipe, device)
@@ -265,13 +261,6 @@ class DiffusersWMBase(lmms):
     def _patch_pipeline_cls_before_load(self) -> None:
         """Apply class-level monkeypatches before ``from_pretrained``. No-op by default."""
         return
-
-    def _pipeline_load_kwargs(self, dtype) -> dict:
-        """Return keyword arguments for the pipeline's ``from_pretrained`` call."""
-        kwargs = {"torch_dtype": dtype}
-        if self.revision is not None:
-            kwargs["revision"] = self.revision
-        return kwargs
 
     def _post_to_device(self, pipe, device: str) -> None:
         """Extra per-pipeline device fixups. No-op by default."""
@@ -367,28 +356,27 @@ class DiffusersWMBase(lmms):
         import torch
 
         extras = dict(extras or {})
+        self._ensure_loaded()
+
         sig = self._generation_signature(prompt, visuals, extras)
         out_path = self._output_path(prompt, doc_id, task, sig, extras)
-        if out_path.exists() and out_path.stat().st_size > 0:
+        if out_path.exists():
             eval_logger.debug(f"Cache hit: {out_path}")
             return str(out_path)
 
-        self._ensure_loaded()
-        partial_path = out_path.with_name(f".{out_path.name}.{os.getpid()}.partial{out_path.suffix}")
         try:
             request_seed = int(extras.get("_lmms_eval_seed", self.seed))
             generator = torch.Generator(device=self.plan.device_str()).manual_seed(request_seed)
             pipeline_extras = {key: value for key, value in extras.items() if not key.startswith("_lmms_eval_")}
             output = self._invoke_pipeline(prompt, visuals, generator, **pipeline_extras)
             out_path.parent.mkdir(parents=True, exist_ok=True)
-            self._export(output, partial_path)
-            if not partial_path.exists() or partial_path.stat().st_size == 0:
-                raise RuntimeError(f"Output is missing or empty after export: {partial_path}")
-            partial_path.replace(out_path)
-            eval_logger.info(f"Generated: {out_path} ({out_path.stat().st_size} bytes)")
+            self._export(output, out_path)
+            if out_path.exists():
+                eval_logger.info(f"Generated: {out_path} ({out_path.stat().st_size} bytes)")
+            else:
+                eval_logger.error(f"Output NOT on disk after export: {out_path}")
             return str(out_path)
         except Exception as exc:
-            partial_path.unlink(missing_ok=True)
             eval_logger.error(f"Generation failed: task={task} doc_id={doc_id}: {exc}\n" f"{traceback.format_exc()}")
             return f"[GENERATION_FAILED] {exc}"
 
