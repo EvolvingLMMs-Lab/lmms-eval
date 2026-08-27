@@ -5,7 +5,6 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, List, Optional, Tuple, Union
 
-import numpy as np
 import torch.distributed as dist
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
@@ -15,12 +14,9 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
+from lmms_eval.models.model_utils.load_video import read_video
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 from lmms_eval.models.model_utils.progress import make_progress
-
-# decord has no wheels for some platforms (e.g. macOS); defer the import so the wrapper stays importable and only video-decoding paths require it.
-VideoReader, _HAS_DECORD = optional_import("decord", "VideoReader")
-cpu, _ = optional_import("decord", "cpu")
 
 NUM_SECONDS_TO_SLEEP = int(os.getenv("NUM_SECONDS_TO_SLEEP", "5"))
 WORKERS = int(os.getenv("WORKERS", "32"))
@@ -71,6 +67,9 @@ class VLLM(lmms):
             the model. Default: True
         chat_template (str, optional): Path to chat template file or template string.
             If None, uses the model's default template. Default: None
+        video_decode_backend (str, optional): Video decoder used by the shared
+            media loader. Defaults to PyAV and can also be set to ``torchcodec``
+            or ``dali``. ``LMMS_VIDEO_DECODE_BACKEND`` is used when omitted.
         **kwargs: Additional arguments passed to the VLLM LLM constructor.
             - NOTE: model specific arguments can be passed here without the need to add more arguments to this class (see example below)
             - String arguments that look like JSON dictionaries will be automatically parsed.
@@ -162,6 +161,7 @@ class VLLM(lmms):
         disable_log_stats: bool = False,
         image_first: bool = False,
         max_new_tokens: int = 1024,
+        video_decode_backend: Optional[str] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -176,6 +176,7 @@ class VLLM(lmms):
         self.tensor_parallel_size = int(tensor_parallel_size)
         self.image_first = image_first
         self.max_new_tokens = int(max_new_tokens)
+        self.video_decode_backend = video_decode_backend
         # Qwen 2/2.5-VL models enforce minimum image dimensions
         self._enforce_image_resize = self._is_qwen_vl_model(model)
 
@@ -443,16 +444,12 @@ class VLLM(lmms):
 
     # Function to encode the video
     def encode_video(self, video_path):
-        vr = VideoReader(video_path, ctx=cpu(0))
-        total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, self.max_frame_num, dtype=int)
-
-        # Ensure the last frame is included
-        if total_frame_num - 1 not in uniform_sampled_frames:
-            uniform_sampled_frames = np.append(uniform_sampled_frames, total_frame_num - 1)
-
-        frame_idx = uniform_sampled_frames.tolist()
-        frames = vr.get_batch(frame_idx).asnumpy()
+        frames = read_video(
+            video_path,
+            num_frm=self.max_frame_num,
+            force_include_last_frame=True,
+            backend=self.video_decode_backend,
+        )
 
         base64_frames = []
         for frame in frames:

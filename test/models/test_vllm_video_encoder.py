@@ -8,9 +8,11 @@ route video encoding through ``to_qwen3_vl_openai_messages`` only when
 
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 from lmms_eval.models.chat.vllm import VLLM
+from lmms_eval.models.simple import vllm as simple_vllm
 from lmms_eval.protocol import ChatMessages
 
 
@@ -76,3 +78,29 @@ def test_multi_round_path_routes_video_by_flag(encoder_calls):
     model = _video_model(False)
     model._to_openai_messages([{"role": "user", "content": [{"type": "text", "text": "hello"}]}])
     assert encoder_calls == ["qwen3vl", "openai"]
+
+
+def test_simple_vllm_uses_shared_video_decoder(monkeypatch):
+    model = simple_vllm.VLLM.__new__(simple_vllm.VLLM)
+    model.max_frame_num = 3
+    model.video_decode_backend = "torchcodec"
+    model.min_image_pixels = 1
+    model._enforce_image_resize = False
+    observed = {}
+
+    def fake_read_video(video_path, **kwargs):
+        observed.update({"video_path": video_path, **kwargs})
+        return np.stack([np.full((2, 2, 3), value, dtype=np.uint8) for value in range(3)])
+
+    monkeypatch.setattr(simple_vllm, "read_video", fake_read_video)
+    monkeypatch.setattr(simple_vllm, "encode_image_to_base64", lambda image, **kwargs: int(np.asarray(image)[0, 0, 0]))
+
+    encoded = model.encode_video("demo.mp4")
+
+    assert encoded == [0, 1, 2]
+    assert observed == {
+        "video_path": "demo.mp4",
+        "num_frm": 3,
+        "force_include_last_frame": True,
+        "backend": "torchcodec",
+    }
