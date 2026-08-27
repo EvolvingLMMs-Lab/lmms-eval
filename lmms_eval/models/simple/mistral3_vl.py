@@ -348,6 +348,7 @@ class Mistral3_VL(lmms):
 
             except Exception as e:
                 import traceback
+
                 eval_logger.error(f"Error during generation: {e}")
                 eval_logger.error(f"Traceback: {traceback.format_exc()}")
                 res.extend([""] * len(contexts))
