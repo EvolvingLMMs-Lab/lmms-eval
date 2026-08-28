@@ -1396,7 +1396,7 @@ def evaluate(
             pbar.close()
             if RANK == 0:
                 elapsed = time.perf_counter() - postprocess_started
-                eval_logger.info(f"Postprocessed {len(processed_documents)} docs for {task_output.task_name}/{filter_key} " f"with {process_docs_parallel} worker(s) in {elapsed:.2f}s")
+                eval_logger.info(f"Postprocessed {len(processed_documents)} docs for {task_output.task_name}/{filter_key} with {process_docs_parallel} worker(s) in {elapsed:.2f}s")
         set_task_context(None)
 
     if WORLD_SIZE > 1:
