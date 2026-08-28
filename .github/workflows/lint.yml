@@ -18,14 +18,12 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@v5
         with:
           python-version: '3.9'
-      - name: Install pre-commit
-        run: pip install pre-commit
       - name: Run pre-commit (autofix)
-        run: pre-commit run --all-files || true
+        run: uvx pre-commit run --all-files || true
       - name: Commit fixes if any
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
