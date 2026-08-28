@@ -110,6 +110,22 @@ def test_simple_vllm_uses_shared_video_decoder(monkeypatch):
     }
 
 
+def test_simple_vllm_repeats_short_video_frames_for_legacy_compatibility(monkeypatch):
+    model = simple_vllm.VLLM.__new__(simple_vllm.VLLM)
+    model.max_frame_num = 8
+    model.video_decode_backend = "pyav"
+    model.min_image_pixels = 1
+    model._enforce_image_resize = False
+
+    frames = np.stack([np.full((2, 2, 3), value, dtype=np.uint8) for value in range(4)])
+    monkeypatch.setattr(simple_vllm, "read_video", lambda *args, **kwargs: frames)
+    monkeypatch.setattr(simple_vllm, "encode_image_to_base64", lambda image, **kwargs: int(np.asarray(image)[0, 0, 0]))
+
+    encoded = model.encode_video("short.mp4")
+
+    assert encoded == [0, 0, 0, 1, 1, 2, 2, 3]
+
+
 def test_vllm_model_resolution_does_not_import_decord():
     """Both the default chat route and force-simple route must stay Decord-free."""
 

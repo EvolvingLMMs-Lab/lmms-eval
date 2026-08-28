@@ -5,6 +5,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, List, Optional, Tuple, Union
 
+import numpy as np
 import torch.distributed as dist
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
@@ -59,8 +60,9 @@ class VLLM(lmms):
             Should be between 0.0 and 1.0. Default: 0.8
         batch_size (int): Number of requests to process in parallel per GPU.
             Default: 1
-        max_frame_num (int): Maximum number of frames to extract from videos.
-            Frames are sampled uniformly across the video duration. Default: 32
+        max_frame_num (int): Number of frames to extract from videos. Frames
+            are sampled uniformly; short clips repeat frames for compatibility
+            with the historical Decord path. Default: 32
         threads (int): Number of threads to use for parallel visual encoding.
             Default: 16
         trust_remote_code (bool, optional): Whether to trust remote code when loading
@@ -69,7 +71,8 @@ class VLLM(lmms):
             If None, uses the model's default template. Default: None
         video_decode_backend (str, optional): Video decoder used by the shared
             media loader. Defaults to PyAV and can also be set to ``torchcodec``
-            or ``dali``. ``LMMS_VIDEO_DECODE_BACKEND`` is used when omitted.
+            or ``dali``. Use ``decord`` for legacy reproduction runs.
+            ``LMMS_VIDEO_DECODE_BACKEND`` is used when omitted.
         **kwargs: Additional arguments passed to the VLLM LLM constructor.
             - NOTE: model specific arguments can be passed here without the need to add more arguments to this class (see example below)
             - String arguments that look like JSON dictionaries will be automatically parsed.
@@ -444,12 +447,18 @@ class VLLM(lmms):
 
     # Function to encode the video
     def encode_video(self, video_path):
+        # Decord historically returned max_frame_num entries by repeating
+        # indices for short clips. Decode each available frame once, then
+        # reproduce that adapter-level contract independently of the backend.
         frames = read_video(
             video_path,
             num_frm=self.max_frame_num,
             force_include_last_frame=True,
             backend=self.video_decode_backend,
         )
+        if 0 < len(frames) < self.max_frame_num:
+            repeat_indices = np.linspace(0, len(frames) - 1, self.max_frame_num, dtype=int)
+            frames = frames[repeat_indices]
 
         base64_frames = []
         for frame in frames:
