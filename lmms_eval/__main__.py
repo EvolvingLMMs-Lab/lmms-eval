@@ -68,6 +68,16 @@ def _int_or_none_list_arg_type(min_len: int, max_len: int, defaults: str, value:
     return items
 
 
+def _positive_int_arg_type(value: str) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise argparse.ArgumentTypeError(f"{value} is not an integer") from exc
+    if parsed < 1:
+        raise argparse.ArgumentTypeError(f"{value} must be at least 1")
+    return parsed
+
+
 def check_argument_types(parser: argparse.ArgumentParser):
     """
     Check to make sure all CLI args are typed, raises error if not
@@ -370,6 +380,15 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         "--process_with_media",
         action="store_true",
         help="Whether you will process you dataset with audio, image. By default set to FalseIn case some benchmarks need to be processed with media, set this flag to True.",
+    )
+    parser.add_argument(
+        "--process-docs-parallel",
+        "--process_docs_parallel",
+        dest="process_docs_parallel",
+        type=_positive_int_arg_type,
+        default=4,
+        metavar="N",
+        help="Number of worker threads for per-document process_results calls. Set to 1 for serial postprocessing. Default: 4.",
     )
     parser.add_argument(
         "--agentic_trace_mode",
@@ -747,6 +766,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         repeats=args.repeats,
         baseline=args.baseline,
         max_tokens=args.max_tokens,
+        process_docs_parallel=getattr(args, "process_docs_parallel", 4),
         **request_caching_args,
     )
 
