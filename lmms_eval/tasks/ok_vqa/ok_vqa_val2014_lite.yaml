@@ -1,6 +1,6 @@
 task: ok_vqa_val2014_lite
 test_split: lite 
-dataset_path: lmms-lab/LMMs-Eval-Lite
+dataset_path: lmms-lab-encoder/LMMs-Eval-Lite
 dataset_name: ok_vqa_val2014
 output_type: generate_until
 doc_to_visual: !function utils.ok_vqa_doc_to_visual

@@ -130,7 +130,6 @@ def calculate_ocr_metrics(pred, gt, return_detailed=False):
 
 
 if __name__ == "__main__":
-
     res = calculate_answer_accuracy("A. ", "A")
     res = calculate_three_level_accuracy("A C B", "A B C")
     res = calculate_multiple_choice_f1("A C B", "A B C")

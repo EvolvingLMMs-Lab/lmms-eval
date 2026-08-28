@@ -30,7 +30,6 @@ import base64
 import json
 import os
 import time
-from collections import defaultdict
 from io import BytesIO
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -329,7 +328,7 @@ def _evaluate_one_image(edited_image: Image.Image, qa_list: List[Dict[str, Any]]
             )
         except Exception as e:
             failed_qa_count += 1
-            eval_logger.warning(f"QA {i+1}/{len(qa_list)} failed: {str(e)[:120]}...")
+            eval_logger.warning(f"QA {i + 1}/{len(qa_list)} failed: {str(e)[:120]}...")
             continue
 
     if failed_qa_count > 0:
@@ -418,7 +417,7 @@ def structeditbench_process_results(doc, results, **kwargs):
         eval_logger.error(f"structeditbench scoring failed for key={key}: {e}")
         editing_acc, maintain_acc, weighted_acc, qa_results = 0.0, 0.0, 0.0, []
 
-    eval_logger.info(f"[structeditbench] key={key} category={category} weighted={weighted_acc:.2f}% " f"edit={editing_acc:.2f}% maintain={maintain_acc:.2f}% " f"(qa={len(qa_results)}/{len(qa_list) if isinstance(qa_list, list) else 0})")
+    eval_logger.info(f"[structeditbench] key={key} category={category} weighted={weighted_acc:.2f}% edit={editing_acc:.2f}% maintain={maintain_acc:.2f}% (qa={len(qa_results)}/{len(qa_list) if isinstance(qa_list, list) else 0})")
 
     base_entry = {
         "key": key,

@@ -185,7 +185,7 @@ class TaskOutput:
             for sample_scores in items:
                 if not isinstance(sample_scores, list):
                     # Fallback: if not a list, skip with warning
-                    eval_logger.warning(f"Stability metrics: expected list of scores per question, " f"got {type(sample_scores)}. Skipping.")
+                    eval_logger.warning(f"Stability metrics: expected list of scores per question, got {type(sample_scores)}. Skipping.")
                     continue
 
                 question_scores = []
@@ -195,13 +195,13 @@ class TaskOutput:
                     elif isinstance(x, dict) and score_key in x:
                         question_scores.append(float(x[score_key]))
                     else:
-                        eval_logger.debug(f"Stability metrics: cannot extract score from " f"{type(x)}: {x}")
+                        eval_logger.debug(f"Stability metrics: cannot extract score from {type(x)}: {x}")
 
                 if question_scores:
                     scores_per_question.append(question_scores)
 
             if not scores_per_question:
-                eval_logger.warning(f"Stability metrics: no valid scores found for metric {metric}. " "Skipping.")
+                eval_logger.warning(f"Stability metrics: no valid scores found for metric {metric}. Skipping.")
                 continue
 
             # Calculate stability metrics
@@ -211,7 +211,7 @@ class TaskOutput:
             self.agg_metrics[f"{metric}_consistency_rate,{filter_key}"] = consistency_rate(scores_per_question)
 
     def __repr__(self):
-        return f"TaskOutput(task_name={self.task_name}, " f"group_name={self.group_name}, " f"version={self.version}, " f"n_shot={self.n_shot}, " f"task_alias={self.task_alias}, " f"group_alias={self.group_alias})"
+        return f"TaskOutput(task_name={self.task_name}, group_name={self.group_name}, version={self.version}, n_shot={self.n_shot}, task_alias={self.task_alias}, group_alias={self.group_alias})"
 
 
 def get_task_list(task_dict: dict) -> List[TaskOutput]:

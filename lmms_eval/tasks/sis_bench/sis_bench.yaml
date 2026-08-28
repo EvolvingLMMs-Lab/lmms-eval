@@ -1,0 +1,74 @@
+dataset_path: choucsan/SIS-Bench
+dataset_kwargs:
+  cache_dir: sis_bench
+  video: true
+  create_link: true
+task: sis_bench
+test_split: test
+output_type: generate_until
+cluster_key: video_name
+doc_to_visual: !function utils.sis_bench_doc_to_visual
+doc_to_text: !function utils.sis_bench_doc_to_text
+doc_to_target: answer
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.sis_bench_process_results
+metric_list:
+  - metric: sis_bench_overall_accuracy
+    aggregation: !function utils.sis_bench_aggregate_overall
+    higher_is_better: true
+  - metric: sis_bench_spatial_cognition_accuracy
+    aggregation: !function utils.sis_bench_aggregate_spatial_cognition
+    higher_is_better: true
+  - metric: sis_bench_self_awareness_accuracy
+    aggregation: !function utils.sis_bench_aggregate_self_awareness
+    higher_is_better: true
+  - metric: sis_bench_object_existence_accuracy
+    aggregation: !function utils.sis_bench_aggregate_object_existence
+    higher_is_better: true
+  - metric: sis_bench_object_attribute_accuracy
+    aggregation: !function utils.sis_bench_aggregate_object_attribute
+    higher_is_better: true
+  - metric: sis_bench_relative_direction_accuracy
+    aggregation: !function utils.sis_bench_aggregate_relative_direction
+    higher_is_better: true
+  - metric: sis_bench_landmark_appearance_order_accuracy
+    aggregation: !function utils.sis_bench_aggregate_landmark_appearance_order
+    higher_is_better: true
+  - metric: sis_bench_landmark_recall_accuracy
+    aggregation: !function utils.sis_bench_aggregate_landmark_recall
+    higher_is_better: true
+  - metric: sis_bench_positional_relationship_accuracy
+    aggregation: !function utils.sis_bench_aggregate_positional_relationship
+    higher_is_better: true
+  - metric: sis_bench_spatial_consistency_accuracy
+    aggregation: !function utils.sis_bench_aggregate_spatial_consistency
+    higher_is_better: true
+  - metric: sis_bench_spatio_temporal_consistency_accuracy
+    aggregation: !function utils.sis_bench_aggregate_spatio_temporal_consistency
+    higher_is_better: true
+  - metric: sis_bench_action_recognition_accuracy
+    aggregation: !function utils.sis_bench_aggregate_action_recognition
+    higher_is_better: true
+  - metric: sis_bench_action_sequence_accuracy
+    aggregation: !function utils.sis_bench_aggregate_action_sequence
+    higher_is_better: true
+  - metric: sis_bench_action_recall_accuracy
+    aggregation: !function utils.sis_bench_aggregate_action_recall
+    higher_is_better: true
+  - metric: sis_bench_action_prediction_accuracy
+    aggregation: !function utils.sis_bench_aggregate_action_prediction
+    higher_is_better: true
+  - metric: sis_bench_path_planning_accuracy
+    aggregation: !function utils.sis_bench_aggregate_path_planning
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "Answer with only the letter of the correct option."
+metadata:
+  version: 1.0

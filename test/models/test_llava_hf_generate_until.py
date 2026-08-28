@@ -80,7 +80,6 @@ def _make_llava_hf(model_generate_side_effect=None) -> LlavaHf:
 
 
 class TestLlavaHfGenerateUntil(unittest.TestCase):
-
     def test_text_task_no_unbound_error(self):
         """Bug A: text-only sample (empty visuals) must not raise UnboundLocalError."""
         instance = _make_llava_hf()

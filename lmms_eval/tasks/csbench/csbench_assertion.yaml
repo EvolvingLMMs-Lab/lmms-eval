@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/CSBench_Assertion
+dataset_path: lmms-lab-encoder/CSBench_Assertion
 dataset_kwargs:
   token: True
 test_split: assertion

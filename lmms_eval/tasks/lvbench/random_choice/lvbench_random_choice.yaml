@@ -1,7 +1,7 @@
 # LVBench Random Choice Setting
 # Shuffle options to test if model relies on option position bias
 
-dataset_path: lmms-lab/LVBench
+dataset_path: lmms-eval/LVBench
 dataset_kwargs:
   token: True
   cache_dir: lvbench

@@ -116,7 +116,7 @@ def get_index(bound, fps, max_frame, first_idx=0, num_segments=32):
 
 
 def load_video(video_path, bound=None, input_size=448, max_num=1, num_segments=32, media_dict=None):
-    if type(video_path) == str:
+    if type(video_path) is str:
         vr = VideoReader(video_path, ctx=cpu(0), num_threads=1)
     else:
         vr = VideoReader(video_path[0], ctx=cpu(0), num_threads=1)
@@ -298,7 +298,7 @@ class InternVideo2_5(lmms):
                     contexts = image_tokens + "\n" + contexts
                 else:
                     pixel_values = None
-                    num_patch_list = None
+                    _num_patch_list = None
                 response, history = self.model.chat(
                     self.tokenizer,
                     pixel_values,

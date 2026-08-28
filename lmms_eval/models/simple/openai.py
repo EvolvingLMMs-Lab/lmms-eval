@@ -109,7 +109,7 @@ class OpenAICompatible(lmms):
         if model is not None:
             model_version = model
         if kwargs:
-            eval_logger.warning(f"Unknown model_args ignored: {list(kwargs.keys())}. " f"Check the supported parameters for the 'openai' backend.")
+            eval_logger.warning(f"Unknown model_args ignored: {list(kwargs.keys())}. Check the supported parameters for the 'openai' backend.")
         self.model_version = model_version
         self.timeout = timeout
         self.retry_backoff_s = max(0.0, float(retry_backoff_s))
@@ -135,7 +135,7 @@ class OpenAICompatible(lmms):
         # httpx.Client uses macOS proxy server settings. Adding httpx_trust_env option
         # allows httpx to ignore proxy server settings set by VPN clients.
         if not httpx_trust_env and DefaultHttpxClient is None:
-            eval_logger.warning("DefaultHttpxClient is unavailable in current openai package; " "falling back to default HTTP client with trust_env=True.")
+            eval_logger.warning("DefaultHttpxClient is unavailable in current openai package; falling back to default HTTP client with trust_env=True.")
             http_client = None
         else:
             if not httpx_trust_env and DefaultHttpxClient is not None:

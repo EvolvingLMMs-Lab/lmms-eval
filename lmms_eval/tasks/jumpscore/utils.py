@@ -360,7 +360,7 @@ def jumpscore_aggregate_results(results: List[Dict[str, Any]]) -> float:
         return 0.0
 
     mean_map = sum(maps) / len(maps)
-    eval_logger.info(f"[JumpScore] Num samples: {len(maps)}\n" f"[JumpScore] Bad pred (no time parsed): {bad_pred}")
+    eval_logger.info(f"[JumpScore] Num samples: {len(maps)}\n[JumpScore] Bad pred (no time parsed): {bad_pred}")
 
     for tolerance in sorted(ap_per_tolerance_combined.keys()):
         ap_list = ap_per_tolerance_combined[tolerance]

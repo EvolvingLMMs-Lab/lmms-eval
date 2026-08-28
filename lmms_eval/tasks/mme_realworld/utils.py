@@ -21,10 +21,10 @@ def mme_realworld_doc_to_visual(doc):
     return [img.convert("RGB")]
 
 
-import base64
-import io
+import base64  # noqa: E402
+import io  # noqa: E402
 
-from PIL import Image
+from PIL import Image  # noqa: E402
 
 
 def decode_base64_to_image(base64_string, target_size=-1):

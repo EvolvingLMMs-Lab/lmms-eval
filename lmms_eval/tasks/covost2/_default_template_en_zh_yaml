@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/covost2_en-zh
+dataset_path: lmms-lab-audio/covost2_en-zh
 dataset_name: en_zh
 dataset_kwargs:
   token: True

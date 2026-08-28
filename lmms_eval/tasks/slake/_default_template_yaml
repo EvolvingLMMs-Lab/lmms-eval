@@ -1,0 +1,74 @@
+dataset_path: BoKelvin/SLAKE
+test_split: test
+output_type: generate_until
+process_docs: !function utils.slake_process_docs
+doc_to_visual: !function utils.slake_doc_to_visual
+doc_to_text: !function utils.slake_doc_to_text
+doc_to_messages: !function utils.slake_doc_to_messages
+doc_to_target: "answer"
+process_results: !function utils.slake_process_results
+
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  do_sample: false
+
+metric_list:
+  - metric: slake_accuracy
+    aggregation: !function utils.slake_aggregate_accuracy
+    higher_is_better: true
+  - metric: slake_open_accuracy
+    aggregation: !function utils.slake_aggregate_open_accuracy
+    higher_is_better: true
+  - metric: slake_closed_accuracy
+    aggregation: !function utils.slake_aggregate_closed_accuracy
+    higher_is_better: true
+  - metric: slake_ct_accuracy
+    aggregation: !function utils.slake_aggregate_ct_accuracy
+    higher_is_better: true
+  - metric: slake_mri_accuracy
+    aggregation: !function utils.slake_aggregate_mri_accuracy
+    higher_is_better: true
+  - metric: slake_xray_accuracy
+    aggregation: !function utils.slake_aggregate_xray_accuracy
+    higher_is_better: true
+  - metric: slake_abnormality_accuracy
+    aggregation: !function utils.slake_aggregate_abnormality_accuracy
+    higher_is_better: true
+  - metric: slake_color_accuracy
+    aggregation: !function utils.slake_aggregate_color_accuracy
+    higher_is_better: true
+  - metric: slake_kg_accuracy
+    aggregation: !function utils.slake_aggregate_kg_accuracy
+    higher_is_better: true
+  - metric: slake_modality_accuracy
+    aggregation: !function utils.slake_aggregate_modality_accuracy
+    higher_is_better: true
+  - metric: slake_organ_accuracy
+    aggregation: !function utils.slake_aggregate_organ_accuracy
+    higher_is_better: true
+  - metric: slake_plane_accuracy
+    aggregation: !function utils.slake_aggregate_plane_accuracy
+    higher_is_better: true
+  - metric: slake_position_accuracy
+    aggregation: !function utils.slake_aggregate_position_accuracy
+    higher_is_better: true
+  - metric: slake_quantity_accuracy
+    aggregation: !function utils.slake_aggregate_quantity_accuracy
+    higher_is_better: true
+  - metric: slake_shape_accuracy
+    aggregation: !function utils.slake_aggregate_shape_accuracy
+    higher_is_better: true
+  - metric: slake_size_accuracy
+    aggregation: !function utils.slake_aggregate_size_accuracy
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer the question using a single word or phrase."
+
+metadata:
+  version: 0.0
+  dataset: BoKelvin/SLAKE
+  license: cc-by-4.0

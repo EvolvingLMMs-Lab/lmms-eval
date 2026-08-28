@@ -37,7 +37,7 @@ def load_video(video_file, duration, max_num_frames=16):
         frames = frames.numpy()
     else:
         frames = frames.asnumpy()
-    frame_timestamps = [frame_index / fps for frame_index in frame_indices]
+    _frame_timestamps = [frame_index / fps for frame_index in frame_indices]
 
     return [Image.fromarray(fr).convert("RGB") for fr in frames]
 

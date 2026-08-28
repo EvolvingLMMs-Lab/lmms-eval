@@ -123,10 +123,10 @@ def extract_answer_idx(sampler, options: List[str], attempt: str):
     return response
 
 
-import time
+import time  # noqa: E402
 
-import openai
-from openai import OpenAI
+import openai  # noqa: E402
+from openai import OpenAI  # noqa: E402
 
 
 class ChatCompletionSampler:
@@ -232,7 +232,7 @@ def process_docs_openai_math_cot_quality_check(dataset: datasets.Dataset) -> dat
             if getattr(doc, "few_shot", None) is not None:
                 out_doc["few_shot"] = True
             return out_doc
-        except:
+        except Exception:
             return {"problem": "Drop", "solution": "Drop", "answer": "Drop", "thinking_trajectory": ["Drop"]}
 
     processed_dataset = dataset.map(_process_doc)

@@ -1,0 +1,22 @@
+task: vrbench_process
+include: _default_template_yaml
+process_results: !function utils.vrbench_process_process_results
+metric_list:
+  - metric: vrbench_score
+    aggregation: !function utils.vrbench_process_aggregate_results
+    higher_is_better: true
+  - metric: vrbench_process_event_attribution_score
+    aggregation: !function utils.vrbench_process_aggregate_event_attribution
+    higher_is_better: true
+  - metric: vrbench_process_hypothetical_reasoning_score
+    aggregation: !function utils.vrbench_process_aggregate_hypothetical_reasoning
+    higher_is_better: true
+  - metric: vrbench_process_implicit_inference_score
+    aggregation: !function utils.vrbench_process_aggregate_implicit_inference
+    higher_is_better: true
+  - metric: vrbench_process_event_prediction_score
+    aggregation: !function utils.vrbench_process_aggregate_event_prediction
+    higher_is_better: true
+  - metric: vrbench_process_logical_linkage_score
+    aggregation: !function utils.vrbench_process_aggregate_logical_linkage
+    higher_is_better: true

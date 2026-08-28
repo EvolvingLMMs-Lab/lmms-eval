@@ -1,0 +1,11 @@
+task: c4_bench_e1
+task_alias: E1 Gold-answer Explanation
+include: _default_template_yaml
+process_docs: !function utils.c4_process_docs_e1
+metric_list:
+  - metric: c4_json_valid
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  version: 1.0
+  task_form: E1

@@ -8,7 +8,6 @@ MMAR evaluates deep reasoning capabilities of Audio-Language Models across
 """
 
 import random
-import re
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -57,7 +56,7 @@ def mmar_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs: Optional[Di
         post_prompt = lmms_eval_specific_kwargs.get("post_prompt", post_prompt)
 
     # Build the instruction
-    instruction = "Listen to the audio and answer the following multiple-choice question. " "Respond with only the letter (A, B, C, or D) of the correct option.\n"
+    instruction = "Listen to the audio and answer the following multiple-choice question. Respond with only the letter (A, B, C, or D) of the correct option.\n"
 
     # Get question and choices
     question = doc["question"]

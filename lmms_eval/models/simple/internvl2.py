@@ -131,11 +131,11 @@ def load_video(video_path, bound=None, input_size=448, max_num=1, num_segments=3
     return pixel_values, num_patches_list
 
 
-import math
-from datetime import timedelta
+import math  # noqa: E402
+from datetime import timedelta  # noqa: E402
 
-from accelerate.state import AcceleratorState
-from accelerate.utils import InitProcessGroupKwargs
+from accelerate.state import AcceleratorState  # noqa: E402
+from accelerate.utils import InitProcessGroupKwargs  # noqa: E402
 
 
 # The reason for writing the code this way is to avoid errors that occur during multi-GPU inference due to tensors not being on the same device. By ensuring that the first and last layers of the large language model (LLM) are on the same device, we prevent such errors.

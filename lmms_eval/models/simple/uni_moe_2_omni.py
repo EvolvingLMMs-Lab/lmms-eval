@@ -76,7 +76,7 @@ class UniMoE2Omni(lmms):
             from uni_moe.model.processing_qwen2_vl import Qwen2VLProcessor
             from uni_moe.qwen_vl_utils import process_mm_info
         except ImportError:
-            raise ImportError("Please install uni_moe package from https://github.com/HITsz-TMG/Uni-MoE. " "Run: pip install git+https://github.com/HITsz-TMG/Uni-MoE.git")
+            raise ImportError("Please install uni_moe package from https://github.com/HITsz-TMG/Uni-MoE. Run: pip install git+https://github.com/HITsz-TMG/Uni-MoE.git")
 
         self.process_mm_info = process_mm_info
 
@@ -116,7 +116,7 @@ class UniMoE2Omni(lmms):
                     "train_batch_size": self.batch_size_per_gpu * accelerator.num_processes,
                 }
                 AcceleratorState().deepspeed_plugin.deepspeed_config_process(must_match=True, **batch_kwargs)
-                eval_logger.info("Detected DistributedType.DEEPSPEED. " "Make sure you run `accelerate config` and set zero stage to 0")
+                eval_logger.info("Detected DistributedType.DEEPSPEED. Make sure you run `accelerate config` and set zero stage to 0")
             if accelerator.distributed_type in [
                 DistributedType.FSDP,
                 DistributedType.DEEPSPEED,
@@ -356,7 +356,7 @@ class UniMoE2Omni(lmms):
             if isinstance(until, str):
                 until = [until]
             elif not isinstance(until, list):
-                raise ValueError(f"Expected `gen_kwargs['until']` to be of type " f"Union[str, list], but got {type(until)}")
+                raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str, list], but got {type(until)}")
             until = [item for item in until if item != "\n\n"]
 
             if isinstance(contexts, tuple):

@@ -1,0 +1,4 @@
+task: vbench_imaging_quality
+dataset_name: vbench_imaging_quality
+test_split: test
+include: _default_template_yaml

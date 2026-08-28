@@ -283,7 +283,7 @@ class MathVistaEvaluator:
             else:
                 try:
                     extraction = str(extraction)
-                except:
+                except Exception:
                     extraction = ""
 
             # extract "A" from "(A) text"
@@ -305,19 +305,19 @@ class MathVistaEvaluator:
         elif answer_type == "integer":
             try:
                 extraction = str(int(float(extraction)))
-            except:
+            except Exception:
                 extraction = None
 
         elif answer_type == "float":
             try:
                 extraction = str(round(float(extraction), precision))
-            except:
+            except Exception:
                 extraction = None
 
         elif answer_type == "list":
             try:
                 extraction = str(extraction)
-            except:
+            except Exception:
                 extraction = None
 
         return extraction
@@ -343,7 +343,7 @@ class MathVistaEvaluator:
         else:
             total_pd = res_pd[res_pd[key] == value]
 
-        correct_pd = total_pd[total_pd["true_false"] == True]
+        correct_pd = total_pd[total_pd["true_false"] == True]  # noqa: E712
         acc = "{:.2f}".format(len(correct_pd) / len(total_pd) * 100) if len(total_pd) > 0 else "0.00"
         return len(correct_pd), len(total_pd), acc
 
@@ -364,7 +364,7 @@ class MathVistaEvaluator:
                 if "choices" in example:
                     texts = ["Choices:"]
                     for i, choice in enumerate(example["choices"]):
-                        texts.append(f"({chr(ord('A')+i)}) {choice}")
+                        texts.append(f"({chr(ord('A') + i)}) {choice}")
                     prompt += "\n" + "\n".join(texts)
 
                 # caption
@@ -511,13 +511,13 @@ class MathVistaEvaluator:
             if shot_type == "format-prompt":
                 texts = []
                 for i, choice in enumerate(choices):
-                    texts.append(f"{chr(ord('A')+i)}. {choice}")
+                    texts.append(f"{chr(ord('A') + i)}. {choice}")
                 choices_text = "\n".join(texts)
             else:
                 # choices: (A) 1.2 (B) 1.3 (C) 1.4 (D) 1.5
                 texts = ["Choices:"]
                 for i, choice in enumerate(choices):
-                    texts.append(f"({chr(ord('A')+i)}) {choice}")
+                    texts.append(f"({chr(ord('A') + i)}) {choice}")
                 choices_text = "\n".join(texts)
         else:
             choices_text = ""

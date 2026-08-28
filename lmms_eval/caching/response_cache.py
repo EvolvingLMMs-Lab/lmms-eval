@@ -407,14 +407,21 @@ class ResponseCache:
             cache_root = os.path.dirname(os.path.abspath(cache_root))
         cache_root = os.path.abspath(cache_root)
 
-        # Task fingerprints
+        # Task fingerprints — recursively process nested groups so subtasks
+        # get proper fingerprints instead of falling back to empty strings.
         task_fingerprints = {}
         if task_dict:
-            for tname, tobj in task_dict.items():
-                if hasattr(tobj, "dump_config"):
-                    cfg_str = json.dumps(tobj.dump_config(), sort_keys=True, default=str)
-                    cfg_str = _FUNC_ADDR_RE.sub(">", cfg_str)
-                    task_fingerprints[tname] = hash_string(cfg_str)[:16]
+
+            def _collect_fingerprints(d):
+                for tname, tobj in d.items():
+                    if hasattr(tobj, "dump_config"):
+                        cfg_str = json.dumps(tobj.dump_config(), sort_keys=True, default=str)
+                        cfg_str = _FUNC_ADDR_RE.sub(">", cfg_str)
+                        task_fingerprints[tname] = hash_string(cfg_str)[:16]
+                    elif isinstance(tobj, dict):
+                        _collect_fingerprints(tobj)
+
+            _collect_fingerprints(task_dict)
 
         # Model fingerprint
         if isinstance(model_args, dict):
@@ -461,7 +468,7 @@ class ResponseCache:
             write_audit = os.path.join(run_dir, rank_audit_name)
             use_scratch = False
 
-        eval_logger.info(f"ResponseCache: root={cache_root}, run={run_id}, rank={global_rank}/{world_size}, " f"writes={'scratch' if use_scratch else 'direct'}")
+        eval_logger.info(f"ResponseCache: root={cache_root}, run={run_id}, rank={global_rank}/{world_size}, writes={'scratch' if use_scratch else 'direct'}")
 
         instance = cls(
             db_path=write_db,
@@ -554,7 +561,7 @@ class ResponseCache:
         if self._eval_version:
             row = self.db.execute("SELECT value FROM meta WHERE key = 'eval_version'").fetchone()
             if row and row[0] != self._eval_version:
-                eval_logger.warning(f"ResponseCache: DB was last written by lmms-eval {row[0]}, current version is {self._eval_version}. " f"Cache keys now include version — old entries will not match (safe, but no reuse).")
+                eval_logger.warning(f"ResponseCache: DB was last written by lmms-eval {row[0]}, current version is {self._eval_version}. Cache keys now include version — old entries will not match (safe, but no reuse).")
             self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("eval_version", self._eval_version))
         self.db.commit()
         self._replay_audit_log()
@@ -885,7 +892,7 @@ class ResponseCache:
         try:
             stats = self.get_stats()
             shared_info = f", {stats.get('hits_shared', 0)} from shared DB" if stats.get("hits_shared", 0) else ""
-            eval_logger.info(f"ResponseCache stats: {stats['hits']} hits{shared_info}, " f"{stats['misses']} misses, {stats['skipped_non_deterministic']} skipped, " f"hit rate: {stats['hit_rate']:.1%}")
+            eval_logger.info(f"ResponseCache stats: {stats['hits']} hits{shared_info}, {stats['misses']} misses, {stats['skipped_non_deterministic']} skipped, hit rate: {stats['hit_rate']:.1%}")
         except Exception:
             pass
 

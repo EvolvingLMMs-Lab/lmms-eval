@@ -2,6 +2,7 @@ import base64
 import hashlib
 import os
 import re
+import threading
 from collections import defaultdict
 from pathlib import Path
 
@@ -22,23 +23,43 @@ def _load_yaml_stripped(path: Path) -> dict:
 _config = _load_yaml_stripped(_default_template_path)
 _config.update(_load_yaml_stripped(_browsecomp_config_path))
 
-_judge_server = None
-_judge_server_config = None
-if _config.get("metadata", {}).get("use_lmms_judge"):
-    try:
-        from lmms_eval.llm_judge import get_server
-        from lmms_eval.llm_judge.protocol import ServerConfig
+_use_lmms_judge = _config.get("metadata", {}).get("use_lmms_judge", False)
 
-        API_TYPE = os.getenv("API_TYPE", "openai").lower()
-        DEPLOYMENT_NAME = os.getenv("DEPLOYMENT_NAME") or os.getenv("OPENAI_API_MODEL", "gpt-4o")
+# Lazy pipeline singleton for LLM judge
+_pipeline = None
+_pipeline_lock = threading.Lock()
 
-        _judge_server_config = ServerConfig(model_name=DEPLOYMENT_NAME)
-        _judge_server = get_server(server_name=API_TYPE, config=_judge_server_config)
-        eval_logger.info("Using LMMS judge server for BrowseComp task.")
-    except Exception as err:
-        eval_logger.warning("Failed to initialize LMMS judge for BrowseComp: {}", err)
-        _judge_server = None
-        _judge_server_config = None
+
+def _get_pipeline():
+    global _pipeline
+    if _pipeline is None:
+        with _pipeline_lock:
+            if _pipeline is None:  # double-check
+                from lmms_eval.verifiers import VerificationPipeline
+                from lmms_eval.verifiers.extractors import StripReasoningExtractor
+                from lmms_eval.verifiers.openai import OpenAIVerifier
+
+                API_TYPE = os.getenv("API_TYPE", "openai").lower()
+                DEPLOYMENT_NAME = os.getenv("DEPLOYMENT_NAME") or os.getenv("OPENAI_API_MODEL", "gpt-4o")
+
+                def _build_prompt(question, prediction, ground_truth, **kwargs):
+                    return BROWSECOMP_JUDGE_PROMPT.format(
+                        question=question,
+                        response=prediction,
+                        correct_answer=ground_truth,
+                    )
+
+                _pipeline = VerificationPipeline(
+                    extractors=[StripReasoningExtractor()],
+                    verifier=OpenAIVerifier(
+                        model=DEPLOYMENT_NAME,
+                        api_type=API_TYPE,
+                        custom_prompt=_build_prompt,
+                        response_format="binary",
+                    ),
+                )
+                eval_logger.info("Using LMMS judge server for BrowseComp task.")
+    return _pipeline
 
 
 BROWSECOMP_JUDGE_PROMPT = """Judge whether the following [response] to [question] is correct based on the [correct_answer].
@@ -128,25 +149,18 @@ def _normalize_for_exact_match(text: str) -> str:
 
 
 def _judge_is_correct(question: str, response: str, correct_answer: str):
-    if _judge_server is None or _judge_server_config is None:
+    if not _use_lmms_judge:
         return None
 
     try:
-        from lmms_eval.llm_judge.protocol import Request
-
-        submit_prompt = BROWSECOMP_JUDGE_PROMPT.format(
-            question=question,
-            response=response,
-            correct_answer=correct_answer,
-        )
-        request = Request(messages=[{"role": "user", "content": submit_prompt}], config=_judge_server_config)
-        judge_response_obj = _judge_server.evaluate(request)
-        judge_result = str(judge_response_obj.content).strip().lower()
-
-        if "incorrect" in judge_result:
-            return False
-        if "correct" in judge_result:
-            return True
+        pipeline = _get_pipeline()
+        result = pipeline(question=question, prediction=response, ground_truth=correct_answer)
+        # OpenAIVerifier swallows judge-call errors and flags them via
+        # judge_failed metadata; return None so the caller falls back to exact
+        # match instead of scoring an infra failure as incorrect.
+        if result.metadata.get("judge_failed"):
+            return None
+        return result.is_correct
     except Exception as err:
         eval_logger.debug("BrowseComp LLM judge failed, fallback to exact match: {}", err)
 

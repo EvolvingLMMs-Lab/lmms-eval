@@ -4,7 +4,7 @@ from loguru import logger
 
 logger.remove()
 # Configure logger with detailed format including file path, function name, and line number
-log_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | " "<level>{level: <8}</level> | " "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - " "<level>{message}</level>"
+log_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
 logger.add(sys.stdout, level="WARNING", format=log_format)
 
 AVAILABLE_LAUNCHERS = {"sglang": "SGLangLauncher"}

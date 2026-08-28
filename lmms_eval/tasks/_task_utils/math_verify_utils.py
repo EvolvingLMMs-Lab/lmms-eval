@@ -61,8 +61,8 @@ patch_target_module("math_verify.parser.timeout", timeout_adapter)
 patch_target_module("math_verify.grader.timeout", timeout_adapter)
 
 
-from latex2sympy2_extended.latex2sympy2 import NormalizationConfig
-from math_verify import *
+from latex2sympy2_extended.latex2sympy2 import NormalizationConfig  # noqa: E402
+from math_verify import LatexExtractionConfig, StringExtractionConfig, parse, verify  # noqa: E402
 
 
 def monkeypatch_math_verify_logger():

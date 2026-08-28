@@ -167,7 +167,7 @@ uv run python -m lmms_eval --tasks list
 # Inspect lmms_eval/models/__init__.py for AVAILABLE_CHAT_TEMPLATE_MODELS / AVAILABLE_SIMPLE_MODELS
 
 # Lint check
-pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 
 ## Reasoning Tag Stripping (v0.7)

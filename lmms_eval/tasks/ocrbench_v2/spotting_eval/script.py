@@ -59,7 +59,7 @@ def validate_data(gtFilePath, submFilePath, evaluationParams):
 
     # Validate format of results
     for k in subm:
-        if (k in gt) == False:
+        if k not in gt:
             raise Exception("The sample %s not present in GT" % k)
 
         rrc_evaluation_funcs.validate_lines_in_file(k, subm[k], evaluationParams["CRLF"], evaluationParams["LTRB"], True, evaluationParams["CONFIDENCES"])
@@ -74,6 +74,8 @@ def evaluate_method(gtFilePath, submFilePath, evaluationParams):
     """
     for module, alias in evaluation_imports().items():
         globals()[alias] = importlib.import_module(module)
+    np = globals()["np"]
+    plg = globals()["plg"]
 
     def polygon_from_points(points, correctOffset=False):
         """
@@ -125,7 +127,7 @@ def evaluate_method(gtFilePath, submFilePath, evaluationParams):
     def get_intersection_over_union(pD, pG):
         try:
             return get_intersection(pD, pG) / get_union(pD, pG)
-        except:
+        except Exception:
             return 0
 
     def get_intersection(pD, pG):
@@ -233,7 +235,7 @@ def evaluate_method(gtFilePath, submFilePath, evaluationParams):
                 or (charCode >= range5[0] and charCode <= range5[1])
                 or (charCode >= range6[0] and charCode <= range6[1])
             )
-            if valid == False:
+            if not valid:
                 return False
 
         return True
@@ -314,8 +316,8 @@ def evaluate_method(gtFilePath, submFilePath, evaluationParams):
 
             # On word spotting we will filter some transcriptions with special characters
             if evaluationParams["WORD_SPOTTING"]:
-                if dontCare == False:
-                    if include_in_dictionary(transcription) == False:
+                if not dontCare:
+                    if not include_in_dictionary(transcription):
                         dontCare = True
                     else:
                         transcription = include_in_dictionary_transcription(transcription)
@@ -378,7 +380,7 @@ def evaluate_method(gtFilePath, submFilePath, evaluationParams):
                                 if evaluationParams["WORD_SPOTTING"]:
                                     correct = gtTrans[gtNum].upper() == detTrans[detNum].upper()
                                 else:
-                                    correct = transcription_match(gtTrans[gtNum].upper(), detTrans[detNum].upper(), evaluationParams["SPECIAL_CHARACTERS"], evaluationParams["ONLY_REMOVE_FIRST_LAST_CHARACTER"]) == True
+                                    correct = transcription_match(gtTrans[gtNum].upper(), detTrans[detNum].upper(), evaluationParams["SPECIAL_CHARACTERS"], evaluationParams["ONLY_REMOVE_FIRST_LAST_CHARACTER"])
                                 detCorrect += 1 if correct else 0
                                 if correct:
                                     detMatchedNums.append(detNum)

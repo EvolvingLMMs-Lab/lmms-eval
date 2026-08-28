@@ -1,0 +1,4 @@
+task: vbench2_camera_motion
+dataset_name: vbench2_camera_motion
+test_split: test
+include: _default_template_yaml

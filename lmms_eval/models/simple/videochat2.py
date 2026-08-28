@@ -10,26 +10,26 @@ from decord import VideoReader, cpu
 from easydict import EasyDict
 
 decord.bridge.set_bridge("torch")
-import torch.nn.functional as F
-from PIL import Image
-from tqdm import tqdm
-from transformers import (
+import torch.nn.functional as F  # noqa: E402
+from PIL import Image  # noqa: E402
+from tqdm import tqdm  # noqa: E402
+from transformers import (  # noqa: E402
     AutoModel,
     StoppingCriteria,
     StoppingCriteriaList,
 )
 
-from lmms_eval.api.instance import Instance
-from lmms_eval.api.model import lmms
-from lmms_eval.api.registry import register_model
+from lmms_eval.api.instance import Instance  # noqa: E402
+from lmms_eval.api.model import lmms  # noqa: E402
+from lmms_eval.api.registry import register_model  # noqa: E402
 
 eval_logger = logging.getLogger("eval_logger")
 
 
-from datetime import timedelta
+from datetime import timedelta  # noqa: E402
 
-from accelerate.state import AcceleratorState
-from accelerate.utils import InitProcessGroupKwargs
+from accelerate.state import AcceleratorState  # noqa: E402
+from accelerate.utils import InitProcessGroupKwargs  # noqa: E402
 
 DEFAULT_GEN_KWARGS = dict(
     num_beams=1,
@@ -181,7 +181,7 @@ def HD_transform_no_padding(frames, image_size=224, hd_num=6, fix_ratio=(2, 1)):
     # calculate the target width and height
     target_width = image_size * target_aspect_ratio[0]
     target_height = image_size * target_aspect_ratio[1]
-    blocks = target_aspect_ratio[0] * target_aspect_ratio[1]
+    _blocks = target_aspect_ratio[0] * target_aspect_ratio[1]
 
     # resize the frames
     resized_frame = F.interpolate(frames, size=(target_height, target_width), mode="bicubic", align_corners=False)
@@ -457,6 +457,7 @@ class VideoChat2(lmms):
 
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
+            answer_prompt = None
             if self.modality == "image":
                 image_path = visuals[0]
                 new_pos_emb = self.get_sinusoid_encoding_table(n_position=(224 // 16) ** 2, cur_frame=1, ckpt_num_frame=1, pre_n_position=14 * 14)
@@ -478,8 +479,6 @@ class VideoChat2(lmms):
                 video_path = visuals[0]
                 if "mvbench" in task:
                     answer_prompt = "Best Option:("
-                else:
-                    answer_prompt = None
                 new_pos_emb = self.get_sinusoid_encoding_table(n_position=(224 // 16) ** 2 * self.num_segments, cur_frame=self.num_segments)
                 self.model.vision_encoder.encoder.pos_embed = new_pos_emb
                 pixel_values = load_video(video_path, num_segments=self.num_segments, return_msg=False, resolution=224, hd_num=self.hd_num)

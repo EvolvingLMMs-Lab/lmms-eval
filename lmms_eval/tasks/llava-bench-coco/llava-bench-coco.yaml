@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/llava-bench-coco
+dataset_path: lmms-lab-encoder/llava-bench-coco
 dataset_kwargs:
   token: True
 task: "llava_bench_coco"

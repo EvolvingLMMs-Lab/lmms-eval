@@ -1,0 +1,4 @@
+task: vbench2_multi-view_consistency
+dataset_name: vbench2_multi-view_consistency
+test_split: test
+include: _default_template_yaml

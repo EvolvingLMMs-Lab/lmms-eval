@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/VQAv2
+dataset_path: lmms-lab-encoder/VQAv2
 dataset_kwargs:
   token: True
 output_type: generate_until

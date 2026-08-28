@@ -10,7 +10,7 @@ VIEWSPATIAL_QUESTION_TYPES = {
 }
 
 
-def viewspatial_doc_to_text(doc):
+def viewspatial_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     """Extracts the text prompt from a viewspatial dataset sample.
 
     Args:
@@ -44,6 +44,31 @@ def viewspatial_doc_to_visual(doc):
         list: A list of visual elements (e.g., PIL Images) converted to 'RGB' format.
     """
     return [visual.convert("RGB") for visual in doc["images"]]
+
+
+def _format_neo_ov_content(images, prompt):
+    if len(images) == 1:
+        return [{"type": "image", "url": images[0]}, {"type": "text", "text": prompt}]
+
+    content = []
+    for idx, image in enumerate(images, start=1):
+        content.append({"type": "text", "text": f"Image-{idx}: "})
+        content.append({"type": "image", "url": image})
+    content.append({"type": "text", "text": prompt})
+    return content
+
+
+def viewspatial_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    lmms_eval_specific_kwargs = lmms_eval_specific_kwargs or {}
+    images = viewspatial_doc_to_visual(doc)
+    prompt = viewspatial_doc_to_text(doc, lmms_eval_specific_kwargs)
+
+    if lmms_eval_specific_kwargs.get("prompt_format") == "neo_ov":
+        return [{"role": "user", "content": _format_neo_ov_content(images, prompt)}]
+
+    content = [{"type": "image", "url": image} for image in images]
+    content.append({"type": "text", "text": prompt})
+    return [{"role": "user", "content": content}]
 
 
 def extract_option(text):

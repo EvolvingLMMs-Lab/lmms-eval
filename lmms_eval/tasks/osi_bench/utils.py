@@ -4,7 +4,6 @@
 
 import os
 import re
-from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -165,11 +164,11 @@ def build_prompt(doc, lmms_eval_specific_kwargs=None, include_video_length=False
     """Build the prompt text based on question category."""
     question_text = doc["question"]
     category = doc.get("category", "unknown")
-    video_length = doc.get("video_length", 0)
+    _video_length = doc.get("video_length", 0)
     options = doc.get("options", [])
 
     # Preamble for numeric-tagged objects
-    preamble_num_tagged = "These are frames of a video.\n" "In the video, objects are identified by numeric tags shown nearby.\n" "With that in mind, please answer the following question based on the video."
+    preamble_num_tagged = "These are frames of a video.\nIn the video, objects are identified by numeric tags shown nearby.\nWith that in mind, please answer the following question based on the video."
 
     prompt_text = ""
 
@@ -341,7 +340,7 @@ def osi_bench_doc_to_text_frames(doc, lmms_eval_specific_kwargs=None, include_vi
 
         # 1. Add time context first (if video_length available)
         if video_length and video_length > 0:
-            time_context = f"The video is {round(video_length, 2)} seconds long. " f"The following {num_frames} frames are uniformly sampled from it " "in chronological order:"
+            time_context = f"The video is {round(video_length, 2)} seconds long. The following {num_frames} frames are uniformly sampled from it in chronological order:"
             parts.append(time_context)
 
         # 2. Add image tokens
@@ -360,7 +359,7 @@ def osi_bench_doc_to_text_frames(doc, lmms_eval_specific_kwargs=None, include_vi
 
         # Append frame context AFTER main prompt if video_length is available
         if video_length and video_length > 0:
-            frame_context = f"The video is {round(video_length, 2)} seconds long. " f"The following {num_frames} frames are uniformly sampled from it " "in chronological order:"
+            frame_context = f"The video is {round(video_length, 2)} seconds long. The following {num_frames} frames are uniformly sampled from it in chronological order:"
             prompt = prompt + "\n" + frame_context
 
         # Append <image> tokens for simple models that don't use doc_to_messages
@@ -434,7 +433,7 @@ def osi_bench_doc_to_messages_frames(doc, lmms_eval_specific_kwargs=None):
 
         # 1. Add time context prompt first (if video_length available)
         if video_length and video_length > 0:
-            time_context_prompt = f"The video is {round(video_length, 2)} seconds long. " f"The following {actual_num_frames} frames are uniformly sampled from it " "in chronological order:"
+            time_context_prompt = f"The video is {round(video_length, 2)} seconds long. The following {actual_num_frames} frames are uniformly sampled from it in chronological order:"
             messages[0]["content"].append({"type": "text", "text": time_context_prompt})
 
         # 2. Add frames

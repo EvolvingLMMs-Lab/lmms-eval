@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional
 
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.simple.qwen3_vl import Qwen3_VL

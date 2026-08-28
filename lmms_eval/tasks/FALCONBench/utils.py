@@ -80,7 +80,7 @@ def download_and_organize_data(cache_dir):
     snapshots = sorted(os.listdir(benchmark_cache_dir))
     snapshot_benchmark_cache_dir = os.path.join(benchmark_cache_dir, snapshots[-1])
     script_path = os.path.join(snapshot_benchmark_cache_dir, "download_videos.py")
-    result = subprocess.run(["python", script_path, "--soccernet_password", SOCCERNET_PWD, "--hf_benchmark_dir", snapshot_benchmark_cache_dir, "--data_dir", cache_dir], stdout=None, stderr=None)
+    _result = subprocess.run(["python", script_path, "--soccernet_password", SOCCERNET_PWD, "--hf_benchmark_dir", snapshot_benchmark_cache_dir, "--data_dir", cache_dir], stdout=None, stderr=None)
 
 
 def move_key_first(d, key):
@@ -111,7 +111,7 @@ def load_video(video_file, duration, max_num_frames=16):
         frames = frames.numpy()
     else:
         frames = frames.asnumpy()
-    frame_timestamps = [frame_index / fps for frame_index in frame_indices]
+    _frame_timestamps = [frame_index / fps for frame_index in frame_indices]
 
     return [Image.fromarray(fr).convert("RGB") for fr in frames]
 
@@ -132,7 +132,7 @@ def FALCONbench_doc_to_target(doc):
 
 
 def FALCONbench_doc_to_text_mcq(doc, lmms_eval_specific_kwargs):
-    candidates = []
+    _candidates = []
 
     question = doc["question"] + "\n" + "\n".join([". ".join([chr(ord("A") + i), candidate]) for i, candidate in enumerate(doc["options"])])
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
@@ -142,7 +142,7 @@ def FALCONbench_doc_to_text_mcq(doc, lmms_eval_specific_kwargs):
 
 
 def FALCONbench_doc_to_text_mcq_temploc(doc, lmms_eval_specific_kwargs):
-    candidates = []
+    _candidates = []
 
     question = doc["question"] + "\n" + "\n".join([". ".join([chr(ord("A") + i), candidate]) for i, candidate in enumerate(doc["options"])])
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
@@ -305,7 +305,7 @@ def evaluate_FALCONbench_gpteval(results):
         eval_score = result["score"]
         try:
             eval_score = int(eval_score)
-        except:
+        except Exception:
             eval_score = 0.0
         score += eval_score
 
@@ -314,7 +314,7 @@ def evaluate_FALCONbench_gpteval(results):
             eval_acc = str(eval_acc)
             if eval_acc == "yes":
                 acc += 1
-        except:
+        except Exception:
             acc += 0
     return {"score": score / len(results), "acc": acc / len(results)}
 
@@ -461,7 +461,7 @@ def parse_acc(review):
 
 
 def gpt_eval(data_dict):
-    evaluated_results = []
+    _evaluated_results = []
 
     try:
         question = data_dict["question"]
@@ -475,7 +475,7 @@ def gpt_eval(data_dict):
     except Exception as e:
         eval_logger.error(f"Error for Video Name: {data_dict.get('video_name', 'Unknown')}: {e}")
         review = "Failed to Get a Proper Review."
-        model_name = ""
+        _model_name = ""
         score = 0
         acc = "no"
 
@@ -685,9 +685,9 @@ def FALCONbench_process_results_mcq(doc, results):
 
 
 def FALCONbench_process_results_mcq_temploc(doc, results):
-    if type(results[0]) == str:
+    if type(results[0]) is str:
         pred_dict = parse_json_response(results[0])
-    elif type(results[0]) == dict and "response" in results[0] and "temporal_window" in results[0]:
+    elif type(results[0]) is dict and "response" in results[0] and "temporal_window" in results[0]:
         pred_dict = results[0]
     else:
         raise ValueError(f"Invalid prediction format for question_id {doc['question_id']}. The output must be a string or a dictionary with 'response' and 'temporal_window' keys.")
@@ -744,9 +744,9 @@ def FALCONbench_process_results_oq(doc, result):
 
 # Process result for evaluation in generic task
 def FALCONbench_process_results_oq_temploc(doc, result):
-    if type(result[0]) == str:
+    if type(result[0]) is str:
         pred_dict = parse_json_response(result[0])
-    elif type(result[0]) == dict and "response" in result[0] and "temporal_window" in result[0]:
+    elif type(result[0]) is dict and "response" in result[0] and "temporal_window" in result[0]:
         pred_dict = result[0]
     else:
         raise ValueError(f"Invalid prediction format for question_id {doc['question_id']}. The output must be a string or a dictionary with 'response' and 'temporal_window' keys.")

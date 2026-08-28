@@ -91,8 +91,8 @@ def videomme_process_results_number(doc, results):
     gt_ans = doc["answer"]  # Already converted to number
 
     # Convert number answer back to letter for category matching
-    pred_letter = NUMBER_TO_LETTER.get(pred_ans, pred_ans)
-    gt_letter = NUMBER_TO_LETTER.get(gt_ans, gt_ans)
+    _pred_letter = NUMBER_TO_LETTER.get(pred_ans, pred_ans)
+    _gt_letter = NUMBER_TO_LETTER.get(gt_ans, gt_ans)
 
     # Extract category info (same as base)
     category = doc.get("domain", doc.get("category", "Unknown"))

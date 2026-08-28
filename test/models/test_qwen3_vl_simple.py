@@ -5,7 +5,7 @@ from unittest.mock import patch
 import numpy as np
 import torch
 
-from lmms_eval.models.simple.qwen3_vl import Qwen3_VL
+from lmms_eval.models.simple.qwen3_vl import Qwen3_VL, _is_video_path
 
 
 class _FakeTokenizer:
@@ -70,6 +70,14 @@ class _VideoMetadata:
 
 
 class TestQwen3VLSimple(unittest.TestCase):
+    def test_is_video_path_supports_common_video_extensions(self):
+        for path in ("clip.mp4", "clip.avi", "clip.mov", "clip.mkv", "clip.webm", "clip.mpeg", "clip.mpg", "clip.MPEG"):
+            with self.subTest(path=path):
+                self.assertTrue(_is_video_path(path))
+
+        self.assertFalse(_is_video_path("frame.jpg"))
+        self.assertFalse(_is_video_path(None))
+
     def _make_model(self, max_num_frames=3):
         model = Qwen3_VL.__new__(Qwen3_VL)
         model._tokenizer = _FakeTokenizer()

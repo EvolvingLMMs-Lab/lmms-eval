@@ -115,7 +115,7 @@ class MathVerseEvaluator:
         """
         total_pd = res_pd[res_pd[key] == value]
 
-        correct_pd = total_pd[total_pd["true_false"] == True]
+        correct_pd = total_pd[total_pd["true_false"] == True]  # noqa: E712
         acc = "{:.2f}".format(len(correct_pd) / len(total_pd) * 100) if len(total_pd) > 0 else "0.00"
         return len(correct_pd), len(total_pd), acc
 

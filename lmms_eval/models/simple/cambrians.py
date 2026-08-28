@@ -49,7 +49,7 @@ def is_image_file(file_path: str) -> bool:
     return ext.lower() in image_extensions
 
 
-from decord import VideoReader, cpu
+from decord import VideoReader, cpu  # noqa: E402
 
 
 def process_video_with_decord(video_file, model_cfg, num_threads=-1):
@@ -72,7 +72,7 @@ def process_video_with_decord(video_file, model_cfg, num_threads=-1):
     video = vr.get_batch(frame_idx).asnumpy()
     frame_time = ",".join([f"{i:.2f}s" for i in frame_time])
 
-    num_frames_to_sample = num_frames = len(frame_idx)
+    num_frames_to_sample = _num_frames = len(frame_idx)
     # https://github.com/dmlc/decord/issues/208
     vr.seek(0)
     return video, video_time, frame_time, num_frames_to_sample

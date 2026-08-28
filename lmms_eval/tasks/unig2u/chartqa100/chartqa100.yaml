@@ -29,7 +29,7 @@ metric_list:
 metadata:
   version: 1.0
   description: "ChartQA 100-sample fixed subset (seed=42)"
-  original_dataset: "lmms-lab/ChartQA"
+  original_dataset: "lmms-lab-encoder/ChartQA"
   num_samples: 100
   seed: 42
 lmms_eval_specific_kwargs:

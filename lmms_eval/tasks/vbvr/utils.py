@@ -236,7 +236,7 @@ def vbvr_process_results(doc: Dict[str, Any], results: Sequence[Any], **kwargs) 
         eval_logger.error(f"VBVR evaluator failed for {task_name}/{video_idx}: {str(e)[:300]}")
         score = 0.0
         dimensions = {}
-        status = f"evaluator_error"
+        status = "evaluator_error"
 
     entry = {
         "task_name": task_name,
@@ -323,7 +323,7 @@ def vbvr_aggregate_overall(results) -> float:
     if total == 0:
         return 0.0
     mean = (_mean(in_dom) * len(in_dom) + _mean(ood) * len(ood)) / total
-    eval_logger.info(f"[VBVR] Overall: {mean:.4f} " f"(In-Domain {_mean(in_dom):.4f} n={len(in_dom)}, " f"Out-of-Domain {_mean(ood):.4f} n={len(ood)})")
+    eval_logger.info(f"[VBVR] Overall: {mean:.4f} (In-Domain {_mean(in_dom):.4f} n={len(in_dom)}, Out-of-Domain {_mean(ood):.4f} n={len(ood)})")
     # Per-category breakdown for the logs
     cat_scores: Dict[str, List[float]] = defaultdict(list)
     for e in entries:

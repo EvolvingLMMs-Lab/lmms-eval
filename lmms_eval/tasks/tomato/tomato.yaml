@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/TOMATO
+dataset_path: lmms-eval/TOMATO
 dataset_kwargs:
   token: True
   cache_dir: TOMATO

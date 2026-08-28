@@ -2,12 +2,12 @@
 Specific evaluators for In-Domain_50 tasks (Part 1).
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
 
-from ..utils import compute_optical_flow, normalize_frame_size, safe_distance
+from ..utils import normalize_frame_size, safe_distance
 from .base_evaluator import BaseEvaluator
 
 
@@ -110,7 +110,7 @@ class StableSortEvaluator(BaseEvaluator):
 
         # 1. Classification (30%): Check if shapes are grouped by type/color
         final_groups = self._group_by_color(final_shapes)
-        gt_groups = self._group_by_color(gt_final_shapes) if gt_final_shapes else final_groups
+        _gt_groups = self._group_by_color(gt_final_shapes) if gt_final_shapes else final_groups
 
         if len(final_shapes) >= 6 and len(final_groups) >= 2:
             # Check if shapes of same color are adjacent (grouped)
@@ -230,7 +230,7 @@ class MultiObjectPlacementEvaluator(BaseEvaluator):
 
     def _detect_star_markers(self, frame: np.ndarray) -> List[Dict]:
         """Detect star markers by looking for small star-shaped objects."""
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        _gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         stars = []
@@ -1238,7 +1238,7 @@ class GridShortestPathEvaluator(BaseEvaluator):
         # 2. Completion: Check if agent reaches endpoint
         endpoint = self._detect_endpoint(last_frame)
         final_agent = self._detect_agent(last_frame)
-        gt_endpoint = self._detect_endpoint(gt_final_frame)
+        _gt_endpoint = self._detect_endpoint(gt_final_frame)
         gt_final_agent = self._detect_agent(gt_final_frame)
 
         if final_agent is not None and gt_final_agent is not None:

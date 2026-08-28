@@ -1,0 +1,4 @@
+task: vbench
+dataset_name: vbench
+test_split: test
+include: _default_template_yaml

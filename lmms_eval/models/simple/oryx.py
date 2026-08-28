@@ -34,7 +34,7 @@ try:
         tokenizer_image_token,
     )
     from oryx.model.builder import load_pretrained_model
-    from oryx.model.language_model.oryx_llama import OryxConfig
+    from oryx.model.language_model.oryx_llama import OryxConfig as OryxConfig
 except ImportError:
     eval_logger.debug("Oryx is not installed. Please install Oryx to use this model.")
 
@@ -42,7 +42,7 @@ try:
     from oryx.model.language_model.oryx_qwen import OryxQwenConfig
 
     AutoConfig.register("oryx_qwen", OryxQwenConfig)
-except:
+except Exception:
     eval_logger.debug("")
 
 
@@ -89,13 +89,13 @@ class Oryx(lmms):
         self.overwrite = overwrite
         self.mm_resampler_type = mm_resampler_type
         self.max_frames_num = int(max_frames_num)
-        if self.overwrite == True:
+        if self.overwrite:
             overwrite_config = {}
             overwrite_config["mm_resampler_type"] = self.mm_resampler_type
             overwrite_config["patchify_video_feature"] = False
             overwrite_config["attn_implementation"] = attn_implementation
 
-            cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
+            _cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
 
             self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, self.model_name, device_map=self.device_map, overwrite_config=overwrite_config)
         else:
@@ -207,7 +207,7 @@ class Oryx(lmms):
     def load_video(self, video_path, max_frames_num):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
-        fps = round(vr.get_avg_fps())
+        _fps = round(vr.get_avg_fps())
 
         uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
         frame_idx = uniform_sampled_frames.tolist()
@@ -225,7 +225,7 @@ class Oryx(lmms):
 
         for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
-            if type(doc_to_target) == str:
+            if type(doc_to_target) is str:
                 continuation = doc_to_target
             else:
                 continuation = doc_to_target(self.task_dict[task][split][doc_id])
@@ -233,7 +233,7 @@ class Oryx(lmms):
             visuals = self.flatten(visuals)
             videos = []
             # video
-            if type(visuals[0][0]) == str:
+            if type(visuals[0][0]) is str:
                 for visual in visuals:
                     video = self.load_video(visual, self.max_frames_num)
                     video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].bfloat16().to(self.device)
@@ -241,6 +241,8 @@ class Oryx(lmms):
                 task_type = "video"
             # image
             else:
+                image_tensor = []
+                image_highres_tensor = []
                 for visual in visuals:
                     image_tensor_, image_highres_tensor_ = process_anyres_highres_image_genli(visual, self._image_processor)
                     image_tensor.append(image_tensor_)
@@ -347,7 +349,7 @@ class Oryx(lmms):
                     videos.append(video)
                     modalities.append(modality)
                 else:
-                    if type(visuals[0][0]) == str:
+                    if type(visuals[0][0]) is str:
                         for visual in visuals:
                             if self.video_decode_backend == "decord":
                                 video, modality = self.load_video(visual, self.max_frames_num)
@@ -412,7 +414,7 @@ class Oryx(lmms):
             keywords = [stop_str]
             stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids)
 
-            cur_prompt = contexts
+            _cur_prompt = contexts
             if task_type == "image":
                 gen_kwargs["image_sizes"] = [visuals[idx].size for idx in range(len(visuals))]
             if "max_new_tokens" not in gen_kwargs:

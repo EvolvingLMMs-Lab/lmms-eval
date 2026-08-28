@@ -157,7 +157,7 @@ class GPT4OAudio(lmms):
                 audio_bytes = buffer.getvalue()
 
                 if len(audio_bytes) <= max_bytes:
-                    eval_logger.info(f"Audio compressed: {len(audio_array)/sample_rate:.1f}s@{sample_rate}Hz -> {len(compressed_audio)/compressed_sr:.1f}s@{compressed_sr}Hz ({len(audio_bytes)/(1024*1024):.2f}MB)")
+                    eval_logger.info(f"Audio compressed: {len(audio_array) / sample_rate:.1f}s@{sample_rate}Hz -> {len(compressed_audio) / compressed_sr:.1f}s@{compressed_sr}Hz ({len(audio_bytes) / (1024 * 1024):.2f}MB)")
                     break
 
             except Exception as e:
@@ -176,7 +176,7 @@ class GPT4OAudio(lmms):
                 audio_bytes = buffer.getvalue()
 
                 if len(audio_bytes) <= max_bytes:
-                    eval_logger.info(f"Audio truncated to {len(truncated_audio)/sample_rate:.1f}s ({len(audio_bytes)/(1024*1024):.2f}MB)")
+                    eval_logger.info(f"Audio truncated to {len(truncated_audio) / sample_rate:.1f}s ({len(audio_bytes) / (1024 * 1024):.2f}MB)")
                     compressed_audio = truncated_audio
                     compressed_sr = sample_rate
                     break
@@ -296,7 +296,7 @@ class GPT4OAudio(lmms):
 
             # Check if audio size is reasonable (OpenAI has limits)
             if total_audio_size > 20 * 1024 * 1024:  # 20MB limit (conservative)
-                eval_logger.warning(f"Audio data size ({total_audio_size / (1024*1024):.2f} MB) may exceed API limits")
+                eval_logger.warning(f"Audio data size ({total_audio_size / (1024 * 1024):.2f} MB) may exceed API limits")
 
             for attempt in range(MAX_RETRIES):
                 try:

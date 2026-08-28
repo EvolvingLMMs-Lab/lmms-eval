@@ -97,7 +97,7 @@ def populate_grading_inputs(batch):
 def verify_grading_output(data, length_data):
     # check the integrity of keys and values
     for i in range(1, length_data + 1):
-        assert f"extract_answer_T{i}" in data, f"extract_answer_T{i} is not found in {d}"
+        assert f"extract_answer_T{i}" in data, f"extract_answer_T{i} is not found in {data}"
         assert f"score_T{i}" in data, f"score_T{i} is not found in {data}"
         assert data[f"score_T{i}"] in [0, 1], f"score_T{i} is not in [0, 1]"
     return True
@@ -159,8 +159,8 @@ def postprocess_descriptive_grading_queries(queries):
         resp_keys = query["resp_keys"]
         for i, resp_key in enumerate(resp_keys):
             # extract the answer and score for each response key
-            extracted_answer = query[f"extract_answer_T{i+1}"]
-            score = query[f"score_T{i+1}"]
+            extracted_answer = query[f"extract_answer_T{i + 1}"]
+            score = query[f"score_T{i + 1}"]
             # store the extracted answer and score
             scores[resp_key] = {
                 "resp_id": resp_key,

@@ -1,0 +1,11 @@
+task: c4_bench_h1
+task_alias: H1 Cross-concept Hint
+include: _default_template_yaml
+process_docs: !function utils.c4_process_docs_h1
+metric_list:
+  - metric: c4_exact_match
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  version: 1.0
+  task_form: H1

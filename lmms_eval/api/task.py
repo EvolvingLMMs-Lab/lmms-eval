@@ -2,7 +2,6 @@ import abc
 import ast
 import copy
 import inspect
-import itertools
 import json
 import os
 import random
@@ -80,7 +79,7 @@ def _resolve_hf_datasets_cache_dir() -> str:
     hf_home = _expand_cache_path(os.getenv("HF_HOME", "~/.cache/huggingface"))
     target_cache_dir = _expand_cache_path(os.getenv("HF_DATASETS_CACHE", os.path.join(hf_home, "datasets")))
 
-    if detect_fs_type(target_cache_dir) != FsType.REMOTE:
+    if detect_fs_type(target_cache_dir) is not FsType.REMOTE:
         os.makedirs(target_cache_dir, exist_ok=True)
         return target_cache_dir
 
@@ -154,6 +153,11 @@ class TaskConfig(dict):
     model_specific_generation_kwargs: dict = None
     model_specific_target_kwargs: dict = None
     reasoning_tags: Union[str, list] = None
+    # Opt-in. When True, a StripThinkingFilter is prepended to every filter
+    # pipeline so <think>/<thinking> reasoning blocks are removed before answer
+    # extraction. Defaults False so scoring inputs for existing tasks are
+    # unchanged; ignored when `reasoning_tags` is configured (that path already strips).
+    auto_strip_thinking: bool = False
 
     def __post_init__(self) -> None:
         if self.dataset_path and os.path.exists(os.path.dirname(self.dataset_path)):
@@ -380,7 +384,7 @@ class Task(abc.ABC):
             return self.validation_docs()
         else:
             if self.config.num_fewshot is not None:
-                eval_logger.warning("has_training_docs and has_validation_docs are False" ", using test_docs as fewshot_docs but this is not recommended.")
+                eval_logger.warning("has_training_docs and has_validation_docs are False, using test_docs as fewshot_docs but this is not recommended.")
             return self.test_docs()
 
     def _process_doc(self, doc):
@@ -437,10 +441,10 @@ class Task(abc.ABC):
     ) -> None:
         """Build a set of Instances for a task, and store them in task.instances"""
         if self.has_test_docs():
-            docs = self.test_docs()
+            _docs = self.test_docs()
             split = self.config.test_split
         elif self.has_validation_docs():
-            docs = self.validation_docs()
+            _docs = self.validation_docs()
             split = self.config.validation_split
         else:
             assert False, f"Task dataset (path={self.DATASET_PATH}, name={self.DATASET_NAME}) must have valid or test docs!"
@@ -517,7 +521,7 @@ class Task(abc.ABC):
 
             # TODO: we should override self.config.repeats if doing greedy gen so users don't waste time+compute
             per_task_metadata = {"task": self.config["task"], "doc_id": doc_id, "repeats": self.config.repeats, "split": split}
-            if self.config.metadata and type(self.config.metadata) == dict:  # TODO: temporary fix for metadata loading, ignore the list of dict type.
+            if self.config.metadata and type(self.config.metadata) is dict:  # TODO: temporary fix for metadata loading, ignore the list of dict type.
                 per_task_metadata.update(self.config.metadata)
 
             inst = self.construct_requests(doc_id=doc_id, ctx=fewshot_ctx, metadata=per_task_metadata)
@@ -550,7 +554,7 @@ class Task(abc.ABC):
                         chat_template,
                     )
                     pad_metadata = {"task": self.config["task"], "doc_id": pad_doc_id, "repeats": self.config.repeats, "split": split, "__padding_only__": True}
-                    if self.config.metadata and type(self.config.metadata) == dict:
+                    if self.config.metadata and type(self.config.metadata) is dict:
                         pad_metadata.update(self.config.metadata)
                     pad_inst = self.construct_requests(doc_id=pad_doc_id, ctx=pad_ctx, metadata=pad_metadata)
                     if not isinstance(pad_inst, list):
@@ -938,20 +942,20 @@ class ConfigurableTask(Task):
 
                 if "aggregation" in metric_config:
                     agg_name = metric_config["aggregation"]
-                    if type(agg_name) == str:
+                    if type(agg_name) is str:
                         self._aggregation_list[metric_name] = get_aggregation(agg_name)
                     elif callable(agg_name):
                         self._aggregation_list[metric_name] = metric_config["aggregation"]
                 else:
                     INV_AGG_REGISTRY = {v: k for k, v in AGGREGATION_REGISTRY.items()}
                     metric_agg = get_metric_aggregation(metric_name)
-                    eval_logger.warning(f"[Task: {self._config.task}] metric {metric_name} is defined, but aggregation is not. " f"using default " f"aggregation={INV_AGG_REGISTRY[metric_agg]}")
+                    eval_logger.warning(f"[Task: {self._config.task}] metric {metric_name} is defined, but aggregation is not. using default aggregation={INV_AGG_REGISTRY[metric_agg]}")
                     self._aggregation_list[metric_name] = metric_agg
 
                 if "higher_is_better" in metric_config:
                     self._higher_is_better[metric_name] = metric_config["higher_is_better"]
                 else:
-                    eval_logger.warning(f"[Task: {self._config.task}] metric {metric_name} is defined, but higher_is_better is not. " f"using default " f"higher_is_better={is_higher_better(metric_name)}")
+                    eval_logger.warning(f"[Task: {self._config.task}] metric {metric_name} is defined, but higher_is_better is not. using default higher_is_better={is_higher_better(metric_name)}")
                     self._higher_is_better[metric_name] = is_higher_better(metric_name)
 
     @retry(stop=(stop_after_attempt(5) | stop_after_delay(60)), wait=wait_fixed(2))
@@ -1232,7 +1236,7 @@ class ConfigurableTask(Task):
             return self.dataset[self.config.fewshot_split]
         else:
             if (self.config.num_fewshot is not None) and (self.config.num_fewshot > 0):
-                eval_logger.warning(f"Task '{self.config.task}': " "num_fewshot > 0 but fewshot_split is None. " "using preconfigured rule.")
+                eval_logger.warning(f"Task '{self.config.task}': num_fewshot > 0 but fewshot_split is None. using preconfigured rule.")
             return super().fewshot_docs()
 
     @utils.positional_deprecated
@@ -1402,9 +1406,9 @@ class ConfigurableTask(Task):
     def doc_to_text(self, doc):
         doc_to_text = self.config.doc_to_text
 
-        if type(doc_to_text) == int:
+        if type(doc_to_text) is int:
             return doc_to_text
-        elif type(doc_to_text) == str:
+        elif type(doc_to_text) is str:
             if doc_to_text in self.features:
                 # if self.config.doc_to_choice is not None:
                 #     return self.doc_to_choice(doc)[doc[doc_to_text]]
@@ -1439,9 +1443,9 @@ class ConfigurableTask(Task):
     def doc_to_target(self, doc: dict) -> Union[int, str, list]:
         doc_to_target = self.config.doc_to_target
 
-        if type(doc_to_target) == int:
+        if type(doc_to_target) is int:
             return doc_to_target
-        elif type(doc_to_target) == str:
+        elif type(doc_to_target) is str:
             if doc_to_target in self.features:
                 # if self.config.doc_to_choice is not None:
                 #     return self.doc_to_choice(doc)[doc[doc_to_target]]
@@ -1458,7 +1462,7 @@ class ConfigurableTask(Task):
                         return target_string
                 else:
                     return target_string
-        elif type(doc_to_target) == list:
+        elif type(doc_to_target) is list:
             return doc_to_target
         elif callable(doc_to_target):
             return doc_to_target(doc, self.model_specific_target_kwargs) if self.model_specific_target_kwargs is not None else doc_to_target(doc)
@@ -1475,7 +1479,7 @@ class ConfigurableTask(Task):
 
     def doc_to_visual(self, doc: dict) -> Union[int, str, list]:
         self.config.doc_to_visual
-        if type(self.config.doc_to_visual) == str:
+        if type(self.config.doc_to_visual) is str:
             assert self.config.doc_to_visual in self.features
             # Single image. Still return a list for consistency.
             return [doc[self.config.doc_to_visual]]
@@ -1497,14 +1501,14 @@ class ConfigurableTask(Task):
         else:
             doc_to_choice = self.config.doc_to_choice
 
-        if type(doc_to_choice) == str:
+        if type(doc_to_choice) is str:
             if doc_to_choice in self.features:
                 return doc[doc_to_choice]
             else:
                 return ast.literal_eval(utils.apply_template(doc_to_choice, doc))
-        elif type(doc_to_choice) == list:
+        elif type(doc_to_choice) is list:
             return doc_to_choice
-        elif type(doc_to_choice) == dict:
+        elif type(doc_to_choice) is dict:
             return list(doc_to_choice.values())
         elif callable(doc_to_choice):
             return doc_to_choice(doc)
@@ -1640,7 +1644,7 @@ class ConfigurableTask(Task):
                     gold_index_error = True
 
             if gold_index_error:
-                eval_logger.warning(f"Label index was not in within range of available choices," f"Sample:\n\n{doc}\n\n")
+                eval_logger.warning(f"Label index was not in within range of available choices,Sample:\n\n{doc}\n\n")
 
             if self.multiple_target:
                 acc = 1.0 if pred in gold else 0.0
@@ -1676,7 +1680,7 @@ class ConfigurableTask(Task):
             # we expect multiple_targets to be a list.
             elif self.multiple_target:
                 gold = list(gold)
-            # elif type(gold) != type(result):
+            # elif type(gold) is not type(result):
             #     # cast gold to the same type as result
             #     gold = type(result)(gold)
 
@@ -1744,7 +1748,7 @@ class ConfigurableTask(Task):
         return getattr(self.config, "task", None)
 
     def __repr__(self):
-        return f"ConfigurableTask(task_name={getattr(self.config, 'task', None)}," f"output_type={self.OUTPUT_TYPE}," f"num_fewshot={getattr(self.config, 'num_fewshot', None)}," f"repeats={getattr(self.config, 'repeats', None)})"
+        return f"ConfigurableTask(task_name={getattr(self.config, 'task', None)},output_type={self.OUTPUT_TYPE},num_fewshot={getattr(self.config, 'num_fewshot', None)},repeats={getattr(self.config, 'repeats', None)})"
 
 
 class ConfigurableMessagesTask(ConfigurableTask):
@@ -1797,7 +1801,14 @@ class ConfigurableMessagesTask(ConfigurableTask):
     def _auto_doc_to_messages(self, doc, *, round_idx=None, previous_output=None, previous_round_info=None):
         if round_idx is None:
             visuals = self.doc_to_visual(doc) or []
-            text = self.doc_to_text(doc)
+            if self.config.doc_to_visual is None:
+                # Text-only tasks: the chat user turn must carry the full task context
+                # (description + few-shot examples + current question), matching the ctx
+                # built by build_all_requests and the simple adapters (lm-eval-harness
+                # semantics). Multimodal tasks keep using only doc_to_text(doc).
+                text = self.fewshot_context(doc, 0 if self.config.num_fewshot is None else self.config.num_fewshot)
+            else:
+                text = self.doc_to_text(doc)
             return self._build_user_turn(visuals, text)
 
         # Multi-round: delegate to doc_to_text using the framework's per-round protocol.
@@ -1853,4 +1864,4 @@ class ConfigurableMessagesTask(ConfigurableTask):
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, task_name=self.config.task, doc_id=doc_id, **kwargs)
 
     def __repr__(self):
-        return f"ConfigurableMessagesTask(task_name={getattr(self.config, 'task', None)}," f"output_type={self.OUTPUT_TYPE}," f"num_fewshot={getattr(self.config, 'num_fewshot', None)}," f"repeats={getattr(self.config, 'repeats', None)})"
+        return f"ConfigurableMessagesTask(task_name={getattr(self.config, 'task', None)},output_type={self.OUTPUT_TYPE},num_fewshot={getattr(self.config, 'num_fewshot', None)},repeats={getattr(self.config, 'repeats', None)})"

@@ -3,19 +3,19 @@ import torch
 torch.backends.cuda.matmul.allow_tf32 = True
 
 
-import warnings
-from datetime import timedelta
-from typing import List, Optional, Tuple, Union
+import warnings  # noqa: E402
+from datetime import timedelta  # noqa: E402
+from typing import List, Optional, Tuple, Union  # noqa: E402
 
-from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
-from accelerate.state import AcceleratorState
-from loguru import logger as eval_logger
-from tqdm import tqdm
+from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs  # noqa: E402
+from accelerate.state import AcceleratorState  # noqa: E402
+from loguru import logger as eval_logger  # noqa: E402
+from tqdm import tqdm  # noqa: E402
 
-from lmms_eval import utils
-from lmms_eval.api.instance import Instance
-from lmms_eval.api.model import lmms
-from lmms_eval.api.registry import register_model
+from lmms_eval import utils  # noqa: E402
+from lmms_eval.api.instance import Instance  # noqa: E402
+from lmms_eval.api.model import lmms  # noqa: E402
+from lmms_eval.api.registry import register_model  # noqa: E402
 
 warnings.filterwarnings("ignore")
 
@@ -38,7 +38,7 @@ except Exception as e:
 #     best_fit_attn_implementation = "flash_attention_2" # flash_attn has a bug that says: ERROR Error query and key must have the same dtype in generating
 
 try:
-    import flash_attn
+    import flash_attn as flash_attn
 
     best_fit_attn_implementation = "flash_attention_2"
 except ImportError:
@@ -205,7 +205,7 @@ class Mantis(lmms):
     def tok_decode(self, tokens):
         try:
             return self.tokenizer.decode(tokens)
-        except:
+        except Exception:
             return self.tokenizer.decode([tokens])
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
@@ -246,8 +246,8 @@ class Mantis(lmms):
             # this is safe to assume because the `grouper` object ensures it.
             gen_kwargs = all_gen_kwargs[0]
 
-            until = gen_kwargs.pop("until", None)
-            image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio", None)
+            _until = gen_kwargs.pop("until", None)
+            _image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio", None)
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024

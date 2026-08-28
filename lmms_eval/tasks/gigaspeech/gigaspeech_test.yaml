@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/gigaspeech
+dataset_path: lmms-lab-audio/gigaspeech
 dataset_name: test
 dataset_kwargs:
   token: True

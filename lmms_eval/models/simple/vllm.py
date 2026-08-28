@@ -8,7 +8,6 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 import numpy as np
 import torch.distributed as dist
 from accelerate import Accelerator, DistributedType
-from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from PIL import Image
 
@@ -18,6 +17,10 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 from lmms_eval.models.model_utils.progress import make_progress
+
+# decord has no wheels for some platforms (e.g. macOS); defer the import so the wrapper stays importable and only video-decoding paths require it.
+VideoReader, _HAS_DECORD = optional_import("decord", "VideoReader")
+cpu, _ = optional_import("decord", "cpu")
 
 NUM_SECONDS_TO_SLEEP = int(os.getenv("NUM_SECONDS_TO_SLEEP", "5"))
 WORKERS = int(os.getenv("WORKERS", "32"))
@@ -228,7 +231,7 @@ class VLLM(lmms):
         if accelerator.num_processes > 1:
             kwargs["distributed_executor_backend"] = "external_launcher"
             if expected_world_size > 1 and accelerator.num_processes != expected_world_size:
-                raise ValueError("For external_launcher mode, accelerate world size must equal " f"tensor_parallel_size * data_parallel_size ({expected_world_size}), " f"but got {accelerator.num_processes}.")
+                raise ValueError(f"For external_launcher mode, accelerate world size must equal tensor_parallel_size * data_parallel_size ({expected_world_size}), but got {accelerator.num_processes}.")
         self.client = LLM(
             model=self.model,
             tensor_parallel_size=self.tensor_parallel_size,
@@ -265,7 +268,7 @@ class VLLM(lmms):
             self._tp_rank_in_group = int(tp_group.rank_in_group)
         except Exception as exc:
             if self._world_size > 1:
-                raise RuntimeError("Failed to initialize vLLM TP group for synchronized request dispatch. " "This is required when tensor_parallel_size > 1 under distributed launch.") from exc
+                raise RuntimeError("Failed to initialize vLLM TP group for synchronized request dispatch. This is required when tensor_parallel_size > 1 under distributed launch.") from exc
             eval_logger.warning(f"Failed to initialize TP group for request sync: {exc}")
 
     def _watchdog_rank(self) -> int:
@@ -350,11 +353,28 @@ class VLLM(lmms):
         return top_p
 
     def _build_sampling_params_dict(self, gen_kwargs: dict[str, Any]) -> dict[str, Any]:
-        return {
+        n = gen_kwargs.get("n")
+        if n is not None and (isinstance(n, bool) or not isinstance(n, int) or n != 1):
+            raise ValueError("generation parameter n must be the integer 1 because the vLLM backends consume exactly one output")
+
+        params = {
             "max_tokens": gen_kwargs["max_new_tokens"],
             "temperature": gen_kwargs["temperature"],
             "top_p": self._normalize_top_p_for_vllm(gen_kwargs["top_p"]),
         }
+        optional_params = (
+            "n",
+            "seed",
+            "top_k",
+            "min_p",
+            "repetition_penalty",
+            "presence_penalty",
+            "frequency_penalty",
+        )
+        for key in optional_params:
+            if gen_kwargs.get(key) is not None:
+                params[key] = gen_kwargs[key]
+        return params
 
     def _run_tp_synced(
         self,
@@ -381,7 +401,7 @@ class VLLM(lmms):
 
         merged_outputs = run_fn(merged_inputs)
         if len(merged_outputs) != len(merged_inputs):
-            raise RuntimeError("vLLM output count mismatch after TP request synchronization: " f"expected {len(merged_inputs)}, got {len(merged_outputs)}")
+            raise RuntimeError(f"vLLM output count mismatch after TP request synchronization: expected {len(merged_inputs)}, got {len(merged_outputs)}")
 
         start = offsets[self._tp_rank_in_group]
         end = offsets[self._tp_rank_in_group + 1]
@@ -518,7 +538,6 @@ class VLLM(lmms):
                             )
                     batched_messages.append(messages)
 
-                sampling_params = SamplingParams(**params)
                 self._write_watchdog_heartbeat("chat_start", batch_idx=batch_idx, batch_requests=batch_requests)
 
                 # NOTE:

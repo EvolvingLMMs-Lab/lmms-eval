@@ -1,0 +1,16 @@
+# MMSI-Video-Bench: single-visual-input subset (native video).
+# Drops ref_images / Cross-Video samples via process_docs so every question has
+# exactly one video (773/1106 samples). This matches Cambrian-P's reported
+# MMSI-Video protocol (a single video input per sample). The base
+# `mmsi_video` task is left unfiltered (the full benchmark definition).
+task: "mmsi_video_single_input"
+process_docs: !function utils.process_docs_single_input_only
+doc_to_visual: !function utils.doc_to_visual_video
+doc_to_text: !function utils.doc_to_text_video
+doc_to_messages: !function utils.doc_to_messages_video
+lmms_eval_specific_kwargs:
+  default:
+    post_prompt: ""
+  gemini_api:
+    pre_prompt: ""
+include: _default_template_yaml

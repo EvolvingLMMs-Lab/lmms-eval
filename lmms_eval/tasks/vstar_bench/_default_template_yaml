@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/vstar-bench
+dataset_path: lmms-lab-encoder/vstar-bench
 task: "vstar_bench"
 test_split: test
 output_type: generate_until

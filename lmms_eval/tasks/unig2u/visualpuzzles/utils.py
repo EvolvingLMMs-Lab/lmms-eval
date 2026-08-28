@@ -1,11 +1,7 @@
-import json
-import logging
-import os
-import random
 import re
 from collections import defaultdict
 
-import numpy as np
+from loguru import logger as eval_logger
 from PIL import Image
 
 MULTI_CHOICE_DIRECT_PROMPT = "Answer the question with the option's letter from the given choices directly."
@@ -135,7 +131,7 @@ def VisualPuzzles_process_result(doc, results):
     """
     pred = results[0].strip()
     all_choices = ["A", "B", "C", "D"]
-    if doc["options"] == None:
+    if doc["options"] is None:
         index2ans = None
     else:
         index2ans = {all_choices[i]: doc["options"][i] for i in range(4)}
@@ -196,7 +192,7 @@ def VisualPuzzles_process_result_simple(doc, results):
     """
     pred = results[0].strip()
     all_choices = ["A", "B", "C", "D"]
-    if doc["options"] == None:
+    if doc["options"] is None:
         index2ans = None
     else:
         index2ans = {all_choices[i]: doc["options"][i] for i in range(4)}

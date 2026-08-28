@@ -18,7 +18,7 @@ also expected in absolute pixels (Qwen-VL, InternVL default behavior).
 
 import json
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from loguru import logger as eval_logger
 

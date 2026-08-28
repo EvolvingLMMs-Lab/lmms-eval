@@ -1,7 +1,7 @@
 include: _default_template_yaml
 
 task: refcocog_grounding_test
-dataset_path: lmms-lab/RefCOCOg
+dataset_path: lmms-lab-encoder/RefCOCOg
 test_split: test
 
 metadata:

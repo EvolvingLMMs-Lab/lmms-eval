@@ -166,7 +166,7 @@ def temporalbench_aggregate_results(results):
     for dataset, binary_qa in binary_qa_per_dataset.items():
         mba_correct = sum([1 for v in multiple_binary_qa_per_dataset[dataset].values() if v])
         loginfo += "\n"
-        loginfo += f"|--- {dataset + ' ':<{width_dataset}} {sum(binary_qa)}/{len(binary_qa):<{width_counts}} {sum(binary_qa)/len(binary_qa) * 100:>{width_percentage}.2f}% ||| {mba_correct}/{len(multiple_binary_qa_per_dataset[dataset]):<{width_counts}} {mba_correct/len(multiple_binary_qa_per_dataset[dataset]) * 100:>{width_percentage}.2f}%"
+        loginfo += f"|--- {dataset + ' ':<{width_dataset}} {sum(binary_qa)}/{len(binary_qa):<{width_counts}} {sum(binary_qa) / len(binary_qa) * 100:>{width_percentage}.2f}% ||| {mba_correct}/{len(multiple_binary_qa_per_dataset[dataset]):<{width_counts}} {mba_correct / len(multiple_binary_qa_per_dataset[dataset]) * 100:>{width_percentage}.2f}%"
 
     if "category" in data["item"] and data["item"]["category"] != "":
         loginfo += "\n"
@@ -192,8 +192,8 @@ def temporalbench_aggregate_results(results):
                 mba_correct = sum([1 for v in multiple_binary_qa_per_category[category].values() if v])
                 loginfo += "\n"
                 loginfo += (
-                    f"|--- {category + ' ':<{width_dataset}} {sum(binary_qa)}/{len(binary_qa):<{width_counts}} {sum(binary_qa)/len(binary_qa) * 100:>{width_percentage}.2f}% "
-                    f"||| {mba_correct}/{len(multiple_binary_qa_per_category[category]):<{width_counts}} {mba_correct/len(multiple_binary_qa_per_category[category]) * 100:>{width_percentage}.2f}%"
+                    f"|--- {category + ' ':<{width_dataset}} {sum(binary_qa)}/{len(binary_qa):<{width_counts}} {sum(binary_qa) / len(binary_qa) * 100:>{width_percentage}.2f}% "
+                    f"||| {mba_correct}/{len(multiple_binary_qa_per_category[category]):<{width_counts}} {mba_correct / len(multiple_binary_qa_per_category[category]) * 100:>{width_percentage}.2f}%"
                 )
     eval_logger.info(loginfo)
     return Binary_accuracy, Multiple_Binary_accuracy

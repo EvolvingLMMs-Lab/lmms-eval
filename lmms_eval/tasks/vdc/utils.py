@@ -5,9 +5,9 @@ import sys
 from pathlib import Path
 
 import yaml
+from loguru import logger as eval_logger
 
 try:
-    import sglang as sgl
     from sglang import (
         RuntimeEndpoint,
         assistant,
@@ -39,8 +39,6 @@ HF_HOME = os.environ["HF_HOME"]
 cache_dir = config["dataset_kwargs"]["cache_dir"]
 cache_dir = os.path.join(HF_HOME, cache_dir)
 cache_dir = os.path.join(cache_dir, "Test_Videos")
-
-from loguru import logger as eval_logger
 
 DETAILED_CAPTION_PROMPTS = [
     "Please imagine the video based on the sequence of frames, and provide a faithfully detailed description of this video in more than three sentences.",
@@ -286,7 +284,7 @@ def llmms_eval(data_dict):
     except Exception as e:
         eval_logger.error(f"Error for Video Name: {data_dict.get('video_name', 'Unknown')}: {e}")
         print(e)
-        model_name = ""
+        _model_name = ""
         score = 0
         acc = "no"
 
@@ -318,7 +316,7 @@ def vdc_aggregate_score(results, args):
         eval_score = result["score"]
         try:
             eval_score = float(eval_score)
-        except:
+        except Exception:
             eval_score = 0.0
 
         score += eval_score
@@ -332,7 +330,7 @@ def vdc_aggregate_acc(results, args):
         eval_acc = result["acc"]
         try:
             eval_acc = float(eval_acc)
-        except:
+        except Exception:
             eval_acc = 0.0
         acc += eval_acc
 

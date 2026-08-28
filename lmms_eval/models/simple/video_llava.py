@@ -13,9 +13,9 @@ from lmms_eval.api.registry import register_model
 
 eval_logger = logger
 
-from transformers import VideoLlavaForConditionalGeneration, VideoLlavaProcessor
+from transformers import VideoLlavaForConditionalGeneration, VideoLlavaProcessor  # noqa: E402
 
-from lmms_eval.models.model_utils.load_video import read_video
+from lmms_eval.models.model_utils.load_video import read_video  # noqa: E402
 
 
 @register_model("video_llava")

@@ -28,7 +28,8 @@ except ImportError:
     eval_logger.warning("pycocotools not found. Install with: pip install pycocotools")
 
 try:
-    from accelerate import Accelerator, DistributedType
+    from accelerate import Accelerator
+    from accelerate import DistributedType as DistributedType
 
     HAS_ACCELERATOR = True
 except ImportError:
@@ -101,9 +102,9 @@ class SAM3(lmms):
         super().__init__()
 
         if not HAS_SAM3:
-            raise ImportError("SAM3 is required but not installed.  " "Please install / upgrade transformers with SAM3 support.")
+            raise ImportError("SAM3 is required but not installed.  Please install / upgrade transformers with SAM3 support.")
         if not HAS_PYCOCOTOOLS:
-            raise ImportError("pycocotools is required for COCO RLE mask encoding.  " "Install with: pip install pycocotools")
+            raise ImportError("pycocotools is required for COCO RLE mask encoding.  Install with: pip install pycocotools")
 
         self.pretrained = pretrained
         self.threshold = threshold

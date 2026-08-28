@@ -29,7 +29,7 @@ try:
 except ImportError:
     eval_logger.warning("Failed to import video_chatgpt modules")
 
-from lmms_eval.models.model_utils.load_video import read_video
+from lmms_eval.models.model_utils.load_video import read_video  # noqa: E402
 
 
 @register_model("video_chatgpt")
@@ -59,7 +59,7 @@ class VideoChatGPT(lmms):
             self.device_map = f"cuda:{accelerator.local_process_index}"
         try:
             self.model, self.vision_tower, self.tokenizer, self.image_processor, self.video_token_len = initialize_model(model_path, projection_path, device=self.device)
-        except:
+        except Exception:
             eval_logger.info("Does not find the model from the path you provide, try downloading from the hf repo.")
             model_path = snapshot_download(repo_id=model_path)
             projection_path = os.path.join(snapshot_download(repo_id=projection_path), "video_chatgpt-7B.bin")
@@ -141,7 +141,7 @@ class VideoChatGPT(lmms):
 
         for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
-            if type(doc_to_target) == str:
+            if type(doc_to_target) is str:
                 continuation = doc_to_target
             else:
                 continuation = doc_to_target(self.task_dict[task][split][doc_id])

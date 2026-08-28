@@ -194,7 +194,7 @@ def get_eval(candidate: str, task: str, content: str, max_tokens: int, retries: 
 
             content = response_data["choices"][0]["message"]["content"].strip()
             gpt_score = extract_last_number(content)
-            if content != "" and score != 0:
+            if content != "" and gpt_score != 0:
                 return content, gpt_prompt, gpt_score
             break  # If successful, break out of the loop
 
@@ -269,7 +269,7 @@ def funqa_aggregate_submissions(results, args, task):
 def funqa_aggregate_results_bleurt(results, args):
     bleurt_version = "lucadiliello/BLEURT-20"
     eval_logger.info(f"Loading BLEURT model {bleurt_version}, you can change to the small version BLEURT-20-D12 in tasks/funqa/utils.py")
-    config = BleurtConfig.from_pretrained(bleurt_version)
+    _config = BleurtConfig.from_pretrained(bleurt_version)
     model = BleurtForSequenceClassification.from_pretrained(bleurt_version)
     tokenizer = BleurtTokenizer.from_pretrained(bleurt_version)
 

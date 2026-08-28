@@ -1,11 +1,9 @@
 import base64
 import json
 import os
-import time
 from io import BytesIO
 from pathlib import Path
 
-import requests
 import yaml
 
 from lmms_eval.llm_judge import ServerConfig, get_server
@@ -18,7 +16,7 @@ def doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 # Assuming the config is loaded similarly as in d170_en/utils.py
 with open(Path(__file__).parent / "dc100_en.yaml", "r") as f:
@@ -43,47 +41,6 @@ From 0 to 100, how much do you rate for this Text Caption in terms of the correc
 Do not dominant the rating by a single attribute such as recognition correctness, but a overall rating on the object/scene appearance, position, pose, action, shape, etc., and contents in the background. 
 Do not consider the appropriateness or sensitive descriptors, such as "middle-aged western man", judge based on if it has correct specifications of the object and scenes in image.
 Provide a few lines for explanation and the rate number at last after "Final Score:"."""
-
-
-def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-    payload = {
-        "model": GPT_EVAL_MODEL_NAME,
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": f"data:image/jpeg;base64,{base64_image}",
-                    },
-                ],
-            }
-        ],
-        "max_tokens": 1024,
-        "temperature": 0.0,
-    }
-
-    for attempt in range(max_retries):
-        try:
-            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
-            response.raise_for_status()
-            response_data = response.json()
-            return response_data["choices"][0]["message"]["content"]
-        except requests.exceptions.RequestException as e:
-            eval_logger.warning(f"Request failed on attempt {attempt+1}: {e}")
-            time.sleep(wait_time)
-            if attempt == max_retries - 1:
-                eval_logger.error(f"Failed to get response after {max_retries} attempts")
-                return ""
-        except Exception as e:
-            eval_logger.error(f"Error on attempt {attempt+1}: {e}")
-            return ""
 
 
 def image_to_base64(pil_image):

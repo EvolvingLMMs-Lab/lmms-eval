@@ -6,11 +6,10 @@ import colorsys
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
-from PIL import Image
 
 
 def safe_distance(p1: Tuple, p2: Tuple) -> float:

@@ -1,0 +1,18 @@
+dataset_path: sci-m-wang/C4-Eval
+dataset_name: default
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.c4_doc_to_visual
+doc_to_text: !function utils.c4_doc_to_text
+doc_to_target: answer
+doc_to_messages: !function utils.c4_doc_to_messages
+process_results: !function utils.c4_process_results
+generation_kwargs:
+  # Avoid the framework's implicit double-newline stop sequence without
+  # imposing an output-token cap on official runs.
+  until: []
+# Preserve reasoning text so the official conservative answer parser can
+# recover an explicitly marked answer when the JSON envelope is malformed.
+reasoning_tags: none
+metadata:
+  version: 1.0

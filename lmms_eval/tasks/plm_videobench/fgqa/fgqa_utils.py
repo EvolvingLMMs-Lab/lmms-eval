@@ -2,7 +2,7 @@ import os
 
 import pandas as pd
 
-from lmms_eval.tasks.plm_videobench.eval_utils import *
+from lmms_eval.tasks.plm_videobench.eval_utils import load_defualt_config
 
 # Load default config parameters
 config = load_defualt_config()
@@ -98,7 +98,7 @@ def check_ans(pred: str, gt: str) -> bool:
     flag = False
 
     pred_list = pred.lower().split(" ")
-    pred_option, pred_content = pred_list[0], " ".join(pred_list[0:])
+    pred_option, _pred_content = pred_list[0], " ".join(pred_list[0:])
     if len(pred_option) == 0:
         return False
     gt_list = gt.lower().split(" ")

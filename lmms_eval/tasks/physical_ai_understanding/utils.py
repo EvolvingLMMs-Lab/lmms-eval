@@ -12,7 +12,6 @@ Reference dataset: https://huggingface.co/datasets/shi-labs/physical-ai-bench-un
 
 from __future__ import annotations
 
-import os
 import os.path as osp
 import re
 from functools import lru_cache

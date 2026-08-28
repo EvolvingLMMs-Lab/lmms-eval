@@ -119,7 +119,7 @@ def _step_model() -> tuple[str, str]:
             break
 
     print("\n  Simple models (legacy):")
-    simple_start = len(chat_names) + 1
+    _simple_start = len(chat_names) + 1
     shown = 0
     for i, (name, tag) in enumerate(labeled, 1):
         if tag == "simple":

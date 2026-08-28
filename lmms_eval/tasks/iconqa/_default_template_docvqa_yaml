@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/ICON-QA
+dataset_path: lmms-lab-encoder/ICON-QA
 dataset_kwargs:
   token: True
 output_type: generate_until

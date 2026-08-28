@@ -220,7 +220,7 @@ SUBCATEGORIES = {
 
 def print_results(name: str, stats: dict, category_stats: dict = None, random_acc: float = None):
     """Print formatted results."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"{name}")
     print("=" * 60)
 
@@ -229,9 +229,9 @@ def print_results(name: str, stats: dict, category_stats: dict = None, random_ac
         acc = overall["acc_num"] / overall["acc_den"] if overall["acc_den"] > 0 else 0.0
         caa = overall["caa_num"] / overall["caa_den"] if overall["caa_den"] > 0 else 0.0
         count = int(overall["acc_den"])
-        print(f"Overall: Accuracy={acc*100:.2f}%, CAA={caa*100:.2f}%, Count={count}")
+        print(f"Overall: Accuracy={acc * 100:.2f}%, CAA={caa * 100:.2f}%, Count={count}")
         if random_acc is not None:
-            print(f"Random Expected Accuracy: {random_acc*100:.2f}%")
+            print(f"Random Expected Accuracy: {random_acc * 100:.2f}%")
 
     # Print sub-category breakdown from metric_stats
     metric_stats = stats.get("metric_stats", {})
@@ -252,7 +252,7 @@ def main():
     parser.add_argument(
         "--logs-dir",
         type=str,
-        help="Path to the model's logs directory (e.g., logs/MODEL_NAME/). " "Will auto-detect the latest site_bench_image and site_bench_video files.",
+        help="Path to the model's logs directory (e.g., logs/MODEL_NAME/). Will auto-detect the latest site_bench_image and site_bench_video files.",
     )
     parser.add_argument(
         "--image-jsonl",

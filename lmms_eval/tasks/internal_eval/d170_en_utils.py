@@ -1,9 +1,7 @@
 import json
 import os
-import time
 from pathlib import Path
 
-import requests
 import yaml
 from loguru import logger as eval_logger
 
@@ -38,49 +36,6 @@ Ground Truth: {ground_truth}
 You should response by following format:
 Score:
 Explanation:"""
-
-
-def get_chat_response(prompt, model=GPT_EVAL_MODEL_NAME, max_tokens=512, patience=3, sleep_time=15):
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-    messages = [
-        {"role": "user", "content": prompt},
-    ]
-
-    payload = {
-        "model": model,
-        "messages": messages,
-        "max_tokens": max_tokens,
-        "temperature": 0.0,
-    }
-
-    while patience > 0:
-        patience -= 1
-        try:
-            response = requests.post(
-                API_URL,
-                headers=headers,
-                json=payload,
-                timeout=60,
-            )
-            response.raise_for_status()
-            response_data = response.json()
-
-            content = response_data["choices"][0]["message"]["content"].strip()
-            if content != "":
-                return content, response_data["model"]
-
-        except Exception as e:
-            eval_logger.info(f"Error in response: {response.json()['error']['message']}")
-            if "Rate limit" in str(e):
-                eval_logger.info("Sleeping due to rate limit...")
-                time.sleep(sleep_time)
-            eval_logger.info(f"Retrying...Patience left: {patience}")
-
-    return "", ""
 
 
 def doc_to_visual(doc):

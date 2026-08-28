@@ -8,7 +8,7 @@ def calculate_iou(box1, box2):
     try:
         box1 = [int(coordinate) for coordinate in box1]
         box2 = [int(coordinate) for coordinate in box2]
-    except:
+    except Exception:
         return 0
 
     x1_inter = max(box1[0], box2[0])
@@ -37,7 +37,7 @@ def vqa_with_position_evaluation(predict, img_metas):
         try:
             predict_bbox_list = ast.literal_eval(predict["bbox"])
             score_bbox = calculate_iou(predict_bbox_list, gt_bbox)
-        except:
+        except Exception:
             score_bbox = 0
     return 0.5 * score_content + 0.5 * score_bbox
 

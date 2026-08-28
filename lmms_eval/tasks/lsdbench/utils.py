@@ -91,5 +91,5 @@ def lsdbench_aggregate_accuracy_results(results):
         total_answered += 1
         total_correct += result["pred_answer"] == result["answer"]
 
-    eval_logger.info(f"Overall Accuracy Performance: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+    eval_logger.info(f"Overall Accuracy Performance: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%")
     return 100 * total_correct / total_answered if total_answered > 0 else 0

@@ -285,6 +285,7 @@ class CambriansVSC(CambrianS):
 
                 episodic_starts = 1
                 outputs = []
+                frame_feature_prediction = None
 
                 for frame_idx in range(visual_features.size(0)):
                     past_key_values = []

@@ -13,7 +13,7 @@ API_TYPE = os.getenv("API_TYPE", "openai")
 
 QWEN_HTTP_CHAT_URL = os.getenv("QWEN_API_URL", None)
 
-import ipaddress
+import ipaddress  # noqa: E402
 
 
 def ip_port_to_url(ip, port):

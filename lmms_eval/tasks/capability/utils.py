@@ -427,7 +427,7 @@ class Evaluator:
     def load_saved_records(self):
         if os.path.exists(self.save_path):
             with open(self.save_path, "r") as f:
-                saved_responses = [json.loads(l.strip("\n")) for l in f.readlines()]
+                saved_responses = [json.loads(line.strip("\n")) for line in f.readlines()]
         else:
             saved_responses = []
         return saved_responses
@@ -602,7 +602,7 @@ if __name__ == "__main__":
     metrics = []
     for task in tasks:
         with open(os.path.join(results_dir, f"{task}.jsonl"), "r") as f:
-            result = [json.loads(l.strip()) for l in f.readlines()]
+            result = [json.loads(line.strip()) for line in f.readlines()]
         save_path = os.path.join(save_dir, f"{task}.jsonl")
         eval_model = config["metadata"]["eval_model_name"]
         num_process = config["metadata"]["eval_num_process"]

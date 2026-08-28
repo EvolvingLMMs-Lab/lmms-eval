@@ -244,7 +244,7 @@ class Qwen2_5_VL_Interleave(lmms):
             # print(contexts[i])
 
             messages = []
-            processed_visuals = []
+            _processed_visuals = []
             for i, context in enumerate(contexts):
                 # context += "\nPlease think step by step."
 

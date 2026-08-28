@@ -53,7 +53,7 @@ class CachedRequestsAdapter(RequestsAdapter):
         pool_block=False,
     ):
         if not requests_available:
-            raise ImportError("`requests` must be installed in order to use RequestsAdapter. " "If you have installed geopy via pip, you may use " "this command to install requests: " '`pip install "geopy[requests]"`.')
+            raise ImportError('`requests` must be installed in order to use RequestsAdapter. If you have installed geopy via pip, you may use this command to install requests: `pip install "geopy[requests]"`.')
         proxies = _normalize_proxies(proxies)
         if ssl_context is None:
             # By default requests uses CA bundle from `certifi` package.
@@ -164,7 +164,7 @@ class GeoProximityLocationDict:
         """
         try:
             guess_coords = location_to_coords(**responses)
-        except:
+        except Exception:
             return 0
 
         if guess_coords is None:

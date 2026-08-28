@@ -7,17 +7,17 @@ from loguru import logger as eval_logger
 from PIL import Image
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-from lmms_eval.tasks.mmsearch.constants import *
-from lmms_eval.tasks.mmsearch.prompts.prompt import *
-from lmms_eval.tasks.mmsearch.prompts.prompt_w_imagesearch import *
+from lmms_eval.tasks.mmsearch.constants import DEFAULT_IMAGE_TOKEN, FULLPAGE_SPLIT_DICT
+from lmms_eval.tasks.mmsearch.prompts.prompt import text_query_dict
+from lmms_eval.tasks.mmsearch.prompts.prompt_w_imagesearch import image_search_text_query_dict
 from lmms_eval.tasks.mmsearch.retrieve_content.retriever import Content_Retriever
 from lmms_eval.tasks.mmsearch.score.f1_score import get_f1_score
 from lmms_eval.tasks.mmsearch.score.req_score import get_requery_score
 from lmms_eval.tasks.mmsearch.score.result_summary import get_result_summary
 from lmms_eval.tasks.mmsearch.utils.image_utils import pil_image_to_bytes
-from lmms_eval.tasks.mmsearch.utils.lmms_eval_utils import *
-from lmms_eval.tasks.mmsearch.utils.prompt_utils import *
-from lmms_eval.tasks.mmsearch.utils.utils import *
+from lmms_eval.tasks.mmsearch.utils.lmms_eval_utils import save_result_to_cache
+from lmms_eval.tasks.mmsearch.utils.prompt_utils import get_full_website_information, get_rerank_incontext_example, get_website_information, postprocess_rerank
+from lmms_eval.tasks.mmsearch.utils.utils import search_text_brief_result, search_url_full_result
 
 with open(Path(__file__).parent / "mmsearch.yaml", "r") as f:
     raw_data = f.readlines()
@@ -212,10 +212,10 @@ def mmsearch_summarization_doc_to_visual(doc):
     # set up prompt
     if doc["query_image"] is None:
         query_has_image = False
-        prompt_template_dict = text_query_dict
+        _prompt_template_dict = text_query_dict
     else:
         query_has_image = True
-        prompt_template_dict = image_search_text_query_dict
+        _prompt_template_dict = image_search_text_query_dict
 
     result_full = [
         dict(

@@ -192,7 +192,7 @@ def parse_open_response(response):
 
 def mirb_process_results(doc, results):
     pred = results[0]
-    subset, answer = doc["subset"], doc["answers"]
+    _subset, answer = doc["subset"], doc["answers"]
     if answer in ["A", "B", "C", "D", "E"]:  # MCQ tasks
         parsed_pred = parse_multi_choice_response(pred)
     else:

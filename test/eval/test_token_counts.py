@@ -9,8 +9,6 @@ Covers:
 - ResponseCache._is_valid_response() with GenerationResult
 """
 
-import pytest
-
 from lmms_eval.api.instance import (
     GenerationResult,
     Instance,

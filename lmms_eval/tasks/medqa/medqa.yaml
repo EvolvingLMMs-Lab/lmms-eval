@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/MEDQA
+dataset_path: lmms-lab-encoder/MEDQA
 dataset_kwargs:
   token: True
 

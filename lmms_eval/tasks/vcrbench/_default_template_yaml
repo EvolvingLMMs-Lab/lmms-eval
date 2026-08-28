@@ -1,0 +1,33 @@
+dataset_path: pritamqu/VCRBench
+dataset_kwargs:
+  cache_dir: vcrbench
+  video: true
+  create_link: true
+test_split: test
+output_type: generate_until
+cluster_key: video_file
+doc_to_visual: !function utils.vcrbench_doc_to_visual
+doc_to_target: !function utils.vcrbench_doc_to_target
+generation_kwargs:
+  max_new_tokens: 512
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.vcrbench_process_results
+metric_list:
+  - metric: vcrbench_accuracy
+    aggregation: !function utils.vcrbench_aggregate_accuracy
+    higher_is_better: true
+  - metric: vcrbench_step_accuracy
+    aggregation: !function utils.vcrbench_aggregate_step_accuracy
+    higher_is_better: true
+  - metric: vcrbench_weighted_accuracy
+    aggregation: !function utils.vcrbench_aggregate_weighted_accuracy
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  version: 1.0

@@ -1,0 +1,25 @@
+dataset_path: txiong23/Multi-Crit
+dataset_name: default
+
+output_type: generate_until
+doc_to_visual: !function utils.multi_crit_doc_to_visual
+doc_to_text: !function utils.multi_crit_doc_to_text
+doc_to_messages: !function utils.multi_crit_doc_to_messages
+doc_to_target: preference
+process_results: !function utils.multi_crit_process_results
+
+generation_kwargs:
+  # Prevent TaskConfig from injecting its default double-newline stop sequence.
+  until: []
+  max_new_tokens: 8192
+  temperature: 0.6
+  top_p: 0.95
+  num_beams: 1
+  do_sample: true
+
+# Preserve the complete generated judgement for the official last-line parser.
+# This controls evaluator-side tag removal; it does not disable model reasoning.
+reasoning_tags: none
+
+metadata:
+  version: 1.0

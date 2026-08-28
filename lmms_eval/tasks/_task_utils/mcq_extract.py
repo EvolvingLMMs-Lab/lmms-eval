@@ -11,7 +11,6 @@ Usage::
     letter = extract_mcq_answer("The correct answer is (B).")  # -> "B"
 """
 
-import re
 from typing import List, Optional
 
 _DEFAULT_CHOICES = ["A", "B", "C", "D", "E", "F", "G", "H"]

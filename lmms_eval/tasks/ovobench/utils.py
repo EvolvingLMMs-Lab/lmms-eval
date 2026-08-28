@@ -175,12 +175,12 @@ def ovo_doc_to_visual(doc, lmms_eval_specific_kwargs):
     data_dir = _resolve_data_dir(lmms_eval_specific_kwargs)
     if lmms_eval_specific_kwargs and "round_idx" in lmms_eval_specific_kwargs:
         i = lmms_eval_specific_kwargs["round_idx"]
-        chunk_video_path = os.path.join(data_dir, f'{doc["id"]}_{i}.mp4')
+        chunk_video_path = os.path.join(data_dir, f"{doc['id']}_{i}.mp4")
     elif is_forward_task(doc):
         # cause of logic of sending lmms_eval_specific_kwargs to doc_to_visual at initial round in multi round generation
-        chunk_video_path = os.path.join(data_dir, f'{doc["id"]}_{0}.mp4')
+        chunk_video_path = os.path.join(data_dir, f"{doc['id']}_{0}.mp4")
     else:
-        chunk_video_path = os.path.join(data_dir, f'{doc["id"]}.mp4')
+        chunk_video_path = os.path.join(data_dir, f"{doc['id']}.mp4")
     assert os.path.exists(chunk_video_path), f"Video chunk path does not exists:{chunk_video_path} !"
 
     return [chunk_video_path]

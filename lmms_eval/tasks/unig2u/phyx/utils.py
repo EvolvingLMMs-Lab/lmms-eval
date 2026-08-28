@@ -288,11 +288,11 @@ MECHANICS_GEN_PROMPT = (
 
 def phyx_doc_to_text_optics_cot(doc, lmms_eval_specific_kwargs=None):
     """Visual CoT prompt for PhyX Optics task."""
-    question = "In addition to the original image, you are also given an auxiliary " "light ray diagram to help you solve the problem.\n\n" + doc["question"]
+    question = "In addition to the original image, you are also given an auxiliary light ray diagram to help you solve the problem.\n\n" + doc["question"]
     return f"[GEN_PROMPT]{OPTICS_GEN_PROMPT}[/GEN_PROMPT][QUESTION]{question}[/QUESTION]"
 
 
 def phyx_doc_to_text_mechanics_cot(doc, lmms_eval_specific_kwargs=None):
     """Visual CoT prompt for PhyX Mechanics task."""
-    question = "In addition to the original image, you are also given an auxiliary " "free body diagram (force analysis diagram) to help you solve the problem.\n\n" + doc["question"]
+    question = "In addition to the original image, you are also given an auxiliary free body diagram (force analysis diagram) to help you solve the problem.\n\n" + doc["question"]
     return f"[GEN_PROMPT]{MECHANICS_GEN_PROMPT}[/GEN_PROMPT][QUESTION]{question}[/QUESTION]"

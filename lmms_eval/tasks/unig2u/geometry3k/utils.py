@@ -6,7 +6,7 @@ Evaluation for plane geometry problems from the Geometry3K dataset.
 import json
 import os
 import time
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from azure.identity import (
     AzureCliCredential,

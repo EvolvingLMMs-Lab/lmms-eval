@@ -15,7 +15,6 @@ from lmms_eval.caching.response_cache import (
     _extract_content_hash,
     compute_cache_key,
     extract_gen_kwargs,
-    is_deterministic,
 )
 
 # ---------------------------------------------------------------------------

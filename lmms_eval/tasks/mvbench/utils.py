@@ -102,7 +102,7 @@ def mcq_acc(answer, pred):
     def processPunctuation(inText):
         outText = inText
         for p in punct:
-            if (p + " " in inText or " " + p in inText) or (re.search(commaStrip, inText) != None):
+            if (p + " " in inText or " " + p in inText) or (re.search(commaStrip, inText) is not None):
                 outText = outText.replace(p, "")
             else:
                 outText = outText.replace(p, " ")

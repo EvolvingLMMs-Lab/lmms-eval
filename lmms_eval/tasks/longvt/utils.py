@@ -23,7 +23,7 @@ SYSTEM_PROMPT = (
     "Please provide a clear, concise response within <answer> </answer> tags that directly addresses the question."
 )
 
-TOOL_PROMPT = "Think first, call **crop_video** if needed, then answer. Format strictly as:  <think>...</think>  " "<tool_call>...</tool_call> (if tools needed)  <answer>...</answer>."
+TOOL_PROMPT = "Think first, call **crop_video** if needed, then answer. Format strictly as:  <think>...</think>  <tool_call>...</tool_call> (if tools needed)  <answer>...</answer>."
 
 
 def longvt_doc_to_visual(doc):
@@ -71,8 +71,8 @@ def extract_characters_regex(s):
         "The correct answer is",
         "The answer is",
         "The answer",
-        "The best option is" "The correct option is",
-        "Best answer:" "Best option:",
+        "The best option isThe correct option is",
+        "Best answer:Best option:",
     ]
     for answer_prefix in answer_prefixes:
         s = s.replace(answer_prefix, "")

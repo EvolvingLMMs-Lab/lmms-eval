@@ -1,14 +1,9 @@
 import io
-import logging
 import re
 from collections import defaultdict
 
-import numpy as np
-import pandas as pd
+from loguru import logger as eval_logger
 from PIL import Image
-
-from lmms_eval.filters.extraction import ExtendedRegexFilter
-from lmms_eval.filters.transformation import MapFilter
 
 
 def msr_doc_to_text(doc, lmms_eval_specific_kwargs=None):
@@ -98,7 +93,7 @@ def extract_single_choice_with_word_boundary(pred, gt):
             return 1.0
         elif predict[0:14] == "the answer is " and answer == predict[14]:
             return 1.0
-    except Exception as e:
+    except Exception:
         return 0.0
     return 0.0
 

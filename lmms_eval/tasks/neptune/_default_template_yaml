@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/GoogleDeepMind-NEPTUNE
+dataset_path: lmms-eval/GoogleDeepMind-NEPTUNE
 dataset_kwargs:
   token: True
   cache_dir: neptune

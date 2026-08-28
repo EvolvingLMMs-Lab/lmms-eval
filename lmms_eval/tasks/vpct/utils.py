@@ -41,7 +41,7 @@ def vpct_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs: Optional[Di
     pre_prompt = kwargs.get("pre_prompt", "")
     post_prompt = kwargs.get("post_prompt", "")
 
-    question = "You are an expert physics simulator. Looking at this image of a ball-and-bucket simulation, " "predict which bucket (numbered 1, 2, or 3 from left to right) the ball will eventually fall into."
+    question = "You are an expert physics simulator. Looking at this image of a ball-and-bucket simulation, predict which bucket (numbered 1, 2, or 3 from left to right) the ball will eventually fall into."
     return f"{pre_prompt}{question}{post_prompt}"
 
 

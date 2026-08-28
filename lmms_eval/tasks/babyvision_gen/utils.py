@@ -8,9 +8,8 @@ import json
 import os
 from collections import defaultdict
 from io import BytesIO
-from typing import Dict, List, Optional
+from typing import Optional
 
-import numpy as np
 from loguru import logger as eval_logger
 from openai import OpenAI
 from PIL import Image

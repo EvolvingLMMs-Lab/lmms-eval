@@ -10,11 +10,11 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
 NUM_SECONDS_TO_SLEEP = 5
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 try:
     import dashscope
-except:
+except Exception:
     eval_logger.debug("Can not import Dashscope")
 
 API_KEY = os.getenv("DASHSCOPE_API_KEY", "YOUR_API_KEY")

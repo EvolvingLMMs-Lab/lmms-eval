@@ -1,0 +1,4 @@
+task: vbench2_complex_plot
+dataset_name: vbench2_complex_plot
+test_split: test
+include: _default_template_yaml
