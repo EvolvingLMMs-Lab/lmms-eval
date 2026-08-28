@@ -25,13 +25,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.11"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
 
       - name: Sync dependencies
         run: uv sync
@@ -80,24 +77,21 @@ jobs:
 
       - name: Capture HEAD snapshot
         run: |
-          source .venv/bin/activate
-          HF_HOME=/tmp/hf-cache python "${{ steps.checker.outputs.checker_path }}" \
+          HF_HOME=/tmp/hf-cache uv run --no-sync python "${{ steps.checker.outputs.checker_path }}" \
             --repo-root . \
             --spec "${{ steps.checker.outputs.spec_path }}" \
             --output /tmp/task-input-head.json
 
       - name: Capture BASE snapshot
         run: |
-          source .venv/bin/activate
-          HF_HOME=/tmp/hf-cache python "${{ steps.checker.outputs.checker_path }}" \
+          HF_HOME=/tmp/hf-cache uv run --no-sync python "${{ steps.checker.outputs.checker_path }}" \
             --repo-root "${{ steps.base.outputs.base_worktree }}" \
             --spec "${{ steps.checker.outputs.spec_path }}" \
             --output /tmp/task-input-base.json
 
       - name: Compare snapshots
         run: |
-          source .venv/bin/activate
-          python - <<'PY'
+          uv run --no-sync python - <<'PY'
           import json
           from pathlib import Path
 
