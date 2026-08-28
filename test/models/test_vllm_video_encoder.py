@@ -6,6 +6,10 @@ route video encoding through ``to_qwen3_vl_openai_messages`` only when
 ``is_qwen3_vl`` is set, on both request paths.
 """
 
+import subprocess
+import sys
+import textwrap
+from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -104,3 +108,46 @@ def test_simple_vllm_uses_shared_video_decoder(monkeypatch):
         "force_include_last_frame": True,
         "backend": "torchcodec",
     }
+
+
+def test_vllm_model_resolution_does_not_import_decord():
+    """Both the default chat route and force-simple route must stay Decord-free."""
+
+    repo_root = Path(__file__).resolve().parents[2]
+    script = textwrap.dedent(
+        """
+        import builtins
+        import importlib
+
+        real_import = builtins.__import__
+        real_import_module = importlib.import_module
+
+        def reject_decord(name, *args, **kwargs):
+            if name == "decord" or name.startswith("decord."):
+                raise RuntimeError(f"unexpected eager Decord import: {name}")
+            return real_import(name, *args, **kwargs)
+
+        def reject_decord_module(name, *args, **kwargs):
+            if name == "decord" or name.startswith("decord."):
+                raise RuntimeError(f"unexpected eager Decord import: {name}")
+            return real_import_module(name, *args, **kwargs)
+
+        builtins.__import__ = reject_decord
+        importlib.import_module = reject_decord_module
+
+        from lmms_eval import models
+
+        models.get_model("vllm")
+        models.get_model("vllm", force_simple=True)
+        """
+    )
+
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
