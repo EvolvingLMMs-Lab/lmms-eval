@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/lmms-eval-hero.avif" alt="LMMs-Eval" width="70%">
+  <img src="https://raw.githubusercontent.com/EvolvingLMMs-Lab/lmms-eval/main/docs/images/lmms-eval-hero.avif" alt="LMMs-Eval" width="70%">
 </p>
 
 # LMMs-Eval: Probing Intelligence in the Real World
