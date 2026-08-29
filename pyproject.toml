@@ -212,7 +212,7 @@ lmms-eval-mcp = "lmms_eval.mcp:main"
 lmms-eval-ui = "lmms_eval.tui.cli:main"
 
 [project.urls]
-Homepage = "https://lmms-lab.github.io"
+Homepage = "https://www.lmms-lab.com/"
 Repository = "https://github.com/EvolvingLMMs-Lab/lmms-eval"
 
 [dependency-groups]
