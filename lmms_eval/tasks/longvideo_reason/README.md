@@ -72,6 +72,25 @@ The official implementation additionally tries `math_verify.parse`/`verify` befo
 path. On a single-letter multiple-choice answer that symbolic path adds nothing the regex
 path does not already cover, so it is omitted here.
 
+#### Why both numbers are reported — measured
+
+Qwen3-VL-8B-Instruct, 8 items, 64 frames, greedy:
+
+| Metric | Value |
+| --- | --- |
+| `longvideo_reason_overall_accuracy` | **75.0** |
+| `longvideo_reason_strict_accuracy` | **0.0** |
+| `longvideo_reason_format_accuracy` | **0.0** |
+
+The model answered 6 of 8 correctly and scored **zero** under the official comparison. It
+writes a fluent paragraph of reasoning and never emits the `<think>`/`<answer>` tags, so the
+official extractor falls back to comparing the *entire completion* against the gold letter,
+which can never match. This is not a corner case: it is the default behaviour of any model
+that has not been fine-tuned to emit that exact format. `longvideo_reason_strict_accuracy`
+therefore reproduces the paper's protocol faithfully, and
+`longvideo_reason_overall_accuracy` is the number that separates models. Quote whichever you
+mean, and say which one.
+
 ## Reading the score
 
 > **The answer key is not uniform. Read the accuracy against 44.1%, not 25%.**
@@ -101,4 +120,5 @@ clips of most video benchmarks, not absolute — a budget chosen for hour-long f
 oversamples here. The reference implementation passes the whole video to the model and leaves
 sampling to the model wrapper; the paper evaluates LongVILA-R1 at 512 frames, which on a
 6-minute video is roughly one frame every 0.7 s. Pass the budget through the model arguments
-and **always report it next to the score**, for example `--model_args ...,max_frames_num=64`.
+and **always report it next to the score**. The argument name is wrapper-specific, e.g.
+`--model_args pretrained=...,max_num_frames=64` for `qwen3_vl`.
