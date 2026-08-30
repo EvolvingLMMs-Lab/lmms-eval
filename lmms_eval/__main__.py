@@ -575,59 +575,65 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         else:
             is_main_process = False
 
-    for args in args_list:
-        try:
-            # if is_main_process and args.wandb_args:  # thoughtfully we should only init wandb once, instead of multiple ranks to avoid network traffics and unwanted behaviors.
-            #     wandb_logger = WandbLogger()
+    try:
+        for args in args_list:
+            try:
+                # if is_main_process and args.wandb_args:  # thoughtfully we should only init wandb once, instead of multiple ranks to avoid network traffics and unwanted behaviors.
+                #     wandb_logger = WandbLogger()
 
-            results, samples = cli_evaluate_single(args)
-            results_list.append(results)
+                results, samples = cli_evaluate_single(args)
+                results_list.append(results)
 
-            if accelerator:
-                accelerator.wait_for_everyone()
-            elif torch.distributed.is_available() and torch.distributed.is_initialized():
-                torch.distributed.barrier()
-            if is_main_process and args.wandb_args:
-                try:
-                    wandb_logger.post_init(results)
-                    wandb_logger.log_eval_result()
-                    if args.wandb_log_samples and samples is not None:
-                        wandb_logger.log_eval_samples(samples)
-                except Exception as e:
-                    eval_logger.info(f"Logging to Weights and Biases failed due to {e}")
-                # wandb_logger.finish()
+                if accelerator:
+                    accelerator.wait_for_everyone()
+                elif torch.distributed.is_available() and torch.distributed.is_initialized():
+                    torch.distributed.barrier()
+                if is_main_process and args.wandb_args:
+                    try:
+                        wandb_logger.post_init(results)
+                        wandb_logger.log_eval_result()
+                        if args.wandb_log_samples and samples is not None:
+                            wandb_logger.log_eval_samples(samples)
+                    except Exception as e:
+                        eval_logger.info(f"Logging to Weights and Biases failed due to {e}")
+                    # wandb_logger.finish()
 
-            if is_main_process and args.swanlab_args and swanlab_logger is not None:
-                try:
-                    swanlab_logger.post_init(results)
-                    swanlab_logger.log_eval_result()
-                    if args.swanlab_log_samples and samples is not None:
-                        swanlab_logger.log_eval_samples(samples)
-                except Exception as e:
-                    eval_logger.info(f"Logging to SwanLab failed due to {e}")
+                if is_main_process and args.swanlab_args and swanlab_logger is not None:
+                    try:
+                        swanlab_logger.post_init(results)
+                        swanlab_logger.log_eval_result()
+                        if args.swanlab_log_samples and samples is not None:
+                            swanlab_logger.log_eval_samples(samples)
+                    except Exception as e:
+                        eval_logger.info(f"Logging to SwanLab failed due to {e}")
 
-        except Exception as e:
-            if args.verbosity == "DEBUG":
-                raise e
-            else:
-                traceback.print_exc()
-                eval_logger.error(f"Error during evaluation: {e}. Please set `--verbosity=DEBUG` to get more information.")
-                results_list.append(None)
+            except Exception as e:
+                if args.verbosity == "DEBUG":
+                    raise e
+                else:
+                    traceback.print_exc()
+                    eval_logger.error(f"Error during evaluation: {e}. Please set `--verbosity=DEBUG` to get more information.")
+                    results_list.append(None)
 
-    for args, results in zip(args_list, results_list):
-        # cli_evaluate will return none if the process is not the main process (rank 0)
-        if results is not None:
-            print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, offset: {args.offset}, num_fewshot: {args.num_fewshot}, batch_size: {args.batch_size}")
-            print(get_eval_banner(branch=results.get("git_branch"), commit=results.get("git_hash")))
-            print(make_table(results))
-            if "groups" in results:
-                print(make_table(results, "groups"))
+        for args, results in zip(args_list, results_list):
+            # cli_evaluate will return none if the process is not the main process (rank 0)
+            if results is not None:
+                print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, offset: {args.offset}, num_fewshot: {args.num_fewshot}, batch_size: {args.batch_size}")
+                print(get_eval_banner(branch=results.get("git_branch"), commit=results.get("git_hash")))
+                print(make_table(results))
+                if "groups" in results:
+                    print(make_table(results, "groups"))
 
-    if args.wandb_args:
-        wandb_logger.run.finish()
+        if args.wandb_args:
+            wandb_logger.run.finish()
 
-    if args.swanlab_args and swanlab_logger is not None:
-        swanlab_logger.finish()
+        if args.swanlab_args and swanlab_logger is not None:
+            swanlab_logger.finish()
+    finally:
+        if accelerator is not None:
+            accelerator.state.destroy_process_group()
+        elif torch.distributed.is_available() and torch.distributed.is_initialized():
+            torch.distributed.destroy_process_group()
 
 
 def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
