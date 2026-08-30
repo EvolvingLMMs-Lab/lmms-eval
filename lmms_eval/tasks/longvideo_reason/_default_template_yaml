@@ -1,0 +1,49 @@
+dataset_path: LongVideo-Reason/longvideo-reason
+dataset_kwargs:
+  cache_dir: longvideo_reason
+  video: true
+  create_link: true
+test_split: test
+output_type: generate_until
+cluster_key: videos
+doc_to_visual: !function utils.longvideo_reason_doc_to_visual
+doc_to_text: !function utils.longvideo_reason_doc_to_text
+doc_to_target: !function utils.longvideo_reason_doc_to_target
+generation_kwargs:
+  max_new_tokens: 2048
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.longvideo_reason_process_results
+metric_list:
+  - metric: longvideo_reason_overall_accuracy
+    aggregation: !function utils.longvideo_reason_aggregate_overall
+    higher_is_better: true
+  - metric: longvideo_reason_strict_accuracy
+    aggregation: !function utils.longvideo_reason_aggregate_strict
+    higher_is_better: true
+  - metric: longvideo_reason_wellformed_accuracy
+    aggregation: !function utils.longvideo_reason_aggregate_wellformed
+    higher_is_better: true
+  - metric: longvideo_reason_format_accuracy
+    aggregation: !function utils.longvideo_reason_aggregate_format
+    higher_is_better: true
+  - metric: longvideo_reason_temporal_accuracy
+    aggregation: !function utils.longvideo_reason_aggregate_temporal
+    higher_is_better: true
+  - metric: longvideo_reason_goal_accuracy
+    aggregation: !function utils.longvideo_reason_aggregate_goal
+    higher_is_better: true
+  - metric: longvideo_reason_spatial_accuracy
+    aggregation: !function utils.longvideo_reason_aggregate_spatial
+    higher_is_better: true
+  - metric: longvideo_reason_plot_accuracy
+    aggregation: !function utils.longvideo_reason_aggregate_plot
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  version: 1.0
