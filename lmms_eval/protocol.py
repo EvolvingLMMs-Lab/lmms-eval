@@ -8,9 +8,8 @@ from pydantic import BaseModel
 from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 
-# Optional video processing dependencies
-VideoReader, _has_decord = optional_import("decord", "VideoReader")
-cpu, _ = optional_import("decord", "cpu")
+# Optional video processing dependency. qwen-vl-utils selects and imports its
+# decoder lazily when a video is actually processed.
 fetch_video, _has_qwen_vl = optional_import("qwen_vl_utils", "fetch_video")
 
 
