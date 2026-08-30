@@ -89,8 +89,16 @@ path does not already cover, so it is omitted here.
 
 ## Frame budget
 
-The videos are long — many run past an hour — so the frame budget matters more here than on a
-short-clip benchmark, and it is not fixed by the task. The reference implementation passes the
-whole video to the model and leaves sampling to the model wrapper; the paper evaluates
-LongVILA-R1 at 512 frames. Pass the budget through the model arguments and **always report it
-next to the score**, for example `--model_args ...,max_frames_num=64`.
+The frame budget is not fixed by the task, and it matters more here than on a short-clip
+benchmark. Measured over 607 of the 991 videos with torchcodec:
+
+| | p5 | p25 | p50 | p75 | p95 | max |
+| --- | --- | --- | --- | --- | --- | --- |
+| duration | 1.8 min | 3.3 min | **6.1 min** | 9.9 min | 15.4 min | 26.6 min |
+
+Mean 6.9 min, 79.1% under 10 minutes, none over 30. "Long" is relative to the 30 s – 3 min
+clips of most video benchmarks, not absolute — a budget chosen for hour-long footage
+oversamples here. The reference implementation passes the whole video to the model and leaves
+sampling to the model wrapper; the paper evaluates LongVILA-R1 at 512 frames, which on a
+6-minute video is roughly one frame every 0.7 s. Pass the budget through the model arguments
+and **always report it next to the score**, for example `--model_args ...,max_frames_num=64`.
