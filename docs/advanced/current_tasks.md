@@ -378,6 +378,7 @@ python -m lmms_eval --tasks list_with_num
 - [LEMONADE](https://huggingface.co/datasets/amathislab/LEMONADE) (lemonade)
 - [LongTimescope](https://longtimescope.github.io/) (longtimescope)
 - [LongVT](https://longvt-bench.github.io/) (longvt) - Tool-based long video understanding
+- [LongVideo-Reason](https://huggingface.co/datasets/LongVideo-Reason/longvideo-reason) (longvideo_reason) - Long-video reasoning over temporal, goal, spatial and plot perspectives ([code](https://github.com/NVlabs/Long-RL))
 - [LongVideoBench](https://github.com/longvideobench/LongVideoBench) (longvideobench)
 - [NEPTUNE](https://github.com/google-deepmind/neptune) (neptune)
   - Video-path subsets: neptune_full_v, neptune_mma_v, neptune_mmh_v
