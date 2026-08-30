@@ -21,12 +21,17 @@ annotations download automatically.
 * Videos — [`LongVideo-Reason/longvideo_eval_videos`](https://huggingface.co/datasets/LongVideo-Reason/longvideo_eval_videos),
   ten `longvideo_eval_subset<N>.tar.gz` shards totalling **195 GB**.
 
-Extract every shard into one parent directory so that a `longvila_videos/` directory results,
-then point the task at the **parent**:
+Extract every shard into one directory and point the task at it:
 
 ```bash
-export LONGVIDEO_REASON_VIDEO_DIR=/path/to/parent   # contains longvila_videos/
+export LONGVIDEO_REASON_VIDEO_DIR=/path/to/videos
 ```
+
+> **The archives do not produce the documented layout.** Every annotation's `videos` field
+> reads `longvila_videos/<stem>.<ext>` and the upstream README describes that path, but each
+> shard actually extracts into its own flat `longvideo_eval_subset<N>/` directory. A resolver
+> that only knows the documented layout reports a complete 195 GB download as 1,000 missing
+> videos. This task searches both layouts, so either works.
 
 `LONGVIDEO_REASON_ROOT` and the usual `LMMS_EVAL_MEDIA_ROOT` / `$HF_HOME/longvideo_reason`
 fallbacks also work. The split ships **867 `.mp4`, 130 `.webm` and 3 `.mkv`** files, so a

@@ -64,6 +64,15 @@ def _is_wellformed(doc: Document) -> bool:
     return len(_choices(doc)) == EXPECTED_OPTION_COUNT
 
 
+# The archives do NOT lay out what the annotations reference. Every `videos`
+# field reads "longvila_videos/<stem>.<ext>" and the upstream README documents
+# that path, but each of the ten shards extracts into its own flat
+# "longvideo_eval_subset<N>/" directory instead. Searching those directories as
+# well means a correct, complete download resolves without the user first having
+# to reorganise 195 GB by hand.
+VIDEO_SUBDIRS = ("longvila_videos", "videos", *(f"longvideo_eval_subset{index}" for index in range(10)))
+
+
 def longvideo_reason_doc_to_visual(doc: Document) -> list[str]:
     """Resolve the local video for one LongVideo-Reason example."""
     reference = str(doc["videos"])
@@ -72,15 +81,17 @@ def longvideo_reason_doc_to_visual(doc: Document) -> list[str]:
         media_type="video",
         cache_dir=CACHE_DIR_NAME,
         env_vars=VIDEO_ENV_VARS,
-        extra_subdirs=("longvila_videos", "videos"),
+        extra_subdirs=VIDEO_SUBDIRS,
     )
     if not os.path.exists(video_path):
         raise FileNotFoundError(
             f"LongVideo-Reason video not found: {reference}. The videos live in a SEPARATE "
             "repository from the annotations: download the ten longvideo_eval_subset*.tar.gz "
-            "shards of LongVideo-Reason/longvideo_eval_videos (195 GB), extract them so that a "
-            "'longvila_videos' directory results, and set LONGVIDEO_REASON_VIDEO_DIR to the "
-            "directory that CONTAINS 'longvila_videos'."
+            "shards of LongVideo-Reason/longvideo_eval_videos (195 GB), extract them all into "
+            "one directory, and set LONGVIDEO_REASON_VIDEO_DIR to it. Note that the shards "
+            "extract into per-shard 'longvideo_eval_subset<N>/' directories rather than into "
+            "the 'longvila_videos/' directory the upstream README describes; both layouts are "
+            "searched."
         )
     return [video_path]
 

@@ -115,6 +115,19 @@ def test_doc_to_visual_resolves_every_shipped_container(monkeypatch: pytest.Monk
     assert resolved == [str(video_dir / f"clip.{extension}")]
 
 
+def test_doc_to_visual_resolves_the_per_shard_layout(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The ten tar.gz shards extract into "longvideo_eval_subset<N>/", NOT into
+    the "longvila_videos/" directory the upstream README documents. A resolver
+    that only knows the documented layout reports a complete 195 GB download as
+    1,000 missing videos."""
+    video_dir = tmp_path / "longvideo_eval_subset7"
+    video_dir.mkdir()
+    _write_test_video(video_dir / "clip.mp4")
+    monkeypatch.setenv("LONGVIDEO_REASON_VIDEO_DIR", str(tmp_path))
+
+    assert lvr_utils.longvideo_reason_doc_to_visual(_doc()) == [str(video_dir / "clip.mp4")]
+
+
 def test_doc_to_visual_raises_when_the_video_is_absent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LONGVIDEO_REASON_VIDEO_DIR", str(tmp_path))
     with pytest.raises(FileNotFoundError, match="longvideo_eval_subset"):
