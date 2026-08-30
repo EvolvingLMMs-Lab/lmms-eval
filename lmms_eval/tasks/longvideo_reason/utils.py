@@ -151,10 +151,26 @@ def extract_longvideo_reason_answer(response: str, choices: Sequence[str]) -> st
         return normalized
 
     text = strip_reasoning_tags(response or "", REASONING_TAG_PAIRS)
-    boxed = _BOXED_ANSWER.findall(text)
-    if boxed and boxed[-1].upper() in choices:
-        return boxed[-1].upper()
-    return extract_mcq_answer(text, choices=list(choices))
+    # SCOPE MATTERS. The shared extractor already ranks "the span starts with a
+    # standalone choice letter" at its highest priority, which is exactly the
+    # dominant answer form here ("B. A personal trainer guiding others'
+    # exercises" -- in an 8-item run against Qwen3-VL-8B-Instruct every answer
+    # span took that form and not one was a bare letter). But that rule can only
+    # fire if it is given the SPAN. Handed the whole completion it never
+    # matches, and a response that dismisses the other options by name ("...not
+    # learning from others (D)") is then decided by the lower-priority
+    # parentheses rule on a distractor. That was a real observed miss, scored D
+    # against a gold of B, not a hypothetical.
+    for scope in (official, text):
+        if not scope:
+            continue
+        boxed = _BOXED_ANSWER.findall(scope)
+        if boxed and boxed[-1].upper() in choices:
+            return boxed[-1].upper()
+        letter = extract_mcq_answer(scope, choices=list(choices))
+        if letter:
+            return letter
+    return ""
 
 
 def longvideo_reason_process_results(doc: Document, results: Sequence[str]) -> dict[str, MetricRecord]:

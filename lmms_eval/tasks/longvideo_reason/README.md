@@ -68,6 +68,17 @@ when it does not yield an offered option letter: `\boxed{X}`, then the shared
 already resolves is returned unchanged and `overall >= strict` holds by construction.
 Letters the example does not actually offer are always rejected.
 
+**The fallback is scoped to the `<answer>` span before it is tried on the whole completion,
+and that ordering is load-bearing.** `extract_mcq_answer` ranks "the text starts with a
+standalone choice letter" at its highest priority, which is exactly the dominant answer form
+on this benchmark — in an 8-item run against Qwen3-VL-8B-Instruct **every** answer span read
+`B. <option text restated>` and not one was a bare letter. That top-priority rule can only fire
+if the extractor is handed the span. Given the whole completion it never matches, and a
+response that dismisses the other options by name ("…not learning from others (D)") is then
+decided by the lower-priority `parentheses` rule on a distractor. Measured: scoring the whole
+completion gave 6/8, scoping to the span gives 7/8 on the same generations, and the one
+remaining miss is a genuine model error.
+
 The official implementation additionally tries `math_verify.parse`/`verify` before its regex
 path. On a single-letter multiple-choice answer that symbolic path adds nothing the regex
 path does not already cover, so it is omitted here.
@@ -78,11 +89,11 @@ Qwen3-VL-8B-Instruct, 8 items, 64 frames, greedy:
 
 | Metric | Value |
 | --- | --- |
-| `longvideo_reason_overall_accuracy` | **75.0** |
+| `longvideo_reason_overall_accuracy` | **87.5** |
 | `longvideo_reason_strict_accuracy` | **0.0** |
 | `longvideo_reason_format_accuracy` | **0.0** |
 
-The model answered 6 of 8 correctly and scored **zero** under the official comparison. It
+The model answered 7 of 8 correctly and scored **zero** under the official comparison. It
 writes a fluent paragraph of reasoning and never emits the `<think>`/`<answer>` tags, so the
 official extractor falls back to comparing the *entire completion* against the gold letter,
 which can never match. This is not a corner case: it is the default behaviour of any model

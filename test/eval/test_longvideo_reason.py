@@ -186,6 +186,55 @@ def test_robust_extraction_recovers_common_answer_forms(completion: str) -> None
     assert lvr_utils.extract_longvideo_reason_answer(completion, ["A", "B", "C", "D"]) == "B"
 
 
+def test_letter_then_restated_option_is_read_off_the_front() -> None:
+    """The dominant answer form on this benchmark. In an 8-item run against
+    Qwen3-VL-8B-Instruct every answer span took this form; not one was a bare
+    letter. The shared extractor ranks it top priority ("start") -- but only
+    when it is given the <answer> span rather than the whole completion."""
+    completion = "<answer> B. A personal trainer guiding others' exercises </answer>"
+    assert lvr_utils.extract_longvideo_reason_answer(completion, ["A", "B", "C", "D"]) == "B"
+
+
+def test_answer_span_beats_distractors_named_in_the_reasoning() -> None:
+    """Regression for a real observed miss.
+
+    Handed the whole completion, the shared extractor cannot fire its "start"
+    rule and settles for the lower-priority parentheses rule on a distractor.
+    This exact completion scored D against a gold of B before the extractor was
+    scoped to the answer span."""
+    completion = (
+        "The man in the blue shirt is consistently seen guiding others. "
+        "The other options do not align: he is not working out alone (A), "
+        "not organizing equipment (C), and not learning from others (D). "
+        "<answer> B. A personal trainer guiding others' exercises </answer>"
+    )
+    assert lvr_utils.extract_longvideo_reason_answer(completion, ["A", "B", "C", "D"]) == "B"
+
+
+@pytest.mark.parametrize(
+    "span",
+    ["B. option text", "(B) option text", "B) option text", "B: option text", "B - option text"],
+)
+def test_answer_span_delimiters(span: str) -> None:
+    completion = f"<answer>{span}</answer>"
+    assert lvr_utils.extract_longvideo_reason_answer(completion, ["A", "B", "C", "D"]) == "B"
+
+
+def test_prose_answer_is_not_read_as_its_first_letter() -> None:
+    """ "Because..." must not become choice B."""
+    completion = "<answer>Because the cheetah is fastest, the answer is C</answer>"
+    assert lvr_utils.extract_longvideo_reason_answer(completion, ["A", "B", "C", "D"]) == "C"
+
+
+def test_extraction_respects_the_offered_choices() -> None:
+    """A letter the example does not offer must never be returned."""
+    assert lvr_utils.extract_longvideo_reason_answer("<answer>D. text</answer>", ["A", "B"]) != "D"
+
+
+def test_falls_back_to_the_full_completion_when_there_is_no_answer_span() -> None:
+    assert lvr_utils.extract_longvideo_reason_answer("I think the answer is C.", ["A", "B", "C", "D"]) == "C"
+
+
 def test_robust_extraction_never_downgrades_an_official_hit() -> None:
     """The additive property the two metrics depend on: whenever the official
     parser yields an offered letter, the robust parser returns the SAME letter."""
