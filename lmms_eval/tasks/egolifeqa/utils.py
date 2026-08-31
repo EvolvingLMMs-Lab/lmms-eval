@@ -165,7 +165,7 @@ def egolifeqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         opts = doc["options"]
         if isinstance(opts, list):
             for i, opt in enumerate(opts):
-                options.append(f"{chr(ord('A')+i)}. {opt}")
+                options.append(f"{chr(ord('A') + i)}. {opt}")
         elif isinstance(opts, dict):
             for letter in sorted(opts.keys()):
                 options.append(f"{letter}. {opts[letter]}")
