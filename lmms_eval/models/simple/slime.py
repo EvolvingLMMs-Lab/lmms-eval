@@ -18,6 +18,13 @@ from lmms_eval.api.instance import Instance  # noqa: E402
 from lmms_eval.api.model import lmms  # noqa: E402
 from lmms_eval.api.registry import register_model  # noqa: E402
 
+try:
+    from lmms_eval.models.model_utils.llava_transformers_compat import ensure_transformers_compat  # noqa: E402
+
+    ensure_transformers_compat()
+except Exception:
+    pass
+
 warnings.filterwarnings("ignore")
 
 from loguru import logger as eval_logger  # noqa: E402
