@@ -1,0 +1,5 @@
+task: herbench_full
+dataset_name: full
+include: _default_template_yaml
+doc_to_visual: !function utils.herbench_full_doc_to_visual
+doc_to_messages: !function utils.herbench_full_doc_to_messages

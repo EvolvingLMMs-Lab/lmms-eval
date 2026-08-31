@@ -1,0 +1,5 @@
+task: herbench_lite_v2
+dataset_name: lite_v2
+include: _default_template_yaml
+doc_to_visual: !function utils.herbench_lite_doc_to_visual
+doc_to_messages: !function utils.herbench_lite_doc_to_messages

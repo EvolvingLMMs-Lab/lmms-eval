@@ -1,0 +1,61 @@
+dataset_path: DanBenAmi/HERBench
+test_split: test
+output_type: generate_until
+cluster_key: video_id
+doc_to_text: !function utils.herbench_doc_to_text
+doc_to_target: answer
+process_results: !function utils.herbench_process_results
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+metric_list:
+  - metric: herbench_overall_accuracy
+    aggregation: !function utils.herbench_aggregate_overall
+    higher_is_better: true
+  - metric: herbench_temporal_shot_ordering_accuracy
+    aggregation: !function utils.herbench_aggregate_temporal_shot_ordering
+    higher_is_better: true
+  - metric: herbench_multi_person_duration_reasoning_accuracy
+    aggregation: !function utils.herbench_aggregate_multi_person_duration_reasoning
+    higher_is_better: true
+  - metric: herbench_action_sequence_integrity_identification_accuracy
+    aggregation: !function utils.herbench_aggregate_action_sequence_integrity_identification
+    higher_is_better: true
+  - metric: herbench_appearance_grounded_behavior_interactions_accuracy
+    aggregation: !function utils.herbench_aggregate_appearance_grounded_behavior_interactions
+    higher_is_better: true
+  - metric: herbench_appearance_grounded_attribute_recognition_accuracy
+    aggregation: !function utils.herbench_aggregate_appearance_grounded_attribute_recognition
+    higher_is_better: true
+  - metric: herbench_appearance_grounded_localization_trajectory_accuracy
+    aggregation: !function utils.herbench_aggregate_appearance_grounded_localization_trajectory
+    higher_is_better: true
+  - metric: herbench_false_action_memory_accuracy
+    aggregation: !function utils.herbench_aggregate_false_action_memory
+    higher_is_better: true
+  - metric: herbench_scene_verification_arrangement_accuracy
+    aggregation: !function utils.herbench_aggregate_scene_verification_arrangement
+    higher_is_better: true
+  - metric: herbench_false_object_memory_accuracy
+    aggregation: !function utils.herbench_aggregate_false_object_memory
+    higher_is_better: true
+  - metric: herbench_multi_entities_grounding_localization_accuracy
+    aggregation: !function utils.herbench_aggregate_multi_entities_grounding_localization
+    higher_is_better: true
+  - metric: herbench_action_counting_accuracy
+    aggregation: !function utils.herbench_aggregate_action_counting
+    higher_is_better: true
+  - metric: herbench_region_localized_people_counting_accuracy
+    aggregation: !function utils.herbench_aggregate_region_localized_people_counting
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    # post_prompt is intentionally not set: the official HERBench answer
+    # instruction is appended automatically (see utils.herbench_doc_to_text).
+    # Set post_prompt here (or per model) to override it.
+metadata:
+  version: 1.0
