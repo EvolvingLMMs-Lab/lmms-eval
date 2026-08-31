@@ -302,7 +302,7 @@ def match_gt2pred_simple(gt_items, pred_items, line_type, img_name):
 
 def match_gt2pred_no_split(gt_items, pred_items, line_type, img_name):
     # directly concatenate gt and pred by position
-    gt_lines, norm_gt_lines, gt_cat_list, pred_lines, norm_pred_lines = get_gt_pred_lines(gt_items, pred_items)
+    gt_lines, norm_gt_lines, gt_cat_list, pred_lines, norm_pred_lines, gt_items, pred_items = get_gt_pred_lines(gt_items, pred_items, line_type)
     gt_line_with_position = []
     for gt_line, norm_gt_line, gt_item in zip(gt_lines, norm_gt_lines, gt_items):
         gt_position = gt_item["order"] if gt_item.get("order") else gt_item.get("position", [""])[0]
