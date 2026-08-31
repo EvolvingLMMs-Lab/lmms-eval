@@ -562,7 +562,6 @@ def sitebench_merge_results(
     if samples is None:
         samples = kwargs.get("samples")
     sample_files = kwargs.get("sample_files") or kwargs.get("sample_paths") or kwargs.get("samples_files")
-    output_dir = kwargs.get("output_dir") or kwargs.get("output_path") or kwargs.get("model_output_dir") or kwargs.get("model_result_dir")
 
     # If samples is empty but sample_files are available, try to load JSONL files
     metric_stats_list = []

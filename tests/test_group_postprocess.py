@@ -4,16 +4,14 @@ import os
 import tempfile
 import textwrap
 
-import pytest
-
 from lmms_eval.api.group import ConfigurableGroup
-from lmms_eval.api.task import ConfigurableTask
 from lmms_eval.evaluator_utils import consolidate_group_results
 from lmms_eval.utils import load_yaml_config
 
 
 def _make_task(name, version="1.0"):
     """Minimal Task mock with required attributes for consolidate_group_results."""
+
     # Use a simple object mimicking Task interface needed for aggregation
     class FakeTask:
         def __init__(self, task_name):
@@ -182,9 +180,7 @@ def test_hook_via_string_import_path():
     # Ensure config stored as string but consolidate will resolve
     assert group.config["postprocess_results"] == "lmms_eval.tasks.sitebench.utils.sitebench_merge_results"
 
-    task_dict = {
-        group: {"t1": _make_task("t1")}
-    }
+    task_dict = {group: {"t1": _make_task("t1")}}
     results = {
         "t1": {"alias": "t1", "acc,none": 0.5, "samples": 2},
         "str_group": {"alias": "str_group"},
@@ -225,9 +221,7 @@ def test_hook_via_yaml_function():
         group = ConfigurableGroup(config=config)
         assert callable(group.config["postprocess_results"])
 
-        task_dict = {
-            group: {"t1": _make_task("t1"), "t2": _make_task("t2")}
-        }
+        task_dict = {group: {"t1": _make_task("t1"), "t2": _make_task("t2")}}
         results = {
             "t1": {"alias": "t1", "acc,none": 0.5, "samples": 1},
             "t2": {"alias": "t2", "acc,none": 0.5, "samples": 1},
