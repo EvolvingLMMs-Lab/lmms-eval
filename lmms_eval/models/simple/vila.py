@@ -16,6 +16,13 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.imports import require_package
 from lmms_eval.models.model_utils.load_video import read_video
 
+try:
+    from lmms_eval.models.model_utils.llava_transformers_compat import ensure_transformers_compat
+
+    ensure_transformers_compat()
+except Exception:
+    pass
+
 eval_logger = logging.getLogger("lmms-eval")
 
 require_package("llava", feature="VILA model")

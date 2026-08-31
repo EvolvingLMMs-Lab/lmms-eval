@@ -10,6 +10,14 @@ import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
+
+try:
+    from lmms_eval.models.model_utils.llava_transformers_compat import ensure_transformers_compat
+
+    ensure_transformers_compat()
+except Exception:
+    pass
+
 from llava.constants import (
     DEFAULT_IM_END_TOKEN,
     DEFAULT_IM_START_TOKEN,
