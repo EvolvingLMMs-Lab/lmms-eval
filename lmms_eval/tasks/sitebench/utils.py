@@ -437,3 +437,226 @@ def aggregate_spatial_relationship_reasoning_acc(results):
 
 def aggregate_spatial_relationship_reasoning_caa(results):
     return _aggregate_category_caa(results, "spatial relationship reasoning")
+
+
+def _sitebench_empty_stats():
+    return {"caa_num": 0.0, "caa_den": 0.0, "acc_num": 0.0, "acc_den": 0.0}
+
+
+def _sitebench_stats_from_samples(samples_list):
+    """Compute metric_stats from in-memory logged samples (list of dicts)."""
+    from collections import defaultdict
+
+    metric_stats = defaultdict(_sitebench_empty_stats)
+    category_stats = defaultdict(_sitebench_empty_stats)
+    for item in samples_list:
+        if not isinstance(item, dict):
+            continue
+        acc = item.get("accuracy", {})
+        caa = item.get("chance_adjusted_acc", {})
+        if not isinstance(acc, dict):
+            acc = {}
+        if not isinstance(caa, dict):
+            caa = {}
+        acc_total = acc.get("total", 0.0)
+        caa_total = caa.get("total", 0.0)
+        for key, value in acc.items():
+            if key == "total":
+                continue
+            try:
+                metric_stats[key]["acc_num"] += float(value)
+                metric_stats[key]["acc_den"] += float(acc_total)
+            except Exception:
+                continue
+        for key, value in caa.items():
+            if key == "total":
+                continue
+            try:
+                metric_stats[key]["caa_num"] += float(value)
+                metric_stats[key]["caa_den"] += float(caa_total)
+            except Exception:
+                continue
+        doc = item.get("doc")
+        if isinstance(doc, dict):
+            category = doc.get("category")
+            if category:
+                try:
+                    category_stats[category]["acc_num"] += float(acc.get("overall", 0.0))
+                    category_stats[category]["acc_den"] += float(acc_total)
+                    category_stats[category]["caa_num"] += float(caa.get("overall", 0.0))
+                    category_stats[category]["caa_den"] += float(caa_total)
+                except Exception:
+                    continue
+    overall = metric_stats.get("overall")
+    return dict(metric_stats), dict(category_stats), overall
+
+
+def _sitebench_merge_stats(stats1, stats2):
+    from collections import defaultdict
+
+    merged = defaultdict(_sitebench_empty_stats)
+    for key, val in (stats1 or {}).items():
+        merged[key]["acc_num"] += val.get("acc_num", 0.0)
+        merged[key]["acc_den"] += val.get("acc_den", 0.0)
+        merged[key]["caa_num"] += val.get("caa_num", 0.0)
+        merged[key]["caa_den"] += val.get("caa_den", 0.0)
+    for key, val in (stats2 or {}).items():
+        merged[key]["acc_num"] += val.get("acc_num", 0.0)
+        merged[key]["acc_den"] += val.get("acc_den", 0.0)
+        merged[key]["caa_num"] += val.get("caa_num", 0.0)
+        merged[key]["caa_den"] += val.get("caa_den", 0.0)
+    return dict(merged)
+
+
+def sitebench_merge_results(
+    group_name=None,
+    subtask_names=None,
+    results=None,
+    samples=None,
+    **kwargs,
+):
+    """Group-level postprocess hook for SiteBench.
+
+    This is the hook referenced in the group YAML as:
+
+        postprocess_results: !function utils.sitebench_merge_results
+
+    It merges per-sample sufficient statistics from subtasks
+    (site_bench_image + site_bench_video) to reproduce the official
+    SiteBench combined score, which cannot be expressed as a simple mean
+    of scalar task metrics.
+
+    The hook is designed for the ``consolidate_group_results`` contract:
+    - receives ``group_name``, subtask list, aggregated ``results``, and
+      ``samples`` dict (task -> logged samples) when ``--log_samples`` is
+      enabled;
+    - optionally receives ``sample_files``/``sample_paths`` mapping task ->
+      JSONL path and ``output_dir``/``model_output_dir`` when results are
+      written to disk;
+    - returns a dict of group-level metrics to be merged into
+      ``results[group_name]``.
+
+    Args:
+        group_name: Name of the group (e.g. "sitebench").
+        subtask_names: List of subtask names in the group.
+        results: Full results dict (unused except for introspection).
+        samples: Dict mapping subtask name -> list of logged samples.
+        **kwargs: Additional context (subtasks, task_names, sample_files,
+            sample_paths, output_dir, model_output_dir, group_config, etc.)
+
+    Returns:
+        Dict of metric key -> value (metric keys should include ",none"
+        filter suffix to match lmms-eval conventions).
+    """
+    # Normalize subtask list (support multiple kwarg aliases)
+    if subtask_names is None:
+        subtask_names = kwargs.get("subtasks") or kwargs.get("task_names") or kwargs.get("subtask_names")
+    if subtask_names is None and isinstance(results, dict) and group_name:
+        # fallback: try to infer from group_config
+        gc = kwargs.get("group_config") or kwargs.get("config")
+        if isinstance(gc, dict) and gc.get("task"):
+            subtask_names = gc.get("task")
+    if subtask_names is None:
+        subtask_names = []
+    # samples may be passed via alias
+    if samples is None:
+        samples = kwargs.get("samples")
+    sample_files = kwargs.get("sample_files") or kwargs.get("sample_paths") or kwargs.get("samples_files")
+    output_dir = kwargs.get("output_dir") or kwargs.get("output_path") or kwargs.get("model_output_dir") or kwargs.get("model_result_dir")
+
+    # If samples is empty but sample_files are available, try to load JSONL files
+    metric_stats_list = []
+    category_stats_list = []
+
+    # Try file-based path first if we have file paths and samples are empty/insufficient
+    use_file = False
+    if sample_files and isinstance(sample_files, dict):
+        # check if any file exists
+        try:
+            import os
+
+            existing = {k: v for k, v in sample_files.items() if isinstance(v, str) and os.path.exists(v)}
+            if existing and (not samples or all(not samples.get(t) for t in subtask_names)):
+                # attempt to use file-based stats
+                try:
+                    from lmms_eval.tasks.sitebench.merge_results import compute_stats_from_jsonl
+
+                    for task in subtask_names:
+                        path = existing.get(task)
+                        if path:
+                            stats = compute_stats_from_jsonl(path)
+                            metric_stats_list.append(stats.get("metric_stats", {}))
+                            category_stats_list.append(stats.get("category_stats", {}))
+                    use_file = True
+                except Exception:
+                    use_file = False
+        except Exception:
+            pass
+
+    if not use_file:
+        if not isinstance(samples, dict) or not subtask_names:
+            return {}
+        for task in subtask_names:
+            task_samples = samples.get(task, [])
+            if not task_samples:
+                continue
+            m_stats, c_stats, _ = _sitebench_stats_from_samples(task_samples)
+            if m_stats:
+                metric_stats_list.append(m_stats)
+                category_stats_list.append(c_stats)
+
+    if not metric_stats_list:
+        return {}
+
+    # Merge across subtasks
+    merged_metric = metric_stats_list[0]
+    for ms in metric_stats_list[1:]:
+        merged_metric = _sitebench_merge_stats(merged_metric, ms)
+    merged_category = {}
+    if category_stats_list:
+        merged_category = category_stats_list[0]
+        for cs in category_stats_list[1:]:
+            merged_category = _sitebench_merge_stats(merged_category, cs)
+
+    # Compute group metrics
+    out = {}
+    if "overall" in merged_metric:
+        overall = merged_metric["overall"]
+        acc_den = overall.get("acc_den", 0.0)
+        caa_den = overall.get("caa_den", 0.0)
+        if acc_den > 0:
+            acc = overall.get("acc_num", 0.0) / acc_den * 100
+            out["accuracy,none"] = round(acc, 5)
+        if caa_den > 0:
+            caa = overall.get("caa_num", 0.0) / caa_den * 100
+            out["chance_adjusted_acc,none"] = round(caa, 5)
+        # Also expose explicit sitebench keys for clarity
+        if "accuracy,none" in out:
+            out["sitebench_accuracy,none"] = out["accuracy,none"]
+        if "chance_adjusted_acc,none" in out:
+            out["sitebench_chance_adjusted_acc,none"] = out["chance_adjusted_acc,none"]
+
+    # Per-subcategory breakdown (optional, useful for debugging)
+    subcategories = {
+        "3d information understanding",
+        "counting & existence",
+        "movement prediction & navigation",
+        "multi-view & cross-image reasoning",
+        "object localization & positioning",
+        "spatial relationship reasoning",
+    }
+    for cat in subcategories:
+        if cat in merged_metric:
+            val = merged_metric[cat]
+            caa_den = val.get("caa_den", 0.0)
+            acc_den = val.get("acc_den", 0.0)
+            if caa_den > 0:
+                caa = val.get("caa_num", 0.0) / caa_den * 100
+                key = CATEGORY_TO_METRIC_KEY.get(cat, cat.replace(" ", "_").replace("&", "and")) + "_caa"
+                out[f"{key},none"] = round(caa, 5)
+            if acc_den > 0:
+                acc = val.get("acc_num", 0.0) / acc_den * 100
+                key = CATEGORY_TO_METRIC_KEY.get(cat, cat.replace(" ", "_").replace("&", "and")) + "_acc"
+                out[f"{key},none"] = round(acc, 5)
+
+    return out

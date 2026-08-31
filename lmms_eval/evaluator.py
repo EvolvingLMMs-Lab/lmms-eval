@@ -980,6 +980,9 @@ def evaluate(
     cli_args=None,
     response_cache: Optional[ResponseCache] = None,
     process_docs_parallel: int = 4,
+    output_dir: Optional[str] = None,
+    model_output_dir: Optional[str] = None,
+    sample_files: Optional[dict] = None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -1519,7 +1522,24 @@ def evaluate(
 
         ### Calculate group metrics ###
         if bool(results):
-            results, versions, show_group_table, *_ = consolidate_group_results(results, versions, task_dict)
+            # Resolve output dirs for group hooks if cli_args carries them
+            _output_dir = output_dir
+            _model_output_dir = model_output_dir
+            _sample_files = sample_files
+            if _output_dir is None and cli_args is not None:
+                _output_dir = getattr(cli_args, "output_path", None)
+            if _sample_files is None and cli_args is not None:
+                _sample_files = getattr(cli_args, "sample_files", None)
+            results, versions, show_group_table, *_ = consolidate_group_results(
+                results,
+                versions,
+                task_dict,
+                samples=samples,
+                configs=configs,
+                output_dir=_output_dir,
+                model_output_dir=_model_output_dir,
+                sample_files=_sample_files,
+            )
 
         results_agg, group_agg = prepare_print_tasks(task_dict, results)
         subtask_list = get_subtask_list(task_dict)
