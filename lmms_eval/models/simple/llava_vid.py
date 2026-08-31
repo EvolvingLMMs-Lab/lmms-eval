@@ -35,7 +35,7 @@ from transformers import AutoConfig
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video
+from lmms_eval.models.model_utils.load_video import _probe_video_metadata, read_video
 
 # try:
 #     from llavavid.model.builder import load_pretrained_model
@@ -460,12 +460,26 @@ class LlavaVid(lmms):
                             force_sample=self.force_sample,
                         )
                     elif self.video_decode_backend == "pyav":
-                        video, frame_time, video_time = read_video(
+                        # read_video is keyword-only and returns the frames alone,
+                        # so rebuild the timing metadata the decord path returns.
+                        # force_sample means "always take max_frames_num frames
+                        # uniformly", which is what read_video does when it is not
+                        # given a target fps.
+                        video = read_video(
                             visuals[0],
-                            self.max_frames_num,
-                            self.fps,
-                            force_sample=self.force_sample,
+                            num_frm=self.max_frames_num,
+                            fps=None if self.force_sample else self.fps,
                         )
+                        total_frame_num, avg_fps = _probe_video_metadata(visuals[0])
+                        if avg_fps:
+                            video_time = total_frame_num / avg_fps
+                            # read_video samples with this same index policy, so
+                            # len(video) is enough to recover the frame positions.
+                            frame_idx = np.linspace(0, total_frame_num - 1, len(video), dtype=int)
+                            frame_time = ",".join([f"{i / avg_fps:.2f}s" for i in frame_idx])
+                        else:
+                            video_time = 0.0
+                            frame_time = ""
                     elif self.video_decode_backend == "image":
                         video = self.load_image(visuals[0])
                 else:
