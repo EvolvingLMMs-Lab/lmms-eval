@@ -49,7 +49,7 @@ dependencies = [
     "einops",
     "ftfy",
     "openai",
-    "opencv-python-headless",
+    "opencv-python-headless; sys_platform != 'linux' or platform_machine != 'ppc64le'",
     "av<16.0.0",
     "hf_transfer",
     "nltk",
