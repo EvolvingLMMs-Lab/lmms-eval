@@ -235,7 +235,7 @@ class Oryx(lmms):
             # video
             if type(visuals[0][0]) is str:
                 for visual in visuals:
-                    video = self.load_video(visual, self.max_frames_num)
+                    video, _modality = self.load_video(visual, self.max_frames_num)
                     video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].bfloat16().to(self.device)
                     videos.append(video)
                 task_type = "video"
@@ -354,7 +354,10 @@ class Oryx(lmms):
                             if self.video_decode_backend == "decord":
                                 video, modality = self.load_video(visual, self.max_frames_num)
                             elif self.video_decode_backend == "pyav":
-                                video, modality = read_video(visual, num_frm=self.max_frames_num)
+                                # read_video returns just the frames; the decord
+                                # branch above pairs them with a modality tag.
+                                video = read_video(visual, num_frm=self.max_frames_num)
+                                modality = "video"
                             # video = self.load_video(visual, self.max_frames_num)
                             frames = []
                             for frame in video:
