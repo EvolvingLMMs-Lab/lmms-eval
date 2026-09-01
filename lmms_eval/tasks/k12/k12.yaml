@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/k12
+dataset_path: lmms-lab-encoder/k12
 dataset_kwargs:
   token: True
 task: "k12"

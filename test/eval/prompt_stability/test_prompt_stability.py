@@ -412,17 +412,15 @@ def test_prompt_stable(case_name, update_snapshots):
         pytest.skip("snapshot updated")
 
     # --- compare mode ---
-    assert snapshot_path.exists(), f"No snapshot found for '{case_name}'.\n" f"Generate with:  pytest test/eval/prompt_stability/ --update-snapshots -v"
+    assert snapshot_path.exists(), f"No snapshot found for '{case_name}'.\nGenerate with:  pytest test/eval/prompt_stability/ --update-snapshots -v"
 
     expected = json.loads(snapshot_path.read_text())
 
     # 1) prompt text must match exactly
-    assert prompt == expected["prompt_text"], (
-        f"Prompt changed for '{case_name}'!\n" f"If intentional, run:\n" f"  pytest test/eval/prompt_stability/ --update-snapshots -v\n\n" f"--- Expected ---\n{expected['prompt_text']}\n\n" f"--- Got ---\n{prompt}"
-    )
+    assert prompt == expected["prompt_text"], f"Prompt changed for '{case_name}'!\nIf intentional, run:\n  pytest test/eval/prompt_stability/ --update-snapshots -v\n\n--- Expected ---\n{expected['prompt_text']}\n\n--- Got ---\n{prompt}"
 
     # 2) gen_kwargs must match
-    assert case["gen_kwargs"] == expected["gen_kwargs"], f"gen_kwargs changed for '{case_name}'!\n" f"Expected: {json.dumps(expected['gen_kwargs'], indent=2)}\n" f"Got:      {json.dumps(case['gen_kwargs'], indent=2)}"
+    assert case["gen_kwargs"] == expected["gen_kwargs"], f"gen_kwargs changed for '{case_name}'!\nExpected: {json.dumps(expected['gen_kwargs'], indent=2)}\nGot:      {json.dumps(case['gen_kwargs'], indent=2)}"
 
 
 @pytest.mark.parametrize("case_name", sorted(CASES.keys()))

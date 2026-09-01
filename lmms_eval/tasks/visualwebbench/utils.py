@@ -80,7 +80,7 @@ def visualwebbench_process_results_accuracy(doc, results):
             cur_pred = ord(cur_pred) - ord("A")
         else:
             cur_pred = -1
-    except:
+    except Exception:
         cur_pred = -1
 
     is_correct = cur_pred == gold
@@ -166,7 +166,7 @@ def eval_action_prediction(preds, golds, **kwargs):
                 cur_pred = ord(cur_pred) - ord("A")
             else:
                 cur_pred = -1
-        except:
+        except Exception:
             cur_pred = -1
         results.append(cur_pred == gold)
 
@@ -182,7 +182,7 @@ def eval_element_ground(preds, golds, **kwargs):
                 cur_pred = ord(cur_pred) - ord("A")
             else:
                 cur_pred = -1
-        except:
+        except Exception:
             cur_pred = -1
         results.append(cur_pred == gold)
 
@@ -198,7 +198,7 @@ def eval_action_ground(preds, golds, **kwargs):
                 cur_pred = ord(cur_pred) - ord("A")
             else:
                 cur_pred = -1
-        except:
+        except Exception:
             cur_pred = -1
         results.append(cur_pred == gold)
 
@@ -214,7 +214,7 @@ def eval_webqa(preds, golds, **kwargs):
                 pred = " "
             cur_f1 = max([rouge.get_scores([pred], [gold], avg=True)["rouge-1"]["f"] for gold in gold_list])
             f1_scores.append(cur_f1)
-        except:
+        except Exception:
             pass
 
     return dict(f1=sum(f1_scores) / len(f1_scores) * 100)

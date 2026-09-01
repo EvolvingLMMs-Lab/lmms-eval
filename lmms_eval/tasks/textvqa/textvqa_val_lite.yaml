@@ -9,7 +9,7 @@ metric_list:
   - metric: submission
     aggregation: !function utils.textvqa_aggregate_submissions
     higher_is_better: true
-dataset_path: lmms-lab/LMMs-Eval-Lite
+dataset_path: lmms-lab-encoder/LMMs-Eval-Lite
 dataset_name: textvqa_val
 output_type: generate_until
 doc_to_visual: !function utils.textvqa_doc_to_visual

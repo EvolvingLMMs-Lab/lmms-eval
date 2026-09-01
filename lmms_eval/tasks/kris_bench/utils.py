@@ -310,7 +310,7 @@ def _call_chat(messages: List[Dict[str, Any]], *, max_tokens: int, temperature: 
             retryable = any(k in s for k in ["timeout", "timed out", "504", "502", "503", "gateway", "rate limit", "overloaded"])
             if retryable and attempt < max_retries - 1:
                 wait = (2**attempt) * 2
-                eval_logger.warning(f"KRIS judge call failed (attempt {attempt+1}/{max_retries}), retrying in {wait}s: {str(e)[:200]}")
+                eval_logger.warning(f"KRIS judge call failed (attempt {attempt + 1}/{max_retries}), retrying in {wait}s: {str(e)[:200]}")
                 time.sleep(wait)
                 continue
             raise

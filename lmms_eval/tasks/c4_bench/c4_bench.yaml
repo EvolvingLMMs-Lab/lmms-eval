@@ -1,0 +1,10 @@
+group: c4_bench
+group_alias: C4 Bench Primary
+task:
+  - c4_bench_h0
+  - c4_bench_h1
+  - c4_bench_h4
+  - c4_bench_e0
+aggregate_metric_list:
+  - metric: c4_exact_match
+    weight_by_size: true

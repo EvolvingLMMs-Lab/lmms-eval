@@ -120,7 +120,7 @@ def _ensure_local_media_path(path_or_url: str) -> str:
         return cached
 
     raise FileNotFoundError(
-        f"Media file not found for '{path_or_url}'. Tried: {candidate} and HF datasets cache under {hf_datasets_cache_dir}. " "Set SPATREEBENCH_MEDIA_ROOT to a folder containing images/ and videos/ if your media is stored elsewhere."
+        f"Media file not found for '{path_or_url}'. Tried: {candidate} and HF datasets cache under {hf_datasets_cache_dir}. Set SPATREEBENCH_MEDIA_ROOT to a folder containing images/ and videos/ if your media is stored elsewhere."
     )
 
 
@@ -203,9 +203,9 @@ def spatialtreebench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     extra_info = json.loads(doc.get("extra_info", "{}"))
     metric_func = extra_info.get("metricfunc")
     level0 = extra_info.get("spatree0")  # e.g., "L1"
-    pe_style = extra_info.get("pe_style")  # e.g., "style_1"
+    _pe_style = extra_info.get("pe_style")  # e.g., "style_1"
 
-    is_mcq = metric_func in ["multichoiceeval", "cogmapeval"]
+    _is_mcq = metric_func in ["multichoiceeval", "cogmapeval"]
     question_text = doc.get("question", "")
     if metric_func == "multichoiceeval":
         if level0 == "L4":

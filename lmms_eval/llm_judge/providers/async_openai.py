@@ -4,12 +4,13 @@ from typing import Dict, List, Optional, Union
 
 import aiohttp
 from loguru import logger as eval_logger
+from PIL import Image
 
 from lmms_eval.models.model_utils.usage_metrics import log_usage
 
 from ..base import AsyncServerInterface
 from ..protocol import Request, Response, ServerConfig
-from .openai import OpenAIProvider
+from .openai import OpenAIProvider, build_sampling_kwargs
 
 
 class AsyncOpenAIProvider(AsyncServerInterface):
@@ -18,14 +19,15 @@ class AsyncOpenAIProvider(AsyncServerInterface):
     def __init__(self, config: Optional[ServerConfig] = None):
         super().__init__(config)
         self.api_key = os.getenv("OPENAI_API_KEY", "")
-        self.api_url = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+        base_url = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1")
+        self.api_url = base_url.rstrip("/") + "/chat/completions"
 
         # Try to use async OpenAI client if available
         self.use_async_client = False
         try:
             from openai import AsyncOpenAI
 
-            self.async_client = AsyncOpenAI(api_key=self.api_key)
+            self.async_client = AsyncOpenAI(api_key=self.api_key, base_url=base_url)
             self.use_async_client = True
         except ImportError:
             eval_logger.warning("AsyncOpenAI client not available, using aiohttp")
@@ -49,8 +51,7 @@ class AsyncOpenAIProvider(AsyncServerInterface):
         payload = {
             "model": config.model_name,
             "messages": messages,
-            "temperature": config.temperature,
-            "max_tokens": config.max_tokens,
+            **build_sampling_kwargs(config),
         }
 
         if config.top_p is not None:
@@ -118,7 +119,7 @@ class AsyncOpenAIProvider(AsyncServerInterface):
                 response.raise_for_status()
                 return await response.json()
 
-    def _add_images_to_messages(self, messages: List[Dict], images: List[Union[str, bytes]]) -> List[Dict]:
+    def _add_images_to_messages(self, messages: List[Dict], images: List[Union[str, bytes, Image.Image]]) -> List[Dict]:
         """Add images to messages - reuse from base implementation"""
         return OpenAIProvider._add_images_to_messages(self, messages, images)
 

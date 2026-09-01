@@ -22,7 +22,7 @@ from lmms_eval.api.registry import register_model
 
 warnings.filterwarnings("ignore")
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 DEFAULT_IMAGE_TOKEN = "<image>"
 DEFAULT_VIDEO_TOKEN = "<video>"
@@ -197,7 +197,7 @@ class LlavaHf(lmms):
 
         for context, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
-            if type(doc_to_target) == str:
+            if type(doc_to_target) is str:
                 continuation = doc_to_target
             else:
                 continuation = doc_to_target(self.task_dict[task][split][doc_id])
@@ -254,7 +254,7 @@ class LlavaHf(lmms):
         return new_list
 
     def load_video(self, video_path, max_frames_num):
-        if type(video_path) == str:
+        if type(video_path) is str:
             vr = VideoReader(video_path, ctx=cpu(0))
         else:
             vr = VideoReader(video_path[0], ctx=cpu(0))
@@ -314,13 +314,14 @@ class LlavaHf(lmms):
             context = contexts[0]
 
             # Some benchmarks like MME do not contain image tokens, so we prepend them to the prompt.
+            # For text-only tasks (e.g. ScienceQA samples with no image), skip token prepending.
             if DEFAULT_IMAGE_TOKEN not in context:
                 if task_type == "image":
-                    image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals)
+                    image_tokens = " ".join([DEFAULT_IMAGE_TOKEN] * len(visuals))
+                    context = f"{image_tokens}\n{context}"
                 elif task_type == "video":
-                    image_tokens = [DEFAULT_VIDEO_TOKEN] * len(visuals)
-                image_tokens = " ".join(image_tokens)
-                context = f"{image_tokens}\n{context}"
+                    image_tokens = " ".join([DEFAULT_VIDEO_TOKEN] * len(visuals))
+                    context = f"{image_tokens}\n{context}"
             # Apply chat template
             messages = [{"role": "user", "content": context}]
             if self.chat_template is not None:
@@ -373,7 +374,7 @@ class LlavaHf(lmms):
                 cont = cont[:, inputs["input_ids"].shape[-1] :]
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
-                cont = ""
+                cont = [[]]
             text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0]
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.debug(f"Generated text for doc ID {doc_id[0]}:\n\n{text_outputs}\n")

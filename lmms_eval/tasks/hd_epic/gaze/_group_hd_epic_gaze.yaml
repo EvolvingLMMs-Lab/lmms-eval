@@ -1,0 +1,8 @@
+# HD-EPIC 'gaze' category -- bundles its 2 prototypes.
+# Run all of them with --tasks hd_epic_gaze
+group: hd_epic_gaze
+task:
+  - hd_epic_gaze_gaze_estimation
+  - hd_epic_gaze_interaction_anticipation
+metadata:
+  version: 1.0

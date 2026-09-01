@@ -129,11 +129,11 @@ class ModelRegistryV2:
         cls_is_simple = getattr(cls, "is_simple", True)
         if resolved.model_type == "chat" and cls_is_simple:
             raise TypeError(
-                f"Model '{resolved.model_id}' resolved as chat but " f"{cls.__name__}.is_simple is True. " f"Set is_simple = False on the class.",
+                f"Model '{resolved.model_id}' resolved as chat but {cls.__name__}.is_simple is True. Set is_simple = False on the class.",
             )
         if resolved.model_type == "simple" and not cls_is_simple:
             raise TypeError(
-                f"Model '{resolved.model_id}' resolved as simple but " f"{cls.__name__}.is_simple is False. " f"Set is_simple = True or register a chat_class_path.",
+                f"Model '{resolved.model_id}' resolved as simple but {cls.__name__}.is_simple is False. Set is_simple = True or register a chat_class_path.",
             )
 
     def load_entrypoint_manifests(
@@ -235,7 +235,7 @@ class ModelRegistryV2:
         if overwrite:
             return incoming_value
         raise ValueError(
-            f"Conflicting {field_name} for model '{model_id}': " f"'{current_value}' vs '{incoming_value}'",
+            f"Conflicting {field_name} for model '{model_id}': '{current_value}' vs '{incoming_value}'",
         )
 
     def _coerce_payload_to_manifests(self, payload) -> list[ModelManifest]:
@@ -249,7 +249,7 @@ class ModelRegistryV2:
             return self._coerce_manifest_iterable(payload)
 
         raise TypeError(
-            "Entry point payload must be ModelManifest, iterable of ModelManifest, " "or callable returning one of those",
+            "Entry point payload must be ModelManifest, iterable of ModelManifest, or callable returning one of those",
         )
 
     @staticmethod

@@ -16,6 +16,7 @@ generation_kwargs:
   do_sample: false
 doc_to_visual: !function utils.spatial_doc_to_visual_video_as_images
 doc_to_text: !function utils.spatial_doc_to_text_video
+doc_to_messages: !function utils.spatial_doc_to_messages_video_as_images
 doc_to_target: "answer"
 process_results: !function utils.spatial_process_results
 metric_list:
@@ -25,9 +26,63 @@ metric_list:
   - metric: chance_adjusted_acc
     aggregation: !function utils.spatial_aggregate_results
     higher_is_better: true
+  - metric: 3d_information_understanding_acc
+    aggregation: !function utils.aggregate_3d_information_understanding_acc
+    higher_is_better: true
+  - metric: 3d_information_understanding_caa
+    aggregation: !function utils.aggregate_3d_information_understanding_caa
+    higher_is_better: true
+  - metric: counting_and_existence_acc
+    aggregation: !function utils.aggregate_counting_and_existence_acc
+    higher_is_better: true
+  - metric: counting_and_existence_caa
+    aggregation: !function utils.aggregate_counting_and_existence_caa
+    higher_is_better: true
+  - metric: movement_prediction_and_navigation_acc
+    aggregation: !function utils.aggregate_movement_prediction_and_navigation_acc
+    higher_is_better: true
+  - metric: movement_prediction_and_navigation_caa
+    aggregation: !function utils.aggregate_movement_prediction_and_navigation_caa
+    higher_is_better: true
+  - metric: multiview_and_crossimage_reasoning_acc
+    aggregation: !function utils.aggregate_multiview_and_crossimage_reasoning_acc
+    higher_is_better: true
+  - metric: multiview_and_crossimage_reasoning_caa
+    aggregation: !function utils.aggregate_multiview_and_crossimage_reasoning_caa
+    higher_is_better: true
+  - metric: object_localization_and_positioning_acc
+    aggregation: !function utils.aggregate_object_localization_and_positioning_acc
+    higher_is_better: true
+  - metric: object_localization_and_positioning_caa
+    aggregation: !function utils.aggregate_object_localization_and_positioning_caa
+    higher_is_better: true
+  - metric: spatial_relationship_reasoning_acc
+    aggregation: !function utils.aggregate_spatial_relationship_reasoning_acc
+    higher_is_better: true
+  - metric: spatial_relationship_reasoning_caa
+    aggregation: !function utils.aggregate_spatial_relationship_reasoning_caa
+    higher_is_better: true
 lmms_eval_specific_kwargs:
   default:
     post_prompt: "Give me the answer letter directly. The best answer is:"
     num_frames: 32  # Number of frames to sample from the video
+  neo_ov:
+    pre_prompt: ""
+    post_prompt: "Give me the answer letter directly. The best answer is:"
+    prompt_format: neo_ov
+    num_frames: 32
+
+model_specific_generation_kwargs:
+  neo_ov:
+    patch_size: 16
+    min_pixels: 691200
+    max_pixels: 691200
+    downsample_ratio: 0.5
+    system_prompt: ""
+    max_new_tokens: 4096
+    temperature: null
+    top_p: null
+    num_beams: null
+    repetition_penalty: null
 metadata:
   - version: 0.0

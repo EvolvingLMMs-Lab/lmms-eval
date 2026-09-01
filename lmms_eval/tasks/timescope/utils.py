@@ -118,7 +118,7 @@ def timescope_aggregate_results(results):
 
     for cur_key in category2score:
         length, task_type = cur_key.split("_")
-        eval_logger.info(f"Evaluation on Video Length: {str(length)} and Task: {task_type}: {100 * category2score[cur_key]['correct'] / category2score[cur_key]['answered'] if category2score[cur_key]['answered'] > 0 else 0 : .1f}%")
+        eval_logger.info(f"Evaluation on Video Length: {str(length)} and Task: {task_type}: {100 * category2score[cur_key]['correct'] / category2score[cur_key]['answered'] if category2score[cur_key]['answered'] > 0 else 0: .1f}%")
     for cur_length in lengths:
         total_correct = 0
         total_answered = 0
@@ -126,7 +126,7 @@ def timescope_aggregate_results(results):
             if str(cur_length) == k.split("_")[0]:
                 total_correct += v["correct"]
                 total_answered += v["answered"]
-        eval_logger.info(f"Evaluation on Video Length: {str(cur_length)}: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+        eval_logger.info(f"Evaluation on Video Length: {str(cur_length)}: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%")
 
     total_correct = 0
     total_answered = 0

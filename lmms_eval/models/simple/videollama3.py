@@ -180,7 +180,7 @@ class VideoLLaMA3(lmms):
 
             message = []
 
-            processed_visuals = []
+            _processed_visuals = []
             for i, context in enumerate(contexts):
                 if len(visuals) > 0:
                     visual = visuals[i] if i < len(visuals) else None

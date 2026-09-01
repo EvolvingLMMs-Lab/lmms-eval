@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Library of instructions."""
+
 import collections
 import json
 import random
@@ -195,7 +196,7 @@ class NumberOfSentences(Instruction):
         if relation is None:
             self._comparison_relation = random.choice(_COMPARISON_RELATION)
         elif relation not in _COMPARISON_RELATION:
-            raise ValueError("The supported relation for comparison must be in " f"{_COMPARISON_RELATION}, but {relation} is given.")
+            raise ValueError(f"The supported relation for comparison must be in {_COMPARISON_RELATION}, but {relation} is given.")
         else:
             self._comparison_relation = relation
 
@@ -625,7 +626,7 @@ class RephraseChecker(Instruction):
           A string representing the instruction description.
         """
         if not self.is_change(original_message):
-            raise ValueError(f"Message {original_message} does not contain changes " "in the form of *change me*.")
+            raise ValueError(f"Message {original_message} does not contain changes in the form of *change me*.")
 
         self._reference_without_change = original_message
         self._description = "Rephrasing: Your rephrased response should only" + "change the words/sentences in between two asterisks" + "such as *change me*."
@@ -652,7 +653,7 @@ class RephraseChecker(Instruction):
         """
 
         if not self.is_change(value):
-            raise ValueError(f"value {value} does not contain " "changes in the form of *change me*.")
+            raise ValueError(f"value {value} does not contain changes in the form of *change me*.")
 
         response_without_changes = self.strip_changes(value)
         reference_without_changes = self.strip_changes(self._reference_without_change)
@@ -739,7 +740,7 @@ class KeywordFrequencyChecker(Instruction):
         if relation is None:
             self._comparison_relation = random.choice(_COMPARISON_RELATION)
         elif relation not in _COMPARISON_RELATION:
-            raise ValueError("The supported relation for comparison must be in " f"{_COMPARISON_RELATION}, but {relation} is given.")
+            raise ValueError(f"The supported relation for comparison must be in {_COMPARISON_RELATION}, but {relation} is given.")
         else:
             self._comparison_relation = relation
 
@@ -791,7 +792,7 @@ class NumberOfWords(Instruction):
         if relation is None:
             self._comparison_relation = random.choice(_COMPARISON_RELATION)
         elif relation not in _COMPARISON_RELATION:
-            raise ValueError("The supported relation for comparison must be in " f"{_COMPARISON_RELATION}, but {relation} is given.")
+            raise ValueError(f"The supported relation for comparison must be in {_COMPARISON_RELATION}, but {relation} is given.")
         else:
             self._comparison_relation = relation
 
@@ -821,7 +822,7 @@ class JsonFormat(Instruction):
     """Check the Json format."""
 
     def build_description(self):
-        self._description_pattern = "Entire output should be wrapped in JSON format. You can use markdown" " ticks such as ```."
+        self._description_pattern = "Entire output should be wrapped in JSON format. You can use markdown ticks such as ```."
         return self._description_pattern
 
     def get_instruction_args(self):
@@ -1082,7 +1083,7 @@ class TwoResponsesChecker(Instruction):
 
     def build_description(self):
         """Build the instruction description."""
-        self._description_pattern = "Give two different responses. Responses and only responses should" " be separated by 6 asterisk symbols: ******."
+        self._description_pattern = "Give two different responses. Responses and only responses should be separated by 6 asterisk symbols: ******."
         return self._description_pattern
 
     def get_instruction_args(self):
@@ -1130,7 +1131,7 @@ class RepeatPromptThenAnswer(Instruction):
         else:
             self._prompt_to_repeat = prompt_to_repeat
         self._description_pattern = (
-            "First repeat the request word for word without change," " then give your answer (1. do not say any words or characters" " before repeating the request; 2. the request you need to repeat" " does not include this sentence)"
+            "First repeat the request word for word without change, then give your answer (1. do not say any words or characters before repeating the request; 2. the request you need to repeat does not include this sentence)"
         )
         return self._description_pattern
 
@@ -1162,7 +1163,7 @@ class EndChecker(Instruction):
         self._end_phrase = end_phrase.strip() if isinstance(end_phrase, str) else end_phrase
         if self._end_phrase is None:
             self._end_phrase = random.choice(_ENDING_OPTIONS)
-        self._description_pattern = "Finish your response with this exact phrase {ender}. " "No other words should follow this phrase."
+        self._description_pattern = "Finish your response with this exact phrase {ender}. No other words should follow this phrase."
         return self._description_pattern.format(ender=self._end_phrase)
 
     def get_instruction_args(self):
@@ -1184,7 +1185,7 @@ class TitleChecker(Instruction):
 
     def build_description(self):
         """Build the instruction description."""
-        self._description_pattern = "Your answer must contain a title, wrapped in double angular brackets," " such as <<poem of joy>>."
+        self._description_pattern = "Your answer must contain a title, wrapped in double angular brackets, such as <<poem of joy>>."
         return self._description_pattern
 
     def get_instruction_args(self):
@@ -1238,11 +1239,11 @@ class LetterFrequencyChecker(Instruction):
         if let_relation is None:
             self._comparison_relation = random.choice(_COMPARISON_RELATION)
         elif let_relation not in _COMPARISON_RELATION:
-            raise ValueError("The supported relation for comparison must be in " f"{_COMPARISON_RELATION}, but {let_relation} is given.")
+            raise ValueError(f"The supported relation for comparison must be in {_COMPARISON_RELATION}, but {let_relation} is given.")
         else:
             self._comparison_relation = let_relation
 
-        self._description_pattern = "In your response, the letter {letter} should appear {let_relation}" " {let_frequency} times."
+        self._description_pattern = "In your response, the letter {letter} should appear {let_relation} {let_frequency} times."
 
         return self._description_pattern.format(
             letter=self._letter,
@@ -1301,7 +1302,7 @@ class LowercaseLettersEnglishChecker(Instruction):
 
     def build_description(self):
         """Build the instruction description."""
-        self._description_pattern = "Your entire response should be in English, and in all lowercase" " letters. No capital letters are allowed."
+        self._description_pattern = "Your entire response should be in English, and in all lowercase letters. No capital letters are allowed."
         return self._description_pattern
 
     def get_instruction_args(self):
@@ -1370,9 +1371,9 @@ class CapitalWordFrequencyChecker(Instruction):
         if capital_relation is None:
             self._comparison_relation = random.choice(_COMPARISON_RELATION)
         elif capital_relation not in _COMPARISON_RELATION:
-            raise ValueError("The supported relation for comparison must be in " f"{_COMPARISON_RELATION}, but {capital_relation} is given.")
+            raise ValueError(f"The supported relation for comparison must be in {_COMPARISON_RELATION}, but {capital_relation} is given.")
 
-        self._description_pattern = "In your response, words with all capital letters should appear" " {relation} {frequency} times."
+        self._description_pattern = "In your response, words with all capital letters should appear {relation} {frequency} times."
 
         return self._description_pattern.format(frequency=self._frequency, relation=self._comparison_relation)
 

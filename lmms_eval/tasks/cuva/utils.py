@@ -170,7 +170,7 @@ def cuva_aggregate_results(results, metric, args):
 def cuva_aggregate_results_bleurt(results, args):
     bleurt_version = "lucadiliello/BLEURT-20"
     eval_logger.info(f"Loading BLEURT model {bleurt_version}, you can change to the small version BLEURT-20-D12 in tasks/cuva/utils.py")
-    config = BleurtConfig.from_pretrained(bleurt_version)
+    _config = BleurtConfig.from_pretrained(bleurt_version)
     model = BleurtForSequenceClassification.from_pretrained(bleurt_version)
     tokenizer = BleurtTokenizer.from_pretrained(bleurt_version)
 

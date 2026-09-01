@@ -32,28 +32,34 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # Import LLaVA modules
 try:
     import copy
-    import os
+    import os as os
     import re
-    import sys
+    import sys as sys
     import warnings
 
     import numpy as np
-    import requests
+    import requests as requests
     import soundfile as sf
     import torch
     import whisper
     from decord import VideoReader, cpu
     from egogpt.constants import (
         DEFAULT_IMAGE_TOKEN,
-        DEFAULT_SPEECH_TOKEN,
-        IGNORE_INDEX,
         IMAGE_TOKEN_INDEX,
         SPEECH_TOKEN_INDEX,
     )
-    from egogpt.conversation import SeparatorStyle, conv_templates
-    from egogpt.mm_utils import get_model_name_from_path, process_images
+    from egogpt.constants import (
+        DEFAULT_SPEECH_TOKEN as DEFAULT_SPEECH_TOKEN,
+    )
+    from egogpt.constants import (
+        IGNORE_INDEX as IGNORE_INDEX,
+    )
+    from egogpt.conversation import SeparatorStyle as SeparatorStyle
+    from egogpt.conversation import conv_templates
+    from egogpt.mm_utils import get_model_name_from_path as get_model_name_from_path
+    from egogpt.mm_utils import process_images
     from egogpt.model.builder import load_pretrained_model
-    from PIL import Image
+    from PIL import Image as Image
     from scipy.signal import resample
 except ImportError as e:
     eval_logger.debug(f"egogpt is not installed. Please install egogpt to use this model.\nError: {e}")
@@ -226,7 +232,7 @@ class EgoGPT(lmms):
     def tok_decode(self, tokens):
         try:
             return self.tokenizer.decode(tokens)
-        except:
+        except Exception:
             return self.tokenizer.decode([tokens])
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
@@ -265,7 +271,7 @@ class EgoGPT(lmms):
         total_frame_num = len(vr)
         avg_fps = round(vr.get_avg_fps() / fps)
         frame_idx = [i for i in range(0, total_frame_num, avg_fps)]
-        frame_time = [i / avg_fps for i in frame_idx]
+        _frame_time = [i / avg_fps for i in frame_idx]
 
         if max_frames_num > 0:
             if len(frame_idx) > max_frames_num:
@@ -324,7 +330,7 @@ class EgoGPT(lmms):
                 if visual is None or visual == []:  # for text-only tasks.
                     visual = None
                     task_type = "text"
-                    placeholder_count = 0
+                    _placeholder_count = 0
                     image_tensor = None
                 else:
                     if len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__:  # for multi image case, we treat per image aspect ratio as "pad" by default.
@@ -332,7 +338,7 @@ class EgoGPT(lmms):
                         eval_logger.info(f"In Multi-Image setting, image aspect ratio: {self._config.image_aspect_ratio}")
 
                     if "task_type" in metadata and metadata["task_type"] == "video" and "sample_frames" in metadata:  # overwrite logic for video task with multiple static image frames
-                        assert type(visual) == list, "sample_frames must be specified for video task"
+                        assert type(visual) is list, "sample_frames must be specified for video task"
                         sample_indices = np.linspace(0, len(visual) - 1, metadata["sample_frames"], dtype=int)
                         visual = [visual[i] for i in sample_indices]
                         assert len(visual) == metadata["sample_frames"]
@@ -344,9 +350,9 @@ class EgoGPT(lmms):
                             image_tensor = image_tensor.to(dtype=torch.float16, device=self.device)
                         image_tensor = [image_tensor]
                         task_type = "video"
-                        placeholder_count = 1
+                        _placeholder_count = 1
 
-                    elif type(visual[0]) == PIL.Image.Image:  # For image, multi-image tasks
+                    elif type(visual[0]) is PIL.Image.Image:  # For image, multi-image tasks
                         image_tensor = process_images(visual, self._image_processor, self._config)
                         speech = torch.zeros(3000, 128)
                         speech_lengths = torch.LongTensor([3000])
@@ -356,9 +362,9 @@ class EgoGPT(lmms):
                             image_tensor = image_tensor.to(dtype=torch.float16, device=self.device)
 
                         task_type = "image"
-                        placeholder_count = len(visual) if isinstance(visual, list) else 1
+                        _placeholder_count = len(visual) if isinstance(visual, list) else 1
 
-                    elif type(visual[0]) == str:  # For video task
+                    elif type(visual[0]) is str:  # For video task
                         image_tensor = []
                         try:
                             if self.video_decode_backend == "decord":
@@ -372,13 +378,13 @@ class EgoGPT(lmms):
                             processed_frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().cuda()
                             processed_frames = processed_frames.half()
                             image_tensor.append(processed_frames)
-                            image_sizes = [frames[0].size]
+                            _image_sizes = [frames[0].size]
                         except Exception as e:
                             eval_logger.error(f"Error {e} in loading video")
                             image_tensor = None
 
                         task_type = "video"
-                        placeholder_count = len(frames) if self.token_strategy == "multiple" else 1
+                        _placeholder_count = len(frames) if self.token_strategy == "multiple" else 1
                 if DEFAULT_IMAGE_TOKEN not in context:
                     question = DEFAULT_IMAGE_TOKEN + "\n" + context
                 else:
@@ -433,7 +439,7 @@ class EgoGPT(lmms):
             input_ids_list = [input_ids]
             pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
             input_ids = self.pad_sequence(input_ids_list, batch_first=True, padding_value=pad_token_ids).to(self.device)
-            attention_masks = input_ids.ne(pad_token_ids).to(self.device)
+            _attention_masks = input_ids.ne(pad_token_ids).to(self.device)
             input_ids = torch.tensor(input_ids, dtype=torch.long).squeeze(0).to(self.device)
             if task_type == "image":
                 gen_kwargs["image_sizes"] = [batched_visuals[0][idx].size for idx in range(len(batched_visuals[0]))]

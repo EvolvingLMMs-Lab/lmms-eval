@@ -42,7 +42,7 @@ def textvqa_process_results(doc, result):
 
 def textvqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     pre_prompt = ""
-    post_post = ""
+    _post_post = ""
     ocr_ref = ""
     if lmms_eval_specific_kwargs:
         if "pre_prompt" in lmms_eval_specific_kwargs:

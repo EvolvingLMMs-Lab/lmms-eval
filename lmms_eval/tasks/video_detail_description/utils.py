@@ -42,7 +42,7 @@ cache_dir = config["dataset_kwargs"]["cache_dir"]
 cache_dir = os.path.join(HF_HOME, cache_dir)
 cache_dir = os.path.join(cache_dir, "Test_Videos")
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 
 # Pass in video path here
@@ -169,7 +169,7 @@ def parse_score(review):
 
 
 def gpt_eval(data_dict):
-    evaluated_results = []
+    _evaluated_results = []
 
     try:
         question = data_dict["question"]
@@ -182,7 +182,7 @@ def gpt_eval(data_dict):
     except Exception as e:
         eval_logger.error(f"Error for Video Name: {data_dict.get('video_name', 'Unknown')}: {e}")
         review = "Failed to Get a Proper Review."
-        model_name = ""
+        _model_name = ""
         score = 0
 
     # Update the dictionary with the new entries
@@ -210,7 +210,7 @@ def video_detail_description_aggregate_score(results, args):
         eval_score = result["score"]
         try:
             eval_score = int(eval_score)
-        except:
+        except Exception:
             eval_score = 0.0
 
         score += eval_score

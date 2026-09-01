@@ -235,7 +235,7 @@ def videomme_doc_to_text_subtitle(doc, lmms_eval_specific_kwargs=None):
                     raw_text = re.findall(pattern, subtitle_by_frame[idx][2])
                     try:
                         textlist.append(raw_text[0])
-                    except:
+                    except Exception:
                         continue
                 subtitle_text = "\n".join(textlist)
         subtitle = subtitle_text
@@ -254,25 +254,9 @@ def videomme_doc_to_text_subtitle(doc, lmms_eval_specific_kwargs=None):
 
 
 def extract_characters_regex(s):
-    s = s.strip()
-    answer_prefixes = [
-        "The best answer is",
-        "The correct answer is",
-        "The answer is",
-        "The answer",
-        "The best option is" "The correct option is",
-        "Best answer:" "Best option:",
-    ]
-    for answer_prefix in answer_prefixes:
-        s = s.replace(answer_prefix, "")
+    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
 
-    if len(s.split()) > 10 and not re.search("[ABCD]", s):
-        return ""
-
-    matches = re.search(r"[ABCD]", s)
-    if matches is None:
-        return ""
-    return matches[0]
+    return extract_mcq_answer(s, choices=["A", "B", "C", "D"])
 
 
 matrices = []
@@ -280,8 +264,8 @@ matrices = []
 for i in VIDEO_TYPE:
     for j in CATEGORIES:
         for k in SUB_CATEGORIES:
-            for l in TASK_CATEGORIES:
-                matrices.append(f"{i}_{j}_{k}_{l}")
+            for task_category in TASK_CATEGORIES:
+                matrices.append(f"{i}_{j}_{k}_{task_category}")
 
 
 def videomme_process_results(doc, results):
@@ -349,7 +333,7 @@ def videomme_aggregate_results(results):
             if video_type in k:
                 total_correct += v["correct"]
                 total_answered += v["answered"]
-        eval_logger.info(f"Evaluation on video Type: {video_type}: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+        eval_logger.info(f"Evaluation on video Type: {video_type}: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%")
 
     for category in CATEGORIES:
         total_correct = 0
@@ -358,7 +342,7 @@ def videomme_aggregate_results(results):
             if category in k:
                 total_correct += v["correct"]
                 total_answered += v["answered"]
-        eval_logger.info(f"Evaluation on Categories: {category}: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+        eval_logger.info(f"Evaluation on Categories: {category}: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%")
 
     for sub_cate in SUB_CATEGORIES:
         total_correct = 0
@@ -367,7 +351,7 @@ def videomme_aggregate_results(results):
             if sub_cate in k:
                 total_correct += v["correct"]
                 total_answered += v["answered"]
-        eval_logger.info(f"Evaluation on Video Sub Categories: {sub_cate}: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+        eval_logger.info(f"Evaluation on Video Sub Categories: {sub_cate}: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%")
 
     for task_cate in TASK_CATEGORIES:
         total_correct = 0
@@ -376,12 +360,12 @@ def videomme_aggregate_results(results):
             if task_cate in k:
                 total_correct += v["correct"]
                 total_answered += v["answered"]
-        eval_logger.info(f"Evaluation on Task Categories: {task_cate}: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+        eval_logger.info(f"Evaluation on Task Categories: {task_cate}: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%")
 
     total_correct = 0
     total_answered = 0
     for k, v in category2score.items():
         total_correct += v["correct"]
         total_answered += v["answered"]
-    eval_logger.info(f"Overall Performance: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+    eval_logger.info(f"Overall Performance: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%")
     return 100 * total_correct / total_answered if total_answered > 0 else 0

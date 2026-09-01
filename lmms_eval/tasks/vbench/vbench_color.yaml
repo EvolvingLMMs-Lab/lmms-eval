@@ -1,0 +1,4 @@
+task: vbench_color
+dataset_name: vbench_color
+test_split: test
+include: _default_template_yaml

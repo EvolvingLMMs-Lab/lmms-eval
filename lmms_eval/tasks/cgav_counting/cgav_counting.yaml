@@ -1,0 +1,7 @@
+group: cgav_counting
+task:
+  - cgav_counting_long
+  - cgav_counting_ref
+  - cgav_counting_clue
+metadata:
+  - version: 1.0

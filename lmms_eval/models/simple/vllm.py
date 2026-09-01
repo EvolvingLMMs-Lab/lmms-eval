@@ -8,7 +8,6 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 import numpy as np
 import torch.distributed as dist
 from accelerate import Accelerator, DistributedType
-from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from PIL import Image
 
@@ -16,6 +15,7 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
+from lmms_eval.models.model_utils.load_video import read_video
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 from lmms_eval.models.model_utils.progress import make_progress
 
@@ -60,14 +60,19 @@ class VLLM(lmms):
             Should be between 0.0 and 1.0. Default: 0.8
         batch_size (int): Number of requests to process in parallel per GPU.
             Default: 1
-        max_frame_num (int): Maximum number of frames to extract from videos.
-            Frames are sampled uniformly across the video duration. Default: 32
+        max_frame_num (int): Number of frames to extract from videos. Frames
+            are sampled uniformly; short clips repeat frames for compatibility
+            with the historical Decord path. Default: 32
         threads (int): Number of threads to use for parallel visual encoding.
             Default: 16
         trust_remote_code (bool, optional): Whether to trust remote code when loading
             the model. Default: True
         chat_template (str, optional): Path to chat template file or template string.
             If None, uses the model's default template. Default: None
+        video_decode_backend (str, optional): Video decoder used by the shared
+            media loader. Defaults to PyAV and can also be set to ``torchcodec``
+            or ``dali``. Use ``decord`` for legacy reproduction runs.
+            ``LMMS_VIDEO_DECODE_BACKEND`` is used when omitted.
         **kwargs: Additional arguments passed to the VLLM LLM constructor.
             - NOTE: model specific arguments can be passed here without the need to add more arguments to this class (see example below)
             - String arguments that look like JSON dictionaries will be automatically parsed.
@@ -159,6 +164,7 @@ class VLLM(lmms):
         disable_log_stats: bool = False,
         image_first: bool = False,
         max_new_tokens: int = 1024,
+        video_decode_backend: Optional[str] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -173,6 +179,7 @@ class VLLM(lmms):
         self.tensor_parallel_size = int(tensor_parallel_size)
         self.image_first = image_first
         self.max_new_tokens = int(max_new_tokens)
+        self.video_decode_backend = video_decode_backend
         # Qwen 2/2.5-VL models enforce minimum image dimensions
         self._enforce_image_resize = self._is_qwen_vl_model(model)
 
@@ -228,7 +235,7 @@ class VLLM(lmms):
         if accelerator.num_processes > 1:
             kwargs["distributed_executor_backend"] = "external_launcher"
             if expected_world_size > 1 and accelerator.num_processes != expected_world_size:
-                raise ValueError("For external_launcher mode, accelerate world size must equal " f"tensor_parallel_size * data_parallel_size ({expected_world_size}), " f"but got {accelerator.num_processes}.")
+                raise ValueError(f"For external_launcher mode, accelerate world size must equal tensor_parallel_size * data_parallel_size ({expected_world_size}), but got {accelerator.num_processes}.")
         self.client = LLM(
             model=self.model,
             tensor_parallel_size=self.tensor_parallel_size,
@@ -265,7 +272,7 @@ class VLLM(lmms):
             self._tp_rank_in_group = int(tp_group.rank_in_group)
         except Exception as exc:
             if self._world_size > 1:
-                raise RuntimeError("Failed to initialize vLLM TP group for synchronized request dispatch. " "This is required when tensor_parallel_size > 1 under distributed launch.") from exc
+                raise RuntimeError("Failed to initialize vLLM TP group for synchronized request dispatch. This is required when tensor_parallel_size > 1 under distributed launch.") from exc
             eval_logger.warning(f"Failed to initialize TP group for request sync: {exc}")
 
     def _watchdog_rank(self) -> int:
@@ -337,6 +344,42 @@ class VLLM(lmms):
             return self.max_new_tokens
         return max(request_max_new_tokens, self.max_new_tokens)
 
+    @staticmethod
+    def _normalize_top_p_for_vllm(top_p: Any) -> Any:
+        if isinstance(top_p, bool):
+            return top_p
+        try:
+            numeric_top_p = float(top_p)
+        except (TypeError, ValueError):
+            return top_p
+        if numeric_top_p == 0.0:
+            return 1.0
+        return top_p
+
+    def _build_sampling_params_dict(self, gen_kwargs: dict[str, Any]) -> dict[str, Any]:
+        n = gen_kwargs.get("n")
+        if n is not None and (isinstance(n, bool) or not isinstance(n, int) or n != 1):
+            raise ValueError("generation parameter n must be the integer 1 because the vLLM backends consume exactly one output")
+
+        params = {
+            "max_tokens": gen_kwargs["max_new_tokens"],
+            "temperature": gen_kwargs["temperature"],
+            "top_p": self._normalize_top_p_for_vllm(gen_kwargs["top_p"]),
+        }
+        optional_params = (
+            "n",
+            "seed",
+            "top_k",
+            "min_p",
+            "repetition_penalty",
+            "presence_penalty",
+            "frequency_penalty",
+        )
+        for key in optional_params:
+            if gen_kwargs.get(key) is not None:
+                params[key] = gen_kwargs[key]
+        return params
+
     def _run_tp_synced(
         self,
         local_inputs: list[Any],
@@ -362,7 +405,7 @@ class VLLM(lmms):
 
         merged_outputs = run_fn(merged_inputs)
         if len(merged_outputs) != len(merged_inputs):
-            raise RuntimeError("vLLM output count mismatch after TP request synchronization: " f"expected {len(merged_inputs)}, got {len(merged_outputs)}")
+            raise RuntimeError(f"vLLM output count mismatch after TP request synchronization: expected {len(merged_inputs)}, got {len(merged_outputs)}")
 
         start = offsets[self._tp_rank_in_group]
         end = offsets[self._tp_rank_in_group + 1]
@@ -404,16 +447,18 @@ class VLLM(lmms):
 
     # Function to encode the video
     def encode_video(self, video_path):
-        vr = VideoReader(video_path, ctx=cpu(0))
-        total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, self.max_frame_num, dtype=int)
-
-        # Ensure the last frame is included
-        if total_frame_num - 1 not in uniform_sampled_frames:
-            uniform_sampled_frames = np.append(uniform_sampled_frames, total_frame_num - 1)
-
-        frame_idx = uniform_sampled_frames.tolist()
-        frames = vr.get_batch(frame_idx).asnumpy()
+        # Decord historically returned max_frame_num entries by repeating
+        # indices for short clips. Decode each available frame once, then
+        # reproduce that adapter-level contract independently of the backend.
+        frames = read_video(
+            video_path,
+            num_frm=self.max_frame_num,
+            force_include_last_frame=True,
+            backend=self.video_decode_backend,
+        )
+        if 0 < len(frames) < self.max_frame_num:
+            repeat_indices = np.linspace(0, len(frames) - 1, self.max_frame_num, dtype=int)
+            frames = frames[repeat_indices]
 
         base64_frames = []
         for frame in frames:
@@ -456,13 +501,7 @@ class VLLM(lmms):
                     gen_kwargs["max_new_tokens"] = self._select_max_new_tokens(gen_kwargs.get("max_new_tokens"))
                     gen_kwargs.setdefault("temperature", 0)
                     gen_kwargs.setdefault("top_p", 0.95)
-
-                    params = {
-                        "max_tokens": gen_kwargs["max_new_tokens"],
-                        "temperature": gen_kwargs["temperature"],
-                        "top_p": gen_kwargs["top_p"],
-                    }
-                    sampling_params = SamplingParams(**params)
+                    sampling_params = SamplingParams(**self._build_sampling_params_dict(gen_kwargs))
 
                     visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
                     if None in visuals:
@@ -505,7 +544,6 @@ class VLLM(lmms):
                             )
                     batched_messages.append(messages)
 
-                sampling_params = SamplingParams(**params)
                 self._write_watchdog_heartbeat("chat_start", batch_idx=batch_idx, batch_requests=batch_requests)
 
                 # NOTE:

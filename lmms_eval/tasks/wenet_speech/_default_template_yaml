@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/WenetSpeech
+dataset_path: lmms-lab-audio/WenetSpeech
 dataset_kwargs:
   token: True
 doc_to_target: "text"

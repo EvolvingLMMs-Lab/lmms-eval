@@ -149,7 +149,7 @@ def xlrs_aggregate_results(results, macro=False):
         cnt_task, sum_task = 0, 0
         for substask, subtask_value in tasks_values.items():
             eval_logger.info("+" * 16 + f"{substask} (Subtask Start)")
-            cnt_subtask, sum_subtask, e_subtask = 0, 0, 0
+            cnt_subtask, sum_subtask, _e_subtask = 0, 0, 0
             for category, category_dict in subtask_value.items():
                 cnt_subtask += category_dict["true"]
                 sum_subtask += category_dict["false"] + category_dict["true"]

@@ -114,7 +114,7 @@ def llava_process_results(doc, result):
         rule = rule_dict.get(category, {})
         prompt = rule.get("prompt", "")
         role = rule.get("role", "유저")
-        content = f"[설명]\n{context}\n\n" f"[질문]\n{question}\n\n" f"[{role} 1]\n{ans1}\n\n[{role} 1 끝]\n\n" f"[{role} 2]\n{ans2}\n\n[{role} 2 끝]\n\n" f"[System]\n{prompt}\n\n"
+        content = f"[설명]\n{context}\n\n[질문]\n{question}\n\n[{role} 1]\n{ans1}\n\n[{role} 1 끝]\n\n[{role} 2]\n{ans2}\n\n[{role} 2 끝]\n\n[System]\n{prompt}\n\n"
 
         review, model_name = get_eval(content, 1024)
         scores = parse_score(review)

@@ -19,8 +19,8 @@ from lmms_eval.models.model_utils.media_encoder import (
 VideoReader, _ = optional_import("decord", "VideoReader")
 cpu, _ = optional_import("decord", "cpu")
 
-from loguru import logger as eval_logger
-from PIL import Image
+from loguru import logger as eval_logger  # noqa: E402
+from PIL import Image  # noqa: E402
 
 API_TYPE = os.getenv("API_TYPE", "openai")
 NUM_SECONDS_TO_SLEEP = 10

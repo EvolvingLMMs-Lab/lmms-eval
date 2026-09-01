@@ -1,7 +1,6 @@
 # credit to https://github.com/EleutherAI/lm-evaluation-harness
 import collections
 import inspect
-import logging
 import os
 from functools import partial
 from typing import Dict, List, Literal, Mapping, Optional, Union
@@ -378,8 +377,8 @@ class TaskManager:
         all_loaded_tasks = dict(collections.ChainMap(*map(load_fn, task_list)))
         return all_loaded_tasks
 
-    def load_config(self, config: Dict):
-        return self._load_individual_task_or_group(config)
+    def load_config(self, config: Dict, task_type: Literal["simple", "chat"] = "simple"):
+        return self._load_individual_task_or_group(config, task_type=task_type)
 
     def _get_task_and_group(self, task_dir: str):
         """Creates a dictionary of tasks index with the following metadata,
@@ -476,7 +475,7 @@ class TaskManager:
                                             "yaml_path": -1,
                                         }
                                     elif tasks_and_groups[tag]["type"] != "tag":
-                                        self.logger.warning(f"The tag {tag} is already registered as a group, this tag will not be registered. " "This may affect tasks you want to call.")
+                                        self.logger.warning(f"The tag {tag} is already registered as a group, this tag will not be registered. This may affect tasks you want to call.")
                                         break
                                     else:
                                         tasks_and_groups[tag]["task"].append(task)
@@ -571,7 +570,7 @@ def get_task_dict(
         if isinstance(task_element, dict):
             task_name_from_config_dict = {
                 **task_name_from_config_dict,
-                **task_manager.load_config(config=task_element),
+                **task_manager.load_config(config=task_element, task_type=task_type),
             }
 
         elif isinstance(task_element, Task):

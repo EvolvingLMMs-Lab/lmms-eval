@@ -297,7 +297,7 @@ class BaichuanOmni(lmms):
     def _format_prompt(self, user_content: str) -> str:
         """Format the full prompt with role prefixes."""
         # System message + User message + Assistant prefix
-        prompt = f"{ROLE_PREFIX['system']}{self.system_prompt}" f"{ROLE_PREFIX['user']}{user_content}" f"{ROLE_PREFIX['assistant']}"
+        prompt = f"{ROLE_PREFIX['system']}{self.system_prompt}{ROLE_PREFIX['user']}{user_content}{ROLE_PREFIX['assistant']}"
         return prompt
 
     def generate_until(self, requests: List[Instance]) -> List[str]:

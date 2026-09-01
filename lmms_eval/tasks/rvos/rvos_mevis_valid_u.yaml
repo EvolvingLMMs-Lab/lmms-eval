@@ -1,0 +1,8 @@
+task: rvos_mevis_valid_u
+dataset_path: kcz358/RVOS-MeViS-ValidU
+dataset_kwargs:
+  token: True
+  video: True
+  cache_dir: rvos_mevis_valid_u
+test_split: valid_u
+include: _default_template_yaml

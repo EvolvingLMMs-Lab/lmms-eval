@@ -1,44 +1,13 @@
 import os
 import random
 import re
-import threading
 from collections import defaultdict
-from pathlib import Path
 
-from lmms_eval.tasks._task_utils.lance_video_resolver import LanceVideoBlobResolver
 from lmms_eval.tasks._task_utils.video_loader import get_video
 from lmms_eval.utils import eval_logger
 
 OPTIONS = ["A", "B", "C", "D", "E"]
 _VIDEO_EXTENSIONS = ("mp4", "webm", "mkv", "mov")
-_LANCE_RESOLVER = None
-_LANCE_RESOLVER_LOCK = threading.Lock()
-
-
-def _get_lance_resolver() -> LanceVideoBlobResolver | None:
-    global _LANCE_RESOLVER
-
-    dataset_uri = os.getenv("MINERVA_LANCE_VIDEO_URI", "").strip()
-    if dataset_uri == "":
-        return None
-
-    if _LANCE_RESOLVER is None:
-        with _LANCE_RESOLVER_LOCK:
-            if _LANCE_RESOLVER is None:
-                id_column = os.getenv("MINERVA_LANCE_VIDEO_ID_COLUMN", "video_id").strip()
-                blob_column = os.getenv("MINERVA_LANCE_VIDEO_BLOB_COLUMN", "video_blob").strip()
-                cache_dir = Path(os.path.expanduser(os.getenv("MINERVA_LANCE_CACHE_DIR", "~/.cache/lmms_eval/minerva_lance_videos")))
-                _LANCE_RESOLVER = LanceVideoBlobResolver(
-                    dataset_uri=dataset_uri,
-                    id_column=id_column,
-                    blob_column=blob_column,
-                    cache_dir=cache_dir,
-                    ext_column="video_ext",
-                    source_name="MINERVA Lance",
-                    video_extensions=_VIDEO_EXTENSIONS,
-                )
-
-    return _LANCE_RESOLVER
 
 
 def _resolve_local_video(video_id: str) -> str | None:
@@ -113,10 +82,6 @@ def minerva_doc_to_visual(doc):
     local_video = _resolve_local_video(video_id)
     if local_video is not None:
         return [local_video]
-
-    resolver = _get_lance_resolver()
-    if resolver is not None:
-        return [resolver.resolve(video_id)]
 
     # Fallback for compatibility if users still rely on direct URL style.
     return [f"https://www.youtube.com/watch?v={video_id}"]

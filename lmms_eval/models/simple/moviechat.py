@@ -235,7 +235,7 @@ class MovieChat(lmms):
     def tok_decode(self, tokens):
         try:
             return self.tokenizer.decode(tokens)
-        except:
+        except Exception:
             return self.tokenizer.decode([tokens])
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
@@ -274,7 +274,7 @@ class MovieChat(lmms):
 
         current_max_len = embs.shape[1] + max_new_tokens
         if current_max_len - max_length > 0:
-            print("Warning: The number of tokens in current conversation exceeds the max length. " "The model will not see the contexts outside the range.")
+            print("Warning: The number of tokens in current conversation exceeds the max length. The model will not see the contexts outside the range.")
         begin_idx = max(0, current_max_len - max_length)
 
         embs = embs[:, begin_idx:]
@@ -339,14 +339,14 @@ class MovieChat(lmms):
             text_outputs = []
 
             for visual, context in zip(batched_visuals, batched_contexts):
-                if type(visual[0]) == PIL.Image.Image and "task_type" not in metadata and "sample_frames" not in metadata:  # For image task
+                if type(visual[0]) is PIL.Image.Image and "task_type" not in metadata and "sample_frames" not in metadata:  # For image task
                     raise NotImplementedError("MovieChat only supports video inputs.")
 
                 elif "task_type" in metadata and metadata["task_type"] == "video" and "sample_frames" in metadata:
                     raise NotImplementedError("MovieChat only supports video inputs.")
 
-                elif type(visual[0]) == str:  # For video task
-                    image_tensor = []
+                elif type(visual[0]) is str:  # For video task
+                    _image_tensor = []
                     self.model.short_memory_buffer = []
                     self.model.long_memory_buffer = []
                     img_list = []

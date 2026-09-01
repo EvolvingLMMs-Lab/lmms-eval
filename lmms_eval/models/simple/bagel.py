@@ -4,7 +4,6 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import numpy as np
 import torch
 from accelerate import (
     Accelerator,
@@ -160,7 +159,7 @@ class BagelUMM(lmms):
         super().__init__()
 
         if not BAGEL_AVAILABLE:
-            raise ImportError(f"Failed to import Bagel dependencies: {BAGEL_IMPORT_ERROR}\n" "Please install the Bagel package by running:\n" "uv pip install git+https://github.com/oscarqjh/Bagel.git")
+            raise ImportError(f"Failed to import Bagel dependencies: {BAGEL_IMPORT_ERROR}\nPlease install the Bagel package by running:\nuv pip install git+https://github.com/oscarqjh/Bagel.git")
 
         # Validate mode
         if mode not in BASE_PARAMS:
@@ -407,7 +406,7 @@ class BagelUMM(lmms):
                 break
 
         if checkpoint is None:
-            raise FileNotFoundError(f"Could not find checkpoint in {model_path}. " f"Expected one of: {checkpoint_candidates}")
+            raise FileNotFoundError(f"Could not find checkpoint in {model_path}. Expected one of: {checkpoint_candidates}")
 
         eval_logger.info(f"Loading checkpoint from: {checkpoint}")
 
@@ -550,11 +549,11 @@ class BagelUMM(lmms):
 
             else:
                 # Case 3: Mismatch between <image> tokens and actual visuals
-                raise ValueError(f"Mismatch between <image> tokens and visuals: " f"Found {num_image_tags} <image> token(s) in context, " f"but received {num_visuals} visual(s). " f"Context preview: '{contexts[:200]}...'")
+                raise ValueError(f"Mismatch between <image> tokens and visuals: Found {num_image_tags} <image> token(s) in context, but received {num_visuals} visual(s). Context preview: '{contexts[:200]}...'")
 
             # Final sanity check: input_list should not be empty
             if not input_list:
-                raise ValueError(f"Failed to build input_list: no valid inputs. " f"Context: '{contexts[:100]}...', Visuals: {num_visuals}")
+                raise ValueError(f"Failed to build input_list: no valid inputs. Context: '{contexts[:100]}...', Visuals: {num_visuals}")
 
             # Prepare inference parameters
             inference_params = self.inference_params.copy()

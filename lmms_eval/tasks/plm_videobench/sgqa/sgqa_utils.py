@@ -1,10 +1,11 @@
+import json
 import os
 
 import pandas as pd
 from openai import OpenAI
 from PIL import Image
 
-from lmms_eval.tasks.plm_videobench.eval_utils import *
+from lmms_eval.tasks.plm_videobench.eval_utils import call_judge_with_retry, get_sgqa_judge_prompt, load_defualt_config, load_video_uniform
 
 # Load default config parameters
 config = load_defualt_config()
@@ -52,7 +53,7 @@ def plm_sgqa_process_results(doc, results):
 
     try:
         judgement = json.loads(llm_response)
-    except:
+    except Exception:
         if "yes" in llm_response or "Yes" in llm_response:
             judgement = {"pred": "yes", "reason": "parse_error"}
         else:

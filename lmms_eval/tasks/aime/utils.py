@@ -126,10 +126,10 @@ def extract_answer_idx(sampler, options: List[str], attempt: str):
     return response
 
 
-import time
+import time  # noqa: E402
 
-import openai
-from openai import OpenAI
+import openai  # noqa: E402
+from openai import OpenAI  # noqa: E402
 
 
 class ChatCompletionSampler:

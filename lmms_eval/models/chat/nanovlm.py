@@ -81,7 +81,7 @@ class NanoVLM(lmms):
         self.max_length = 4096
         self.eot_token_id = self._workers[0].tokenizer.eos_token_id
 
-        eval_logger.info(f"NanoVLM loaded: {len(self._workers)} worker(s) on {worker_devices}, " f"image_token_count={self._workers[0].image_token_count}, use_cache={self.use_cache}")
+        eval_logger.info(f"NanoVLM loaded: {len(self._workers)} worker(s) on {worker_devices}, image_token_count={self._workers[0].image_token_count}, use_cache={self.use_cache}")
 
     # ------------------------------------------------------------------
     # Initialization helpers

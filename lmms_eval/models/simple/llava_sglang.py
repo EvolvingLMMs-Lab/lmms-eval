@@ -5,21 +5,21 @@ import torch
 torch.backends.cuda.matmul.allow_tf32 = True
 
 
-import warnings
-from typing import List, Optional, Tuple, Union
+import warnings  # noqa: E402
+from typing import List, Optional, Tuple, Union  # noqa: E402
 
-from tqdm import tqdm
+from tqdm import tqdm  # noqa: E402
 
-from lmms_eval import utils
-from lmms_eval.api.instance import Instance
-from lmms_eval.api.model import lmms
-from lmms_eval.api.registry import register_model
+from lmms_eval import utils  # noqa: E402
+from lmms_eval.api.instance import Instance  # noqa: E402
+from lmms_eval.api.model import lmms  # noqa: E402
+from lmms_eval.api.registry import register_model  # noqa: E402
 
 warnings.filterwarnings("ignore")
-import tempfile
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import tempfile  # noqa: E402
+from concurrent.futures import ThreadPoolExecutor, as_completed  # noqa: E402
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 try:
     import sglang as sgl

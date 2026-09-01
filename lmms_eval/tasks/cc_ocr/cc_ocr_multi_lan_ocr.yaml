@@ -1,0 +1,15 @@
+include: _default_yaml_template
+
+task: cc_ocr_multi_lan_ocr
+dataset_name: multi_lan_ocr
+
+metric_list:
+  - metric: macro_f1
+    aggregation: !function utils.cc_ocr_agg_ocr_macro_f1
+    higher_is_better: true
+  - metric: micro_f1
+    aggregation: !function utils.cc_ocr_agg_ocr_micro_f1
+    higher_is_better: true
+
+metadata:
+  - version: 0.0

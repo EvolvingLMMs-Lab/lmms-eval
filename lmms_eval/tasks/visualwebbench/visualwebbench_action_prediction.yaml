@@ -1,7 +1,7 @@
 dataset_kwargs:
-  token: true
+  token: false
 dataset_name: action_prediction
-dataset_path: lmms-lab/VisualWebBench
+dataset_path: lmms-lab-encoder/VisualWebBench
 doc_to_target: !function utils.visualwebbench_doc_to_target
 doc_to_text: !function utils.visualwebbench_doc_to_text
 doc_to_visual: !function utils.visualwebbench_doc_to_visual

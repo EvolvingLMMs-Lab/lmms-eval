@@ -1,4 +1,4 @@
-dataset_path: lmms_eval/tasks/ovobench/ovobench_data
+dataset_path: kcz358/OVOBench
 dataset_name: backward
 task: "ovo_backward"
 test_split: test
@@ -20,9 +20,9 @@ metric_list:
 
 lmms_eval_specific_kwargs:
   default:
-    # specify path to the directory with unzipped chuncks from https://huggingface.co/datasets/JoeLeelyf/OVO-Bench
-    # to prepare data properly follow oficial instruction: https://github.com/JoeLeelyf/OVO-Bench/tree/main#data-preparation
-    data_dir: 
+    # Optional: path to a pre-extracted chunked videos directory.
+    # If empty, chunks are auto-downloaded into $HF_HOME/ovobench.
+    data_dir: null
 
 metadata:
   version: 0.0

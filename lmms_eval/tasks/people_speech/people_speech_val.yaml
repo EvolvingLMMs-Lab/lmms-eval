@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/peoples_speech
+dataset_path: lmms-lab-audio/peoples_speech
 dataset_kwargs:
   token: True
 task : "people_speech_val"

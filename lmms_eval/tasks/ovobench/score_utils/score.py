@@ -1,7 +1,7 @@
 # code from https://github.com/JoeLeelyf/OVO-Bench/blob/main/utils/OVOBenchScore.py
 def calculate_score_backward_realtime(results):
     def get_score(response, gt):
-        if response == None:
+        if response is None:
             return 0
         return int(gt in response)
 
@@ -20,7 +20,7 @@ def calculate_score_backward_realtime(results):
 
 def calculate_score_forward(results):
     def get_score_REC(response, gt):
-        if response == None:
+        if response is None:
             return 0
         import re
 
@@ -29,7 +29,7 @@ def calculate_score_forward(results):
         return response == str(gt)
 
     def get_score_SSR_CRR(response, gt):
-        if response == None:
+        if response is None:
             return 0
         return int(gt in response)
 

@@ -13,9 +13,9 @@ from lmms_eval.api.registry import register_model
 
 eval_logger = logger
 
-from transformers import VideoLlavaForConditionalGeneration, VideoLlavaProcessor
+from transformers import VideoLlavaForConditionalGeneration, VideoLlavaProcessor  # noqa: E402
 
-from lmms_eval.models.model_utils.load_video import read_video
+from lmms_eval.models.model_utils.load_video import read_video  # noqa: E402
 
 
 @register_model("video_llava")
@@ -179,7 +179,7 @@ class VideoLLaVA(lmms):
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             assert len(visuals) == 1
-            clip = read_video(visuals[0], self.num_frames)
+            clip = read_video(visuals[0], num_frm=self.num_frames)
 
             inputs = self._processor(text=self.prompt.format(contexts), videos=clip, return_tensors="pt")
             pixel_values_videos = inputs["pixel_values_videos"]

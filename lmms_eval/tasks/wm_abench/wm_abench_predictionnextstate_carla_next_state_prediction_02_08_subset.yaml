@@ -1,0 +1,4 @@
+dataset_name: "PredictionNextState_carla_next_state_prediction_02_08_subset"
+tag: "wm_abench_subtasks"
+task: "wm_abench_predictionnextstate_carla_next_state_prediction_02_08_subset"
+include: _default_template_yaml

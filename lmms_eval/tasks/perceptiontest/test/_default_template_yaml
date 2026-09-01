@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/PerceptionTest
+dataset_path: lmms-eval/PerceptionTest
 dataset_kwargs:
   token: True
   video: True

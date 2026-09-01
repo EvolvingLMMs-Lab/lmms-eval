@@ -1,0 +1,3 @@
+task: vcrbench
+include: _default_template_yaml
+doc_to_text: !function utils.vcrbench_doc_to_text

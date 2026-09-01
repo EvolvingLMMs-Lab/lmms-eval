@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/ClothoAQA
+dataset_path: lmms-lab-audio/ClothoAQA
 dataset_kwargs:
   token: True
 doc_to_target: "answer"

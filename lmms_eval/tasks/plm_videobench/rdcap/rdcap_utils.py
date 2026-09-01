@@ -4,7 +4,17 @@ import os
 import numpy as np
 from openai import OpenAI
 
-from lmms_eval.tasks.plm_videobench.eval_utils import *
+from lmms_eval.tasks.plm_videobench.eval_utils import (
+    call_judge_with_retry,
+    draw_bounding_boxes,
+    evaluate_detections,
+    extract_delta_segments,
+    get_caption_judge_prompt,
+    load_defualt_config,
+    load_plm_stc_metadata,
+    load_video,
+    sodac_llm_score,
+)
 
 # Load default config parameters
 config = load_defualt_config()
@@ -72,7 +82,7 @@ def plm_rdcap_process_results(doc, results):
             # Parse LLM judge outputs
             try:
                 judgement = json.loads(llm_response)
-            except:
+            except Exception:
                 judgement = {"score": 0, "explanation": "N/A"}
             score = judgement["score"] / 10
             scores.append(score)

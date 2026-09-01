@@ -12,6 +12,7 @@ This documentation covers every layer of `lmms-eval` — from running your first
 - [Extending the Framework](#extending-the-framework)
   - [Adding a Model](#adding-a-model)
   - [Adding a Task](#adding-a-task)
+  - [Verifying Results](#verifying-results)
 - [Using lmms-eval as a Library](#using-lmms-eval-as-a-library)
 - [Performance and Caching](#performance-and-caching)
 - [Task Catalog](#task-catalog)
@@ -83,7 +84,7 @@ Evaluation should not be the bottleneck. Four layers of optimization keep GPUs a
 |-------|-----------|--------|
 | **API throughput** | Adaptive concurrency control with refill scheduling, prefix-aware queueing, and retry/backoff decoupling. | ~7.5x throughput over v0.5 on fixed benchmarks ([v0.6 release notes](releases/lmms-eval-0.6.md)). |
 | **Response caching** | SQLite + JSONL write-ahead log stores deterministic responses (`temperature=0`, `do_sample=False`). Subsequent runs skip inference entirely for cached samples. | Zero redundant model calls on repeated or resumed runs ([caching guide](advanced/caching.md)). |
-| **Video I/O** | TorchCodec multi-threaded decode replaces single-threaded PyAV. Lance-backed blob storage on Hugging Face enables single-IOP random access per video. | Up to 3.58x faster frame decode; eliminates full-table scans ([v0.7 release notes](releases/lmms-eval-0.7.md)). |
+| **Video I/O** | TorchCodec multi-threaded decode replaces single-threaded PyAV. | Up to 3.58x faster frame decode ([v0.7 release notes](releases/lmms-eval-0.7.md)). |
 | **Prefix KV reuse** | Requests are clustered by shared media and sorted by length so vLLM/SGLang can maximize KV cache hits across a batch. | Fewer redundant prefill computations on shared-image/video tasks. |
 
 The async pipeline decouples model inference from metric scoring. Model outputs are persisted immediately, and scoring runs independently - so a crash after inference does not lose results, and judge-stage work (exact match, LLM-as-judge) can run on a separate machine or at a later time.
@@ -150,6 +151,10 @@ generation_kwargs:
 metric_list:
   - metric: acc
 ```
+
+### Verifying Results
+
+The [Verifiers Guide](guides/verifiers_guide.md) covers `lmms_eval.verifiers`, a pluggable per-sample verification pipeline for scoring predictions in `process_results` - rule-based matching (exact/contains/MCQ/numeric), LLM-as-judge (OpenAI, Gemini), and composite fallback chains, all built from extractors that clean model output before it's judged.
 
 ## Using lmms-eval as a Library
 
@@ -224,7 +229,7 @@ Each release note documents new tasks, models, architectural changes, and migrat
 
 | Version | Theme | Highlights |
 |---------|-------|------------|
-| [v0.7](releases/lmms-eval-0.7.md) | Operational simplicity | YAML-first config, reasoning-tag stripping, Lance-backed video, skill-based agent workflows. |
+| [v0.7](releases/lmms-eval-0.7.md) | Operational simplicity | YAML-first config, reasoning-tag stripping, skill-based agent workflows. |
 | [v0.6](releases/lmms-eval-0.6.md) | Evaluation as a service | Async HTTP server, adaptive API concurrency (~7.5x throughput), statistical rigor (CI, paired t-test). |
 | [v0.5](releases/lmms-eval-0.5.md) | Audio expansion | Comprehensive audio evaluation, response caching, 50+ benchmark variants. |
 | [v0.4](releases/lmms-eval-0.4.md) | Scale and reasoning | Distributed evaluation, reasoning benchmarks, unified chat interface. |

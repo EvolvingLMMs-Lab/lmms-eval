@@ -1,0 +1,6 @@
+include: _mcq.yaml
+task: "videonet_mcq_test"
+dataset_kwargs:
+  cache_dir: videonet
+  data_files:
+    test: "benchmarks/mcq_test.jsonl"

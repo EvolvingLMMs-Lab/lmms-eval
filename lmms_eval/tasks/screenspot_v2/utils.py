@@ -19,7 +19,7 @@ def screenspot_v2_doc_to_visual(doc: Dict[str, Any]) -> List[Any]:
 
 def screenspot_v2_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs=None) -> str:
     instruction = doc.get("instruction", "")
-    return "Identify the UI element for the instruction and output exactly one click point as [x, y] in normalized coordinates within [0, 1]. " "Do not output a bounding box.\n" f"Instruction: {instruction}"
+    return f"Identify the UI element for the instruction and output exactly one click point as [x, y] in normalized coordinates within [0, 1]. Do not output a bounding box.\nInstruction: {instruction}"
 
 
 def screenspot_v2_doc_to_messages(doc: Dict[str, Any], lmms_eval_specific_kwargs=None):

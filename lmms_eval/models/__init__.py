@@ -11,18 +11,27 @@ from loguru import logger
 from lmms_eval.models.registry_v2 import ModelManifest, ModelRegistryV2
 
 logger.remove()
-log_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | " "<level>{level: <8}</level> | " "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - " "<level>{message}</level>"
+log_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
 logger.add(sys.stdout, level="WARNING", format=log_format)
 
 
 AVAILABLE_SIMPLE_MODELS = {
     "aero": "Aero",
+    "generation_api": "GenerationApi",
+    "cosmos_wm": "CosmosWorldModel",
+    "wan2_1_t2i": "Wan2_1_T2I",
+    "wan2_1_t2v": "Wan2_1_T2V",
+    "wan2_2": "Wan2_2",
+    "wan2_2_t2v": "Wan2_2_T2V",
+    "ltx_video": "LTXVideo",
+    "magi1_wm": "Magi1WorldModel",
     "aria": "Aria",
     "audio_flamingo_3": "AudioFlamingo3",
     "glm4v": "GLM4V",
     "auroracap": "AuroraCap",
     "bagel": "Bagel",
     "bagel_umm": "BagelUMM",
+    "bagel_unig2u": "BagelUniG2U",
     "baichuan_omni": "BaichuanOmni",
     "batch_gpt4": "BatchGPT4",
     "claude": "Claude",
@@ -35,11 +44,13 @@ AVAILABLE_SIMPLE_MODELS = {
     "egogpt": "EgoGPT",
     "from_log": "FromLog",
     "fuyu": "Fuyu",
-    "gemini_api": "GeminiAPI",
+    "gemini": "Gemini",
     "gpt4o_audio": "GPT4OAudio",
     "gemma3": "Gemma3",
+    "gemma4": "Gemma4",
     "gpt4v": "GPT4V",
     "idefics2": "Idefics2",
+    "illume_plus": "ILLUMEPlus",
     "instructblip": "InstructBLIP",
     "internvideo2_5": "InternVideo2_5",
     "internvideo2": "InternVideo2",
@@ -58,17 +69,21 @@ AVAILABLE_SIMPLE_MODELS = {
     "llava_sglang": "LlavaSglang",
     "llava_vid": "LlavaVid",
     "llava": "Llava",
+    "litellm": "LiteLLMCompatible",
     "longva": "LongVA",
     "mantis": "Mantis",
     "minicpm_o": "MiniCPM_O",
     "minicpm_v": "MiniCPM_V",
     "minimonkey": "MiniMonkey",
+    "mmada": "MMaDA",
+    "mistral3_vl": "Mistral3_VL",
     "moviechat": "MovieChat",
     "mplug_owl_video": "mplug_Owl",
     "ola": "Ola",
     "omnivinci": "OmniVinci",
     "openai": "OpenAICompatible",
     "oryx": "Oryx",
+    "ovis_u1": "OvisU1",
     "penguinvl": "PenguinVL",
     "phi3v": "Phi3v",
     "phi4_multimodal": "Phi4",
@@ -79,6 +94,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "qwen2_5_vl": "Qwen2_5_VL",
     "qwen2_audio": "Qwen2_Audio",
     "qwen2_vl": "Qwen2_VL",
+    "qwen_image_edit": "QwenImageEdit",
     "qwen3_omni": "Qwen3_Omni",
     "qwen3_vl": "Qwen3_VL",
     "qwen3_5": "Qwen3_5",
@@ -99,6 +115,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "vita": "VITA",
     "vllm": "VLLM",
     "vora": "VoRA",
+    "vqtoken": "VQToken",
     "whisper_vllm": "WhisperVllm",
     "whisper": "Whisper",
     "whisper_tt": "WhisperTT",
@@ -107,31 +124,52 @@ AVAILABLE_SIMPLE_MODELS = {
 }
 
 AVAILABLE_CHAT_TEMPLATE_MODELS = {
+    "gemini": "Gemini",
+    "aero_realtime_vllm": "AeroRealtimeVLLM",
     "bagel_lmms_engine": "BagelLmmsEngine",
+    "fastvideo": "FastVideo",
     "internvl_hf": "InternVLHf",
     "llava_hf": "LlavaHf",
     "nanovlm": "NanoVLM",
+    "neo_ov": "NeoOV",
     "phi4_multimodal": "Phi4",
     "qwen3_vl": "Qwen3_VL",
     "qwen3_5": "Qwen3_5",
     "qwen2_5_vl": "Qwen2_5_VL",
+    "qwen2_5_omni": "Qwen2_5_Omni",
+    "qwen3_omni": "Qwen3_Omni",
+    "omnivinci": "OmniVinci",
+    "baichuan_omni": "BaichuanOmni",
+    "minicpm_o": "MiniCPM_O",
     "thyme": "Thyme",
     "openai": "OpenAICompatible",
     "vllm": "VLLM",
+    "vllm_omni_api": "VLLMOmniAPI",
+    "vllm_omni": "VLLMOmni",
     "vllm_generate": "VLLMGenerate",
     "sglang": "Sglang",
+    "sglang_diffusion": "SGLangDiffusion",
     "huggingface": "Huggingface",
+    "litellm": "LiteLLMCompatible",
     "async_openai": "AsyncOpenAIChat",
     "async_hf_model": "AsyncHFModel",
     "longvila": "LongVila",
     "llava_onevision1_5": "Llava_OneVision1_5",
+    "llava_onevision2": "Llava_OneVision2",
+    "lfm2_5_vl": "LFM2_5_VL",
 }
 
 MODEL_ALIASES: dict[str, tuple[str, ...]] = {
+    "aero_realtime_vllm": ("aero_realtime_vllm_chat",),
+    "gemini": ("gemini_api",),
     "dummy": ("dummy_video_reader",),
     "openai": ("openai_compatible", "openai_compatible_chat"),
     "async_openai": ("async_openai_compatible_chat", "async_openai_compatible"),
     "async_hf_model": ("async_hf",),
+    "litellm": ("litellm_chat", "litellm_compatible"),
+    "vllm_omni_api": ("vllm-omni-api", "vllm_omni_client"),
+    "vllm_omni": ("vllm-omni",),
+    "sglang_diffusion": ("sglang-diffusion", "sglang_wan", "sglang-wan"),
 }
 
 
@@ -171,7 +209,7 @@ def _merge_legacy_plugin_models(registry: ModelRegistryV2) -> None:
         return
 
     warnings.warn(
-        "LMMS_EVAL_PLUGINS is deprecated. Prefer Python entry-points group " "'lmms_eval.models' for plugin model registration.",
+        "LMMS_EVAL_PLUGINS is deprecated. Prefer Python entry-points group 'lmms_eval.models' for plugin model registration.",
         DeprecationWarning,
         stacklevel=2,
     )

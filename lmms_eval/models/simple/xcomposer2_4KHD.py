@@ -17,7 +17,7 @@ from lmms_eval.api.registry import register_model
 
 pattern = re.compile(r"[A-Z]")
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 meta_instruction = """You are an AI assistant whose name is InternLM-XComposer (浦语·灵笔).
 - InternLM-XComposer (浦语·灵笔) is a multi-modality conversational language model that is developed\
@@ -162,7 +162,7 @@ class XComposer2_4KHD(lmms):
             im_mask = []
             images_loc = [0]
             need_bos = self.need_bos
-            padding = self.padding
+            _padding = self.padding
             for i, pts in enumerate(images_loc + [len(contexts)]):
                 subtext = contexts[pt1:pts]
                 if need_bos or len(subtext) > 0:

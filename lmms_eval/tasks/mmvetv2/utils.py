@@ -97,7 +97,7 @@ def process_images_horizontal(original_images, size):
         img_resized = resize_image_height(img, fixed_size=size)
 
         # Add order label
-        img_labeled = add_order_label(img_resized, f"[{i+1}]")
+        img_labeled = add_order_label(img_resized, f"[{i + 1}]")
 
         # Append to list
         images.append(img_labeled)
@@ -113,7 +113,7 @@ def process_images_vertical(original_images, size):
         img_resized = resize_image_width(img, fixed_size=size)
 
         # Add order label
-        img_labeled = add_order_label(img_resized, f"[{i+1}]")
+        img_labeled = add_order_label(img_resized, f"[{i + 1}]")
 
         # Append to list
         images.append(img_labeled)

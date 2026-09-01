@@ -91,8 +91,8 @@ def extract_characters_regex(s):
         "The correct answer is",
         "The answer is",
         "The answer",
-        "The best option is" "The correct option is",
-        "Best answer:" "Best option:",
+        "The best option isThe correct option is",
+        "Best answer:Best option:",
     ]
     for answer_prefix in answer_prefixes:
         s = s.replace(answer_prefix, "")
@@ -150,12 +150,12 @@ def mmworld_aggregate_results(results):
             if category in k:
                 total_correct += v["correct"]
                 total_answered += v["answered"]
-        eval_logger.info(f"Evaluation on DISCIPLINES: {category}: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+        eval_logger.info(f"Evaluation on DISCIPLINES: {category}: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%")
 
     total_correct = 0
     total_answered = 0
     for k, v in category2score.items():
         total_correct += v["correct"]
         total_answered += v["answered"]
-    eval_logger.info(f"Overall Performance: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+    eval_logger.info(f"Overall Performance: {100 * total_correct / total_answered if total_answered > 0 else 0: .1f}%")
     return 100 * total_correct / total_answered if total_answered > 0 else 0

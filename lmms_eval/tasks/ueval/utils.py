@@ -108,7 +108,7 @@ def parse_gemini_response(response_text: str) -> Dict[str, Any]:
             fixed_json = re.sub(r'(?<!\\)\\(?!["\\/bfnrtu])', r"\\\\", json_str)
             return json.loads(fixed_json)
         except Exception:
-            raise ValueError(f"Failed to parse JSON. Original error: {e}\n" f"JSON (first 500 chars): {json_str[:500]}")
+            raise ValueError(f"Failed to parse JSON. Original error: {e}\nJSON (first 500 chars): {json_str[:500]}")
 
 
 def send_to_gemini(prompt: str, image_paths: Optional[Sequence[str]], retries: int = 5) -> Optional[Dict[str, Any]]:
@@ -143,7 +143,7 @@ def send_to_gemini(prompt: str, image_paths: Optional[Sequence[str]], retries: i
             parsed = parse_gemini_response(response.text)
             return parsed
         except Exception as e:
-            eval_logger.error(f"Gemini API error (attempt {attempt+1}): {e}")
+            eval_logger.error(f"Gemini API error (attempt {attempt + 1}): {e}")
             if attempt < retries - 1:
                 time.sleep(2**attempt)
             else:
@@ -272,7 +272,7 @@ def ueval_process_results(doc, results):
     # Extract domain from task_type field
     domain = doc.get("task_type", "unknown")
 
-    eval_logger.info(f"[{domain}] Sample {doc.get('id', 'N/A')}: " f"Text={text_met}/{text_total}, " f"Image={image_met}/{image_total}, " f"Overall={overall_score:.4f}")
+    eval_logger.info(f"[{domain}] Sample {doc.get('id', 'N/A')}: Text={text_met}/{text_total}, Image={image_met}/{image_total}, Overall={overall_score:.4f}")
 
     return {
         "text_score": {"score": text_score, "domain": domain, "id": doc.get("id", "N/A")},

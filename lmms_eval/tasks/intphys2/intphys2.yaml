@@ -1,0 +1,23 @@
+task: intphys2
+dataset_path: facebook/IntPhys2
+test_split: Main
+output_type: generate_until
+doc_to_visual: !function utils.intphys2_main_doc_to_visual
+doc_to_text: !function utils.intphys2_doc_to_text
+doc_to_target: !function utils.intphys2_doc_to_target
+process_results: !function utils.intphys2_process_results
+metric_list:
+  - metric: intphys2_accuracy
+    aggregation: !function utils.intphys2_aggregate
+    higher_is_better: true
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  top_p: 1.0
+  do_sample: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with only Possible or Impossible."
+metadata:
+  - version: 0.0

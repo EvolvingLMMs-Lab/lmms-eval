@@ -14,10 +14,10 @@ from lmms_eval.api.registry import register_model
 eval_logger = logging.getLogger("eval_logger")
 
 
-from datetime import timedelta
+from datetime import timedelta  # noqa: E402
 
-from accelerate.state import AcceleratorState
-from accelerate.utils import InitProcessGroupKwargs
+from accelerate.state import AcceleratorState  # noqa: E402
+from accelerate.utils import InitProcessGroupKwargs  # noqa: E402
 
 
 @register_model("xcomposer2d5")

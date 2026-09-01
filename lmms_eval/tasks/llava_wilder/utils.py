@@ -63,7 +63,7 @@ def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
             content = response.content if response.content else ""
             return content, response.model_used
         except Exception as e:
-            eval_logger.warning(f"Request failed on attempt {attempt+1}: {e}")
+            eval_logger.warning(f"Request failed on attempt {attempt + 1}: {e}")
             time.sleep(wait_time)
             if attempt == max_retries - 1:
                 eval_logger.error(f"Failed to get response after {max_retries} attempts")
@@ -103,8 +103,8 @@ def llava_process_results(doc, result):
         question = doc.get("Question", "")
         ans1 = doc.get("Answer", "")
         ans2 = result[0] if result else ""
-        content = f"[Question]\n{question}\n\n" + f"[Assistant 1]\n{ans1}\n\n[End of Assistant 1]\n\n" + f"[Assistant 2]\n{ans2}\n\n[End of Assistant 2]\n\n" f"[System]\n{judge_rules}\n\n"
-        visuals = llava_doc_to_visual(doc)
+        content = f"[Question]\n{question}\n\n" + f"[Assistant 1]\n{ans1}\n\n[End of Assistant 1]\n\n" + f"[Assistant 2]\n{ans2}\n\n[End of Assistant 2]\n\n[System]\n{judge_rules}\n\n"
+        _visuals = llava_doc_to_visual(doc)
         image_path = doc["image"]
         base64_image = image_to_base64(image_path)
         review, model_name = get_chat_response(base64_image, content)

@@ -1,5 +1,6 @@
 import logging
 import re
+import string
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -58,9 +59,50 @@ def embspatial_doc_to_visual(doc: dict) -> list:
     return [doc["image"].convert("RGB")]
 
 
+def _format_neo_ov_content(images: list, prompt: str) -> list:
+    if len(images) == 1:
+        return [{"type": "image", "url": images[0]}, {"type": "text", "text": prompt}]
+
+    content = []
+    for idx, image in enumerate(images, start=1):
+        content.append({"type": "text", "text": f"Image-{idx}: "})
+        content.append({"type": "image", "url": image})
+    content.append({"type": "text", "text": prompt})
+    return content
+
+
+def _embspatial_neo_ov_prompt(doc: dict[str, Any]) -> str:
+    question = doc["question"].replace("<image>", "").strip()
+    hint = doc.get("hint")
+    if hint is not None and hint == hint:
+        question = f"{hint}\n{question}"
+
+    options = doc["answer_options"]
+    for idx, item in enumerate(options):
+        question += f"\n{string.ascii_uppercase[idx]}. {item}"
+
+    return question + "\nAnswer with the option's letter from the given choices directly."
+
+
+def embspatial_doc_to_messages(doc: dict[str, Any], lmms_eval_specific_kwargs: Optional[dict[str, Any]] = None) -> list:
+    lmms_eval_specific_kwargs = lmms_eval_specific_kwargs or {}
+    images = embspatial_doc_to_visual(doc)
+
+    if lmms_eval_specific_kwargs.get("prompt_format") == "neo_ov":
+        prompt = _embspatial_neo_ov_prompt(doc)
+        return [{"role": "user", "content": _format_neo_ov_content(images, prompt)}]
+
+    prompt = embspatial_doc_to_text(doc, lmms_eval_specific_kwargs)
+    content = [{"type": "image", "url": image} for image in images]
+    content.append({"type": "text", "text": prompt})
+    return [{"role": "user", "content": content}]
+
+
+DATA_SOURCES = ["ai2thor", "mp3d", "scannet"]
+
+
 def embspatial_process_results(doc, results):
     choices = ["A", "B", "C", "D"]
-    key_name = "embspatial_acc"
     # extract grounded answer
     grounded_output = choices[doc["answer"]]
     response = results[0]
@@ -69,8 +111,14 @@ def embspatial_process_results(doc, results):
     pred_letter = _extract_answer_letter(response)
     flag = pred_letter == grounded_output
 
-    omnispatial_submission = {"id": doc["question_id"], "gt_content": grounded_output, "pred": response, "sub_task": doc["relation"], "is_correct": flag}
-    return {key_name: omnispatial_submission}
+    data_source = doc.get("data_source", "unknown")
+    entry = {"id": doc["question_id"], "gt_content": grounded_output, "pred": response, "sub_task": doc["relation"], "is_correct": flag, "data_source": data_source}
+
+    result = {"embspatial_acc": entry}
+    for src in DATA_SOURCES:
+        result[f"{src}_accuracy"] = entry
+
+    return result
 
 
 def embspatial_aggregate_results(results: List[Dict]):
@@ -99,3 +147,21 @@ def embspatial_aggregate_results(results: List[Dict]):
 
     eval_logger.info("=" * 40)
     return accuracy
+
+
+def _aggregate_by_source(results, target_source: str) -> float:
+    """Aggregate accuracy for a specific data source."""
+    scores = [1 if r["is_correct"] else 0 for r in results if r.get("data_source") == target_source]
+    return sum(scores) / len(scores) if scores else 0.0
+
+
+def embspatial_aggregate_ai2thor_accuracy(results):
+    return _aggregate_by_source(results, "ai2thor")
+
+
+def embspatial_aggregate_mp3d_accuracy(results):
+    return _aggregate_by_source(results, "mp3d")
+
+
+def embspatial_aggregate_scannet_accuracy(results):
+    return _aggregate_by_source(results, "scannet")

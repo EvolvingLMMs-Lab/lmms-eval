@@ -36,7 +36,7 @@ import os
 import random
 import re
 from collections import defaultdict
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import requests
 from datasets import Dataset

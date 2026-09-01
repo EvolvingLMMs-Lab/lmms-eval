@@ -81,7 +81,7 @@ def flickr_aggregation_result(results, metric, args):
 
     score, scores = scorers_dict[metric][0].compute_score(gts, res)
     # When metric is one of the Bleu, score will be a list
-    if type(score) == list:
+    if type(score) is list:
         n = int(metric.split("_")[-1])
         score = score[n - 1]
 

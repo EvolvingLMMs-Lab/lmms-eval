@@ -13,7 +13,7 @@ processor = AutoProcessor.from_pretrained(model_id)
 raw_image_1 = Image.open(image_file_1)
 raw_image_2 = Image.open(image_file_2)
 inputs = processor([prompt_1, prompt_2], [raw_image_1, raw_image_1, raw_image_2], padding=True, return_tensors="pt").to(0, torch.float16)
-import pdb
+import pdb  # noqa: E402
 
 pdb.set_trace()
 output = model.generate(**inputs, max_new_tokens=200, do_sample=False)

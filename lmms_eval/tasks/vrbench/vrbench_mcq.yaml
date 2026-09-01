@@ -1,0 +1,28 @@
+task: vrbench_mcq
+include: _default_template_yaml
+process_results: !function utils.vrbench_mcq_process_results
+metric_list:
+  - metric: vrbench_score
+    aggregation: !function utils.vrbench_mcq_aggregate_results
+    higher_is_better: true
+  - metric: vrbench_mcq_event_attribution_accuracy
+    aggregation: !function utils.vrbench_mcq_aggregate_event_attribution
+    higher_is_better: true
+  - metric: vrbench_mcq_hypothetical_reasoning_accuracy
+    aggregation: !function utils.vrbench_mcq_aggregate_hypothetical_reasoning
+    higher_is_better: true
+  - metric: vrbench_mcq_event_summarization_accuracy
+    aggregation: !function utils.vrbench_mcq_aggregate_event_summarization
+    higher_is_better: true
+  - metric: vrbench_mcq_implicit_inference_accuracy
+    aggregation: !function utils.vrbench_mcq_aggregate_implicit_inference
+    higher_is_better: true
+  - metric: vrbench_mcq_event_prediction_accuracy
+    aggregation: !function utils.vrbench_mcq_aggregate_event_prediction
+    higher_is_better: true
+  - metric: vrbench_mcq_counting_problems_accuracy
+    aggregation: !function utils.vrbench_mcq_aggregate_counting_problems
+    higher_is_better: true
+  - metric: vrbench_mcq_logical_linkage_accuracy
+    aggregation: !function utils.vrbench_mcq_aggregate_logical_linkage
+    higher_is_better: true

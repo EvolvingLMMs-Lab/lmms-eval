@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/DC100_EN
+dataset_path: lmms-lab-encoder/DC100_EN
 dataset_kwargs:
   token: True
 task: "dc100_en"

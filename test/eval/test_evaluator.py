@@ -6,11 +6,8 @@ cache integration, is_simple vs chat model paths.
 Does NOT cover: simple_evaluate, evaluate (too many dependencies).
 """
 
-import copy
 import json
 from unittest.mock import MagicMock
-
-import pytest
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.evaluator import _run_generate_until_agentic

@@ -1,0 +1,3 @@
+dataset_name: 64_frame
+task: revsi_64_frame
+include: _default_template_yaml

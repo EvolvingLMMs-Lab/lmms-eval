@@ -37,20 +37,28 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # Import LLaVA modules
 try:
     from llava.constants import (
-        DEFAULT_IM_END_TOKEN,
-        DEFAULT_IM_START_TOKEN,
+        DEFAULT_IM_END_TOKEN as DEFAULT_IM_END_TOKEN,
+    )
+    from llava.constants import (
+        DEFAULT_IM_START_TOKEN as DEFAULT_IM_START_TOKEN,
+    )
+    from llava.constants import (
         DEFAULT_IMAGE_TOKEN,
-        IGNORE_INDEX,
         IMAGE_TOKEN_INDEX,
+    )
+    from llava.constants import (
+        IGNORE_INDEX as IGNORE_INDEX,
     )
     from llava.conversation import SeparatorStyle, conv_templates
     from llava.mm_utils import (
         KeywordsStoppingCriteria,
         get_model_name_from_path,
-        process_images,
         tokenizer_image_token,
     )
-    from llava.model.builder import load_pretrained_model
+    from llava.mm_utils import (
+        process_images as process_images,
+    )
+    from llava.model.builder import load_pretrained_model as load_pretrained_model
 except ImportError as e:
     eval_logger.debug(f"LLaVA_NeXT is not installed. Please install llava from `https://github.com/rese1f/MovieChat.git` to use this model.\nError: {e}")
 
@@ -266,7 +274,7 @@ class Llava_OneVision_MovieChat(lmms):
     def tok_decode(self, tokens):
         try:
             return self.tokenizer.decode(tokens)
-        except:
+        except Exception:
             return self.tokenizer.decode([tokens])
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
@@ -281,7 +289,7 @@ class Llava_OneVision_MovieChat(lmms):
         return new_list
 
     def load_video(self, video_path, max_frames_num):
-        if type(video_path) == str:
+        if type(video_path) is str:
             vr = VideoReader(video_path, ctx=cpu(0))
         else:
             vr = VideoReader(video_path[0], ctx=cpu(0))
@@ -363,13 +371,13 @@ class Llava_OneVision_MovieChat(lmms):
                 if len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__:  # for multi image case, we treat per image aspect ratio as "pad" by default.
                     self._config.image_aspect_ratio = getattr(gen_kwargs, "image_aspect_ratio", "pad")
                     eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
-                if type(visual[0]) == PIL.Image.Image and "task_type" not in metadata and "sample_frames" not in metadata:  # For image task
+                if type(visual[0]) is PIL.Image.Image and "task_type" not in metadata and "sample_frames" not in metadata:  # For image task
                     raise NotImplementedError("MovieChat only supports video inputs.")
 
                 elif "task_type" in metadata and metadata["task_type"] == "video" and "sample_frames" in metadata:
                     raise NotImplementedError("MovieChat only supports video inputs.")
 
-                elif type(visual[0]) == str:  # For video task
+                elif type(visual[0]) is str:  # For video task
                     try:
                         self.short_memory_buffer = []
                         self.long_memory_buffer = []

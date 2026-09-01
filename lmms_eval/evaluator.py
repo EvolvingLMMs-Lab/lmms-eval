@@ -7,6 +7,9 @@ import mimetypes
 import os
 import random
 import re
+import time
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from dataclasses import dataclass
 from datetime import timedelta
 from typing import Callable, List, Optional, Union
 
@@ -22,21 +25,19 @@ from tqdm import tqdm
 # before slow ranks (e.g. 1h24m vs 4h24m).  3h was not enough — increase to 24h.
 torch.distributed.distributed_c10d.default_pg_timeout = timedelta(hours=24)
 
-import lmms_eval.api
-import lmms_eval.api.metrics
-import lmms_eval.api.registry
-from lmms_eval import models
-from lmms_eval.api.instance import Instance, unwrap_generation_output
-from lmms_eval.api.model import lmms
-from lmms_eval.api.reasoning import parse_reasoning_tags_config, strip_reasoning_tags
-from lmms_eval.api.task import Task
-from lmms_eval.baselines import (
-    BASELINE_REGISTRY,
+import lmms_eval.api  # noqa: E402
+import lmms_eval.api.metrics  # noqa: E402
+import lmms_eval.api.registry  # noqa: E402
+from lmms_eval import models  # noqa: E402
+from lmms_eval.api.instance import Instance, unwrap_generation_output  # noqa: E402
+from lmms_eval.api.reasoning import parse_reasoning_tags_config, strip_reasoning_tags  # noqa: E402
+from lmms_eval.api.task import Task  # noqa: E402
+from lmms_eval.baselines import (  # noqa: E402
     get_baseline_display_name,
     load_baseline,
 )
-from lmms_eval.caching.response_cache import ResponseCache
-from lmms_eval.evaluator_utils import (
+from lmms_eval.caching.response_cache import ResponseCache  # noqa: E402
+from lmms_eval.evaluator_utils import (  # noqa: E402
     compute_baseline_comparison,
     consolidate_group_results,
     consolidate_results,
@@ -45,20 +46,19 @@ from lmms_eval.evaluator_utils import (
     get_task_list,
     prepare_print_tasks,
     print_writeout,
-    run_task_tests,
 )
-from lmms_eval.llm_judge.launcher import get_launcher
-from lmms_eval.loggers.evaluation_tracker import EvaluationTracker
-from lmms_eval.models.model_utils.efficiency_metrics import build_efficiency_summary
-from lmms_eval.models.model_utils.usage_metrics import (
+from lmms_eval.llm_judge.launcher import get_launcher  # noqa: E402
+from lmms_eval.loggers.evaluation_tracker import EvaluationTracker  # noqa: E402
+from lmms_eval.models.model_utils.efficiency_metrics import build_efficiency_summary  # noqa: E402
+from lmms_eval.models.model_utils.usage_metrics import (  # noqa: E402
     is_budget_exceeded,
     reset_usage_metrics,
     set_budget,
     set_task_context,
     summarize_usage_metrics,
 )
-from lmms_eval.tasks import TaskManager, get_task_dict
-from lmms_eval.utils import (
+from lmms_eval.tasks import TaskManager, get_task_dict  # noqa: E402
+from lmms_eval.utils import (  # noqa: E402
     create_iterator,
     get_datetime_str,
     get_git_branch_name,
@@ -73,6 +73,43 @@ from lmms_eval.utils import (
 )
 
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff")
+_SENSITIVE_CONFIG_KEYS = {
+    "api_key",
+    "client_secret",
+    "hf_token",
+    "huggingface_hub_token",
+    "huggingfacehub_api_token",
+    "token",
+}
+# Suffixes also catch prefixed variants: openai_api_key, github_token, my_secret, db_password.
+_SENSITIVE_KEY_SUFFIXES = ("api_key", "_token", "_secret", "password")
+_SECRET_ASSIGNMENT_RE = re.compile(r"(?i)(^|[,\s])(\w*(?:api_key|token|secret|password))=([^,\s]+)")
+_HF_TOKEN_VALUE_RE = re.compile(r"\bhf_[A-Za-z0-9]{20,}\b")
+
+
+def _is_sensitive_config_key(key) -> bool:
+    key_lower = str(key).lower()
+    return key_lower in _SENSITIVE_CONFIG_KEYS or key_lower.endswith(_SENSITIVE_KEY_SUFFIXES)
+
+
+def _redact_eval_config_secrets(value):
+    if isinstance(value, dict):
+        return {key: ("[REDACTED]" if _is_sensitive_config_key(key) else _redact_eval_config_secrets(item)) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return type(value)(_redact_eval_config_secrets(item) for item in value)
+    if isinstance(value, str):
+        value = _SECRET_ASSIGNMENT_RE.sub(r"\1\2=[REDACTED]", value)
+        return _HF_TOKEN_VALUE_RE.sub("[REDACTED]", value)
+    return value
+
+
+def _clone_padding_request(pad_source: Instance) -> Instance:
+    pad_instance = copy.copy(pad_source)
+    pad_instance.metadata = dict(pad_source.metadata or {})
+    pad_instance.metadata["__padding_only__"] = True
+    pad_instance.resps = []
+    pad_instance.token_counts = []
+    return pad_instance
 
 
 def _enable_reentrant_filelocks() -> None:
@@ -202,6 +239,129 @@ def _collect_input_media(doc: dict, request_args: list) -> list[str]:
     return sources
 
 
+@dataclass
+class _ProcessedDocument:
+    metrics: dict
+    per_sample_scores: dict
+    logged_sample: Optional[dict]
+
+
+def _thread_map_ordered(function: Callable, items, max_workers: int, on_complete: Optional[Callable] = None) -> list:
+    """Run ``function`` concurrently while returning results in input order.
+
+    Only ``2 * max_workers`` inputs are materialized at once. This keeps media
+    documents bounded in memory while allowing a slow early document to finish
+    after later documents without stalling the worker pool.
+    """
+
+    if max_workers < 1:
+        raise ValueError(f"process_docs_parallel must be at least 1, got {max_workers}")
+
+    if max_workers == 1:
+        results = []
+        for item in items:
+            results.append(function(item))
+            if on_complete is not None:
+                on_complete()
+        return results
+
+    indexed_items = iter(enumerate(items))
+    completed = []
+    with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="lmms-process-results") as executor:
+        pending = {}
+
+        def submit_next() -> bool:
+            try:
+                index, item = next(indexed_items)
+            except StopIteration:
+                return False
+            pending[executor.submit(function, item)] = index
+            return True
+
+        for _ in range(max_workers * 2):
+            if not submit_next():
+                break
+
+        while pending:
+            done, _ = wait(tuple(pending), return_when=FIRST_COMPLETED)
+            for future in done:
+                index = pending.pop(future)
+                completed.append((index, future.result()))
+                if on_complete is not None:
+                    on_complete()
+                submit_next()
+
+    completed.sort(key=lambda item: item[0])
+    return [result for _, result in completed]
+
+
+def _process_document_results(item, *, task: Task, filter_key: str, reasoning_tags, log_samples: bool) -> _ProcessedDocument:
+    """Run one document's scoring without mutating shared ``TaskOutput`` state."""
+
+    doc_id, doc, requests = item
+
+    if reasoning_tags is not None:
+        for req in requests:
+            raw_resp = req.filtered_resps[filter_key]
+            req.raw_filtered_resps[filter_key] = raw_resp
+            if isinstance(raw_resp, str):
+                req.filtered_resps[filter_key] = strip_reasoning_tags(raw_resp, reasoning_tags)
+            elif isinstance(raw_resp, list):
+                req.filtered_resps[filter_key] = [strip_reasoning_tags(response, reasoning_tags) if isinstance(response, str) else response for response in raw_resp]
+
+    metrics = task.process_results(doc, [req.filtered_resps[filter_key] for req in requests])
+
+    per_sample_scores = {}
+    repeats = task.config.repeats if hasattr(task, "config") and hasattr(task.config, "repeats") else 1
+    if repeats > 1 and len(requests) == repeats:
+        for req in requests:
+            sample_metrics = task.process_results(doc, [req.filtered_resps[filter_key]])
+            for metric_name, value in sample_metrics.items():
+                per_sample_scores.setdefault(metric_name, []).append(value)
+
+    logged_sample = None
+    if log_samples:
+        target = task.doc_to_target(doc)
+        saved_doc = {key: value for key, value in doc.items() if not is_multimodal_content(value)}
+        filtered_arguments = []
+        for req in requests:
+            for value in req.args:
+                if isinstance(value, (str, int, float, bool, list, dict, type(None))):
+                    filtered_arguments.append(value)
+
+        input_media = _collect_input_media(doc, filtered_arguments)
+        per_sample_token_counts = []
+        for req in requests:
+            if req.token_counts:
+                token_counts = req.token_counts[0]
+                per_sample_token_counts.append(token_counts.to_dict() if token_counts is not None else None)
+            else:
+                per_sample_token_counts.append(None)
+
+        logged_sample = {
+            "doc_id": doc_id,
+            "doc": saved_doc,
+            "target": target,
+            "arguments": filtered_arguments,
+            "resps": [req.raw_filtered_resps.get(filter_key, req.resps) for req in requests],
+            "filtered_resps": [req.filtered_resps[filter_key] for req in requests],
+            "token_counts": per_sample_token_counts,
+            "doc_hash": hash_string(
+                json.dumps(
+                    requests[0].doc,
+                    indent=2,
+                    default=handle_non_serializable,
+                    ensure_ascii=False,
+                )
+            ),
+        }
+        if input_media:
+            logged_sample["input_media"] = input_media
+        logged_sample.update(metrics)
+
+    return _ProcessedDocument(metrics=metrics, per_sample_scores=per_sample_scores, logged_sample=logged_sample)
+
+
 @positional_deprecated
 def simple_evaluate(
     model,
@@ -241,6 +401,7 @@ def simple_evaluate(
     repeats: int = 1,
     baseline: Optional[str] = None,
     max_tokens: Optional[int] = None,
+    process_docs_parallel: int = 4,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -302,6 +463,8 @@ def simple_evaluate(
         Random seed for fewshot sampler random generator. If set to None, the seed of generator will be set to None.
     :param distributed_executor_backend: str
         The backend to use for distributed execution, `accelerate` or `torchrun`. Defaults to "accelerate" for the `accelerate` library.
+    :param process_docs_parallel: int
+        Number of worker threads used for per-document ``process_results`` calls. Set to 1 for serial postprocessing.
     :return
         Dictionary of results
     """
@@ -323,6 +486,10 @@ def simple_evaluate(
         eval_logger.info(" | ".join(seed_message))
 
     assert tasks != [], "No tasks specified, or no tasks found. Please verify the task names."
+
+    process_docs_parallel = int(process_docs_parallel)
+    if process_docs_parallel < 1:
+        raise ValueError(f"process_docs_parallel must be at least 1, got {process_docs_parallel}")
 
     assert distributed_executor_backend in {"accelerate", "torchrun"}, f"Invalid distributed executor backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'."
 
@@ -404,7 +571,7 @@ def simple_evaluate(
 
             else:
                 task_obj = task_dict[task_name]
-                if type(task_obj) == tuple:
+                if type(task_obj) is tuple:
                     group, task_obj = task_obj
                     if task_obj is None:
                         continue
@@ -466,7 +633,7 @@ def simple_evaluate(
         set_budget(max_tokens=max_tokens)
 
     # Getting the rank settings
-    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+    _local_rank = int(os.environ.get("LOCAL_RANK", 0))
     global_rank = int(os.environ.get("RANK", 0))
     world_size = int(os.environ.get("WORLD_SIZE", 1))
 
@@ -501,6 +668,7 @@ def simple_evaluate(
             cli_args=cli_args,
             eval_server_launcher=eval_launcher,
             response_cache=response_cache,
+            process_docs_parallel=process_docs_parallel,
         )
         eval_succeeded = True
     finally:
@@ -531,6 +699,7 @@ def simple_evaluate(
         # add info about execution
         results["config"].update(
             {
+                "model_backend": f"{type(lm).__module__}.{type(lm).__name__} ({task_type})",
                 "batch_size": batch_size,
                 "batch_sizes": (list(lm.batch_sizes.values()) if hasattr(lm, "batch_sizes") else []),
                 "device": device,
@@ -538,6 +707,7 @@ def simple_evaluate(
                 "limit": limit,
                 "offset": offset,
                 "bootstrap_iters": bootstrap_iters,
+                "process_docs_parallel": process_docs_parallel,
                 "gen_kwargs": gen_kwargs,
                 "random_seed": random_seed,
                 "numpy_seed": numpy_random_seed,
@@ -555,6 +725,8 @@ def simple_evaluate(
                 except (TypeError, ValueError):
                     resolved[key] = str(value)
             results["config"]["resolved_cli_args"] = resolved
+
+        results["config"] = _redact_eval_config_secrets(results["config"])
 
         results["git_hash"] = get_git_commit_hash()
         results["git_branch"] = get_git_branch_name()
@@ -621,7 +793,7 @@ def simple_evaluate(
                             task_results["paired_ci_lower"] = comparison["ci_lower"] * 100
                             task_results["paired_ci_upper"] = comparison["ci_upper"] * 100
                             task_results["paired_pvalue"] = comparison["p_value"]
-                            eval_logger.info(f"[Baseline] {task_name}: diff={comparison['mean_diff']*100:.2f}%, p={comparison['p_value']:.4f}")
+                            eval_logger.info(f"[Baseline] {task_name}: diff={comparison['mean_diff'] * 100:.2f}%, p={comparison['p_value']:.4f}")
                         else:
                             eval_logger.debug(f"[Baseline] Skipping {task_name}: no valid scores found with score_key='{score_key}'")
                 except Exception as e:
@@ -676,7 +848,7 @@ def _run_generate_until_agentic(
                     metadata=req.metadata,
                 )
             else:
-                current_doc = lm.task_dict[task_name][split][doc_id]
+                _current_doc = lm.task_dict[task_name][split][doc_id]
 
                 def _agentic_doc_to_messages(_doc):
                     visuals = current_doc_to_visual(_doc)
@@ -745,7 +917,9 @@ def _run_generate_until_agentic(
                 if next_context is not None:
                     current_context = next_context
                 if visuals is not None:
-                    current_doc_to_visual = lambda _doc, _visuals=visuals: _visuals
+
+                    def current_doc_to_visual(_doc, _visuals=visuals):
+                        return _visuals
             elif isinstance(step_payload, str):
                 current_context = step_payload
             else:
@@ -805,6 +979,7 @@ def evaluate(
     eval_server_launcher: Optional[Union[str, Callable]] = None,
     cli_args=None,
     response_cache: Optional[ResponseCache] = None,
+    process_docs_parallel: int = 4,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -830,9 +1005,15 @@ def evaluate(
         Whether to provide the fewshot examples as a multiturn conversation or a single user turn.
     :param distributed_executor_backend: str
         The backend to use for distributed execution, `accelerate` or `torchrun`. Defaults to "accelerate" for the `accelerate` library.
+    :param process_docs_parallel: int
+        Number of worker threads used for per-document ``process_results`` calls. Set to 1 for serial postprocessing.
     :return
         Dictionary of results
     """
+
+    process_docs_parallel = int(process_docs_parallel)
+    if process_docs_parallel < 1:
+        raise ValueError(f"process_docs_parallel must be at least 1, got {process_docs_parallel}")
 
     # stores the final result for each task, for each metric/filter pair.
     results = collections.defaultdict(dict)
@@ -847,14 +1028,14 @@ def evaluate(
     # Aggregated task scores presented with groups
     results_agg = collections.defaultdict(dict)
     # Aggregated groups scores only
-    groups_agg = collections.defaultdict(dict)
+    _groups_agg = collections.defaultdict(dict)
     # stores the amount to pad out reqs per req. type so that
     # number of fwd passes per distributed rank is equal
     padding_requests = collections.defaultdict(int)
     # store the hierarchy to do proper ordering
     task_hierarchy = collections.defaultdict(list)
     # store the ordering of tasks and groups
-    task_order = collections.defaultdict(int)
+    _task_order = collections.defaultdict(int)
     task_group_alias = collections.defaultdict(dict)
     # store num-fewshot value per task
     num_fewshot = collections.defaultdict(int)
@@ -862,6 +1043,7 @@ def evaluate(
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     global_rank = int(os.environ.get("RANK", 0))
     world_size = int(os.environ.get("WORLD_SIZE", 1))
+
     eval_logger.info(f"Running on rank {global_rank} (local rank {local_rank})")
 
     def _infer_task_request_type(task_obj: Task) -> Optional[str]:
@@ -882,8 +1064,32 @@ def evaluate(
         if not all("bypass" not in getattr(task_output.task, "_metric_fn_list", {}).keys() for task_output in eval_tasks):
             raise ValueError("log_samples must be True for 'bypass' metric-only tasks")
 
-    if distributed_executor_backend == "accelerate" and not hasattr(lm, "accelerator"):
-        lm.accelerator = Accelerator()
+    if distributed_executor_backend == "accelerate":
+        if not hasattr(lm, "accelerator"):
+            lm.accelerator = Accelerator()
+    else:
+        # Torchrun/native path: auto-init a process group for multi-rank runs
+        # whose model backend never called init_process_group (e.g. diffusers
+        # video-gen models), so evaluator collectives don't crash. gloo needs no
+        # GPU. Gated out of the accelerate path on purpose: pre-initializing here
+        # would make Accelerator() adopt this gloo group instead of building NCCL,
+        # silently running GPU collectives on CPU.
+        if world_size > 1 and dist.is_available() and not dist.is_initialized():
+            if os.environ.get("MASTER_ADDR") and os.environ.get("MASTER_PORT"):
+                dist.init_process_group(backend="gloo")
+                eval_logger.info(f"evaluator: auto-initialized gloo process group (world={world_size})")
+            else:
+                eval_logger.warning(
+                    f"evaluator: WORLD_SIZE={world_size} but MASTER_ADDR/MASTER_PORT are unset; skipping torch.distributed auto-init. Distributed collectives will fail unless the model backend initializes the process group itself."
+                )
+
+    # Inject rank/world_size into the model so that logging (tqdm disable)
+    # and rank-conditional logic work on non-zero ranks.  Many simple models
+    # only read LOCAL_RANK for device binding and leave _rank/_world_size
+    # at their defaults (0, 1).
+    if world_size > 1:
+        lm._rank = global_rank
+        lm._world_size = world_size
 
     for task_output in eval_tasks:
         task = task_output.task
@@ -892,7 +1098,7 @@ def evaluate(
 
         name_to_task[task_name] = task
 
-        if type(task) == tuple:
+        if type(task) is tuple:
             group_name, task = task
             task_hierarchy[group_name].append(task_name)
             versions[group_name] = "N/A"
@@ -950,8 +1156,8 @@ def evaluate(
                 instances_rnk = torch.tensor(len(task._instances), device=lm.device)
                 gathered_item = lm.accelerator.gather(instances_rnk).cpu().detach().numpy().tolist()
             elif distributed_executor_backend == "torchrun":
-                instances_rnk = torch.tensor(len(task._instances), device=lm.device)
-                gathered_item = torch.zeros(world_size * 1, dtype=instances_rnk.dtype, device=lm.device)
+                instances_rnk = torch.tensor([len(task._instances)], device=lm.device)
+                gathered_item = torch.zeros(world_size, dtype=instances_rnk.dtype, device=lm.device)
                 dist.all_gather_into_tensor(gathered_item, instances_rnk)
                 gathered_item = gathered_item.cpu().detach().numpy().tolist()
             else:
@@ -1003,7 +1209,8 @@ def evaluate(
                 eval_logger.warning(f"Running {reqtype} requests but could not find a pad source request on rank {global_rank}; skipping rank padding.")
             else:
                 for _ in range(padding_requests[reqtype]):
-                    cloned_reqs.extend([pad_source] * pad_source.repeats)
+                    pad_instance = _clone_padding_request(pad_source)
+                    cloned_reqs.extend([pad_instance] * pad_instance.repeats)
 
         # run requests through model (with optional response cache)
         if reqtype == "generate_until_agentic":
@@ -1053,6 +1260,31 @@ def evaluate(
 
     ### Postprocess outputs ###
     # TODO: del model here, maybe (idea: allow user to specify device of e.g. reward model separately)
+
+    # When a task opts in via `auto_strip_thinking`, prepend a StripThinkingFilter to
+    # the FRONT of each existing filter ensemble's chain so answer-extraction filters
+    # (take_first / regex / multi_choice_regex) receive text with the <think>/<thinking>
+    # reasoning blocks already removed. We deliberately do NOT add a sibling ensemble:
+    # FilterEnsembles do not chain (each reads raw inst.resps and writes its own
+    # filtered_resps key), so a sibling would leave extraction filters seeing un-stripped
+    # text and would create a new scored key holding an unselected list.
+    from lmms_eval.filters.transformation import StripThinkingFilter
+
+    for task_output in eval_tasks:
+        task = task_output.task
+        if not hasattr(task, "_filters"):
+            continue
+        if not getattr(getattr(task, "config", None), "auto_strip_thinking", False):
+            continue
+        # Skip when reasoning_tags is already configured (task or CLI): the scoring loop
+        # below strips those blocks, so auto-stripping here would double-strip.
+        cli_reasoning_tags = getattr(cli_args, "reasoning_tags", None) if cli_args else None
+        task_reasoning_tags = getattr(task.config, "reasoning_tags", None)
+        if parse_reasoning_tags_config(cli_value=cli_reasoning_tags, task_value=task_reasoning_tags) is not None:
+            continue
+        for ensemble in task._filters:
+            ensemble.filters.insert(0, StripThinkingFilter())
+
     for task_output in eval_tasks:
         task = task_output.task
         task.apply_filters()
@@ -1122,87 +1354,49 @@ def evaluate(
             )
             total_docs = sum(1 for _ in doc_iterator_for_counting)
             pbar = tqdm(total=total_docs, desc="Postprocessing", disable=(RANK != 0))
-            for doc_id, doc in doc_iterator:
-                requests = instances_by_doc_id[doc_id]
+            postprocess_started = time.perf_counter()
 
-                # Strip reasoning tags before scoring
-                if reasoning_tags is not None:
-                    for req in requests:
-                        raw_resp = req.filtered_resps[filter_key]
-                        req.raw_filtered_resps[filter_key] = raw_resp
-                        if isinstance(raw_resp, str):
-                            req.filtered_resps[filter_key] = strip_reasoning_tags(raw_resp, reasoning_tags)
-                        elif isinstance(raw_resp, list):
-                            req.filtered_resps[filter_key] = [strip_reasoning_tags(r, reasoning_tags) if isinstance(r, str) else r for r in raw_resp]
+            def documents_to_process():
+                for doc_id, doc in doc_iterator:
+                    requests = instances_by_doc_id[doc_id]
+                    # A partial rerun can leave a document in this rank's shard
+                    # without any corresponding requests.
+                    if not requests:
+                        pbar.update(1)
+                        continue
+                    yield doc_id, doc, requests
 
-                metrics = task.process_results(doc, [req.filtered_resps[filter_key] for req in requests])
+            def process_document(item):
+                return _process_document_results(
+                    item,
+                    task=task,
+                    filter_key=filter_key,
+                    reasoning_tags=reasoning_tags,
+                    log_samples=log_samples,
+                )
 
-                # For stability metrics: compute per-sample scores when repeats > 1
-                repeats = task.config.repeats if hasattr(task, "config") and hasattr(task.config, "repeats") else 1
-                if repeats > 1 and len(requests) == repeats:
-                    # Compute per-sample scores by calling process_results for each sample individually
-                    per_sample_scores = {}
-                    for req in requests:
-                        sample_metrics = task.process_results(doc, [req.filtered_resps[filter_key]])
-                        for metric_name, value in sample_metrics.items():
-                            if metric_name not in per_sample_scores:
-                                per_sample_scores[metric_name] = []
-                            per_sample_scores[metric_name].append(value)
-                    # Store per-sample scores grouped by doc_id
-                    for metric_name, scores in per_sample_scores.items():
-                        task_output.per_sample_metrics[(metric_name, filter_key)].append(scores)
+            processed_documents = _thread_map_ordered(
+                process_document,
+                documents_to_process(),
+                max_workers=process_docs_parallel,
+                on_complete=lambda: pbar.update(1),
+            )
 
-                if log_samples:
-                    target = task.doc_to_target(doc)
-                    saved_doc = {}
-                    for key, value in doc.items():
-                        if not is_multimodal_content(value):
-                            saved_doc[key] = value
-                    filtered_arguments = []
-                    for req in requests:
-                        # check if req.args is a list of tuples, and each item in the list is a serializable object
-                        for value in req.args:
-                            if isinstance(value, (str, int, float, bool, list, dict, type(None))):
-                                filtered_arguments.append(value)
-                            # else:
-                            #     filtered_arguments.append(_handle_non_serializable(value))
-
-                    input_media = _collect_input_media(doc, filtered_arguments)
-
-                    per_sample_tc = []
-                    for req in requests:
-                        if req.token_counts:
-                            tc = req.token_counts[0]
-                            per_sample_tc.append(tc.to_dict() if tc is not None else None)
-                        else:
-                            per_sample_tc.append(None)
-
-                    example = {
-                        "doc_id": doc_id,
-                        "doc": saved_doc,
-                        "target": target,
-                        "arguments": filtered_arguments,
-                        "resps": [req.raw_filtered_resps.get(filter_key, req.resps) for req in requests],
-                        "filtered_resps": [req.filtered_resps[filter_key] for req in requests],
-                        "token_counts": per_sample_tc,
-                        "doc_hash": hash_string(
-                            json.dumps(
-                                requests[0].doc,
-                                indent=2,
-                                default=handle_non_serializable,
-                                ensure_ascii=False,
-                            )
-                        ),
-                    }
-                    if input_media:
-                        example["input_media"] = input_media
-                    example.update(metrics)
-                    task_output.logged_samples.append(example)
-                for metric, value in metrics.items():
+            # Worker completion order is intentionally unconstrained. Commit
+            # results only after restoring document order so metrics and sample
+            # logs retain the serial evaluator's deterministic ordering.
+            for processed in processed_documents:
+                for metric_name, scores in processed.per_sample_scores.items():
+                    task_output.per_sample_metrics[(metric_name, filter_key)].append(scores)
+                if processed.logged_sample is not None:
+                    task_output.logged_samples.append(processed.logged_sample)
+                for metric, value in processed.metrics.items():
                     task_output.sample_metrics[(metric, filter_key)].append(value)
-                pbar.update(1)
 
             pbar.close()
+            if RANK == 0:
+                elapsed = time.perf_counter() - postprocess_started
+                eval_logger.info(f"Postprocessed {len(processed_documents)} docs for {task_output.task_name}/{filter_key} with {process_docs_parallel} worker(s) in {elapsed:.2f}s")
         set_task_context(None)
 
     if WORLD_SIZE > 1:

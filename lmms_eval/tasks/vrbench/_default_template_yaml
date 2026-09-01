@@ -1,0 +1,24 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: hf://datasets/OpenGVLab/VRBench/VRBench_eval.jsonl
+test_split: test
+output_type: generate_until
+cluster_key: video_id
+process_docs: !function utils.vrbench_process_docs
+doc_to_visual: !function utils.vrbench_doc_to_visual
+doc_to_text: !function utils.vrbench_doc_to_text
+doc_to_target: answer
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+    include_video_summary: true
+metadata:
+  version: 1.0

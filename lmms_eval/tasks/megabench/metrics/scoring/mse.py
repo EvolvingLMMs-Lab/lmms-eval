@@ -32,7 +32,7 @@ class NormalizedRMSE:
             rmse = np.clip(np.sqrt(mse_val), cls.MIN, cls.MAX)
             norm_rmse = 1 - (rmse - cls.MIN) / (cls.MAX - cls.MIN)
             return norm_rmse
-        except:
+        except Exception:
             # Usually Syntax, Type or Value errors, caused by wrong output formats
             return 0
 
@@ -56,7 +56,7 @@ class AngleSeqFloatRMSE:
             res = np.array(responses)
             tgt = np.array(targets)
             rmse = np.sqrt(mse(res, tgt)).sum() / len(targets)
-        except:  # cannot obtain the rmse from the response, return 0
+        except Exception:  # cannot obtain the rmse from the response, return 0
             return 0
 
         rmse = np.clip(rmse, cls.MIN, cls.MAX)

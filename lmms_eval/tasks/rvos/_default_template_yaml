@@ -1,0 +1,40 @@
+dataset_kwargs:
+  token: True
+  video: True
+output_type: generate_until
+doc_to_visual: !function utils.rvos_doc_to_visual
+doc_to_text: !function utils.rvos_doc_to_text
+doc_to_messages: !function utils.rvos_doc_to_messages
+doc_to_target: "expression"
+generation_kwargs:
+  max_new_tokens: 2048
+  temperature: 0
+  top_p: 1.0
+  do_sample: false
+process_results: !function utils.rvos_process_results
+metric_list:
+  - metric: rvos_f1
+    aggregation: !function utils.rvos_aggregate_f1
+    higher_is_better: true
+  - metric: rvos_precision
+    aggregation: !function utils.rvos_aggregate_precision
+    higher_is_better: true
+  - metric: rvos_recall
+    aggregation: !function utils.rvos_aggregate_recall
+    higher_is_better: true
+  - metric: rvos_hota
+    aggregation: !function utils.rvos_aggregate_hota
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    prompt_template: "Track the {expression}"
+    prompt_suffix: |2
+
+      Return the answer in XML format:
+      <tracks coords="t0 id0 x0 y0 id1 x1 y1; t1 id0 x2 y2 id1 x3 y3; ...">target objects</tracks>
+      Each semicolon-separated segment is one timestamp.
+      Format of each segment: time object_id x y [object_id x y ...], where time is in seconds, object_id starts from 0, and x and y are integers in [0,1000].
+      If the request refers to multiple objects, track all matching objects.
+      Use one consistent object_id for each physical object across time.
+metadata:
+  - version: 0.0

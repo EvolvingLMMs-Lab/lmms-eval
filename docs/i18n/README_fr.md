@@ -1,5 +1,5 @@
-<p align="center" width="70%">
-<img src="https://i.postimg.cc/KvkLzbF9/WX20241212-014400-2x.png">
+<p align="center">
+  <img src="../images/lmms-eval-hero.avif" alt="LMMs-Eval" width="70%">
 </p>
 
 # Suite d'Évaluation des Grands Modèles Multimodaux

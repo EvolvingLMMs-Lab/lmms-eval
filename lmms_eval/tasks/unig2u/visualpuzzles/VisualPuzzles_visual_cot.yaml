@@ -1,0 +1,7 @@
+group: unig2u_VisualPuzzles_visual_cot
+task:
+  - unig2u_VisualPuzzles_algorithmic_visual_cot
+  - unig2u_VisualPuzzles_analogical_visual_cot
+  - unig2u_VisualPuzzles_deductive_visual_cot
+  - unig2u_VisualPuzzles_inductive_visual_cot
+  - unig2u_VisualPuzzles_spatial_visual_cot

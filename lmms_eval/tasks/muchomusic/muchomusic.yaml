@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/muchomusic
+dataset_path: lmms-lab-audio/muchomusic
 dataset_kwargs:
   token: True
 

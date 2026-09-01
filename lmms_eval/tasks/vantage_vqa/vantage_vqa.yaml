@@ -1,0 +1,27 @@
+task: "vantage_vqa"
+dataset_path: nvidia/PhysicalAI-VANTAGE-Bench
+dataset_name: vqa
+test_split: test
+output_type: generate_until
+process_docs: !function utils.vantage_vqa_process_docs
+doc_to_visual: !function utils.vantage_vqa_doc_to_visual
+doc_to_text: !function utils.vantage_vqa_doc_to_text
+doc_to_messages: !function utils.vantage_vqa_doc_to_messages
+doc_to_target: !function utils.vantage_vqa_doc_to_target
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.vantage_vqa_process_results
+metric_list:
+  - metric: submission
+    aggregation: !function utils.vantage_vqa_aggregate_submissions
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nRespond with only the answer letter: A, B, C, or D."
+metadata:
+  version: 0.0

@@ -7,14 +7,15 @@ from pycocotools.coco import COCO
 COCO_METRICS = ["CIDEr"]
 
 
-from loguru import logger as eval_logger
+from loguru import logger as eval_logger  # noqa: E402
 
 
 def screenspot_bbox_doc_to_visual(doc):
     bbox = doc["bbox"]
     image = doc["image"].convert("RGB")
     draw = ImageDraw.Draw(image)
-    bbox_xy = [bbox[0], bbox[1], bbox[2], bbox[3]]
+    width, height = image.size
+    bbox_xy = [bbox[0] * width, bbox[1] * height, bbox[2] * width, bbox[3] * height]
     draw.rectangle(bbox_xy, outline="red", width=3)
     return [image.convert("RGB")]
 
@@ -86,7 +87,7 @@ def screenspot_aggregation_result(results, metric):
     # coco_eval.setEval(score, metric)
 
     # When metric is one of the Bleu, score will be a list
-    if type(score) == list:
+    if type(score) is list:
         n = int(metric.split("_")[-1])
         score = score[n - 1]
 

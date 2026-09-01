@@ -1,5 +1,5 @@
-<p align="center" width="70%">
-<img src="https://i.postimg.cc/KvkLzbF9/WX20241212-014400-2x.png">
+<p align="center">
+  <img src="https://raw.githubusercontent.com/EvolvingLMMs-Lab/lmms-eval/main/docs/images/lmms-eval-hero.avif" alt="LMMs-Eval" width="70%">
 </p>
 
 # LMMs-Eval: Probing Intelligence in the Real World
@@ -41,7 +41,7 @@ For how the pipeline works and the concrete mechanisms behind these principles, 
 
 ## What's New
 
-**v0.7** (Feb 2026) - Operational simplicity and pipeline maturity. 25+ new tasks across 8 domains, 2 new model backends, agentic task evaluation (`generate_until_agentic`), video I/O overhaul with TorchCodec (up to 3.58x faster), Lance-backed video distribution on Hugging Face, safety/red-teaming baselines, efficiency metrics (per-sample token counts, run-level throughput), and streamlined flattened JSONL log output for cleaner post-analysis. [Release notes](docs/releases/lmms-eval-0.7.md) | [Changelog](docs/releases/CHANGELOG.md).
+**v0.7** (Feb 2026) - Operational simplicity and pipeline maturity. 25+ new tasks across 8 domains, 2 new model backends, agentic task evaluation (`generate_until_agentic`), video I/O overhaul with TorchCodec (up to 3.58x faster), safety/red-teaming baselines, efficiency metrics (per-sample token counts, run-level throughput), and streamlined flattened JSONL log output for cleaner post-analysis. [Release notes](docs/releases/lmms-eval-0.7.md) | [Changelog](docs/releases/CHANGELOG.md).
 
 **v0.6** (Feb 2026) - Evaluation as a service. Standalone HTTP eval server, ~7.5x throughput over v0.5, statistically grounded results (CI, paired t-test), 50+ new tasks. [Release notes](docs/releases/lmms-eval-0.6.md) | [Changelog](docs/releases/CHANGELOG.md).
 
@@ -186,6 +186,11 @@ bash examples/models/sglang.sh
 **Qwen3.5:**
 ```bash
 bash examples/models/sglang_qwen35.sh
+```
+
+**Wan2.2-I2V on VBVR:**
+```bash
+bash examples/models/sglang_wan22_vbvr.sh
 ```
 
 ### Evaluation of OpenAI-Compatible Model

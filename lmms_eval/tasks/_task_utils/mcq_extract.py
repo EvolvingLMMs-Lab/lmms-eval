@@ -11,7 +11,6 @@ Usage::
     letter = extract_mcq_answer("The correct answer is (B).")  # -> "B"
 """
 
-import re
 from typing import List, Optional
 
 _DEFAULT_CHOICES = ["A", "B", "C", "D", "E", "F", "G", "H"]
@@ -36,6 +35,17 @@ _ANSWER_PHRASES = [
     "i pick",
     "my answer is",
     "my choice is",
+    # Korean
+    "옵션",
+    "정답은",
+    "답은",
+    "답:",
+    # Chinese
+    "答案是",
+    "答案为",
+    "选",
+    # Japanese
+    "答えは",
 ]
 
 # Higher = more confident that this is the intended answer.

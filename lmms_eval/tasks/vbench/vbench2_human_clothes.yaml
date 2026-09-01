@@ -1,0 +1,4 @@
+task: vbench2_human_clothes
+dataset_name: vbench2_human_clothes
+test_split: test
+include: _default_template_yaml
