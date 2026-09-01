@@ -50,6 +50,35 @@ The model must output JSON of the form:
 {"text": "", "videos": ["/abs/path/to/generated.mp4"]}
 ```
 
+### SGLang Diffusion (Wan2.2-I2V)
+
+Recent SGLang releases include a native Diffusion runtime for Wan. Its current
+Diffusion extra requires PyAV 16 while lmms-eval's base environment pins an
+older PyAV, so use a dedicated uv environment and install the two projects
+sequentially. The command below pins the build validated on this cluster; newer
+Linux wheels require a newer glibc than its current 2.31 runtime. Keep lmms-eval
+to one process; SGLang launches and manages the configured GPU workers itself.
+
+```bash
+uv venv .venv-sglang --python 3.12
+uv pip install --python .venv-sglang/bin/python -e .
+uv pip install --python .venv-sglang/bin/python --prerelease=allow "sglang[diffusion]==0.5.10.post1"
+
+.venv-sglang/bin/python -m lmms_eval \
+  --model sglang \
+  --model_args "model=Wan-AI/Wan2.2-I2V-A14B-Diffusers,runtime=diffusion,num_gpus=4,enable_cfg_parallel=true,ulysses_degree=2,text_encoder_cpu_offload=true,pin_cpu_memory=true" \
+  --tasks vbvr \
+  --batch_size 1 \
+  --log_samples \
+  --output_path logs
+```
+
+`runtime=diffusion` is optional for Wan repository names and local Diffusers
+checkpoints with a `model_index.json`; `--model sglang` detects those
+automatically. Use `--model sglang_diffusion` to select the same adapter
+explicitly. The same minimal command is available as
+`examples/models/sglang_wan22_vbvr.sh`.
+
 ### Full example (multi-GPU Wan2.2-I2V)
 
 ```fish
@@ -81,8 +110,9 @@ exec stdbuf -oL -eL .venv/bin/python -m lmms_eval eval \
     --output_path logs
 ```
 
-Generated videos land in `$HF_HOME/lmms_eval/generated_videos/fastvideo` by
-default. Per-sample logs and aggregated metrics land under `--output_path`, and
+FastVideo-generated videos land in `$HF_HOME/lmms_eval/generated_videos/fastvideo`
+by default; SGLang-generated videos land under `logs/sglang_diffusion` unless
+`output_dir` is set in `--model_args`. Per-sample logs and aggregated metrics land under `--output_path`, and
 the detailed VBVR evaluation JSON is written through `generate_submission_file()`
 under `--output_path/submissions/`. Add `--use_cache <path>` only if you want
 lmms-eval response caching in addition to FastVideo's generated-mp4 reuse. Tune

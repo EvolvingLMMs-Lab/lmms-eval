@@ -188,6 +188,11 @@ bash examples/models/sglang.sh
 bash examples/models/sglang_qwen35.sh
 ```
 
+**Wan2.2-I2V on VBVR:**
+```bash
+bash examples/models/sglang_wan22_vbvr.sh
+```
+
 ### Evaluation of OpenAI-Compatible Model
 
 ```bash
