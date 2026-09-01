@@ -12,13 +12,14 @@ Examples:
 import argparse
 import json
 import re
+import shutil
 import tempfile
 import urllib.request
 import zipfile
 from pathlib import Path
 
 import datasets
-from huggingface_hub import HfApi, hf_hub_download, metadata_update
+from huggingface_hub import HfApi, hf_hub_download, metadata_update, snapshot_download
 
 TARGET_ORG = "lmms-lab-eval"
 
@@ -405,7 +406,46 @@ BUILDERS = {
 }
 
 
-def _copy_media(api: HfApi, dataset_name: str, target_repo: str) -> None:
+def _upload_physics_rw_media(api: HfApi, target_repo: str, dataset: datasets.DatasetDict) -> None:
+    source_paths = []
+    for row in dataset["test"]:
+        target_path = Path(row["video_path"])
+        if target_path.is_absolute() or ".." in target_path.parts or not target_path.parts or target_path.parts[0] != "media":
+            raise ValueError(f"Invalid Physics-RW target path: {target_path}")
+        source_paths.append(Path("Physics-RW", *target_path.parts[1:]))
+
+    snapshot_path = Path(
+        snapshot_download(
+            PHYSICS_RW_SOURCE,
+            repo_type="dataset",
+            revision=SOURCE_REVISIONS[PHYSICS_RW_SOURCE],
+            allow_patterns=[path.as_posix() for path in source_paths],
+        )
+    )
+
+    # The source MP4s are legacy Git blobs, which the Hub rejects in a
+    # server-side repository copy. Stage only the 40 evaluation videos and
+    # upload them through the current Xet-backed upload path instead.
+    with tempfile.TemporaryDirectory(prefix="physics-rw-media-") as temp_dir:
+        temp_root = Path(temp_dir)
+        for source_path in source_paths:
+            local_source = snapshot_path / source_path
+            local_target = temp_root / "media" / Path(*source_path.parts[1:])
+            local_target.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                local_target.hardlink_to(local_source)
+            except OSError:
+                shutil.copy2(local_source, local_target)
+
+        api.upload_folder(
+            repo_id=target_repo,
+            repo_type="dataset",
+            folder_path=temp_root,
+            commit_message="data: publish official classification videos",
+        )
+
+
+def _copy_media(api: HfApi, dataset_name: str, target_repo: str, dataset) -> None:
     if dataset_name == "physbench":
         for filename in ("image.zip", "video.zip"):
             api.copy_files(
@@ -418,10 +458,7 @@ def _copy_media(api: HfApi, dataset_name: str, target_repo: str) -> None:
             f"hf://datasets/{target_repo}/PhysGame-Benchmark.zip",
         )
     elif dataset_name == "physics_rw":
-        api.copy_files(
-            f"hf://datasets/{PHYSICS_RW_SOURCE}@{SOURCE_REVISIONS[PHYSICS_RW_SOURCE]}/Physics-RW/",
-            f"hf://datasets/{target_repo}/media/",
-        )
+        _upload_physics_rw_media(api, target_repo, dataset)
 
 
 def _update_card(api: HfApi, dataset_name: str, target_repo: str) -> None:
@@ -470,7 +507,7 @@ def publish_dataset(dataset_name: str, dataset, *, copy_media: bool) -> None:
         dataset.push_to_hub(target_repo, commit_message="data: publish normalized annotations")
 
     if copy_media:
-        _copy_media(api, dataset_name, target_repo)
+        _copy_media(api, dataset_name, target_repo, dataset)
     _update_card(api, dataset_name, target_repo)
 
 
