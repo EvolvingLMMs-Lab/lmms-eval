@@ -140,7 +140,7 @@ def _load_diff_generator():
     try:
         from sglang.multimodal_gen import DiffGenerator
     except (ImportError, AttributeError) as exc:
-        raise ImportError("SGLang Diffusion is required for Wan generation. Install the validated build with " "`uv pip install --prerelease=allow 'sglang[diffusion]==0.5.10.post1'`.") from exc
+        raise ImportError("SGLang Diffusion is required for Wan generation. Install the validated build with `uv pip install --prerelease=allow 'sglang[diffusion]==0.5.10.post1'`.") from exc
     return DiffGenerator
 
 
@@ -218,7 +218,7 @@ class SGLangDiffusion(lmms):
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
-            raise RuntimeError("SGLang Diffusion manages its own GPU workers. Launch lmms-eval as one process " "and set num_gpus in --model_args instead of using accelerate launch.")
+            raise RuntimeError("SGLang Diffusion manages its own GPU workers. Launch lmms-eval as one process and set num_gpus in --model_args instead of using accelerate launch.")
         self.accelerator = accelerator
         self._rank = accelerator.process_index
         self._world_size = accelerator.num_processes

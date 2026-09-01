@@ -112,7 +112,7 @@ class VLLMOmniAPI(lmms):
         if model is not None:
             model_version = model
         if kwargs:
-            eval_logger.warning(f"Unknown model_args ignored: {list(kwargs.keys())}. " "Check the supported parameters for the 'vllm_omni_api' backend.")
+            eval_logger.warning(f"Unknown model_args ignored: {list(kwargs.keys())}. Check the supported parameters for the 'vllm_omni_api' backend.")
 
         self.model_version = model_version or None
         configured_base_urls = base_urls or os.getenv("VLLM_OMNI_API_BASES")
@@ -374,7 +374,7 @@ class VLLMOmniAPI(lmms):
                 return self._pack_result(os.path.abspath(output_path), metadata), idx
             except Exception as exc:  # noqa: BLE001
                 last_error = str(exc)
-                eval_logger.info(f"vllm_omni_api attempt {attempt + 1}/{self.max_retries} failed " f"for {output_path}: {last_error[:300]}")
+                eval_logger.info(f"vllm_omni_api attempt {attempt + 1}/{self.max_retries} failed for {output_path}: {last_error[:300]}")
                 if attempt < self.max_retries - 1:
                     await asyncio.sleep(self.retry_backoff_s)
 
