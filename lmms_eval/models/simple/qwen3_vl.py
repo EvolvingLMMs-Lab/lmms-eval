@@ -83,7 +83,7 @@ class Qwen3_VL(lmms):
         batch_size: Optional[Union[int, str]] = 1,
         use_cache=True,
         attn_implementation: Optional[str] = None,
-        min_pixels: int = 64 * 32 * 32, 
+        min_pixels: int = 64 * 32 * 32,
         max_pixels: int = 16384 * 32 * 32,
         total_pixels: Optional[int] = None,
         max_num_frames: int = 32,
