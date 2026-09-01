@@ -93,12 +93,17 @@ class TestPhysicsBenchmarks(unittest.TestCase):
             "sub_questions": ["Find x.", "Find y."],
             "answers": ["2 m", "3 s"],
             "difficulty": "easy",
-            "images": [image, {"bytes": buffer.getvalue(), "path": "diagram.png"}],
+            "image_1": image,
+            "image_2": {"bytes": buffer.getvalue(), "path": "diagram.png"},
+            "image_3": None,
+            "image_4": None,
+            "image_5": None,
         }
 
         visuals = physreason_utils.physreason_doc_to_visual(doc)
         self.assertEqual(len(visuals), 2)
         self.assertTrue(all(visual.mode == "RGB" for visual in visuals))
+        self.assertEqual(len(physreason_utils.physreason_doc_to_visual({"images": [image]})), 1)
 
         prompt = physreason_utils.physreason_doc_to_text(doc)
         self.assertIn("(1) Find x.", prompt)

@@ -18,7 +18,13 @@ from PIL import Image
 def physreason_doc_to_visual(doc):
     """Return every image associated with the problem."""
     visuals = []
-    for image in doc.get("images", []):
+    image_columns = [doc.get(f"image_{index}") for index in range(1, 6)]
+    images = [image for image in image_columns if image is not None]
+    if not images:
+        # Retain compatibility with the original nested List(Image) schema.
+        images = doc.get("images", [])
+
+    for image in images:
         try:
             if isinstance(image, Image.Image):
                 visuals.append(image.convert("RGB"))

@@ -42,6 +42,7 @@ PHYSREASON_ARCHIVES = {
     "full": ("PhysReason-full.zip", "PhysReason_full"),
     "mini": ("PhysReason-mini.zip", "PhysReason-mini"),
 }
+PHYSREASON_MAX_IMAGES = 5
 
 DATASET_METADATA = {
     "physbench": {
@@ -70,7 +71,7 @@ DATASET_METADATA = {
         "pretty_name": "PhysReason",
         "license": "mit",
         "source": "https://huggingface.co/datasets/zhibei1204/PhysReason",
-        "description": "Normalized full and mini PhysReason configurations with native multi-image columns.",
+        "description": "Normalized full and mini PhysReason configurations with Viewer-compatible image columns.",
     },
 }
 
@@ -331,28 +332,29 @@ def _build_physreason_config(config_name: str) -> datasets.DatasetDict:
             explanation_steps = _normalize_explanation_steps(problem)
             step_analysis = _normalize_step_analysis(problem)
 
-            rows.append(
-                {
-                    "problem_id": problem_path.name,
-                    "context": str(question_structure.get("context", "")),
-                    "sub_questions": sub_questions,
-                    "answers": [str(answer) for answer in answers],
-                    "difficulty": str(problem.get("difficulty", "unknown")),
-                    "images": images,
-                    "image_file_names": image_file_names,
-                    "image_captions": _normalize_image_captions(problem),
-                    "theorems": _normalize_theorems(problem, step_analysis),
-                    "explanation_steps": explanation_steps,
-                    "step_analysis": step_analysis,
-                    "num_steps": len(explanation_steps),
-                }
-            )
+            row = {
+                "problem_id": problem_path.name,
+                "context": str(question_structure.get("context", "")),
+                "sub_questions": sub_questions,
+                "answers": [str(answer) for answer in answers],
+                "difficulty": str(problem.get("difficulty", "unknown")),
+                "image_file_names": image_file_names,
+                "num_images": len(images),
+                "image_captions": _normalize_image_captions(problem),
+                "theorems": _normalize_theorems(problem, step_analysis),
+                "explanation_steps": explanation_steps,
+                "step_analysis": step_analysis,
+                "num_steps": len(explanation_steps),
+            }
+            row.update({f"image_{index + 1}": images[index] if index < len(images) else None for index in range(PHYSREASON_MAX_IMAGES)})
+            rows.append(row)
 
     expected_size = 1200 if config_name == "full" else 200
     assert len(rows) == expected_size
     assert len({row["problem_id"] for row in rows}) == expected_size
     assert all(len(row["sub_questions"]) == len(row["answers"]) for row in rows)
-    assert all(len(row["images"]) == len(row["image_file_names"]) for row in rows)
+    assert all(row["num_images"] == len(row["image_file_names"]) for row in rows)
+    assert max(row["num_images"] for row in rows) <= PHYSREASON_MAX_IMAGES
     assert all(row["num_steps"] == len(row["explanation_steps"]) for row in rows)
 
     features = datasets.Features(
@@ -362,8 +364,9 @@ def _build_physreason_config(config_name: str) -> datasets.DatasetDict:
             "sub_questions": datasets.Sequence(datasets.Value("string")),
             "answers": datasets.Sequence(datasets.Value("string")),
             "difficulty": datasets.Value("string"),
-            "images": datasets.Sequence(datasets.Image()),
+            **{f"image_{index + 1}": datasets.Image() for index in range(PHYSREASON_MAX_IMAGES)},
             "image_file_names": datasets.Sequence(datasets.Value("string")),
+            "num_images": datasets.Value("int64"),
             "image_captions": datasets.Value("string"),
             "theorems": datasets.Sequence(datasets.Value("string")),
             "explanation_steps": [
