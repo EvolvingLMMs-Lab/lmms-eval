@@ -334,6 +334,7 @@ def _build_physreason_config(config_name: str) -> datasets.DatasetDict:
 
             row = {
                 "problem_id": problem_path.name,
+                **{f"image_{index + 1}": images[index] if index < len(images) else None for index in range(PHYSREASON_MAX_IMAGES)},
                 "context": str(question_structure.get("context", "")),
                 "sub_questions": sub_questions,
                 "answers": [str(answer) for answer in answers],
@@ -346,7 +347,6 @@ def _build_physreason_config(config_name: str) -> datasets.DatasetDict:
                 "step_analysis": step_analysis,
                 "num_steps": len(explanation_steps),
             }
-            row.update({f"image_{index + 1}": images[index] if index < len(images) else None for index in range(PHYSREASON_MAX_IMAGES)})
             rows.append(row)
 
     expected_size = 1200 if config_name == "full" else 200
@@ -360,11 +360,11 @@ def _build_physreason_config(config_name: str) -> datasets.DatasetDict:
     features = datasets.Features(
         {
             "problem_id": datasets.Value("string"),
+            **{f"image_{index + 1}": datasets.Image() for index in range(PHYSREASON_MAX_IMAGES)},
             "context": datasets.Value("string"),
             "sub_questions": datasets.Sequence(datasets.Value("string")),
             "answers": datasets.Sequence(datasets.Value("string")),
             "difficulty": datasets.Value("string"),
-            **{f"image_{index + 1}": datasets.Image() for index in range(PHYSREASON_MAX_IMAGES)},
             "image_file_names": datasets.Sequence(datasets.Value("string")),
             "num_images": datasets.Value("int64"),
             "image_captions": datasets.Value("string"),
