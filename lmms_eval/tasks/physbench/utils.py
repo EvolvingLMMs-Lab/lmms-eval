@@ -1,10 +1,7 @@
-import json
 import os
-import urllib.request
 from collections import defaultdict
 from pathlib import Path
 
-import datasets
 import yaml
 from loguru import logger as eval_logger
 
@@ -14,30 +11,6 @@ from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
 # PhysBench category breakdowns
 TASK_TYPES = ["property", "relationships", "scene", "dynamics"]
 ABILITY_TYPES = ["identify", "comparison", "static", "dynamic", "perception", "prediction", "judgment", "reasoning"]
-
-# URL for val split answers (answers not included in HF dataset)
-VAL_ANSWER_URL = "https://raw.githubusercontent.com/USC-GVL/PhysBench/main/eval/physbench/val_answer.json"
-
-# Cached answer map: idx -> {answer, task_type, sub_type, ability_type}
-_val_answers = None
-
-
-def _fetch_val_answers():
-    """Download and cache the val answer file from the PhysBench GitHub repo."""
-    global _val_answers
-    if _val_answers is not None:
-        return _val_answers
-
-    eval_logger.info(f"Fetching PhysBench val answers from {VAL_ANSWER_URL}")
-    try:
-        with urllib.request.urlopen(VAL_ANSWER_URL, timeout=30) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        _val_answers = {item["idx"]: item for item in data}
-        eval_logger.info(f"Loaded {len(_val_answers)} val answers")
-    except Exception as e:
-        eval_logger.warning(f"Failed to fetch val answers: {e}. Accuracy will not be computed.")
-        _val_answers = {}
-    return _val_answers
 
 
 def _load_task_config():
@@ -53,27 +26,9 @@ def _get_cache_dir():
     return lmms_utils.resolve_cache_dir(config["dataset_kwargs"]["cache_dir"], base_dir=hf_home)
 
 
-def physbench_process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
-    """Filter to val split only (test answers are hidden) and merge answers."""
-    # Filter to val entries only
-    dataset = dataset.filter(lambda x: x["split"] == "val")
-
-    # Fetch and merge answer metadata
-    answers = _fetch_val_answers()
-    if not answers:
-        return dataset
-
-    def _merge_answer(example):
-        idx = example["idx"]
-        ans_info = answers.get(idx, {})
-        example["answer"] = ans_info.get("answer", "")
-        example["task_type"] = ans_info.get("task_type", "")
-        example["sub_type"] = ans_info.get("sub_type", "")
-        example["ability_type"] = ans_info.get("ability_type", "")
-        return example
-
-    dataset = dataset.map(_merge_answer)
-    return dataset
+def physbench_process_docs(dataset):
+    """Drop the source rows whose public answer is empty."""
+    return dataset.filter(lambda example: bool(example.get("answer", "").strip()))
 
 
 def _resolve_media_path(cache_dir, fname):
@@ -105,7 +60,6 @@ def _resolve_media_path(cache_dir, fname):
 def physbench_doc_to_visual(doc):
     """Return list of media paths (images and videos) for a document."""
     cache_dir = _get_cache_dir()
-    # Clean dataset uses media_path (string), original uses file_name (list)
     media = doc.get("file_name") or doc.get("media_path", "")
     if isinstance(media, str):
         media = [media] if media else []

@@ -1,14 +1,11 @@
-# NOTE: PhysGame/PhysGame-Benchmark does not exist as a public HuggingFace dataset.
-# The PhysGame org (https://huggingface.co/PhysGame) only has training datasets
-# (PhysGame-40K, PhysDPO-10k). The 880-video benchmark referenced in the paper
-# (https://arxiv.org/abs/2412.01800) and GitHub repo was never published publicly.
-# This task cannot run until the authors release the benchmark dataset.
-# See: https://github.com/PhysGame/PhysGame
-dataset_path: PhysGame/PhysGame-Benchmark
+# PhysGame / GameBench: Physical commonsense violations in gameplay videos
+# Paper: https://arxiv.org/abs/2412.01800
+# Source: PhysGame/GameBench
+# Normalized copy: lmms-lab-eval/PhysGame
+dataset_path: lmms-lab-eval/PhysGame
 dataset_kwargs:
-  token: True
   cache_dir: physgame
-  video: True
+  video: true
 task: physgame
 test_split: test
 output_type: generate_until
@@ -29,4 +26,4 @@ lmms_eval_specific_kwargs:
     pre_prompt: ""
     post_prompt: "\nAnswer with the option's letter from the given choices directly."
 metadata:
-  - version: 0.0
+  version: 1.0

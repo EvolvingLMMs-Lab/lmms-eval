@@ -1,177 +1,36 @@
 """Utility functions for PhysReason benchmark evaluation.
 
-Handles data preparation (zip download + JSONL generation), prompt
-construction, image extraction, and scoring for open-ended physics
-problem solving.
+Handles prompt construction, native Hugging Face image columns, and scoring
+for open-ended physics problem solving.
 
 Dataset: https://huggingface.co/datasets/zhibei1204/PhysReason
 Paper:   https://arxiv.org/abs/2502.12054
 """
 
-import json
-import os
 import re
-import zipfile
+from io import BytesIO
 
 import numpy as np
 from loguru import logger as eval_logger
 from PIL import Image
 
-# ---------------------------------------------------------------------------
-# Data preparation: download zip from HF, extract, build JSONL for datasets
-# ---------------------------------------------------------------------------
-
-_HF_REPO = "zhibei1204/PhysReason"
-_ZIP_NAMES = {
-    "full": "PhysReason-full.zip",
-    "mini": "PhysReason-mini.zip",
-}
-_ZIP_ROOTS = {
-    "full": "PhysReason_full",
-    "mini": "PhysReason-mini",
-}
-_TASK_DIR = os.path.dirname(os.path.abspath(__file__))
-_DATA_DIR = os.path.join(_TASK_DIR, "physreason_data")
-
-# Cache directory for extracted zip contents (images live here)
-_CACHE_BASE = os.path.join(
-    os.path.expanduser(os.getenv("HF_HOME", "~/.cache/huggingface")),
-    "physreason",
-)
-
-
-def _ensure_data_prepared(config_name: str) -> None:
-    """Download the PhysReason zip, extract it, and build a JSONL file.
-
-    The JSONL is placed at ``physreason_data/<config_name>/data.jsonl`` so
-    that ``datasets.load_dataset`` auto-discovers it.  Images are extracted
-    to ``$HF_HOME/physreason/<config_name>/`` and referenced by path in the
-    ``image_path`` field.
-    """
-    split_dir = os.path.join(_DATA_DIR, config_name, "test")
-    jsonl_path = os.path.join(split_dir, "data.jsonl")
-
-    if os.path.exists(jsonl_path):
-        return  # already prepared
-
-    eval_logger.info(f"[physreason] Preparing {config_name} data ...")
-
-    from huggingface_hub import hf_hub_download
-
-    zip_file = hf_hub_download(
-        repo_id=_HF_REPO,
-        repo_type="dataset",
-        filename=_ZIP_NAMES[config_name],
-    )
-
-    extract_dir = os.path.join(_CACHE_BASE, config_name)
-    os.makedirs(extract_dir, exist_ok=True)
-
-    zip_root = _ZIP_ROOTS[config_name]
-    marker = os.path.join(extract_dir, ".extracted")
-    if not os.path.exists(marker):
-        eval_logger.info(f"[physreason] Extracting {zip_file} -> {extract_dir}")
-        with zipfile.ZipFile(zip_file, "r") as zf:
-            zf.extractall(extract_dir)
-        with open(marker, "w") as f:
-            f.write("done\n")
-
-    problems_root = os.path.join(extract_dir, zip_root)
-    if not os.path.isdir(problems_root):
-        problems_root = extract_dir
-
-    rows = []
-    for problem_dir_name in sorted(os.listdir(problems_root)):
-        problem_path = os.path.join(problems_root, problem_dir_name)
-        if not os.path.isdir(problem_path):
-            continue
-        json_path = os.path.join(problem_path, "problem.json")
-        if not os.path.exists(json_path):
-            continue
-
-        with open(json_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        qs = data.get("question_structure", {})
-        context = qs.get("context", "")
-
-        sub_questions = []
-        i = 1
-        while f"sub_question_{i}" in qs:
-            sub_questions.append(qs[f"sub_question_{i}"])
-            i += 1
-
-        answers = data.get("answer", [])
-        if isinstance(answers, str):
-            answers = [answers]
-
-        difficulty = data.get("difficulty", "unknown")
-
-        image_list = data.get("question_image_list", [])
-        image_rel = image_list[0] if image_list else ""
-        # Absolute path to image within the extraction cache
-        if image_rel:
-            image_abs = os.path.join(problem_path, image_rel)
-        else:
-            image_abs = ""
-
-        image_caption = data.get("image_captions", "")
-        if isinstance(image_caption, list):
-            image_caption = " ".join(image_caption)
-
-        explanation_steps = data.get("explanation_steps", {})
-        num_steps = sum(len(sq_steps) for sq_steps in explanation_steps.values() if isinstance(sq_steps, dict))
-
-        rows.append(
-            {
-                "problem_id": problem_dir_name,
-                "context": context,
-                "sub_questions": sub_questions,
-                "answers": answers,
-                "difficulty": difficulty,
-                "image_path": image_abs,
-                "image_caption": image_caption or "",
-                "num_sub_questions": len(sub_questions),
-                "num_steps": num_steps,
-            }
-        )
-
-    os.makedirs(split_dir, exist_ok=True)
-    with open(jsonl_path, "w", encoding="utf-8") as f:
-        for row in rows:
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")
-
-    eval_logger.info(f"[physreason] Wrote {len(rows)} rows to {jsonl_path}")
-
-
-# Prepare both configs at import time so the JSONL files exist before
-# datasets.load_dataset is called.
-for _cfg in ("full", "mini"):
-    try:
-        _ensure_data_prepared(_cfg)
-    except Exception:
-        # Don't crash on import if only one config is needed and the
-        # other can't be downloaded (e.g. offline).  The actual load
-        # will fail later with a clear error.
-        pass
-
-
-# ---------------------------------------------------------------------------
-# doc_to_visual / doc_to_text / scoring
-# ---------------------------------------------------------------------------
-
 
 def physreason_doc_to_visual(doc):
-    """Load the problem image from the cached extraction directory."""
-    image_path = doc.get("image_path", "")
-    if not image_path or not os.path.exists(image_path):
-        return []
-    try:
-        img = Image.open(image_path).convert("RGB")
-        return [img]
-    except Exception:
-        eval_logger.warning(f"[physreason] Failed to load image: {image_path}")
-        return []
+    """Return every image associated with the problem."""
+    visuals = []
+    for image in doc.get("images", []):
+        try:
+            if isinstance(image, Image.Image):
+                visuals.append(image.convert("RGB"))
+            elif isinstance(image, dict) and image.get("bytes") is not None:
+                visuals.append(Image.open(BytesIO(image["bytes"])).convert("RGB"))
+            elif isinstance(image, dict) and image.get("path"):
+                visuals.append(Image.open(image["path"]).convert("RGB"))
+            elif isinstance(image, str):
+                visuals.append(Image.open(image).convert("RGB"))
+        except Exception as error:
+            eval_logger.warning("PhysReason failed to decode an image: {}", error)
+    return visuals
 
 
 def physreason_doc_to_text(doc, lmms_eval_specific_kwargs=None):
@@ -192,7 +51,7 @@ def physreason_doc_to_text(doc, lmms_eval_specific_kwargs=None):
             prompt_parts.append(f"({i}) {sq.strip()}")
 
     prompt_parts.append("")
-    prompt_parts.append("Solve each sub-question step by step. " "For each sub-question, show your reasoning and then give the final answer. " "Format each final answer as: Answer (N): <your answer>")
+    prompt_parts.append("Solve each sub-question step by step. For each sub-question, show your reasoning and then give the final answer. Format each final answer as: Answer (N): <your answer>")
 
     return "\n".join(prompt_parts)
 

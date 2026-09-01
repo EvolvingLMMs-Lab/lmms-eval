@@ -1,4 +1,5 @@
-dataset_path: lmms_eval/tasks/physreason/physreason_data/full
+dataset_path: lmms-lab-eval/PhysReason
+dataset_name: full
 task: "physreason"
 test_split: test
 output_type: generate_until
@@ -18,4 +19,4 @@ metric_list:
     higher_is_better: true
 
 metadata:
-  version: 0.0
+  version: 1.0

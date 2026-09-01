@@ -1,22 +1,7 @@
 import os
 import re
 
-import datasets
 from loguru import logger as eval_logger
-
-# Maps video filename prefix to the HuggingFace subdirectory for that domain.
-_PREFIX_TO_DOMAIN = {
-    "elec": "Electromagnetism",
-    "elasticity": "Mechanics",
-    "gravity": "Mechanics",
-    "dominoes": "Mechanics",
-    "optics": "Optics",
-    "thermology": "Thermodynamics",
-    "buoyancy": "Mechanics",
-    "pressure": "Mechanics",
-}
-
-_HF_BASE = "https://huggingface.co/datasets/zhaopengyu/Physics-RW/resolve/main/Physics-RW"
 
 DOMAINS = ["Electromagnetism", "Mechanics", "Optics", "Thermodynamics"]
 
@@ -26,69 +11,14 @@ def _get_cache_dir():
     return os.path.join(hf_home, "physics_rw")
 
 
-def _domain_from_video_path(video_path):
-    """Infer domain from video filename prefix."""
-    basename = os.path.basename(video_path).replace(".mp4", "")
-    for prefix, domain in _PREFIX_TO_DOMAIN.items():
-        if basename.startswith(prefix):
-            return domain
-    # Fallback: try to guess from the full path
-    for domain in DOMAINS:
-        if domain.lower() in video_path.lower():
-            return domain
-    return "Unknown"
-
-
-def _download_video(video_path, domain, cache_dir):
-    """Download a video from HuggingFace if not already cached."""
-    # video_path is like "video/elec_ori_video_26_0.mp4"
-    filename = os.path.basename(video_path)
-    local_path = os.path.join(cache_dir, domain, filename)
-
-    if os.path.exists(local_path):
-        return local_path
-
-    url = f"{_HF_BASE}/{domain}/classification/{video_path}"
-    os.makedirs(os.path.dirname(local_path), exist_ok=True)
-
-    try:
-        import urllib.request
-
-        eval_logger.info("Physics-RW: downloading {} -> {}", url, local_path)
-        urllib.request.urlretrieve(url, local_path)
-        return local_path
-    except Exception as e:
-        eval_logger.warning("Physics-RW: failed to download {}: {}", url, e)
-        return None
-
-
-def physics_rw_process_docs(dataset):
-    """Add domain field to each doc based on the video filename prefix."""
-    processed = []
-    for doc in dataset:
-        doc = dict(doc)
-        doc["domain"] = _domain_from_video_path(doc.get("video_path", ""))
-        processed.append(doc)
-    return datasets.Dataset.from_list(processed)
-
-
 def physics_rw_doc_to_visual(doc):
     cache_dir = _get_cache_dir()
-    video_path = doc.get("video_path", "")
-    domain = doc.get("domain", _domain_from_video_path(video_path))
+    video_path = os.path.join(cache_dir, doc.get("video_path", ""))
 
-    # Try local cache first
-    filename = os.path.basename(video_path)
-    local_path = os.path.join(cache_dir, domain, filename)
+    if os.path.exists(video_path):
+        return [video_path]
 
-    if not os.path.exists(local_path):
-        local_path = _download_video(video_path, domain, cache_dir)
-
-    if local_path and os.path.exists(local_path):
-        return [local_path]
-
-    eval_logger.warning("Physics-RW: video not found for {}", video_path)
-    return []
+    raise FileNotFoundError(f"Physics-RW video not found: {video_path}")
 
 
 def physics_rw_doc_to_text(doc, lmms_eval_specific_kwargs=None):
@@ -128,7 +58,7 @@ def physics_rw_process_results(doc, results):
 
     return {
         "physics_rw_accuracy": {
-            "idx": doc.get("idx", -1),
+            "id": doc.get("id", ""),
             "domain": domain,
             "pred_answer": pred_ans,
             "answer": gt_ans,

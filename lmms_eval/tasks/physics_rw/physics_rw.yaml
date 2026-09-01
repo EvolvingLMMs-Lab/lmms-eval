@@ -1,14 +1,13 @@
-dataset_path: json
+# Physics-RW: Real-world physics prediction
+# Source: zhaopengyu/Physics-RW
+# Normalized copy: lmms-lab-eval/Physics-RW
+dataset_path: lmms-lab-eval/Physics-RW
 dataset_kwargs:
-  data_files:
-    test:
-      - https://huggingface.co/datasets/zhaopengyu/Physics-RW/resolve/main/Physics-RW/Electromagnetism/classification/classification_en.json
-      - https://huggingface.co/datasets/zhaopengyu/Physics-RW/resolve/main/Physics-RW/Mechanics/classification/classification_en.json
-      - https://huggingface.co/datasets/zhaopengyu/Physics-RW/resolve/main/Physics-RW/Optics/classification/classification_en.json
-      - https://huggingface.co/datasets/zhaopengyu/Physics-RW/resolve/main/Physics-RW/Thermodynamics/classification/classification_en.json
+  cache_dir: physics_rw
+  video: true
+  create_link: true
 task: physics_rw
 test_split: test
-process_docs: !function utils.physics_rw_process_docs
 output_type: generate_until
 doc_to_visual: !function utils.physics_rw_doc_to_visual
 doc_to_text: !function utils.physics_rw_doc_to_text
@@ -27,4 +26,4 @@ lmms_eval_specific_kwargs:
     pre_prompt: ""
     post_prompt: ""
 metadata:
-  - version: 0.0
+  version: 1.0
