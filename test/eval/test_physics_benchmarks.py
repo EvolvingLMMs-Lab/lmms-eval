@@ -8,7 +8,7 @@ import datasets
 import torch
 from PIL import Image
 
-from lmms_eval.models.simple.qwen2_5_vl import _interleave_visual_content, _limit_video_inputs, _strip_visual_placeholders
+from lmms_eval.models.simple.qwen2_5_vl import _build_video_content, _interleave_visual_content, _limit_video_inputs, _strip_visual_placeholders
 from lmms_eval.tasks.physbench import utils as physbench_utils
 from lmms_eval.tasks.physgame import utils as physgame_utils
 from lmms_eval.tasks.physics_rw import utils as physics_rw_utils
@@ -129,6 +129,17 @@ class TestPhysicsBenchmarks(unittest.TestCase):
         self.assertEqual([video.shape[0] for video in limited], [4, 4])
         self.assertEqual(limited[0][0].tolist(), [0, 1])
         self.assertEqual(limited[0][-1].tolist(), [18, 19])
+
+        fixed_frames = _build_video_content("clip.mp4", min_pixels=100352, max_pixels=602112, fps=None, nframes=8)
+        self.assertEqual(fixed_frames["nframes"], 8)
+        self.assertNotIn("fps", fixed_frames)
+
+        sampled_by_fps = _build_video_content("clip.mp4", min_pixels=100352, max_pixels=345600, fps=2.0, nframes=None)
+        self.assertEqual(sampled_by_fps["fps"], 2.0)
+        self.assertNotIn("nframes", sampled_by_fps)
+
+        with self.assertRaises(ValueError):
+            _build_video_content("clip.mp4", min_pixels=100352, max_pixels=602112, fps=2.0, nframes=8)
 
     def test_physreason_preserves_multiple_images_and_scores_answers(self):
         image = Image.new("RGB", (2, 2), color="red")

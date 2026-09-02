@@ -88,6 +88,24 @@ def _limit_video_inputs(video_inputs, max_num_frames: int):
     return video_inputs
 
 
+def _build_video_content(video: str, *, min_pixels: int, max_pixels: int, fps: Optional[float], nframes: Optional[int]) -> dict:
+    """Build qwen-vl-utils video input with an explicit sampling policy."""
+    if fps is not None and nframes is not None:
+        raise ValueError("Qwen video inputs cannot specify both fps and nframes")
+
+    content = {
+        "type": "video",
+        "video": video,
+        "max_pixels": max_pixels,
+        "min_pixels": min_pixels,
+    }
+    if fps is not None:
+        content["fps"] = fps
+    if nframes is not None:
+        content["nframes"] = nframes
+    return content
+
+
 @register_model("qwen2_5_vl")
 class Qwen2_5_VL(lmms):
     """
@@ -105,8 +123,13 @@ class Qwen2_5_VL(lmms):
         attn_implementation: Optional[str] = None,
         min_pixels: int = 256 * 28 * 28,
         max_pixels: int = 1605632,
+        image_min_pixels: Optional[int] = None,
+        image_max_pixels: Optional[int] = None,
+        video_min_pixels: Optional[int] = None,
+        video_max_pixels: Optional[int] = None,
         max_num_frames: int = 32,
         fps: Optional[float] = None,
+        video_nframes: Optional[int] = None,
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
         reasoning_prompt: Optional[str] = None,
@@ -143,14 +166,22 @@ class Qwen2_5_VL(lmms):
         self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(pretrained, **model_kwargs).eval()
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
+        self.image_min_pixels = image_min_pixels if image_min_pixels is not None else min_pixels
+        self.image_max_pixels = image_max_pixels if image_max_pixels is not None else max_pixels
+        self.video_min_pixels = video_min_pixels if video_min_pixels is not None else min_pixels
+        self.video_max_pixels = video_max_pixels if video_max_pixels is not None else max_pixels
         self.max_num_frames = max_num_frames
         self.fps = fps
+        self.video_nframes = video_nframes
+
+        if self.fps is not None and self.video_nframes is not None:
+            raise ValueError("Qwen video inputs cannot specify both fps and video_nframes")
 
         if reasoning_prompt:
             self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
         else:
             self.reasoning_prompt = None
-        self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels)
+        self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=self.image_max_pixels, min_pixels=self.image_min_pixels)
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained)
         self.system_prompt = system_prompt
         self.interleave_visuals = interleave_visuals
@@ -291,22 +322,22 @@ class Qwen2_5_VL(lmms):
                 if visual_list[i] is not None:
                     for visual in visual_list[i]:
                         if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
-                            video_content = {
-                                "type": "video",
-                                "video": visual,
-                                "max_pixels": self.max_pixels,
-                                "min_pixels": self.min_pixels,
-                            }
-                            if self.fps is not None:
-                                video_content["fps"] = self.fps
-                            processed_visuals.append(video_content)
+                            processed_visuals.append(
+                                _build_video_content(
+                                    visual,
+                                    min_pixels=self.video_min_pixels,
+                                    max_pixels=self.video_max_pixels,
+                                    fps=self.fps,
+                                    nframes=self.video_nframes,
+                                )
+                            )
                         elif isinstance(visual, Image.Image):  # Handle both single and multiple images
                             processed_visuals.append(
                                 {
                                     "type": "image",
                                     "image": self._encode_image_data_url(visual),
-                                    "max_pixels": self.max_pixels,
-                                    "min_pixels": self.min_pixels,
+                                    "max_pixels": self.image_max_pixels,
+                                    "min_pixels": self.image_min_pixels,
                                 }
                             )
 
@@ -477,22 +508,22 @@ class Qwen2_5_VL(lmms):
                     if visuals_list[i] is not None:
                         for visual in visuals_list[i]:
                             if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):
-                                video_content = {
-                                    "type": "video",
-                                    "video": visual,
-                                    "max_pixels": self.max_pixels,
-                                    "min_pixels": self.min_pixels,
-                                }
-                                if self.fps is not None:
-                                    video_content["fps"] = self.fps
-                                processed_visuals.append(video_content)
+                                processed_visuals.append(
+                                    _build_video_content(
+                                        visual,
+                                        min_pixels=self.video_min_pixels,
+                                        max_pixels=self.video_max_pixels,
+                                        fps=self.fps,
+                                        nframes=self.video_nframes,
+                                    )
+                                )
                             elif isinstance(visual, Image.Image):
                                 processed_visuals.append(
                                     {
                                         "type": "image",
                                         "image": self._encode_image_data_url(visual),
-                                        "max_pixels": self.max_pixels,
-                                        "min_pixels": self.min_pixels,
+                                        "max_pixels": self.image_max_pixels,
+                                        "min_pixels": self.image_min_pixels,
                                     }
                                 )
 
