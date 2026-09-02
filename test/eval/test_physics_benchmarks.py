@@ -78,6 +78,8 @@ class TestPhysicsBenchmarks(unittest.TestCase):
         result = physics_rw_utils.physics_rw_process_results(doc, ["Yes, it will."])
         self.assertEqual(result["physics_rw_accuracy"]["pred_answer"], "yes")
         self.assertEqual(result["physics_rw_macro_f1"]["pred_answer"], "yes")
+        strict_result = physics_rw_utils.physics_rw_process_results(doc, ["I think the answer is yes."])
+        self.assertEqual(strict_result["physics_rw_accuracy"]["pred_answer"], "")
 
         with tempfile.TemporaryDirectory() as cache_dir:
             video_path = os.path.join(cache_dir, doc["video_path"])

@@ -30,23 +30,12 @@ def physics_rw_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def _extract_yes_no(text):
-    """Extract yes/no answer from model response."""
+    """Extract yes/no only when it is the first output word, as in the paper."""
     text = text.strip().lower()
-    # Direct match at start
-    if text.startswith("yes"):
+    if re.match(r"^yes\b", text):
         return "yes"
-    if text.startswith("no"):
+    if re.match(r"^no\b", text):
         return "no"
-    # Search for yes/no in the response
-    yes_match = re.search(r"\byes\b", text)
-    no_match = re.search(r"\bno\b", text)
-    if yes_match and not no_match:
-        return "yes"
-    if no_match and not yes_match:
-        return "no"
-    # Both present: take whichever appears first
-    if yes_match and no_match:
-        return "yes" if yes_match.start() < no_match.start() else "no"
     return ""
 
 
