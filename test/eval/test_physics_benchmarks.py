@@ -154,6 +154,9 @@ class TestPhysicsBenchmarks(unittest.TestCase):
         prompt = physreason_utils.physreason_doc_to_text(doc)
         self.assertIn("(1) Find x.", prompt)
         self.assertIn("(2) Find y.", prompt)
+        self.assertIn("continuously across all sub-questions", prompt)
+        self.assertIn("one formula and its solution process in each step", prompt)
+        self.assertIn("LaTeX notation ($)", prompt)
 
         result = physreason_utils.physreason_process_results(doc, ["Answer (1): 2 m\nAnswer (2): 3 s"])
         self.assertEqual(result["physreason_accuracy"]["accuracy"], 1.0)

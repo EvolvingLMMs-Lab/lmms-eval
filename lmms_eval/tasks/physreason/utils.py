@@ -57,7 +57,13 @@ def physreason_doc_to_text(doc, lmms_eval_specific_kwargs=None):
             prompt_parts.append(f"({i}) {sq.strip()}")
 
     prompt_parts.append("")
-    prompt_parts.append("Solve each sub-question step by step. For each sub-question, show your reasoning and then give the final answer. Format each final answer as: Answer (N): <your answer>")
+    prompt_parts.append(
+        "Solve each sub-question step by step. Number the reasoning steps "
+        "continuously across all sub-questions without restarting. Include one "
+        "formula and its solution process in each step, and enclose mathematical "
+        "formulas in LaTeX notation ($). After the reasoning for each "
+        "sub-question, format its final answer as: Answer (N): <your answer>"
+    )
 
     return "\n".join(prompt_parts)
 
