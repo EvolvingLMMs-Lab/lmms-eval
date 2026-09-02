@@ -286,6 +286,10 @@ python -m lmms_eval --tasks list_with_num
 - [EgoPlan](https://github.com/ChenYi99/EgoPlan) (egoplan)
 - [EgoTempo](https://github.com/google-research-datasets/egotempo) (egotempo)
 - [EgoThink](https://github.com/AdaCheng/EgoThink) (egothink)
+- [HERBench](https://huggingface.co/datasets/DanBenAmi/HERBench) (herbench)
+  - Full set, 27,631 questions / 335 videos (herbench_full)
+  - Lite subset, 2,000 questions / 68 videos (herbench_lite)
+  - Refined lite subset, 1,971 questions / 68 videos (herbench_lite_v2)
 - [IntPhys2](https://arxiv.org/abs/2506.09849) (intphys2)
   - intphys2_debug
 - [MLVU](https://github.com/JUNJIE99/MLVU) (mlvu)
