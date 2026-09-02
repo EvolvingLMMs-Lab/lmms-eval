@@ -9,7 +9,7 @@ doc_to_target: "answers"
 process_results: !function utils.physreason_process_results
 
 generation_kwargs:
-  max_new_tokens: 4096
+  max_new_tokens: 8192
   temperature: 0
   do_sample: false
 
