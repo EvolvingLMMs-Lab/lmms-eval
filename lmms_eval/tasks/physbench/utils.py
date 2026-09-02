@@ -6,7 +6,6 @@ import yaml
 from loguru import logger as eval_logger
 
 from lmms_eval import utils as lmms_utils
-from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
 
 # PhysBench category breakdowns
 TASK_TYPES = ["property", "relationships", "scene", "dynamics"]
@@ -83,9 +82,9 @@ def physbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def physbench_process_results(doc, results):
-    """Extract predicted answer and compare to ground truth."""
-    pred = results[0]
-    pred_ans = extract_mcq_answer(pred, choices=["A", "B", "C", "D"])
+    """Apply the official answer-prefix comparison protocol."""
+    pred = results[0].strip() if results else ""
+    pred_ans = pred[0].upper() if pred and pred[0].upper() in "ABCD" else ""
     gt_ans = doc.get("answer", "")
 
     score = 1.0 if pred_ans.upper() == gt_ans.upper() and gt_ans else 0.0

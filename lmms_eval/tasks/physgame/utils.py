@@ -3,8 +3,6 @@ from collections import defaultdict
 
 from loguru import logger as eval_logger
 
-from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
-
 # Physics categories from the PhysGame benchmark (4 domains, 12 fine-grained)
 PHYSICS_DOMAINS = ["Mechanics", "Kinematics", "Optics", "Material Properties"]
 
@@ -46,8 +44,11 @@ def physgame_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def physgame_process_results(doc, results):
-    pred = results[0]
-    pred_ans = extract_mcq_answer(pred, choices=["A", "B", "C", "D"])
+    # The official evaluator compares ``output[0]`` with the answer. Strip
+    # transport whitespace, but otherwise retain that strict first-character
+    # protocol instead of rescuing a letter from a verbose response.
+    pred = results[0].strip() if results else ""
+    pred_ans = pred[0].upper() if pred and pred[0].upper() in "ABCD" else ""
     gt_ans = str(doc["answer"]).strip().upper()
 
     return {

@@ -43,6 +43,11 @@ class TestPhysicsBenchmarks(unittest.TestCase):
 
         self.assertEqual([os.path.basename(path) for path in visuals], media_names)
 
+        scored = physbench_utils.physbench_process_results({"idx": 2, "answer": "B"}, ["B. Option"])
+        self.assertEqual(scored["physbench_accuracy"]["score"], 1.0)
+        verbose = physbench_utils.physbench_process_results({"idx": 2, "answer": "B"}, ["The answer is B."])
+        self.assertEqual(verbose["physbench_accuracy"]["pred_answer"], "")
+
     def test_physgame_uses_normalized_options_and_video_path(self):
         doc = {
             "question_id": "abc123",
@@ -57,8 +62,10 @@ class TestPhysicsBenchmarks(unittest.TestCase):
         self.assertIn("A: One", prompt)
         self.assertIn("D: Four", prompt)
 
-        result = physgame_utils.physgame_process_results(doc, ["The correct answer is (C)."])
+        result = physgame_utils.physgame_process_results(doc, ["C"])
         self.assertEqual(result["physgame_accuracy"]["pred_answer"], "C")
+        verbose_result = physgame_utils.physgame_process_results(doc, ["The correct answer is (C)."])
+        self.assertEqual(verbose_result["physgame_accuracy"]["pred_answer"], "")
 
         with tempfile.TemporaryDirectory() as cache_dir:
             video_path = os.path.join(cache_dir, doc["video_path"])
