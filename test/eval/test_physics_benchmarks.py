@@ -19,6 +19,7 @@ from tools.prepare_physics_benchmarks import (
     _normalize_step_analysis,
     _normalize_theorems,
 )
+from tools.score_physreason_psas_a import _step_weights, _summarize
 
 
 class TestPhysicsBenchmarks(unittest.TestCase):
@@ -180,6 +181,28 @@ class TestPhysicsBenchmarks(unittest.TestCase):
         self.assertEqual([item["step"] for item in explanations], ["step_1", "step_2"])
         self.assertEqual(analysis[0]["result_quantities"][0]["equation"], "")
         self.assertEqual(_normalize_theorems(problem, analysis), ["Newton's second law"])
+
+    def test_physreason_psas_a_uses_step_weights(self):
+        problem = {
+            "sub_questions": ["First?", "Second?"],
+            "explanation_steps": [
+                {"sub_question": "sub_question_1"},
+                {"sub_question": "sub_question_2"},
+                {"sub_question": "sub_question_2"},
+            ],
+        }
+        weights = _step_weights(problem)
+        self.assertEqual(weights, [1, 2])
+
+        problems = {0: {"problem_id": "p0", "difficulty": "easy", "weights": weights}}
+        records = {
+            (0, 0): {"correct": False, "usage": {"prompt_tokens": 10, "completion_tokens": 1}},
+            (0, 1): {"correct": True, "usage": {"prompt_tokens": 20, "completion_tokens": 2}},
+        }
+        summary = _summarize(records, problems, expected_records=2)
+        self.assertTrue(summary["complete"])
+        self.assertAlmostEqual(summary["psas_a"], 200 / 3)
+        self.assertEqual(summary["usage"], {"prompt_tokens": 30, "completion_tokens": 3})
 
 
 if __name__ == "__main__":
