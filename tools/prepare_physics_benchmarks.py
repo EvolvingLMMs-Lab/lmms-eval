@@ -10,34 +10,48 @@ Examples:
 """
 
 import argparse
+import concurrent.futures
+import hashlib
+import http.client
 import json
+import os
 import re
 import shutil
 import tempfile
+import time
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
+from urllib.parse import urlencode
 
 import datasets
-from huggingface_hub import HfApi, hf_hub_download, metadata_update, snapshot_download
+from huggingface_hub import HfApi, hf_hub_download, metadata_update
 
 TARGET_ORG = "lmms-lab-eval"
 
 PHYSBENCH_SOURCE = "USC-PSI-Lab/PhysBench"
 PHYSGAME_SOURCE = "PhysGame/GameBench"
-PHYSICS_RW_SOURCE = "zhaopengyu/Physics-RW"
+PHYSICS_RW_SOURCE = "pengyz/Physics-RW"
 PHYSREASON_SOURCE = "zhibei1204/PhysReason"
 
 SOURCE_REVISIONS = {
     PHYSBENCH_SOURCE: "478fd93da8ec8d6f5252b9586b1fa10f335c5a95",
     PHYSGAME_SOURCE: "fd5c649f02a876b7b32061cba08b8622e12e25eb",
-    PHYSICS_RW_SOURCE: "882ea4705377613b9c970ce2086ef27ff206df8e",
     PHYSREASON_SOURCE: "b63b7fa6e6bc99563038cafb1e136b060da2f91d",
 }
 PHYSBENCH_ANSWER_REVISION = "a7eadc4da554e20163303ec0c1e076a35a9f52e2"
 PHYSBENCH_ANSWER_URL = f"https://raw.githubusercontent.com/USC-GVL/PhysBench/{PHYSBENCH_ANSWER_REVISION}/eval/physbench/test_answer.json"
 
 PHYSICS_RW_DOMAINS = ["Electromagnetism", "Mechanics", "Optics", "Thermodynamics"]
+PHYSICS_RW_REVISION = "79c52f89d7113f8b71b4da422630a5b214a79ab4"
+PHYSICS_RW_PAPER_COUNTS = {
+    "Mechanics": 716,
+    "Thermodynamics": 138,
+    "Electromagnetism": 152,
+    "Optics": 129,
+}
+PHYSICS_RW_MODELSCOPE_ENDPOINT = f"https://www.modelscope.cn/api/v1/datasets/{PHYSICS_RW_SOURCE}/repo"
 PHYSREASON_ARCHIVES = {
     "full": ("PhysReason-full.zip", "PhysReason_full"),
     "mini": ("PhysReason-mini.zip", "PhysReason-mini"),
@@ -63,8 +77,8 @@ DATASET_METADATA = {
         "repo": "Physics-RW",
         "pretty_name": "Physics-RW",
         "license": "cc-by-nc-4.0",
-        "source": "https://huggingface.co/datasets/zhaopengyu/Physics-RW",
-        "description": "Normalized English Physics-RW classification annotations and official videos.",
+        "source": "https://www.modelscope.cn/datasets/pengyz/Physics-RW",
+        "description": "Normalized 1,135-example English Physics-RW classification benchmark and official videos.",
     },
     "physreason": {
         "repo": "PhysReason",
@@ -79,6 +93,60 @@ DATASET_METADATA = {
 def _read_json_url(url: str):
     with urllib.request.urlopen(url, timeout=60) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def _modelscope_url(relative_path: str) -> str:
+    query = urlencode({"Revision": PHYSICS_RW_REVISION, "FilePath": relative_path})
+    return f"{PHYSICS_RW_MODELSCOPE_ENDPOINT}?{query}"
+
+
+def _download_url(url: str, destination: Path, *, retries: int = 5) -> None:
+    """Download a large source file atomically, retrying transient CDN errors."""
+    if destination.is_file() and destination.stat().st_size > 0:
+        head_request = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "lmms-eval-dataset-preparer"})
+        try:
+            with urllib.request.urlopen(head_request, timeout=30) as response:
+                expected_size = int(response.headers.get("Content-Length", 0))
+                expected_sha256 = response.headers.get("X-Linked-Etag", "").strip('"').lower()
+            size_matches = expected_size and destination.stat().st_size == expected_size
+            hash_matches = not re.fullmatch(r"[0-9a-f]{64}", expected_sha256) or _sha256(destination) == expected_sha256
+            if size_matches and hash_matches:
+                return
+        except (OSError, TimeoutError, urllib.error.URLError, http.client.IncompleteRead):
+            # A fresh, validated GET below is safer than trusting a cached file
+            # when the CDN metadata request itself is unavailable.
+            pass
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    partial_path = destination.with_name(f"{destination.name}.partial")
+    request = urllib.request.Request(url, headers={"User-Agent": "lmms-eval-dataset-preparer"})
+
+    for attempt in range(1, retries + 1):
+        partial_path.unlink(missing_ok=True)
+        try:
+            with urllib.request.urlopen(request, timeout=300) as response, open(partial_path, "wb") as output:
+                expected_size = int(response.headers.get("Content-Length", 0))
+                expected_sha256 = response.headers.get("X-Linked-Etag", "").strip('"').lower()
+                shutil.copyfileobj(response, output, length=1024 * 1024)
+            downloaded_size = partial_path.stat().st_size
+            if downloaded_size == 0:
+                raise OSError(f"Downloaded an empty file from {url}")
+            if expected_size and downloaded_size != expected_size:
+                raise OSError(f"Incomplete download from {url}: expected {expected_size} bytes, got {downloaded_size}")
+            if re.fullmatch(r"[0-9a-f]{64}", expected_sha256) and _sha256(partial_path) != expected_sha256:
+                raise OSError(f"Checksum mismatch for {url}")
+            partial_path.replace(destination)
+            return
+        except (OSError, TimeoutError, urllib.error.URLError, http.client.IncompleteRead):
+            partial_path.unlink(missing_ok=True)
+            if attempt == retries:
+                raise
+            time.sleep(2**attempt)
+
+
+def _sha256(path: Path) -> str:
+    with open(path, "rb") as file:
+        return hashlib.file_digest(file, "sha256").hexdigest()
 
 
 def build_physbench() -> datasets.DatasetDict:
@@ -180,26 +248,31 @@ def build_physics_rw() -> datasets.DatasetDict:
     rows = []
     for domain in PHYSICS_RW_DOMAINS:
         relative_path = f"Physics-RW/{domain}/classification/classification_en.json"
-        annotation_path = hf_hub_download(PHYSICS_RW_SOURCE, relative_path, repo_type="dataset", revision=SOURCE_REVISIONS[PHYSICS_RW_SOURCE])
-        with open(annotation_path, encoding="utf-8") as file:
-            annotations = json.load(file)
+        annotations = _read_json_url(_modelscope_url(relative_path))
+        paper_count = PHYSICS_RW_PAPER_COUNTS[domain]
+        if len(annotations) < paper_count:
+            raise ValueError(f"Physics-RW {domain} has {len(annotations)} rows; expected at least {paper_count}")
 
-        for annotation in annotations:
+        # The ModelScope Mechanics file contains 39 later rows whose labels are
+        # still Chinese. Table 2 of the paper defines the English benchmark as
+        # the first 716 Mechanics rows, for 1,135 examples across four domains.
+        for annotation in annotations[:paper_count]:
             source_idx = int(annotation["idx"])
             source_video_path = str(annotation["video_path"])
+            label = str(annotation.get("answer", annotation.get("label", ""))).lower()
             rows.append(
                 {
                     "id": f"{domain.lower()}-{source_idx}",
                     "source_idx": source_idx,
                     "domain": domain,
                     "instruction": str(annotation["instruction"]),
-                    "label": str(annotation["label"]).lower(),
+                    "label": label,
                     "video_path": f"media/{domain}/classification/{source_video_path}",
                 }
             )
 
-    assert len(rows) == 40
-    assert len({row["id"] for row in rows}) == 40
+    assert len(rows) == sum(PHYSICS_RW_PAPER_COUNTS.values()) == 1135
+    assert len({row["id"] for row in rows}) == 1135
     assert all(row["label"] in {"yes", "no"} for row in rows)
 
     features = datasets.Features(
@@ -417,42 +490,35 @@ BUILDERS = {
 
 
 def _upload_physics_rw_media(api: HfApi, target_repo: str, dataset: datasets.DatasetDict) -> None:
-    source_paths = []
+    source_to_target = {}
     for row in dataset["test"]:
         target_path = Path(row["video_path"])
         if target_path.is_absolute() or ".." in target_path.parts or not target_path.parts or target_path.parts[0] != "media":
             raise ValueError(f"Invalid Physics-RW target path: {target_path}")
-        source_paths.append(Path("Physics-RW", *target_path.parts[1:]))
+        source_path = Path("Physics-RW", *target_path.parts[1:])
+        source_to_target[source_path] = target_path
 
-    snapshot_path = Path(
-        snapshot_download(
-            PHYSICS_RW_SOURCE,
-            repo_type="dataset",
-            revision=SOURCE_REVISIONS[PHYSICS_RW_SOURCE],
-            allow_patterns=[path.as_posix() for path in source_paths],
-        )
+    hf_home = Path(os.path.expanduser(os.getenv("HF_HOME", "~/.cache/huggingface")))
+    # Keep source staging separate from the task cache symlink created by
+    # lmms-eval. Mixing the two can mutate a Hub snapshot and make later runs
+    # silently reuse incomplete files.
+    cache_root = hf_home / "physics_rw_sources" / PHYSICS_RW_REVISION
+
+    def download_media(item: tuple[Path, Path]) -> None:
+        source_path, target_path = item
+        _download_url(_modelscope_url(source_path.as_posix()), cache_root / target_path)
+
+    items = sorted(source_to_target.items(), key=lambda item: item[0].as_posix())
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+        list(executor.map(download_media, items))
+
+    api.upload_folder(
+        repo_id=target_repo,
+        repo_type="dataset",
+        folder_path=cache_root,
+        allow_patterns="media/**",
+        commit_message="data: publish official classification videos",
     )
-
-    # The source MP4s are legacy Git blobs, which the Hub rejects in a
-    # server-side repository copy. Stage only the 40 evaluation videos and
-    # upload them through the current Xet-backed upload path instead.
-    with tempfile.TemporaryDirectory(prefix="physics-rw-media-") as temp_dir:
-        temp_root = Path(temp_dir)
-        for source_path in source_paths:
-            local_source = snapshot_path / source_path
-            local_target = temp_root / "media" / Path(*source_path.parts[1:])
-            local_target.parent.mkdir(parents=True, exist_ok=True)
-            try:
-                local_target.hardlink_to(local_source)
-            except OSError:
-                shutil.copy2(local_source, local_target)
-
-        api.upload_folder(
-            repo_id=target_repo,
-            repo_type="dataset",
-            folder_path=temp_root,
-            commit_message="data: publish official classification videos",
-        )
 
 
 def _copy_media(api: HfApi, dataset_name: str, target_repo: str, dataset) -> None:

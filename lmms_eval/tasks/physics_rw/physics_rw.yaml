@@ -1,5 +1,5 @@
 # Physics-RW: Real-world physics prediction
-# Source: zhaopengyu/Physics-RW
+# Source: pengyz/Physics-RW on ModelScope (paper's 1,135-example split)
 # Normalized copy: lmms-lab-eval/Physics-RW
 dataset_path: lmms-lab-eval/Physics-RW
 dataset_kwargs:

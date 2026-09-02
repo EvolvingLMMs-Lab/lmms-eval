@@ -2,6 +2,7 @@ import io
 import os
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import datasets
@@ -14,10 +15,13 @@ from lmms_eval.tasks.physgame import utils as physgame_utils
 from lmms_eval.tasks.physics_rw import utils as physics_rw_utils
 from lmms_eval.tasks.physreason import utils as physreason_utils
 from tools.prepare_physics_benchmarks import (
+    PHYSICS_RW_PAPER_COUNTS,
+    _download_url,
     _normalize_explanation_steps,
     _normalize_image_captions,
     _normalize_step_analysis,
     _normalize_theorems,
+    build_physics_rw,
 )
 from tools.score_physreason_psas_a import _step_weights, _summarize
 
@@ -103,6 +107,76 @@ class TestPhysicsBenchmarks(unittest.TestCase):
             {"pred_answer": "no", "answer": "yes"},
         ]
         self.assertEqual(physics_rw_utils.physics_rw_aggregate_macro_f1(metric_rows), 50.0)
+
+    def test_physics_rw_builder_uses_the_paper_split(self):
+        annotations = {}
+        for domain, count in PHYSICS_RW_PAPER_COUNTS.items():
+            rows = [
+                {
+                    "idx": index,
+                    "video_path": f"video/{domain.lower()}_{index}.mp4",
+                    "instruction": "Please answer yes or no only.",
+                    "answer": "yes" if index % 2 else "no",
+                }
+                for index in range(count)
+            ]
+            annotations[domain] = rows
+
+        # Mirror the 39 post-paper Mechanics rows in the current ModelScope
+        # source. They must not silently change the published benchmark size.
+        annotations["Mechanics"].extend(
+            {
+                "idx": index,
+                "video_path": f"video/mechanics_extra_{index}.mp4",
+                "instruction": "Please answer yes or no only.",
+                "answer": "是",
+            }
+            for index in range(716, 755)
+        )
+
+        def source_rows(url):
+            domain = next(domain for domain in PHYSICS_RW_PAPER_COUNTS if f"Physics-RW%2F{domain}%2F" in url)
+            return annotations[domain]
+
+        with patch("tools.prepare_physics_benchmarks._read_json_url", side_effect=source_rows):
+            dataset = build_physics_rw()["test"]
+
+        self.assertEqual(len(dataset), 1135)
+        self.assertEqual(sum(row["domain"] == "Mechanics" for row in dataset), 716)
+        self.assertTrue(all(row["label"] in {"yes", "no"} for row in dataset))
+
+    def test_physics_rw_media_download_rejects_truncated_files(self):
+        response = io.BytesIO(b"ab")
+        response.headers = {"Content-Length": "4"}
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            destination = Path(temp_dir) / "video.mp4"
+            with patch("urllib.request.urlopen", return_value=response):
+                with self.assertRaisesRegex(OSError, "Incomplete download"):
+                    _download_url("https://example.com/video.mp4", destination, retries=1)
+            self.assertFalse(os.path.exists(destination))
+
+    def test_physics_rw_media_download_rejects_checksum_mismatch(self):
+        response = io.BytesIO(b"ab")
+        response.headers = {"Content-Length": "2", "X-Linked-Etag": "0" * 64}
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            destination = Path(temp_dir) / "video.mp4"
+            with patch("urllib.request.urlopen", return_value=response):
+                with self.assertRaisesRegex(OSError, "Checksum mismatch"):
+                    _download_url("https://example.com/video.mp4", destination, retries=1)
+            self.assertFalse(os.path.exists(destination))
+
+    def test_physics_rw_media_download_recovers_from_head_timeout(self):
+        response = io.BytesIO(b"new")
+        response.headers = {"Content-Length": "3"}
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            destination = Path(temp_dir) / "video.mp4"
+            destination.write_bytes(b"cached")
+            with patch("urllib.request.urlopen", side_effect=[TimeoutError(), response]):
+                _download_url("https://example.com/video.mp4", destination, retries=1)
+            self.assertEqual(destination.read_bytes(), b"new")
 
     def test_qwen_interleaves_plain_and_numbered_visual_markers(self):
         image_1 = {"type": "image", "image": "first"}

@@ -92,10 +92,22 @@ def _f1_for_label(results, label):
     return 2 * true_positive / denominator if denominator else 0.0
 
 
+def _macro_f1(results):
+    if not results:
+        return 0.0
+    return 100 * sum(_f1_for_label(results, label) for label in ("yes", "no")) / 2
+
+
 def physics_rw_aggregate_macro_f1(results):
     """Compute the paper's binary macro-F1 metric on yes/no predictions."""
     if not results:
         return 0.0
-    macro_f1 = 100 * sum(_f1_for_label(results, label) for label in ("yes", "no")) / 2
+
+    for domain in DOMAINS:
+        domain_results = [result for result in results if result.get("domain") == domain]
+        if domain_results:
+            eval_logger.info("Physics-RW [{}] macro F1: {:.1f}%", domain, _macro_f1(domain_results))
+
+    macro_f1 = _macro_f1(results)
     eval_logger.info("Physics-RW macro F1: {:.1f}%", macro_f1)
     return macro_f1
