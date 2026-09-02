@@ -32,7 +32,7 @@ def physgame_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     options = doc["options"]
     # options is a dict like {"A": "...", "B": "...", "C": "...", "D": "..."}
     if isinstance(options, dict):
-        option_str = "\n".join([f"{k}. {v}" for k, v in options.items()])
+        option_str = "\n".join([f"{k}: {v}" for k, v in options.items()])
     elif isinstance(options, list):
         option_str = "\n".join(options)
     else:

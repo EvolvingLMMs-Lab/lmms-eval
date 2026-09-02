@@ -56,14 +56,13 @@ def physics_rw_process_results(doc, results):
     gt_ans = doc.get("label", "").strip().lower()
     domain = doc.get("domain", "Unknown")
 
-    return {
-        "physics_rw_accuracy": {
-            "id": doc.get("id", ""),
-            "domain": domain,
-            "pred_answer": pred_ans,
-            "answer": gt_ans,
-        }
+    result = {
+        "id": doc.get("id", ""),
+        "domain": domain,
+        "pred_answer": pred_ans,
+        "answer": gt_ans,
     }
+    return {"physics_rw_accuracy": result, "physics_rw_macro_f1": result}
 
 
 def physics_rw_aggregate_results(results):
@@ -94,3 +93,20 @@ def physics_rw_aggregate_results(results):
     overall = 100 * total_correct / total
     eval_logger.info("Physics-RW overall: {:.1f}% ({}/{})", overall, total_correct, total)
     return overall
+
+
+def _f1_for_label(results, label):
+    true_positive = sum(result["pred_answer"] == label and result["answer"] == label for result in results)
+    false_positive = sum(result["pred_answer"] == label and result["answer"] != label for result in results)
+    false_negative = sum(result["pred_answer"] != label and result["answer"] == label for result in results)
+    denominator = 2 * true_positive + false_positive + false_negative
+    return 2 * true_positive / denominator if denominator else 0.0
+
+
+def physics_rw_aggregate_macro_f1(results):
+    """Compute the paper's binary macro-F1 metric on yes/no predictions."""
+    if not results:
+        return 0.0
+    macro_f1 = 100 * sum(_f1_for_label(results, label) for label in ("yes", "no")) / 2
+    eval_logger.info("Physics-RW macro F1: {:.1f}%", macro_f1)
+    return macro_f1

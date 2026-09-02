@@ -90,6 +90,7 @@ def build_physbench() -> datasets.DatasetDict:
     answers = {int(row["idx"]): row for row in answer_rows}
 
     split_rows = {"val": [], "test": []}
+    full_rows = []
     for annotation in annotations:
         idx = int(annotation["idx"])
         split = annotation["split"]
@@ -97,21 +98,22 @@ def build_physbench() -> datasets.DatasetDict:
             continue
 
         answer_info = answers.get(idx, {})
-        split_rows[split].append(
-            {
-                "idx": idx,
-                "split": split,
-                "question": str(annotation["question"]),
-                "file_name": [str(name) for name in annotation.get("file_name", [])],
-                "answer": str(answer_info.get("answer", "")),
-                "task_type": str(answer_info.get("task_type", "")),
-                "sub_type": str(answer_info.get("sub_type", "")),
-                "ability_type": str(answer_info.get("ability_type", "")),
-            }
-        )
+        row = {
+            "idx": idx,
+            "split": split,
+            "question": str(annotation["question"]),
+            "file_name": [str(name) for name in annotation.get("file_name", [])],
+            "answer": str(answer_info.get("answer", "")),
+            "task_type": str(answer_info.get("task_type", "")),
+            "sub_type": str(answer_info.get("sub_type", "")),
+            "ability_type": str(answer_info.get("ability_type", "")),
+        }
+        split_rows[split].append(row)
+        full_rows.append(row)
 
     assert len(split_rows["val"]) == 200
     assert len(split_rows["test"]) == 9802
+    assert len(full_rows) == 10002
     assert sum(not row["answer"] for rows in split_rows.values() for row in rows) == 17
     assert all(row["file_name"] for rows in split_rows.values() for row in rows)
 
@@ -127,7 +129,12 @@ def build_physbench() -> datasets.DatasetDict:
             "ability_type": datasets.Value("string"),
         }
     )
-    return datasets.DatasetDict({split: datasets.Dataset.from_list(rows, features=features) for split, rows in split_rows.items()})
+    return datasets.DatasetDict(
+        {
+            "full": datasets.Dataset.from_list(full_rows, features=features),
+            **{split: datasets.Dataset.from_list(rows, features=features) for split, rows in split_rows.items()},
+        }
+    )
 
 
 def build_physgame() -> datasets.DatasetDict:

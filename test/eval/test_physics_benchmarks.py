@@ -5,8 +5,10 @@ import unittest
 from unittest.mock import patch
 
 import datasets
+import torch
 from PIL import Image
 
+from lmms_eval.models.simple.qwen2_5_vl import _interleave_visual_content, _limit_video_inputs, _strip_visual_placeholders
 from lmms_eval.tasks.physbench import utils as physbench_utils
 from lmms_eval.tasks.physgame import utils as physgame_utils
 from lmms_eval.tasks.physics_rw import utils as physics_rw_utils
@@ -52,8 +54,8 @@ class TestPhysicsBenchmarks(unittest.TestCase):
             "video_path": "PhysGame-Benchmark/abc123.mp4",
         }
         prompt = physgame_utils.physgame_doc_to_text(doc)
-        self.assertIn("A. One", prompt)
-        self.assertIn("D. Four", prompt)
+        self.assertIn("A: One", prompt)
+        self.assertIn("D: Four", prompt)
 
         result = physgame_utils.physgame_process_results(doc, ["The correct answer is (C)."])
         self.assertEqual(result["physgame_accuracy"]["pred_answer"], "C")
@@ -75,6 +77,7 @@ class TestPhysicsBenchmarks(unittest.TestCase):
         }
         result = physics_rw_utils.physics_rw_process_results(doc, ["Yes, it will."])
         self.assertEqual(result["physics_rw_accuracy"]["pred_answer"], "yes")
+        self.assertEqual(result["physics_rw_macro_f1"]["pred_answer"], "yes")
 
         with tempfile.TemporaryDirectory() as cache_dir:
             video_path = os.path.join(cache_dir, doc["video_path"])
@@ -82,6 +85,40 @@ class TestPhysicsBenchmarks(unittest.TestCase):
             open(video_path, "wb").close()
             with patch.object(physics_rw_utils, "_get_cache_dir", return_value=cache_dir):
                 self.assertEqual(physics_rw_utils.physics_rw_doc_to_visual(doc), [video_path])
+
+        metric_rows = [
+            {"pred_answer": "yes", "answer": "yes"},
+            {"pred_answer": "yes", "answer": "no"},
+            {"pred_answer": "no", "answer": "no"},
+            {"pred_answer": "no", "answer": "yes"},
+        ]
+        self.assertEqual(physics_rw_utils.physics_rw_aggregate_macro_f1(metric_rows), 50.0)
+
+    def test_qwen_interleaves_plain_and_numbered_visual_markers(self):
+        image_1 = {"type": "image", "image": "first"}
+        image_2 = {"type": "image", "image": "second"}
+        video = {"type": "video", "video": "clip"}
+
+        content = _interleave_visual_content(
+            "Transform <image> into <image>, then inspect <video>.",
+            [image_1, image_2, video],
+        )
+        self.assertEqual([part["type"] for part in content], ["text", "image", "text", "image", "text", "video", "text"])
+        self.assertIs(content[1], image_1)
+        self.assertIs(content[3], image_2)
+        self.assertIs(content[5], video)
+
+        numbered = _interleave_visual_content("Compare <image 2> with <image 1>.", [image_1, image_2])
+        self.assertIs(numbered[1], image_2)
+        self.assertIs(numbered[3], image_1)
+        self.assertEqual(_strip_visual_placeholders("<video> Q <image>"), " Q ")
+
+    def test_qwen_caps_every_video_in_a_batch(self):
+        videos = [torch.arange(20).reshape(10, 2), torch.arange(24).reshape(12, 2)]
+        limited = _limit_video_inputs(videos, 4)
+        self.assertEqual([video.shape[0] for video in limited], [4, 4])
+        self.assertEqual(limited[0][0].tolist(), [0, 1])
+        self.assertEqual(limited[0][-1].tolist(), [18, 19])
 
     def test_physreason_preserves_multiple_images_and_scores_answers(self):
         image = Image.new("RGB", (2, 2), color="red")

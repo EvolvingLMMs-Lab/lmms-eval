@@ -21,6 +21,9 @@ metric_list:
   - metric: physics_rw_accuracy
     aggregation: !function utils.physics_rw_aggregate_results
     higher_is_better: true
+  - metric: physics_rw_macro_f1
+    aggregation: !function utils.physics_rw_aggregate_macro_f1
+    higher_is_better: true
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""

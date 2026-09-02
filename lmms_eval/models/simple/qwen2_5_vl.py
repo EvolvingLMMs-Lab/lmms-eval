@@ -1,7 +1,6 @@
 import re
 from typing import List, Optional, Tuple, Union
 
-import decord
 import numpy as np
 import torch
 from accelerate import Accelerator, DistributedType
@@ -24,6 +23,69 @@ from lmms_eval.models.model_utils.media_encoder import encode_image_to_data_url
 process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
 if not _has_qwen_vl:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
+
+
+_VISUAL_PLACEHOLDER_RE = re.compile(r"<(image|video)(?:\s+(\d+))?>", re.IGNORECASE)
+
+
+def _strip_visual_placeholders(context: str) -> str:
+    """Remove task-level media markers after media has been attached."""
+    return _VISUAL_PLACEHOLDER_RE.sub("", context)
+
+
+def _interleave_visual_content(context: str, processed_visuals: list) -> list:
+    """Insert visuals at ``<image>``/``<video>`` markers in prompt order.
+
+    Unnumbered markers consume visuals sequentially. Numbered markers such as
+    ``<image 2>`` retain the existing explicit-index behavior. Tasks without
+    markers keep the standard visuals-first layout.
+    """
+    matches = list(_VISUAL_PLACEHOLDER_RE.finditer(context))
+    if not matches:
+        return [*processed_visuals, {"type": "text", "text": context}]
+
+    content_parts = []
+    cursor = 0
+    next_visual_index = 0
+    used_visual_indices = set()
+
+    for match in matches:
+        if match.start() > cursor:
+            content_parts.append({"type": "text", "text": context[cursor : match.start()]})
+
+        explicit_index = match.group(2)
+        if explicit_index is not None:
+            visual_index = int(explicit_index) - 1
+        else:
+            while next_visual_index in used_visual_indices:
+                next_visual_index += 1
+            visual_index = next_visual_index
+            next_visual_index += 1
+
+        if 0 <= visual_index < len(processed_visuals):
+            content_parts.append(processed_visuals[visual_index])
+            used_visual_indices.add(visual_index)
+
+        cursor = match.end()
+
+    if cursor < len(context):
+        content_parts.append({"type": "text", "text": context[cursor:]})
+
+    return content_parts or [{"type": "text", "text": ""}]
+
+
+def _limit_video_inputs(video_inputs, max_num_frames: int):
+    """Uniformly cap every video in a batch while preserving both endpoints."""
+    if video_inputs is None or max_num_frames is None or max_num_frames <= 0:
+        return video_inputs
+
+    for video_index, video_input in enumerate(video_inputs):
+        total_frames = video_input.shape[0]
+        if total_frames <= max_num_frames:
+            continue
+        indices = np.linspace(0, total_frames - 1, max_num_frames, dtype=int)
+        video_inputs[video_index] = video_input[np.unique(indices)]
+    return video_inputs
 
 
 @register_model("qwen2_5_vl")
@@ -216,16 +278,11 @@ class Qwen2_5_VL(lmms):
             if isinstance(contexts, tuple):
                 contexts = list(contexts)
 
-            for i in range(len(contexts)):
-                if "<image>" in contexts[i]:
-                    contexts[i] = contexts[i].replace("<image>", "")
-
             batched_messages = []
             for i, context in enumerate(contexts):
-                if "<image>" in context:
-                    context = context.replace("<image>", "")
-
-                message = [{"role": "system", "content": self.system_prompt}]
+                message = []
+                if self.system_prompt:
+                    message.append({"role": "system", "content": self.system_prompt})
                 if self.reasoning_prompt:
                     context = context.strip() + self.reasoning_prompt
                     contexts[i] = context
@@ -234,18 +291,15 @@ class Qwen2_5_VL(lmms):
                 if visual_list[i] is not None:
                     for visual in visual_list[i]:
                         if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
-                            vr = decord.VideoReader(visual)
-                            first_frame = vr[0].asnumpy()
-                            height, width = first_frame.shape[:2]
-                            # max_pixels = height * width
-                            processed_visuals.append(
-                                {
-                                    "type": "video",
-                                    "video": visual,
-                                    "max_pixels": self.max_pixels,
-                                    "min_pixels": self.min_pixels,
-                                }
-                            )
+                            video_content = {
+                                "type": "video",
+                                "video": visual,
+                                "max_pixels": self.max_pixels,
+                                "min_pixels": self.min_pixels,
+                            }
+                            if self.fps is not None:
+                                video_content["fps"] = self.fps
+                            processed_visuals.append(video_content)
                         elif isinstance(visual, Image.Image):  # Handle both single and multiple images
                             processed_visuals.append(
                                 {
@@ -260,28 +314,14 @@ class Qwen2_5_VL(lmms):
                     message.append(
                         {
                             "role": "user",
-                            "content": processed_visuals + [{"type": "text", "text": context}],
+                            "content": processed_visuals + [{"type": "text", "text": _strip_visual_placeholders(context)}],
                         }
                     )
-                else:  # currently support find <image x> in the context
-                    image_placeholders = re.findall(r"<image \d+>", context)
-                    content_parts = []
-                    text_parts = re.split(r"<image \d+>", context)
-                    if text_parts[0]:
-                        content_parts.append({"type": "text", "text": text_parts[0]})
-
-                    for i, placeholder in enumerate(image_placeholders):
-                        img_idx = int(re.search(r"<image (\d+)>", placeholder).group(1)) - 1
-                        image_idx = min(img_idx, len(processed_visuals) - 1) if processed_visuals else 0
-                        if processed_visuals and image_idx < len(processed_visuals):
-                            content_parts.append(processed_visuals[image_idx])
-                        if i + 1 < len(text_parts) and text_parts[i + 1]:
-                            content_parts.append({"type": "text", "text": text_parts[i + 1]})
-
+                else:
                     message.append(
                         {
                             "role": "user",
-                            "content": content_parts,
+                            "content": _interleave_visual_content(context, processed_visuals),
                         }
                     )
 
@@ -289,16 +329,7 @@ class Qwen2_5_VL(lmms):
 
             texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
             image_inputs, video_inputs = process_vision_info(batched_messages)
-            if video_inputs is not None:
-                total_frames = video_inputs[0].shape[0]
-                indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
-                # Ensure unique indices if linspace produces duplicates for few frames
-                indices = np.unique(indices)
-                # Append the last frame index if not already included
-                if total_frames - 1 not in indices:
-                    indices = np.append(indices, total_frames - 1)
-                    indices = np.unique(indices)  # Ensure uniqueness again
-                video_inputs[0] = video_inputs[0][indices]
+            video_inputs = _limit_video_inputs(video_inputs, self.max_num_frames)
             padding_side = "left" if self.batch_size > 1 else "right"
             inputs = self.processor(
                 text=texts,
@@ -434,16 +465,11 @@ class Qwen2_5_VL(lmms):
                     visuals_list = batched_visuals
                     contexts = list(batched_contexts)
 
-                for i in range(len(contexts)):
-                    if "<image>" in contexts[i]:
-                        contexts[i] = contexts[i].replace("<image>", "")
-
                 batched_messages = []
                 for i, context in enumerate(contexts):
-                    if "<image>" in context:
-                        context = context.replace("<image>", "")
-
-                    message = [{"role": "system", "content": self.system_prompt}]
+                    message = []
+                    if self.system_prompt:
+                        message.append({"role": "system", "content": self.system_prompt})
                     if self.reasoning_prompt:
                         context = context.strip() + self.reasoning_prompt
 
@@ -451,17 +477,15 @@ class Qwen2_5_VL(lmms):
                     if visuals_list[i] is not None:
                         for visual in visuals_list[i]:
                             if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):
-                                vr = decord.VideoReader(visual)
-                                first_frame = vr[0].asnumpy()
-                                height, width = first_frame.shape[:2]
-                                processed_visuals.append(
-                                    {
-                                        "type": "video",
-                                        "video": visual,
-                                        "max_pixels": self.max_pixels,
-                                        "min_pixels": self.min_pixels,
-                                    }
-                                )
+                                video_content = {
+                                    "type": "video",
+                                    "video": visual,
+                                    "max_pixels": self.max_pixels,
+                                    "min_pixels": self.min_pixels,
+                                }
+                                if self.fps is not None:
+                                    video_content["fps"] = self.fps
+                                processed_visuals.append(video_content)
                             elif isinstance(visual, Image.Image):
                                 processed_visuals.append(
                                     {
@@ -476,28 +500,14 @@ class Qwen2_5_VL(lmms):
                         message.append(
                             {
                                 "role": "user",
-                                "content": processed_visuals + [{"type": "text", "text": context}],
+                                "content": processed_visuals + [{"type": "text", "text": _strip_visual_placeholders(context)}],
                             }
                         )
                     else:
-                        image_placeholders = re.findall(r"<image \d+>", context)
-                        content_parts = []
-                        text_parts = re.split(r"<image \d+>", context)
-                        if text_parts[0]:
-                            content_parts.append({"type": "text", "text": text_parts[0]})
-
-                        for j, placeholder in enumerate(image_placeholders):
-                            img_idx = int(re.search(r"<image (\d+)>", placeholder).group(1)) - 1
-                            image_idx = min(img_idx, len(processed_visuals) - 1) if processed_visuals else 0
-                            if processed_visuals and image_idx < len(processed_visuals):
-                                content_parts.append(processed_visuals[image_idx])
-                            if j + 1 < len(text_parts) and text_parts[j + 1]:
-                                content_parts.append({"type": "text", "text": text_parts[j + 1]})
-
                         message.append(
                             {
                                 "role": "user",
-                                "content": content_parts,
+                                "content": _interleave_visual_content(context, processed_visuals),
                             }
                         )
 
@@ -505,14 +515,7 @@ class Qwen2_5_VL(lmms):
 
                 texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in batched_messages]
                 image_inputs, video_inputs = process_vision_info(batched_messages)
-                if video_inputs is not None:
-                    total_frames = video_inputs[0].shape[0]
-                    indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
-                    indices = np.unique(indices)
-                    if total_frames - 1 not in indices:
-                        indices = np.append(indices, total_frames - 1)
-                        indices = np.unique(indices)
-                    video_inputs[0] = video_inputs[0][indices]
+                video_inputs = _limit_video_inputs(video_inputs, self.max_num_frames)
                 inputs = self.processor(
                     text=texts,
                     images=image_inputs,
