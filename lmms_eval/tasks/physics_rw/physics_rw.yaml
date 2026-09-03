@@ -1,0 +1,32 @@
+# Physics-RW: Real-world physics prediction
+# Source: pengyz/Physics-RW on ModelScope (paper's 1,135-example split)
+# Normalized copy: lmms-lab-eval/Physics-RW
+dataset_path: lmms-lab-eval/Physics-RW
+dataset_kwargs:
+  cache_dir: physics_rw
+  video: true
+  create_link: true
+task: physics_rw
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.physics_rw_doc_to_visual
+doc_to_text: !function utils.physics_rw_doc_to_text
+doc_to_target: "label"
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  do_sample: false
+process_results: !function utils.physics_rw_process_results
+metric_list:
+  - metric: physics_rw_accuracy
+    aggregation: !function utils.physics_rw_aggregate_results
+    higher_is_better: true
+  - metric: physics_rw_macro_f1
+    aggregation: !function utils.physics_rw_aggregate_macro_f1
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  version: 1.0

@@ -1,0 +1,32 @@
+# PhysBench: Multi-domain physics reasoning (ICLR 2025)
+# Paper: https://arxiv.org/abs/2501.16411
+# Source: USC-PSI-Lab/PhysBench
+# Normalized copy: lmms-lab-eval/PhysBench
+dataset_path: lmms-lab-eval/PhysBench
+dataset_kwargs:
+  cache_dir: physbench
+  video: true
+task: physbench
+# The paper reports the entire 10,002-example test set, including its 200-row
+# public validation subset. The 17 rows without public labels are filtered by
+# ``physbench_process_docs``.
+test_split: full
+output_type: generate_until
+process_docs: !function utils.physbench_process_docs
+doc_to_visual: !function utils.physbench_doc_to_visual
+doc_to_text: !function utils.physbench_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  do_sample: false
+process_results: !function utils.physbench_process_results
+metric_list:
+  - metric: physbench_accuracy
+    aggregation: !function utils.physbench_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    post_prompt: "\nAnswer with the option's letter from the given choices directly. You can only answer one letter from A, B, C, or D."
+metadata:
+  version: 1.0

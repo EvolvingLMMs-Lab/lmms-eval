@@ -63,8 +63,8 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
 
             # Apply chat template
             video_kwargs = {
-                "max_pixels": self.max_pixels,
-                "min_pixels": self.min_pixels,
+                "max_pixels": self.video_max_pixels,
+                "min_pixels": self.video_min_pixels,
             }
             if self.fps is not None:
                 video_kwargs["fps"] = self.fps
@@ -76,7 +76,8 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                         video_path = videos[0]  # Assume batch size 1 for videos
                         vr = decord.VideoReader(video_path)
                         video_total_frames = len(vr)
-                        nframes = min(self.max_num_frames, video_total_frames)
+                        requested_nframes = self.video_nframes if self.video_nframes is not None else self.max_num_frames
+                        nframes = min(requested_nframes, video_total_frames)
                         # qwen_vl_utils requires nframes to be a multiple of 2 (FRAME_FACTOR)
                         # and rounds using round_by_factor, so we need to floor to even number
                         # to avoid rounding up past total_frames
@@ -85,9 +86,9 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                         video_kwargs["nframes"] = nframes
                     except Exception as e:
                         eval_logger.warning(f"Failed to probe video {videos[0]}: {e}, using default nframes")
-                        video_kwargs["nframes"] = self.max_num_frames
+                        video_kwargs["nframes"] = self.video_nframes if self.video_nframes is not None else self.max_num_frames
                 else:
-                    video_kwargs["nframes"] = self.max_num_frames
+                    video_kwargs["nframes"] = self.video_nframes if self.video_nframes is not None else self.max_num_frames
             batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs) for chat_message in chat_messages]
             texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
             image_inputs, video_inputs, video_kwargs_qwen = process_vision_info(

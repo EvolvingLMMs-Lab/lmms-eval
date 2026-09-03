@@ -1,0 +1,29 @@
+# PhysGame / GameBench: Physical commonsense violations in gameplay videos
+# Paper: https://arxiv.org/abs/2412.01800
+# Source: PhysGame/GameBench
+# Normalized copy: lmms-lab-eval/PhysGame
+dataset_path: lmms-lab-eval/PhysGame
+dataset_kwargs:
+  cache_dir: physgame
+  video: true
+task: physgame
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.physgame_doc_to_visual
+doc_to_text: !function utils.physgame_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 128
+  temperature: 0
+  do_sample: false
+process_results: !function utils.physgame_process_results
+metric_list:
+  - metric: physgame_accuracy
+    aggregation: !function utils.physgame_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "Watch the video carefully and analyze the events and object movements, focusing on any inconsistencies with physical laws. Identify and highlight instances where the behavior deviates from expected real-world physics, and select the most accurate option to describe the detected glitch.\n"
+    post_prompt: "\nOnly give the best option."
+metadata:
+  version: 1.0
