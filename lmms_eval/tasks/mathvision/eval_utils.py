@@ -308,12 +308,15 @@ def _fix_sqrt(string):
     for split in splits[1:]:
         # If the split portion is non-empty and the first character isn't a '{',
         # then it means the argument of the sqrt is not enclosed in braces.
-        if len(split) > 0 and split[0] != "{":
+        # An optional root index ("\\sqrt[3]{8}") starts with '[' and is already
+        # well-formed: bracing its '[' corrupted it to '\\sqrt{[}3]{8}', invalid
+        # LaTeX that kills the latex2sympy equivalence path in is_equal.
+        if len(split) > 0 and split[0] not in "{[":
             a = split[0]
             # Add braces around the first character and append the rest of the split portion.
             new_substr = "\\sqrt{" + a + "}" + split[1:]
         else:
-            # If the split portion starts with a '{', then it's already correct.
+            # If the split portion starts with a '{' or a root index '[', it's already correct.
             new_substr = "\\sqrt" + split
         # Add the new substring to our result string.
         new_string += new_substr
