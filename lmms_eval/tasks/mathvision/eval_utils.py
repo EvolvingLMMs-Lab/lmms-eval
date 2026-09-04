@@ -417,7 +417,16 @@ def find_math_answer(s: str) -> str:
     # Clean the string from various LaTeX formatting.
     ans = ans.replace(" ", "").replace("\\,", "").replace("∞", "\\infty")
     ans = ans.replace("+\infty", "\infty").replace("\\\\", "\\").replace("\n", "")
-    ans = ans.replace("\\text", "").replace("\\mbox", "").replace("bmatrix", "pmatrix")
+    # Unwrap \text{...}/\mbox{...} content instead of deleting only the
+    # command name: leftover braces corrupt the answer (\text{Sunday} ->
+    # "{sunday}", which latex2sympy cannot post-process, so is_equal
+    # scores False against the bare gold "Sunday"). Only brace-balanced
+    # spans are unwrapped; anything with nested braces falls back to the
+    # legacy bare replace, because "{\frac{1}{2}}" parses and must keep
+    # doing so.
+    ans = re.sub(r"\\(?:text|mbox)\{([^{}]*)\}", r"\1", ans)
+    ans = ans.replace("\\text", "").replace("\\mbox", "")
+    ans = ans.replace("bmatrix", "pmatrix")
     ans = ans.replace("\\left", "").replace("\\right", "").replace("^{\\circ}", "")
     ans = ans.replace("^\\circ", "").replace("{m}^3", "").replace("m^3", "")
     ans = ans.replace("{units}", "").replace("units", "").replace("{km}", "").replace("km", "")

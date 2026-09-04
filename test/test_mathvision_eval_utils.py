@@ -2,7 +2,12 @@ import pytest
 
 pytest.importorskip("latex2sympy2")
 
-from lmms_eval.tasks.mathvision.eval_utils import _fix_sqrt, _strip_string  # noqa: E402
+from lmms_eval.tasks.mathvision.eval_utils import (  # noqa: E402
+    _fix_sqrt,
+    _strip_string,
+    find_math_answer,
+    is_equal,
+)
 
 
 def test_fix_sqrt_preserves_indexed_roots():
@@ -51,3 +56,23 @@ def test_frac_still_normalized_with_sqrt_present():
     # Control: normalization already worked when a sqrt was present;
     # the fix removes the guard that made sqrt presence a precondition.
     assert _strip_string("\\frac12 + \\sqrt2") == "\\frac{1}{2}+\\sqrt{2}"
+
+
+def test_boxed_text_answer_is_unwrapped_not_braced():
+    assert find_math_answer("\\boxed{\\text{Sunday}}") == "sunday"
+    assert is_equal(find_math_answer("\\boxed{\\text{Sunday}}"), "Sunday") is True
+
+
+def test_mbox_answer_is_unwrapped():
+    assert find_math_answer("\\boxed{\\mbox{8}}") == "8"
+
+
+def test_nested_text_falls_back_to_bare_replace():
+    # Only brace-balanced spans are unwrapped. Nested \text must keep the
+    # legacy bare-replace result, because "{\frac{1}{2}}" parses in
+    # latex2sympy and must keep doing so.
+    assert find_math_answer("\\boxed{\\text{\\frac{1}{2}}}") == "{\\frac{1}{2}}"
+
+
+def test_plain_boxed_answer_untouched():
+    assert find_math_answer("\\boxed{3}") == "3"
