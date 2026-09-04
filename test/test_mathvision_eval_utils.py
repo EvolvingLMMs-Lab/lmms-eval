@@ -26,3 +26,28 @@ def test_strip_string_leaves_indexed_roots_parseable():
     stripped = _strip_string("\\sqrt[3]{8}")
     # the stripped gold/answer must still parse, so is_equal's sympy fallback works
     assert str(latex2sympy(stripped)) == "8**(1/3)"
+
+
+def test_frac_shorthand_normalized_without_sqrt():
+    assert _strip_string("\\frac12") == "\\frac{1}{2}"
+    assert _strip_string("\\frac1{2}") == "\\frac{1}{2}"
+    assert _strip_string("\\frac34") == "\\frac{3}{4}"
+    assert _strip_string("1\\frac12") == "1\\frac{1}{2}"
+
+
+def test_frac_shorthand_parseable_without_sqrt():
+    from latex2sympy2 import latex2sympy
+
+    assert str(latex2sympy(_strip_string("\\frac12"))) == "1/2"
+
+
+def test_frac_braced_numeral_form_is_canonical_passthrough():
+    # \frac{1}2 is left as-is by the canonical _fix_fracs (hendrycks
+    # math_equivalence); this documents parity, not a fix.
+    assert _strip_string("\\frac{1}2") == "\\frac{1}2"
+
+
+def test_frac_still_normalized_with_sqrt_present():
+    # Control: normalization already worked when a sqrt was present;
+    # the fix removes the guard that made sqrt presence a precondition.
+    assert _strip_string("\\frac12 + \\sqrt2") == "\\frac{1}{2}+\\sqrt{2}"

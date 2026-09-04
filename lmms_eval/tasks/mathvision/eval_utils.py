@@ -378,9 +378,12 @@ def _strip_string(string):
     # Remove all spaces
     string = string.replace(" ", "")
 
-    # Transform certain fraction notations to the desired format. Note: The function _fix_fracs is not provided.
-    if "sqrt" in string:
-        string = _fix_fracs(string)
+    # Transform certain fraction notations to the desired format.
+    # Unconditional, matching the canonical hendrycks math_equivalence:
+    # the "sqrt" guard here was a copy of the _fix_sqrt guard above and
+    # made \frac12-style shorthand unreachable for every sqrt-free
+    # answer, which latex2sympy then fails to parse inside is_equal.
+    string = _fix_fracs(string)
 
     # Convert 0.5 to its fraction representation
     if string == "0.5":
