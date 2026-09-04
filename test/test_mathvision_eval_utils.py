@@ -76,3 +76,24 @@ def test_nested_text_falls_back_to_bare_replace():
 
 def test_plain_boxed_answer_untouched():
     assert find_math_answer("\\boxed{3}") == "3"
+
+
+def test_last_boxed_wins_over_retracted_intermediate():
+    # A self-correcting model emits a box, retracts it, and boxes the final
+    # answer; find_math_answer's own [-1] indexing (and lm-eval's
+    # last_boxed_only_string convention) intend the LAST one.
+    assert find_math_answer("the answer is \\boxed{2}. wait, actually \\boxed{3}") == "3"
+
+
+def test_nested_single_box_content_preserved():
+    # The greedy regex was right for a single nested box; depth-balanced
+    # extraction must keep this.
+    assert find_math_answer("\\boxed{\\frac{1}{2}}") == "\\frac{1}{2}"
+
+
+def test_no_box_returns_whole_string():
+    assert find_math_answer("no box here") == "noboxhere"  # spaces are stripped downstream
+
+
+def test_plain_boxed_answer_untouched_by_box_extraction():
+    assert find_math_answer("\\boxed{7}") == "7"

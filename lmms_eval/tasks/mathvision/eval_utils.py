@@ -395,16 +395,39 @@ def _strip_string(string):
     return string
 
 
+def _last_boxed_content(s: str):
+    """Return the content of the last `\boxed{...}` span, brace-balanced.
+
+    The previous greedy regex ("oxed{(.*)}", re.S) spanned from the first
+    box to the last brace of the whole string; with two boxes ("\boxed{2}.
+    wait, \boxed{3}") the }-split fallback below then resurrected the
+    FIRST, retracted answer, while this function's own [-1] indexing (and
+    lm-eval's last_boxed_only_string convention) intend the last.
+    """
+    idx = s.rfind("\\boxed")
+    if idx < 0:
+        return None
+    i = s.find("{", idx)
+    if i < 0:
+        return None
+    depth = 0
+    for j in range(i, len(s)):
+        if s[j] == "{":
+            depth += 1
+        elif s[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return s[i + 1 : j]
+    return None  # unbalanced: fall through to the whole-string fallback
+
+
 def find_math_answer(s: str) -> str:
     s = s.lower()
     if "{}" in s:
         s = s.replace("{}", "")
 
-    try:
-        pattern = re.compile("oxed{(.*)}", flags=re.S)
-        ans = pattern.findall(s)[-1]
-    except Exception:
-        ans = s  # If the pattern is not found, consider the entire string as the answer.
+    boxed = _last_boxed_content(s)
+    ans = boxed if boxed is not None else s  # no (or unbalanced) box: whole string.
 
     # If there's a closing bracket without an opening bracket before it, consider everything before it.
     if ans.find("}") != -1 and (ans.find("{") == -1 or ans.find("}") < ans.find("{")):
