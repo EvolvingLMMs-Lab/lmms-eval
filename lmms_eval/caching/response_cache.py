@@ -344,14 +344,6 @@ def _serialize_response(response: Any) -> str:
     return json.dumps(response, ensure_ascii=False, default=str)
 
 
-def _deserialize_response(stored: str) -> Any:
-    """json.loads returns list for stored tuples — downstream tuple unpacking still works."""
-    try:
-        return json.loads(stored)
-    except (json.JSONDecodeError, TypeError):
-        return stored
-
-
 _SCHEMA_SQL = """\
 CREATE TABLE IF NOT EXISTS responses (
     cache_key     TEXT PRIMARY KEY,
@@ -613,16 +605,21 @@ class ResponseCache:
                         continue
                     try:
                         rec = json.loads(line)
+                        if not isinstance(rec, dict):
+                            continue
                         if not rec.get("deterministic", True) or not rec.get("cache_key"):
                             continue
-                        cur = self.db.execute("SELECT 1 FROM responses WHERE cache_key = ?", (rec["cache_key"],))
-                        if cur.fetchone() is None:
+                        if self._decode_valid_response(rec["response"], rec["request_type"]) is None:
+                            continue
+                        cur = self.db.execute("SELECT response, request_type FROM responses WHERE cache_key = ?", (rec["cache_key"],))
+                        existing = cur.fetchone()
+                        if existing is None or self._decode_valid_response(*existing) is None:
                             self.db.execute(
-                                "INSERT INTO responses (cache_key, request_type, task_name, doc_id, idx, gen_kwargs, response, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                                "INSERT OR REPLACE INTO responses (cache_key, request_type, task_name, doc_id, idx, gen_kwargs, response, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                                 (rec["cache_key"], rec["request_type"], rec["task_name"], rec["doc_id"], rec.get("idx", 0), rec.get("gen_kwargs", "{}"), rec["response"], rec.get("created_at", time.time())),
                             )
                             replayed += 1
-                    except (json.JSONDecodeError, KeyError):
+                    except (json.JSONDecodeError, KeyError, TypeError):
                         continue
             if replayed > 0:
                 self.db.commit()
@@ -631,20 +628,24 @@ class ResponseCache:
             eval_logger.warning(f"ResponseCache: audit log replay failed: {e}")
 
     def _lookup(self, cache_key: str) -> Any:
-        """Look up a cache key: local DB first, then shared DB."""
+        """Read valid responses only, including from caches written by older versions."""
         # 1. Check local (writable) DB
-        cur = self.db.execute("SELECT response FROM responses WHERE cache_key = ?", (cache_key,))
+        cur = self.db.execute("SELECT response, request_type FROM responses WHERE cache_key = ?", (cache_key,))
         row = cur.fetchone()
         if row is not None:
-            return _deserialize_response(row[0])
+            response = self._decode_valid_response(*row)
+            if response is not None:
+                return response
         # 2. Fall back to shared (read-only) DB
         if self._shared_db is not None:
             try:
-                cur = self._shared_db.execute("SELECT response FROM responses WHERE cache_key = ?", (cache_key,))
+                cur = self._shared_db.execute("SELECT response, request_type FROM responses WHERE cache_key = ?", (cache_key,))
                 row = cur.fetchone()
                 if row is not None:
-                    self._hits_shared += 1
-                    return _deserialize_response(row[0])
+                    response = self._decode_valid_response(*row)
+                    if response is not None:
+                        self._hits_shared += 1
+                        return response
             except Exception:
                 pass  # shared DB failure is non-fatal
         return None
@@ -729,6 +730,15 @@ class ResponseCache:
             return False
         return True
 
+    @classmethod
+    def _decode_valid_response(cls, stored: str, request_type: str) -> Any:
+        """Apply the live-write validity policy to persisted JSON payloads."""
+        try:
+            response = json.loads(stored)
+        except (json.JSONDecodeError, TypeError):
+            return None
+        return response if cls._is_valid_response(response, request_type) else None
+
     def execute(self, lm: Any, reqtype: str, requests: List[Instance]) -> list:
         """Check cache -> run model on misses -> store results -> return merged list.
 
@@ -783,6 +793,7 @@ class ResponseCache:
                 cacheable = self._extract_cacheable(resp)
                 gen_kwargs = extract_gen_kwargs(req)
                 deterministic = is_deterministic(reqtype, gen_kwargs)
+                valid = self._is_valid_response(cacheable, reqtype)
                 ch = _extract_content_hash(req)
                 tf = self._task_fingerprints.get(req.task_name, "")
                 cache_key = (
@@ -807,13 +818,13 @@ class ResponseCache:
                     req.idx,
                     gen_kwargs,
                     cacheable,
-                    cache_key=cache_key,
+                    cache_key=cache_key if valid else "",
                     deterministic=deterministic,
                     task_fingerprint=tf,
                     content_hash=ch,
                     model_fingerprint_hash=self._model_fingerprint_hash,
                 )
-                if deterministic and self._is_valid_response(resp, reqtype):
+                if deterministic and valid:
                     self._store(cache_key, reqtype, req.task_name, req.doc_id, req.idx, gen_kwargs, cacheable)
                     if self._use_scratch:
                         self._entries_since_checkpoint += 1
@@ -1021,7 +1032,7 @@ class ResponseCache:
     def merge_shards(shard_paths: List[str], output_path: str) -> int:
         """Merge per-rank SQLite shards into a consolidated DB.
 
-        Uses INSERT OR IGNORE so existing entries in ``output_path`` are preserved.
+        Preserves valid existing entries and replaces invalid entries with valid retries.
         Creates ``output_path`` if it does not exist.
 
         Returns the number of entries inserted.
@@ -1037,9 +1048,14 @@ class ResponseCache:
             shard_db = sqlite3.connect(shard_path)
             rows = shard_db.execute("SELECT cache_key, request_type, task_name, doc_id, idx, gen_kwargs, response, created_at FROM responses").fetchall()
             for row in rows:
+                if ResponseCache._decode_valid_response(row[6], row[1]) is None:
+                    continue
+                existing = out_db.execute("SELECT response, request_type FROM responses WHERE cache_key = ?", (row[0],)).fetchone()
+                if existing is not None and ResponseCache._decode_valid_response(*existing) is not None:
+                    continue
                 try:
                     out_db.execute(
-                        "INSERT OR IGNORE INTO responses (cache_key, request_type, task_name, doc_id, idx, gen_kwargs, response, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                        "INSERT OR REPLACE INTO responses (cache_key, request_type, task_name, doc_id, idx, gen_kwargs, response, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                         row,
                     )
                     total += 1
