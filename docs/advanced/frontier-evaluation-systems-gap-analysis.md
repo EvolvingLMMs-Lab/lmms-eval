@@ -37,8 +37,10 @@ Rechecked reference patterns: [Inspect eval sets](https://inspect.aisi.org.uk/ev
 
 Delivery references: [pipeline RFC #1439](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1439), [CPU contracts #1440](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1440), [agent environment #1419](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1419), and [group postprocessing #1499](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1499).
 
-## Executive finding
 
+The next request-cache fix is [PR #1514](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1514), commit `20e1cdb96294fb99992d763ea6072e4eef864e77`. It stores original document IDs and contexts, reconstructs current requests, bypasses disabled/refresh reads, preserves rank limits, and publishes cache files atomically. Versioned hashed filenames isolate the new representation. The targeted suites passed 96 tests; the offline CPU contract command passed 213 tests. Combining both cache PRs on `brian/dev` passed 102 tests and four subtests. The existing context identity remains incomplete, so dataset/prompt/few-shot changes still require refresh.
+
+## Executive finding
 lmms-eval is already strong where many evaluation frameworks are weak: multimodal benchmark coverage, model adapters, crash-aware response caching, per-sample records, and statistical reporting. The next differentiator should not be another wave of benchmark and backend integrations. It should be a trustworthy evaluation runtime with explicit contracts.
 
 The three highest-value improvements are:
