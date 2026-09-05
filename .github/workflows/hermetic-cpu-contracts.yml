@@ -1,0 +1,47 @@
+name: Hermetic CPU Contracts
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hermetic-cpu-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: "."
+      CUDA_VISIBLE_DEVICES: ""
+      HF_HUB_OFFLINE: "1"
+      HF_DATASETS_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      WANDB_MODE: disabled
+      OPENAI_API_KEY: lmms-eval-ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.7.3"
+      - name: Create Python environment
+        run: uv venv --python 3.11
+      - name: Sync pinned CPU contract dependencies
+        run: uv pip sync .github/hermetic-cpu-requirements.txt
+      - name: Collect all tests
+        run: uv run --no-sync python -m pytest --collect-only -q
+      - name: Run hermetic CPU contracts
+        run: >-
+          uv run --no-sync python -m pytest -q -m "not gpu and not api"
+          test/cli/test_cli_dispatch_parametrized.py
+          test/models/test_model_registry_v2.py
+          test/eval/test_protocol.py
+          test/eval/test_request_construction_contract.py
+          test/eval/test_task_pipeline.py
+          test/eval/test_evaluator.py
+          test/entrypoints/test_job_scheduler_subprocess.py

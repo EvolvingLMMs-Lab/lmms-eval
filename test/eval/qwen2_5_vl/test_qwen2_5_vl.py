@@ -5,9 +5,18 @@ Test cases for Qwen2.5-VL model evaluation via HTTP server.
 import unittest
 from unittest import TestCase
 
-from utils import get_gpu_count, run_evaluation_test, with_server, with_temp_dir
+import pytest
+
+from test.eval.utils import (
+    get_gpu_count,
+    run_evaluation_test,
+    with_server,
+    with_temp_dir,
+)
 
 
+@pytest.mark.gpu
+@pytest.mark.slow
 class TestQwen2_5_VL(TestCase):
     """Test cases for Qwen2.5-VL model evaluation."""
 
