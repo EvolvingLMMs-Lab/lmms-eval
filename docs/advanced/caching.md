@@ -101,7 +101,7 @@ To force re-evaluation: delete the `{model_hash}/` directory under your cache pa
 
 ### Crash recovery
 
-Write order: JSONL append + fsync -> SQLite upsert. On startup, any JSONL entries missing from SQLite are replayed. This survives crashes between the two writes.
+Write order: JSONL append + fsync -> SQLite upsert. On startup, valid JSONL entries missing from SQLite are replayed. Valid audit entries also replace invalid SQLite entries left by older versions. This survives crashes between the two writes.
 
 ### Poisoning prevention
 
@@ -109,7 +109,9 @@ Responses are validated before caching:
 
 - `None` -> rejected
 - Empty or whitespace-only strings -> rejected
-- Malformed loglikelihood tuples (not `[float, bool]`) -> rejected
+- Loglikelihood responses that are not a two-element list or tuple -> rejected; element types are not validated
+
+The same validity policy applies to audit recovery, local/shared cache reads, and shard merging. Invalid responses remain in the audit log with an empty cache key. Older keyed audit entries are validated before replay. Invalid SQLite payloads are treated as misses, and valid retries can replace them during replay or shard merging. Existing valid entries are preserved.
 
 ### Merge distributed shards
 
