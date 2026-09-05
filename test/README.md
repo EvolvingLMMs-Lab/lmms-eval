@@ -45,8 +45,8 @@ User input: --model X --tasks Y
     ├─ Prompt Generation ────── test/eval/prompt_stability/
     │   Golden snapshot comparison for 8 classic benchmarks
     │
-    ├─ Request Construction ─── test/eval/test_construct_requests.py
-    │   Build Instance.args tuples for each task×model combination
+    ├─ Request Construction ─── test/eval/test_request_construction_contract.py
+    │   Call real ConfigurableTask and ConfigurableMessagesTask construct_requests methods
     │
     ├─ Message Protocol ─────── test/eval/test_protocol.py
     │   ChatMessages structure, media extraction, HF conversion
@@ -248,39 +248,39 @@ This regenerates all golden files. Review the diff before committing to confirm 
 
 ---
 
-### Request Construction Layer
+### Production Request Construction Layer
 
 Request construction tests verify the exact tuple shape that models unpack from `Instance.args`. A mismatch here causes silent data corruption at runtime:
 
 ```python
-def test_configurable_task_generate_until_tuple_shape():
-    args = ("What is this?", {"temperature": 0}, _dummy_doc_to_visual, 0, "test_task", "test")
-    inst = _make_instance("generate_until", args)
+def test_configurable_task_generate_until_constructs_simple_layout():
+    task = _task(ConfigurableTask, "generate_until")
+    request = _request(task)
 
-    prompt, gen_kwargs, doc_to_visual, doc_id, task, split = inst.args
-    assert prompt == "What is this?"
-    assert callable(doc_to_visual)
-    assert isinstance(gen_kwargs, dict)
-    assert doc_id == 0
+    assert request.request_type == "generate_until"
+    assert request.args[0] == "context"
+    assert isinstance(request.args[1], dict)
+    assert callable(request.args[2])
 ```
 
-#### `test/eval/test_construct_requests.py`
+#### `test/eval/test_request_construction_contract.py`
 
-Validates the `Instance.args` tuple that `task.construct_requests()` produces. This tuple is the contract between task code and model code — its length, order, and types must be exact.
+Validates the `Instance.args` tuple that the production `ConfigurableTask.construct_requests()` and `ConfigurableMessagesTask.construct_requests()` methods produce. This tuple is the contract between task code and model code — its length, order, and types must be exact.
 
 The tuple shape varies by task type and model type:
 
 | Task Type | Model Type | `output_type` | Tuple Shape |
 |-----------|------------|---------------|-------------|
-| `ConfigurableTask` | Simple | `generate_until` | `(prompt, gen_kwargs, doc_to_visual, doc_id, task, split)` |
-| `ConfigurableTask` | Simple | `loglikelihood` | `(context, target, doc_to_visual, doc_id, task, split)` |
-| `ConfigurableMessagesTask` | Chat | `generate_until` | `(doc_to_messages, gen_kwargs, doc_id, task, split)` |
+| `ConfigurableTask` | Simple | `generate_until` | `(ctx, gen_kwargs, doc_to_visual, doc_id, task, split)` |
+| `ConfigurableTask` | Simple | `loglikelihood` | `(ctx, doc_to_target, doc_to_visual, doc_id, task, split)` |
 | Multi-round | Simple | `generate_until_multi_round` | `(context, gen_kwargs, doc_to_visual, doc_to_text_multi_round, doc_id, task, split)` |
 | Agentic | Simple | `generate_until_agentic` | `(context, gen_kwargs, doc_to_visual, doc_to_text, doc_id, task, split)` |
+| `ConfigurableMessagesTask` | Chat | `generate_until`, `generate_until_multi_round` | `(ctx, doc_to_messages, gen_kwargs, doc_id, task, split)` |
+| `ConfigurableMessagesTask` | Chat | `generate_until_agentic` | `(ctx, gen_kwargs, doc_to_visual, doc_to_text, doc_id, task, split)` |
 
-The tests use mock tasks with controlled YAML configs to verify each combination. They check tuple length, the types of each element (callable, dict, int, str), and specific values where applicable.
+The tests allocate dataset-free task shells with controlled configs, then call the production constructors. They check tuple length, order, types, copied generation kwargs, and task metadata without loading a dataset.
 
-> Historical note: Many production bugs have originated from tuple order mismatches. A model unpacking `(prompt, gen_kwargs, doc_to_visual, ...)` receives garbage if the task emits `(doc_to_messages, gen_kwargs, doc_id, ...)` instead.
+> Historical note: Many production bugs have originated from tuple order mismatches. A model expecting `(ctx, gen_kwargs, doc_to_visual, ...)` will unpack the wrong values if it receives the chat layout `(ctx, doc_to_messages, gen_kwargs, ...)`.
 
 ---
 
@@ -538,8 +538,8 @@ test/
 ├── eval/
 │   ├── __init__.py
 │   ├── test_protocol.py                     # ChatMessages protocol (32 tests)
-│   ├── test_construct_requests.py           # Instance.args tuple shapes (23 tests)
-│   ├── test_evaluator.py                    # Agentic evaluation loop (15 tests)
+│   ├── test_request_construction_contract.py # Production request constructors (7 tests)
+│   ├── test_evaluator.py                    # Agentic evaluation loop (12 tests)
 │   ├── test_task_pipeline.py                # Task registration + YAML + utils (~20 tests)
 │   ├── test_benchmark_aliases.py            # Alias group resolution (2 tests)
 │   ├── test_new_benchmarks_tasks.py         # New benchmark validation (~15 tests)
