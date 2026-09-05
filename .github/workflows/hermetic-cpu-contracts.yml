@@ -45,3 +45,4 @@ jobs:
           test/eval/test_task_pipeline.py
           test/eval/test_evaluator.py
           test/entrypoints/test_job_scheduler_subprocess.py
+          test/tui/test_server.py
