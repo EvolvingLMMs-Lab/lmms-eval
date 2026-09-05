@@ -44,8 +44,18 @@ uv run uvicorn lmms_eval.tui.server:app --host 0.0.0.0 --port 8000
 ### Custom Port
 
 ```bash
-LMMS_SERVER_PORT=3000 uv run lmms-eval-ui
+LMMS_SERVER_PORT=3000 LMMS_EVAL_TUI_ALLOWED_ORIGINS=http://localhost:3000 uv run lmms-eval-ui
 ```
+
+## Security configuration
+
+The TUI is a trusted-network tool. Its default browser origins are `http://localhost:8000`, `http://127.0.0.1:8000`, `http://localhost:5173`, and `http://127.0.0.1:5173`. An operator may replace them with a comma-separated exact-origin allowlist:
+
+```bash
+LMMS_EVAL_TUI_ALLOWED_ORIGINS=https://tui.internal.example uv run lmms-eval-ui
+```
+
+The UI does not run request-provided shell setup or environment variables. Configure model credentials, dataset roots, and other environment values in the process that starts the TUI server.
 
 ## Features
 

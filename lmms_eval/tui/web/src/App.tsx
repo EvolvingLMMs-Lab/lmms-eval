@@ -135,52 +135,6 @@ function highlightShell(code: string) {
   return tokens
 }
 
-interface ShellEditorProps {
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-  className?: string
-}
-
-function ShellEditor({ value, onChange, placeholder, className = '' }: ShellEditorProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const preRef = useRef<HTMLPreElement>(null)
-
-  const handleScroll = () => {
-    if (textareaRef.current && preRef.current) {
-      preRef.current.scrollTop = textareaRef.current.scrollTop
-      preRef.current.scrollLeft = textareaRef.current.scrollLeft
-    }
-  }
-
-  return (
-    <div className={`relative group bg-white border border-neutral-200 transition-colors focus-within:border-black overflow-hidden ${className}`}>
-      <pre
-        ref={preRef}
-        className="absolute inset-0 px-3 py-2 text-xs font-mono leading-relaxed whitespace-pre pointer-events-none overflow-hidden text-transparent"
-        style={{ fontFamily: 'monospace' }} 
-        aria-hidden="true"
-      >
-        {value ? highlightShell(value) : <span className="text-neutral-300 italic">{placeholder}</span>}
-        <br />
-      </pre>
-      
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        onScroll={handleScroll}
-        placeholder={placeholder}
-        className="relative z-10 w-full h-full bg-transparent text-transparent caret-black px-3 py-2 text-xs font-mono leading-relaxed resize-none focus:outline-none whitespace-pre overflow-auto scrollbar-thin scrollbar-thumb-neutral-200 scrollbar-track-transparent"
-        style={{ fontFamily: 'monospace' }} 
-        spellCheck={false}
-        autoCapitalize="off"
-        autoComplete="off"
-      />
-    </div>
-  )
-}
-
 interface SelectProps {
   value: string
   onChange: (value: string) => void
@@ -304,14 +258,12 @@ interface Config {
   model: string
   model_args: string
   tasks: string[]
-  env_vars: string
   batch_size: number
   limit: number | null
   output_path: string
   log_samples: boolean
   verbosity: string
   device: string | null
-  env_setup: string
 }
 
 type Status = 'ready' | 'running' | 'stopped' | 'completed' | 'error'
@@ -341,11 +293,6 @@ export default function App() {
   
   const [model, setModel] = useState('openai')
   const [modelArgs, setModelArgs] = useState('model_version=bytedance-seed/seed-1.6-flash')
-  const [envVars, setEnvVars] = useState(
-    'export HF_HOME=${HF_HOME:-~/.cache/huggingface}\n' +
-      'export OPENAI_API_KEY=${OPENROUTER_API_KEY}\n' +
-      'export OPENAI_API_BASE=https://openrouter.ai/api/v1'
-  )
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set(['mme']))
   const [taskFilter, setTaskFilter] = useState('')
   const [batchSize, setBatchSize] = useState('1')
@@ -353,7 +300,6 @@ export default function App() {
   const [device, setDevice] = useState('')
   const [outputPath, setOutputPath] = useState('./logs/openrouter_task_smoke/')
   const [verbosity, setVerbosity] = useState('DEBUG')
-  const [envSetup, setEnvSetup] = useState('')
   
   const [status, setStatus] = useState<Status>('ready')
   const [jobId, setJobId] = useState<string | null>(null)
@@ -363,7 +309,6 @@ export default function App() {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [configExpanded, setConfigExpanded] = useState(true)
   const [tasksExpanded, setTasksExpanded] = useState(true)
-  const [envVarsExpanded, setEnvVarsExpanded] = useState(true)
   const [logsMaximized, setLogsMaximized] = useState(false)
   const [yamlPreview, setYamlPreview] = useState<YamlPreview | null>(null)
   
@@ -376,7 +321,6 @@ export default function App() {
         setVersion(d.version)
         if (d.git) setGitInfo(d.git)
         if (d.system) setSysInfo(d.system)
-        if (d.env_setup) setEnvSetup(d.env_setup)
       })
       .catch(() => setVersion('error'))
     
@@ -396,14 +340,12 @@ export default function App() {
       model,
       model_args: modelArgs,
       tasks: Array.from(selectedTasks),
-      env_vars: envVars,
       batch_size: parseInt(batchSize) || 1,
       limit: limit ? parseInt(limit) : null,
       output_path: outputPath,
       log_samples: true,
       verbosity,
       device: device || null,
-      env_setup: envSetup,
     }
     
     fetch(`${API_BASE}/eval/preview`, {
@@ -414,7 +356,7 @@ export default function App() {
       .then(r => r.json())
       .then(d => setCommand(d.command))
       .catch(() => setCommand('# Error generating command'))
-  }, [model, modelArgs, selectedTasks, envVars, batchSize, limit, device, outputPath, verbosity, envSetup])
+  }, [model, modelArgs, selectedTasks, batchSize, limit, device, outputPath, verbosity])
 
   useEffect(() => {
     if (outputRef.current) {
@@ -526,14 +468,12 @@ export default function App() {
       model,
       model_args: modelArgs,
       tasks: Array.from(selectedTasks),
-      env_vars: envVars,
       batch_size: parseInt(batchSize) || 1,
       limit: limit ? parseInt(limit) : null,
       output_path: outputPath,
       log_samples: true,
       verbosity,
       device: device || null,
-      env_setup: envSetup,
     }
     
     try {
@@ -593,14 +533,12 @@ export default function App() {
       model,
       model_args: modelArgs,
       tasks: Array.from(selectedTasks),
-      env_vars: envVars,
       batch_size: parseInt(batchSize) || 1,
       limit: limit ? parseInt(limit) : null,
       output_path: outputPath,
       log_samples: true,
       verbosity,
       device: device || null,
-      env_setup: envSetup,
     }
 
     try {
@@ -647,7 +585,6 @@ export default function App() {
         if (data.model) setModel(data.model)
         if (data.model_args) setModelArgs(data.model_args)
         if (data.tasks && data.tasks.length > 0) setSelectedTasks(new Set(data.tasks))
-        if (data.env_vars) setEnvVars(data.env_vars)
         if (data.batch_size) setBatchSize(String(data.batch_size))
         if (data.limit != null) setLimit(String(data.limit))
         if (data.output_path) setOutputPath(data.output_path)
@@ -783,16 +720,6 @@ export default function App() {
             
             {configExpanded && (
               <div className="p-6 pt-0 space-y-4">
-                <div className="group">
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Environment Setup</label>
-                  <input
-                    value={envSetup}
-                    onChange={e => setEnvSetup(e.target.value)}
-                    placeholder="e.g. source .venv/bin/activate"
-                    className="w-full bg-white border border-neutral-200 px-3 py-2 text-xs font-mono focus:border-black focus:outline-none transition-colors placeholder-neutral-400 text-neutral-600"
-                  />
-                </div>
-
                 <div className="group">
                   <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Model</label>
                   <Select
@@ -1015,23 +942,6 @@ export default function App() {
                   />
                 </div>
 
-                <div className="group">
-                  <label 
-                    className="flex items-center gap-2 text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 cursor-pointer"
-                    onClick={() => setEnvVarsExpanded(!envVarsExpanded)}
-                  >
-                    <span className={`transform transition-transform ${envVarsExpanded ? 'rotate-0' : '-rotate-90'}`}>▼</span>
-                    Environment Variables
-                  </label>
-                  {envVarsExpanded && (
-                    <ShellEditor 
-                      value={envVars}
-                      onChange={setEnvVars}
-                      placeholder="export KEY=VALUE..."
-                      className="h-32 w-full resize-y min-h-[80px] max-h-[400px]"
-                    />
-                  )}
-                </div>
               </div>
             )}
           </div>

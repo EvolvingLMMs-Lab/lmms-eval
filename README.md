@@ -405,7 +405,7 @@ LMMS-Eval includes an optional Web UI for interactive evaluation configuration.
 uv run lmms-eval-ui
 
 # Custom port
-LMMS_SERVER_PORT=3000 uv run lmms-eval-ui
+LMMS_SERVER_PORT=3000 LMMS_EVAL_TUI_ALLOWED_ORIGINS=http://localhost:3000 uv run lmms-eval-ui
 ```
 
 The web UI provides:

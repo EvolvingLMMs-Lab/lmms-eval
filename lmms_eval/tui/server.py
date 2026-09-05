@@ -11,19 +11,21 @@ import mimetypes
 import os
 import platform
 import re
+import shlex
 import signal
 import socket
 import subprocess
+import sys
 import uuid
 from importlib.metadata import version as pkg_version
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote, unquote
+from urllib.parse import quote, unquote, urlsplit
 
 import yaml
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -36,14 +38,60 @@ app = FastAPI(title="LMMs-Eval Web UI", version="0.1.0")
 
 STATIC_DIR = Path(__file__).parent / "web" / "dist"
 
-# Enable CORS for local development
+
+_DEFAULT_TUI_ORIGINS = (
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+)
+
+
+def _allowed_tui_origins() -> tuple[str, ...]:
+    raw = os.environ.get("LMMS_EVAL_TUI_ALLOWED_ORIGINS", "")
+    origins = _DEFAULT_TUI_ORIGINS if not raw.strip() else tuple(item.strip() for item in raw.split(",") if item.strip())
+    if not origins:
+        raise RuntimeError("LMMS_EVAL_TUI_ALLOWED_ORIGINS must contain at least one exact origin")
+    for origin in origins:
+        try:
+            parsed = urlsplit(origin)
+            hostname = parsed.hostname
+            parsed.port
+        except ValueError as exc:
+            raise RuntimeError("LMMS_EVAL_TUI_ALLOWED_ORIGINS must contain exact http(s) origins") from exc
+        if (
+            parsed.scheme not in {"http", "https"}
+            or not hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or "*" in parsed.netloc
+            or any(character.isspace() for character in parsed.netloc)
+            or origin != f"{parsed.scheme}://{parsed.netloc}"
+        ):
+            raise RuntimeError("LMMS_EVAL_TUI_ALLOWED_ORIGINS must contain exact http(s) origins")
+    return origins
+
+
+_ALLOWED_TUI_ORIGINS = _allowed_tui_origins()
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=list(_ALLOWED_TUI_ORIGINS),
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
 )
+
+
+@app.middleware("http")
+async def reject_disallowed_origin(request: Request, call_next):
+    origin = request.headers.get("origin")
+    is_preflight = request.method == "OPTIONS" and "access-control-request-method" in request.headers
+    if origin is not None and origin not in _ALLOWED_TUI_ORIGINS and not is_preflight:
+        return JSONResponse(status_code=403, content={"detail": "Origin not allowed"})
+    return await call_next(request)
+
 
 # In-memory job storage
 _jobs: dict[str, dict[str, Any]] = {}
@@ -247,20 +295,6 @@ def get_repo_root() -> str:
         return ""
 
 
-def _detect_env_setup() -> str:
-    """Auto-detect environment activation command.
-
-    Builds: cd <repo_root> && source .venv/bin/activate
-    Returns empty string if no venv found.
-    """
-    repo_root = get_repo_root()
-    if repo_root:
-        activate = Path(repo_root) / ".venv" / "bin" / "activate"
-        if activate.exists():
-            return f"cd {repo_root} && source .venv/bin/activate"
-    return ""
-
-
 def get_system_info() -> dict[str, str]:
     return {
         "hostname": socket.gethostname(),
@@ -334,6 +368,14 @@ class ExportYamlRequest(BaseModel):
     verbosity: str = "INFO"
     device: str | None = None
     env_setup: str = ""
+
+
+_ENVIRONMENT_SETUP_DISABLED = "Request-level environment setup is disabled; configure the TUI server environment instead."
+
+
+def _reject_request_environment(request: EvalRequest | PreviewRequest | ExportYamlRequest) -> None:
+    if request.env_setup.strip() or request.env_vars.strip():
+        raise HTTPException(status_code=400, detail=_ENVIRONMENT_SETUP_DISABLED)
 
 
 class ExportYamlResponse(BaseModel):
@@ -410,7 +452,6 @@ async def health() -> dict[str, Any]:
         "version": get_version(),
         "git": get_git_info(),
         "system": get_system_info(),
-        "env_setup": _detect_env_setup(),
     }
 
 
@@ -468,123 +509,41 @@ async def get_task_yaml(task_id: str) -> dict[str, str]:
     raise HTTPException(status_code=404, detail=f"Task YAML not found for '{task_id}'")
 
 
-def _normalize_env_line(line: str) -> str | None:
-    stripped = line.strip()
-    if not stripped or stripped.startswith("#"):
-        return None
-    if stripped.startswith("export "):
-        return stripped
-    if "=" in stripped:
-        return f"export {stripped}"
-    return None
-
-
-def _build_env_exports(env_vars: str) -> list[str]:
-    exports: list[str] = []
-    for line in env_vars.splitlines():
-        export_line = _normalize_env_line(line)
-        if export_line:
-            exports.append(export_line)
-    return exports
-
-
-def _env_vars_to_dict(env_vars: str) -> dict[str, str]:
-    """Convert env_vars multi-line string to a dict for YAML export."""
-    env_dict: dict[str, str] = {}
-    for line in env_vars.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        if stripped.startswith("export "):
-            stripped = stripped[7:]
-        if "=" in stripped:
-            key, _, value = stripped.partition("=")
-            env_dict[key.strip()] = value.strip()
-    return env_dict
-
-
-def _dict_to_env_vars(env_dict: dict[str, str]) -> str:
-    """Convert env dict from YAML to env_vars multi-line string for UI."""
-    lines = []
-    for key, value in env_dict.items():
-        lines.append(f"export {key}={value}")
-    return "\n".join(lines)
+def _build_eval_argv(request: EvalRequest | PreviewRequest) -> list[str]:
+    argv = [sys.executable, "-m", "lmms_eval", "--model", request.model]
+    if request.model_args:
+        argv.extend(["--model_args", request.model_args])
+    if request.tasks:
+        argv.extend(["--tasks", ",".join(request.tasks)])
+    argv.extend(["--batch_size", str(request.batch_size)])
+    if request.limit is not None:
+        argv.extend(["--limit", str(request.limit)])
+    argv.extend(["--output_path", request.output_path])
+    if request.log_samples:
+        argv.append("--log_samples")
+    argv.extend(["--verbosity", request.verbosity])
+    if request.device:
+        argv.extend(["--device", request.device])
+    return argv
 
 
 def _build_command(request: EvalRequest | PreviewRequest) -> str:
-    """Build the lmms_eval command string."""
-    parts = ["python -m lmms_eval"]
-    parts.append(f"--model {request.model}")
-    if request.model_args:
-        parts.append(f"--model_args '{request.model_args}'")
-    if request.tasks:
-        parts.append(f"--tasks {','.join(request.tasks)}")
-    parts.append(f"--batch_size {request.batch_size}")
-    if request.limit is not None:
-        parts.append(f"--limit {request.limit}")
-    parts.append(f"--output_path {request.output_path}")
-    if request.log_samples:
-        parts.append("--log_samples")
-    parts.append(f"--verbosity {request.verbosity}")
-    if request.device:
-        parts.append(f"--device {request.device}")
-    command = " \\\n    ".join(parts)
-    # Collect all prefix lines: env_setup first, then env_vars exports
-    prefix_lines: list[str] = []
-    env_setup = request.env_setup or _detect_env_setup()
-    if env_setup:
-        prefix_lines.append(env_setup)
-    prefix_lines.extend(_build_env_exports(request.env_vars))
-    if prefix_lines:
-        return "\n".join([*prefix_lines, command])
-    return command
-
-
-def _build_shell_command(request: EvalRequest) -> str:
-    """Build the shell command for execution."""
-    parts = ["python", "-m", "lmms_eval"]
-    parts.extend(["--model", request.model])
-    if request.model_args:
-        parts.extend(["--model_args", request.model_args])
-    if request.tasks:
-        parts.extend(["--tasks", ",".join(request.tasks)])
-    parts.extend(["--batch_size", str(request.batch_size)])
-    if request.limit is not None:
-        parts.extend(["--limit", str(request.limit)])
-    parts.extend(["--output_path", request.output_path])
-    if request.log_samples:
-        parts.append("--log_samples")
-    parts.extend(["--verbosity", request.verbosity])
-    if request.device:
-        parts.extend(["--device", request.device])
-    command = " ".join(parts)
-    # Collect all prefix commands: env_setup first, then env_vars exports
-    prefix_parts: list[str] = []
-    env_setup = request.env_setup or _detect_env_setup()
-    if env_setup:
-        prefix_parts.append(env_setup)
-    prefix_parts.extend(_build_env_exports(request.env_vars))
-    if prefix_parts:
-        prefix = " && ".join(prefix_parts)
-        return f"{prefix} && {command}"
-    return command
+    argv = _build_eval_argv(request)
+    return shlex.join(["python", *argv[1:]])
 
 
 @app.post("/eval/preview", response_model=PreviewResponse)
 async def preview_command(request: PreviewRequest) -> PreviewResponse:
     """Generate command preview without executing."""
-    command = _build_command(request)
-    return PreviewResponse(command=command)
+    _reject_request_environment(request)
+    return PreviewResponse(command=_build_command(request))
 
 
 @app.post("/eval/export-yaml", response_model=ExportYamlResponse)
 async def export_yaml(request: ExportYamlRequest) -> ExportYamlResponse:
     """Export current UI config as a YAML config file."""
+    _reject_request_environment(request)
     config: dict[str, Any] = {}
-
-    env_dict = _env_vars_to_dict(request.env_vars)
-    if env_dict:
-        config["env"] = env_dict
 
     config["model"] = request.model
     if request.model_args:
@@ -617,8 +576,7 @@ async def import_yaml(request: ImportYamlRequest) -> ImportYamlResponse:
     if not isinstance(config, dict):
         raise HTTPException(status_code=400, detail="YAML must be a dict (not a list or scalar)")
 
-    env_dict = config.pop("env", {})
-    env_vars = _dict_to_env_vars(env_dict) if env_dict else ""
+    config.pop("env", None)
 
     tasks_raw = config.get("tasks", "")
     if isinstance(tasks_raw, str):
@@ -632,7 +590,6 @@ async def import_yaml(request: ImportYamlRequest) -> ImportYamlResponse:
         model=config.get("model", ""),
         model_args=config.get("model_args", ""),
         tasks=tasks,
-        env_vars=env_vars,
         batch_size=config.get("batch_size", 1),
         limit=config.get("limit"),
         output_path=config.get("output_path", "./logs/"),
@@ -645,16 +602,16 @@ async def import_yaml(request: ImportYamlRequest) -> ImportYamlResponse:
 @app.post("/eval/start", response_model=EvalStartResponse)
 async def start_eval(request: EvalRequest) -> EvalStartResponse:
     """Start an evaluation job."""
+    _reject_request_environment(request)
     if not request.tasks:
         raise HTTPException(status_code=400, detail="No tasks specified")
 
     job_id = str(uuid.uuid4())
     command = _build_command(request)
-    shell_command = _build_shell_command(request)
 
     _jobs[job_id] = {
         "status": "starting",
-        "command": shell_command,
+        "argv": _build_eval_argv(request),
         "process": None,
         "request": request,
     }
@@ -669,14 +626,13 @@ async def _stream_output(job_id: str):
         yield f"data: {json.dumps({'type': 'error', 'message': 'Job not found'})}\n\n"
         return
 
-    shell_command = job["command"]
-
     try:
-        process = await asyncio.create_subprocess_shell(
-            shell_command,
+        process = await asyncio.create_subprocess_exec(
+            *job["argv"],
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
             start_new_session=True,
+            cwd=get_repo_root() or None,
         )
         job["process"] = process
         job["status"] = "running"
