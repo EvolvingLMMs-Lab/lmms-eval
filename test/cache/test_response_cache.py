@@ -323,6 +323,119 @@ class TestAuditLogObservability(_CacheTestBase):
 
 
 class TestCrashRecovery(_CacheTestBase):
+    def test_invalid_responses_stay_observable_but_are_not_recovered(self):
+        requests = [_gen_request(doc_id=i) for i in range(3)]
+        cache = self._open_cache()
+        try:
+            self.assertEqual(cache.execute(_mock_model([None, "", "  "]), "generate_until", requests), [None, "", "  "])
+            self.assertEqual(cache.get_stats()["total_cached_entries"], 0)
+        finally:
+            cache.close()
+
+        records = self._read_audit_lines()
+        self.assertEqual([json.loads(rec["response"]) for rec in records], [None, "", "  "])
+        self.assertTrue(all(rec["deterministic"] and not rec["cache_key"] for rec in records))
+        cache = self._open_cache()
+        try:
+            model = _mock_model(["retry0", "retry1", "retry2"])
+            self.assertEqual(cache.execute(model, "generate_until", requests), ["retry0", "retry1", "retry2"])
+            model.generate_until.assert_called_once()
+        finally:
+            cache.close()
+
+    def test_legacy_audit_skips_invalid_rows_and_recovers_later_valid_rows(self):
+        # Old writers assigned cache keys to invalid responses as well.
+        rows = [
+            ("generate_until", "null"),
+            ("generate_until", '""'),
+            ("generate_until", '"  "'),
+            ("loglikelihood", "[0.5]"),
+            ("generate_until", "truncated-json"),
+            ("generate_until", '"recovered"'),
+            ("loglikelihood", "[0.5, true]"),
+        ]
+        with open(self.audit_path, "w") as audit:
+            for request_type, response in rows:
+                audit.write(json.dumps({"cache_key": request_type, "deterministic": True, "request_type": request_type, "task_name": "t", "doc_id": 0, "response": response}) + "\n")
+        cache = self._open_cache()
+        try:
+            self.assertEqual(cache.get_stats()["total_cached_entries"], 2)
+            self.assertEqual(cache._lookup("generate_until"), "recovered")
+            self.assertEqual(cache._lookup("loglikelihood"), [0.5, True])
+        finally:
+            cache.close()
+
+    def test_existing_invalid_database_rows_are_misses(self):
+        for request_type, response in [("generate_until", ""), ("generate_until", "  "), ("generate_until", None), ("loglikelihood", [0.5])]:
+            with self.subTest(request_type=request_type, response=response):
+                cache = self._open_cache()
+                try:
+                    cache._store("legacy", request_type, "t", 0, 0, {}, response)
+                    self.assertIsNone(cache._lookup("legacy"))
+                    cache.db.execute("UPDATE responses SET response = ? WHERE cache_key = ?", ("truncated-json", "legacy"))
+                    cache.db.commit()
+                    self.assertIsNone(cache._lookup("legacy"))
+                finally:
+                    cache.close()
+
+    def test_invalid_local_row_falls_through_to_valid_shared_cache(self):
+        shared_path = os.path.join(self.tmpdir, "shared.db")
+        shared = ResponseCache(shared_path, os.path.join(self.tmpdir, "shared.jsonl"))
+        try:
+            shared._store("valid", "generate_until", "t", 0, 0, {}, "shared-answer")
+            shared._store("invalid", "generate_until", "t", 1, 0, {}, "")
+        finally:
+            shared.close()
+        cache = self._open_cache(shared_db_path=shared_path)
+        try:
+            cache._store("valid", "generate_until", "t", 0, 0, {}, "")
+            self.assertEqual(cache._lookup("valid"), "shared-answer")
+            self.assertIsNone(cache._lookup("invalid"))
+            self.assertEqual(cache.get_stats()["hits_shared"], 1)
+        finally:
+            cache.close()
+
+    def test_valid_audit_repairs_invalid_existing_database_row(self):
+        cache = self._open_cache()
+        try:
+            cache._store("retry", "generate_until", "t", 0, 0, {}, "")
+            cache._log_to_audit("generate_until", "t", 0, 0, {}, "recovered", cache_key="retry")
+        finally:
+            cache.close()
+        cache = self._open_cache()
+        try:
+            self.assertEqual(cache._lookup("retry"), "recovered")
+        finally:
+            cache.close()
+
+    def test_retry_repairs_shared_cache_after_merge(self):
+        request = _gen_request()
+        shared_path = os.path.join(self.tmpdir, "shared.db")
+        key = compute_cache_key("generate_until", "t", 0, extract_gen_kwargs(request), content_hash=_extract_content_hash(request))
+        shared = ResponseCache(shared_path, os.path.join(self.tmpdir, "shared.jsonl"))
+        try:
+            shared._store(key, "generate_until", "t", 0, 0, {}, "")
+            shared._store("preserve", "generate_until", "t", 1, 0, {}, "original")
+        finally:
+            shared.close()
+        cache = self._open_cache(shared_db_path=shared_path)
+        try:
+            self.assertEqual(cache.execute(_mock_model(["retry"]), "generate_until", [request]), ["retry"])
+            cache._store("preserve", "generate_until", "t", 1, 0, {}, "replacement")
+            cache._store("invalid", "generate_until", "t", 2, 0, {}, "")
+        finally:
+            cache.close()
+        self.assertEqual(ResponseCache.merge_shards([self.db_path], shared_path), 1)
+        fresh = ResponseCache(os.path.join(self.tmpdir, "fresh.db"), os.path.join(self.tmpdir, "fresh.jsonl"), shared_db_path=shared_path)
+        try:
+            model = _mock_model([])
+            self.assertEqual(fresh.execute(model, "generate_until", [request]), ["retry"])
+            model.generate_until.assert_not_called()
+            self.assertEqual(fresh._lookup("preserve"), "original")
+            self.assertIsNone(fresh._lookup("invalid"))
+        finally:
+            fresh.close()
+
     def test_jsonl_replay_after_simulated_crash(self):
         model = _mock_model(["crash_answer"])
         req = _gen_request(temperature=0)
