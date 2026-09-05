@@ -1091,6 +1091,7 @@ def evaluate(
         lm._rank = global_rank
         lm._world_size = world_size
 
+    task_limits = {}
     for task_output in eval_tasks:
         task = task_output.task
         task_name = task_output.task_name
@@ -1124,9 +1125,10 @@ def evaluate(
         if ("group_alias" in configs[task_name]) and (group_name not in task_group_alias) and (group_name is not None):
             task_group_alias[group_name] = configs[task_name]["group_alias"]
 
-        limit = get_sample_size(task, limit)
+        task_limit = get_sample_size(task, limit)
+        task_limits[task_name] = task_limit
         task.build_all_requests(
-            limit=limit,
+            limit=task_limit,
             offset=offset,
             rank=global_rank,
             world_size=world_size,
@@ -1287,6 +1289,7 @@ def evaluate(
 
     for task_output in eval_tasks:
         task = task_output.task
+        task_limit = task_limits[task_output.task_name]
         task.apply_filters()
         set_task_context(task_output.task_name)
 
@@ -1329,17 +1332,17 @@ def evaluate(
                 doc_iterator = create_iterator(
                     enumerate(task.eval_docs_no_media),
                     rank=RANK,
-                    limit=int(limit) if limit else None,
+                    limit=int(task_limit) if task_limit else None,
                     world_size=WORLD_SIZE,
                     offset=offset,
                 )
             else:
-                doc_iterator = task.doc_iterator(rank=RANK, limit=limit, world_size=WORLD_SIZE, offset=offset)
+                doc_iterator = task.doc_iterator(rank=RANK, limit=task_limit, world_size=WORLD_SIZE, offset=offset)
             doc_iterator_for_counting = (
                 create_iterator(
                     range(len(task.test_docs())),
                     rank=RANK,
-                    limit=limit,
+                    limit=task_limit,
                     world_size=WORLD_SIZE,
                     offset=offset,
                 )
@@ -1347,7 +1350,7 @@ def evaluate(
                 else create_iterator(
                     range(len(task.validation_docs())),
                     rank=RANK,
-                    limit=limit,
+                    limit=task_limit,
                     world_size=WORLD_SIZE,
                     offset=offset,
                 )
@@ -1552,7 +1555,7 @@ def evaluate(
                 task_output.task_name: {
                     "original": len(task_output.task.eval_docs),
                     "effective": min(
-                        limit if limit else len(task_output.task.eval_docs),
+                        task_limits[task_output.task_name] if task_limits[task_output.task_name] is not None else len(task_output.task.eval_docs),
                         len(task_output.task.eval_docs),
                     ),
                 }
