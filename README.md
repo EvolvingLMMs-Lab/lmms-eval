@@ -199,6 +199,28 @@ bash examples/models/sglang_wan22_vbvr.sh
 bash examples/models/openai_compatible.sh
 ```
 
+### Atlas Cloud LLM Judge
+
+Atlas Cloud is available as an optional OpenAI-compatible provider for tasks
+that use the LLM judge interface:
+
+```bash
+export ATLASCLOUD_API_KEY="<YOUR_API_KEY>"
+```
+
+```python
+from lmms_eval.llm_judge import ServerConfig, get_server
+
+judge = get_server(
+    "atlascloud",
+    ServerConfig(model_name="openai/gpt-4.1-mini"),
+)
+```
+
+Set `ATLASCLOUD_API_URL` only when you need to override the default
+`https://api.atlascloud.ai/v1` endpoint. Existing judge providers remain the
+default unless `atlascloud` is selected explicitly.
+
 ### Evaluation of Qwen2.5-VL
 
 ```bash

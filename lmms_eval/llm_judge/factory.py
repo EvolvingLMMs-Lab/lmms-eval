@@ -18,6 +18,7 @@ except ImportError:
 from .providers import (
     AsyncAzureOpenAIProvider,
     AsyncOpenAIProvider,
+    AtlasCloudProvider,
     AzureOpenAIProvider,
     BedrockProvider,
     DummyProvider,
@@ -31,6 +32,7 @@ class ProviderFactory:
 
     _provider_classes = {
         "openai": OpenAIProvider,
+        "atlascloud": AtlasCloudProvider,
         "azure": AzureOpenAIProvider,
         "async_openai": AsyncOpenAIProvider,
         "async_azure": AsyncAzureOpenAIProvider,
@@ -52,7 +54,7 @@ class ProviderFactory:
         Create a judge instance based on API type
 
         Args:
-            api_type: Type of API to use ('openai' or 'azure').
+            api_type: Type of API to use (for example, 'openai', 'atlascloud', or 'azure').
                      If None, will use API_TYPE environment variable
             config: Configuration for the judge
 

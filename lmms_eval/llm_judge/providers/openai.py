@@ -32,10 +32,15 @@ def build_sampling_kwargs(config: ServerConfig) -> Dict[str, Any]:
 class OpenAIProvider(ServerInterface):
     """OpenAI API implementation of the Judge interface"""
 
+    api_key_env = "OPENAI_API_KEY"
+    base_url_env = "OPENAI_API_URL"
+    default_base_url = "https://api.openai.com/v1"
+    provider_name = "OpenAI"
+
     def __init__(self, config: Optional[ServerConfig] = None):
         super().__init__(config)
-        self.api_key = os.getenv("OPENAI_API_KEY", "")
-        self.base_url = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1")
+        self.api_key = os.getenv(self.api_key_env, "")
+        self.base_url = os.getenv(self.base_url_env, self.default_base_url)
 
         # Initialize OpenAI client
         try:
@@ -53,7 +58,7 @@ class OpenAIProvider(ServerInterface):
     def evaluate(self, request: Request) -> Response:
         """Evaluate using OpenAI API"""
         if not self.is_available():
-            raise ValueError("OpenAI API key not configured")
+            raise ValueError(f"{self.provider_name} API key not configured")
 
         config = request.config or self.config
         messages = self.prepare_messages(request)
