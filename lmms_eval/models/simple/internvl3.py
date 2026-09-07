@@ -8,7 +8,6 @@ import torchvision.transforms as T
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from accelerate.utils import InitProcessGroupKwargs
-from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from PIL import Image
 from torchvision.transforms.functional import InterpolationMode
@@ -18,6 +17,7 @@ from transformers import AutoModel, AutoTokenizer
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import import_decord
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
@@ -200,7 +200,9 @@ def load_video(
     Returns:
         Tuple of (pixel_values tensor, list of patch counts per frame).
     """
-    vr = VideoReader(video_path, ctx=cpu(0), num_threads=1)
+    decord = import_decord()
+
+    vr = decord.VideoReader(video_path, ctx=decord.cpu(0), num_threads=1)
     max_frame = len(vr) - 1
     fps = float(vr.get_avg_fps())
 

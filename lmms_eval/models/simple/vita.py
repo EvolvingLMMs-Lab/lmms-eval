@@ -8,7 +8,6 @@ import soundfile as sf
 import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from decord import VideoReader, cpu
 from PIL import Image
 from tqdm import tqdm
 
@@ -19,6 +18,8 @@ from lmms_eval.api.model import lmms
 warnings.filterwarnings("ignore")
 
 from loguru import logger as eval_logger  # noqa: E402
+
+from lmms_eval.models.model_utils.load_video import import_decord  # noqa: E402
 
 try:
     from vita.constants import (
@@ -385,6 +386,8 @@ class VITA(lmms):
     ):
         # speed up video decode via decord.
 
+        decord = import_decord()
+
         if s is None:
             start_time, end_time = None, None
         else:
@@ -398,7 +401,7 @@ class VITA(lmms):
                 end_time = start_time + 1
 
         if os.path.exists(video_path):
-            vreader = VideoReader(video_path, ctx=cpu(0))
+            vreader = decord.VideoReader(video_path, ctx=decord.cpu(0))
         else:
             print(video_path)
             raise FileNotFoundError

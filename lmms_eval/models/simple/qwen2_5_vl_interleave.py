@@ -3,7 +3,6 @@ import json
 from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
-import decord
 import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
@@ -327,10 +326,6 @@ class Qwen2_5_VL_Interleave(lmms):
                             # with open("alb.json", "w") as f:
                             #     json.dump(message, f, indent=4)
                         else:
-                            vr = decord.VideoReader(visual)
-                            first_frame = vr[0].asnumpy()
-                            height, width = first_frame.shape[:2]
-                            # max_pixels = height * width
                             message.append(
                                 {
                                     "role": "user",

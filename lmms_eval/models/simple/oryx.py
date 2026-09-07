@@ -6,7 +6,6 @@ import numpy as np
 import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from decord import VideoReader, cpu
 from PIL import Image
 from tqdm import tqdm
 from transformers import AutoConfig
@@ -14,7 +13,7 @@ from transformers import AutoConfig
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video
+from lmms_eval.models.model_utils.load_video import import_decord, read_video
 
 eval_logger = logging.getLogger("lmms-eval")
 
@@ -205,7 +204,9 @@ class Oryx(lmms):
         return encoding
 
     def load_video(self, video_path, max_frames_num):
-        vr = VideoReader(video_path, ctx=cpu(0))
+        decord = import_decord()
+
+        vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
         total_frame_num = len(vr)
         _fps = round(vr.get_avg_fps())
 

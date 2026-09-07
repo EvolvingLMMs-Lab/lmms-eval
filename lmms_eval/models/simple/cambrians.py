@@ -31,6 +31,7 @@ from tqdm import tqdm
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import import_decord
 
 
 def is_video_file(file_path: str) -> bool:
@@ -49,14 +50,13 @@ def is_image_file(file_path: str) -> bool:
     return ext.lower() in image_extensions
 
 
-from decord import VideoReader, cpu  # noqa: E402
-
-
 def process_video_with_decord(video_file, model_cfg, num_threads=-1):
+    decord = import_decord()
+
     if num_threads < 1:
-        vr = VideoReader(video_file, ctx=cpu(0))
+        vr = decord.VideoReader(video_file, ctx=decord.cpu(0))
     else:
-        vr = VideoReader(video_file, ctx=cpu(0), num_threads=num_threads)
+        vr = decord.VideoReader(video_file, ctx=decord.cpu(0), num_threads=num_threads)
     total_frame_num = len(vr)
     video_time = total_frame_num / vr.get_avg_fps()
     avg_fps = round(vr.get_avg_fps() / model_cfg.video_fps)

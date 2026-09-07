@@ -16,14 +16,8 @@ from tqdm import tqdm
 # Local application/library specific imports
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.imports import optional_import
+from lmms_eval.models.model_utils.load_video import import_decord
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
-
-# Conditional imports
-VideoReader, _has_decord = optional_import("decord", "VideoReader")
-cpu, _ = optional_import("decord", "cpu")
-if not _has_decord:
-    eval_logger.warning("Decord is not installed. Video input will not be supported.")
 
 # Constants and global configurations
 API_TYPE = os.getenv("API_TYPE", "openai")
@@ -89,7 +83,9 @@ class BatchGPT4(lmms):
 
     # Function to encode the video
     def encode_video(self, video_path, for_get_frames_num):
-        vr = VideoReader(video_path, ctx=cpu(0))
+        decord = import_decord()
+
+        vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
         total_frame_num = len(vr)
         uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
         frame_idx = uniform_sampled_frames.tolist()

@@ -1,4 +1,6 @@
 import importlib
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
@@ -119,3 +121,41 @@ def test_pyav_short_video_returns_each_source_frame_once(tmp_path):
 
     assert frames.shape == (4, 16, 16, 3)
     assert np.allclose(frames.mean(axis=(1, 2, 3)), [0, 10, 20, 30], atol=2)
+
+
+@pytest.mark.parametrize("header_frames,count_frames,expected_frames", [(12, True, 12), (0, False, 0), (0, True, 4)])
+def test_probe_video_metadata_counts_only_when_requested(monkeypatch, header_frames, count_frames, expected_frames):
+    container = Mock()
+    container.streams.video = [SimpleNamespace(frames=header_frames, average_rate=10)]
+    container.decode.return_value = iter(range(4))
+    monkeypatch.setattr(load_video, "_import_pyav", lambda: SimpleNamespace(open=lambda path: container))
+
+    assert load_video._probe_video_metadata("demo.mp4", count_frames=count_frames) == (expected_frames, 10.0)
+
+    if count_frames and not header_frames:
+        container.decode.assert_called_once_with(video=0)
+    else:
+        container.decode.assert_not_called()
+    container.close.assert_called_once()
+
+
+def test_probe_video_metadata_closes_container_on_decode_error(monkeypatch):
+    container = Mock()
+    container.streams.video = [SimpleNamespace(frames=0, average_rate=None)]
+    container.decode.side_effect = RuntimeError("invalid video")
+    monkeypatch.setattr(load_video, "_import_pyav", lambda: SimpleNamespace(open=lambda path: container))
+
+    with pytest.raises(RuntimeError, match="invalid video"):
+        load_video._probe_video_metadata("broken.mp4", count_frames=True)
+
+    container.close.assert_called_once()
+
+
+def test_probe_video_metadata_counts_matroska_frames(tmp_path):
+    video_path = tmp_path / "unknown-frame-count.mkv"
+    _write_matroska_video(video_path, frame_count=4)
+
+    total_frames, fps = load_video._probe_video_metadata(str(video_path), count_frames=True)
+
+    assert total_frames == 4
+    assert fps == pytest.approx(10)

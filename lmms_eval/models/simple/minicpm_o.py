@@ -45,17 +45,12 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import import_decord
 
 try:
     from transformers import AutoModel, AutoTokenizer
 except ImportError:
     eval_logger.warning("Failed to import transformers; Please install transformers==4.44.2")
-
-try:
-    from decord import VideoReader, cpu
-except ImportError:
-    VideoReader = None
-    cpu = None
 
 try:
     from moviepy import VideoFileClip
@@ -68,15 +63,14 @@ MAX_NUM_FRAMES = 64
 
 def encode_video(video_path: str, max_frames: int = MAX_NUM_FRAMES) -> List[Image.Image]:
     """Extract frames from video file."""
-    if VideoReader is None:
-        raise ImportError("decord is required for video processing. Install with: pip install decord")
+    decord = import_decord()
 
     def uniform_sample(sequence, n):
         gap = len(sequence) / n
         idxs = [int(i * gap + gap / 2) for i in range(n)]
         return [sequence[i] for i in idxs]
 
-    vr = VideoReader(video_path, ctx=cpu(0))
+    vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
     sample_fps = round(vr.get_avg_fps() / 1)
     frame_idx = [i for i in range(0, len(vr), sample_fps)]
     if len(frame_idx) > max_frames:

@@ -13,7 +13,6 @@ import PIL
 import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from decord import VideoReader, cpu
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from packaging import version
 from PIL import Image
@@ -24,6 +23,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import import_decord
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -289,10 +289,12 @@ class Llava_OneVision_MovieChat(lmms):
         return new_list
 
     def load_video(self, video_path, max_frames_num):
+        decord = import_decord()
+
         if type(video_path) is str:
-            vr = VideoReader(video_path, ctx=cpu(0))
+            vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
         else:
-            vr = VideoReader(video_path[0], ctx=cpu(0))
+            vr = decord.VideoReader(video_path[0], ctx=decord.cpu(0))
         total_frame_num = len(vr)
         uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
         frame_idx = uniform_sampled_frames.tolist()

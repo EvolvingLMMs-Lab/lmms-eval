@@ -11,7 +11,6 @@ import PIL
 import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from decord import VideoReader, cpu
 from packaging import version
 from tqdm import tqdm
 
@@ -19,6 +18,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import import_decord
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -42,7 +42,6 @@ try:
     import soundfile as sf
     import torch
     import whisper
-    from decord import VideoReader, cpu
     from egogpt.constants import (
         DEFAULT_IMAGE_TOKEN,
         IMAGE_TOKEN_INDEX,
@@ -252,6 +251,8 @@ class EgoGPT(lmms):
         return parts
 
     def load_video(self, video_path=None, audio_path=None, max_frames_num=16, fps=1, task_name=None):
+        decord = import_decord()
+
         if audio_path is not None:
             speech, sample_rate = sf.read(audio_path)
             if sample_rate != 16000:
@@ -267,7 +268,7 @@ class EgoGPT(lmms):
             speech = torch.zeros(3000, 128)
             speech_lengths = torch.LongTensor([3000])
 
-        vr = VideoReader(video_path, ctx=cpu(0), num_threads=1)
+        vr = decord.VideoReader(video_path, ctx=decord.cpu(0), num_threads=1)
         total_frame_num = len(vr)
         avg_fps = round(vr.get_avg_fps() / fps)
         frame_idx = [i for i in range(0, total_frame_num, avg_fps)]

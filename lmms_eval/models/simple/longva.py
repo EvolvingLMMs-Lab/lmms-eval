@@ -13,7 +13,6 @@ from typing import List, Optional, Tuple, Union  # noqa: E402
 
 import numpy as np  # noqa: E402
 import PIL  # noqa: E402
-from decord import VideoReader, cpu  # noqa: E402
 from packaging import version  # noqa: E402
 from tqdm import tqdm  # noqa: E402
 
@@ -25,7 +24,7 @@ from lmms_eval import utils  # noqa: E402
 from lmms_eval.api.instance import Instance  # noqa: E402
 from lmms_eval.api.model import lmms  # noqa: E402
 from lmms_eval.api.registry import register_model  # noqa: E402
-from lmms_eval.models.model_utils.load_video import read_video  # noqa: E402
+from lmms_eval.models.model_utils.load_video import import_decord, read_video  # noqa: E402
 
 try:
     from longva.constants import (
@@ -334,10 +333,12 @@ class LongVA(lmms):
         return new_list
 
     def load_video(self, video_path, max_frames_num):
+        decord = import_decord()
+
         if type(video_path) is str:
-            vr = VideoReader(video_path, ctx=cpu(0))
+            vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
         else:
-            vr = VideoReader(video_path[0], ctx=cpu(0))
+            vr = decord.VideoReader(video_path[0], ctx=decord.cpu(0))
         total_frame_num = len(vr)
         uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
         frame_idx = uniform_sampled_frames.tolist()

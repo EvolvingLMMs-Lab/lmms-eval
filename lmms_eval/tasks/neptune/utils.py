@@ -8,6 +8,8 @@ import yaml
 from loguru import logger as eval_logger
 from PIL import Image
 
+from lmms_eval.models.model_utils.load_video import import_decord
+
 OPTIONS = ["A", "B", "C", "D", "E"]
 
 
@@ -122,9 +124,9 @@ def _parse_choice_from_response(response, option_map):
 
 
 def _sample_video_frames(video_path, max_num_frames=32, frame_sampling="uniform"):
-    from decord import VideoReader, cpu
+    decord = import_decord()
 
-    video_reader = VideoReader(video_path, ctx=cpu(0), num_threads=1)
+    video_reader = decord.VideoReader(video_path, ctx=decord.cpu(0), num_threads=1)
     total_frames = len(video_reader)
     if total_frames == 0:
         return []

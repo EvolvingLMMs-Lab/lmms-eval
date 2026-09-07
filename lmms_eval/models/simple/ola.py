@@ -22,7 +22,6 @@ import PIL
 import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from decord import VideoReader, cpu
 from tqdm import tqdm
 from transformers import AutoConfig
 
@@ -68,6 +67,8 @@ try:
 except Exception:
     eval_logger.debug("")
 from moviepy.video.io.VideoFileClip import VideoFileClip  # noqa: E402
+
+from lmms_eval.models.model_utils.load_video import import_decord  # noqa: E402
 
 if "USE_SPEECH" in os.environ:
     USE_SPEECH = os.environ["USE_SPEECH"]
@@ -270,7 +271,9 @@ class Ola(lmms):
         return encoding
 
     def load_video(self, video_path, max_frames_num):
-        vr = VideoReader(video_path, ctx=cpu(0))
+        decord = import_decord()
+
+        vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
         total_frame_num = len(vr)
         _fps = round(vr.get_avg_fps())
 

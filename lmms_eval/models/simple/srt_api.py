@@ -5,7 +5,6 @@ from typing import List, Tuple
 
 import numpy as np
 from accelerate import Accelerator, DistributedType
-from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from openai import AsyncOpenAI, OpenAI
 from PIL import Image
@@ -19,6 +18,7 @@ from tqdm import tqdm
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import import_decord
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 
 NUM_SECONDS_TO_SLEEP = 5
@@ -108,10 +108,12 @@ class SRT_API(lmms):
     # Function to encode the video
     def encode_video(self, video_path, for_get_frames_num):
         # import pdb; pdb.set_trace()
+        decord = import_decord()
+
         if isinstance(video_path, str):
-            vr = VideoReader(video_path, ctx=cpu(0))
+            vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
         else:
-            vr = VideoReader(video_path[0], ctx=cpu(0))
+            vr = decord.VideoReader(video_path[0], ctx=decord.cpu(0))
         total_frame_num = len(vr)
         video_time = total_frame_num / vr.get_avg_fps()
         fps = round(vr.get_avg_fps())

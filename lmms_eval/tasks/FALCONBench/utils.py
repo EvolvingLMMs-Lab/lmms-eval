@@ -25,10 +25,10 @@ from pathlib import Path
 import requests
 import torch
 import yaml
-from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from PIL import Image
 
+from lmms_eval.models.model_utils.load_video import import_decord
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 SOCCERNET_PWD = os.getenv("SOCCERNET_PWD", "s0cc3rn3t")
@@ -99,7 +99,9 @@ def timestamp_to_seconds(timestamp):
 
 def load_video(video_file, duration, max_num_frames=16):
 
-    vr = VideoReader(video_file, ctx=cpu(0), num_threads=1)
+    decord = import_decord()
+
+    vr = decord.VideoReader(video_file, ctx=decord.cpu(0), num_threads=1)
     fps = vr.get_avg_fps()
     total_valid_frames = len(vr)
     num_frames = min(max_num_frames, int(total_valid_frames))

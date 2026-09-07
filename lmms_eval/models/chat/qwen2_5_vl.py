@@ -4,16 +4,12 @@ from typing import List
 from loguru import logger as eval_logger
 from tqdm import tqdm
 
-try:
-    import decord
-except ImportError:
-    decord = None
-
 from lmms_eval import utils
 from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
+from lmms_eval.models.model_utils.load_video import _probe_video_metadata
 from lmms_eval.models.simple.qwen2_5_vl import Qwen2_5_VL as Qwen2_5_VLSimple
 from lmms_eval.protocol import ChatMessages
 
@@ -71,11 +67,10 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             else:
                 # Probe videos to get frame count and set nframes = min(max_num_frames, total_frames)
                 # This avoids the error when video has fewer frames than max_num_frames
-                if videos and decord is not None:
+                if videos:
                     try:
                         video_path = videos[0]  # Assume batch size 1 for videos
-                        vr = decord.VideoReader(video_path)
-                        video_total_frames = len(vr)
+                        video_total_frames, _ = _probe_video_metadata(video_path, count_frames=True)
                         requested_nframes = self.video_nframes if self.video_nframes is not None else self.max_num_frames
                         nframes = min(requested_nframes, video_total_frames)
                         # qwen_vl_utils requires nframes to be a multiple of 2 (FRAME_FACTOR)

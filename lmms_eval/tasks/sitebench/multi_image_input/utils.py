@@ -1,9 +1,9 @@
 import os
 
 import numpy as np
-from decord import VideoReader, cpu
 from PIL import Image
 
+from lmms_eval.models.model_utils.load_video import import_decord
 from lmms_eval.tasks.sitebench.utils import (
     UpperLetters as UpperLetters,
 )
@@ -70,6 +70,8 @@ def spatial_doc_to_visual_video_as_images(doc, lmms_eval_specific_kwargs=None):
     Returns:
         List of PIL.Image objects sampled uniformly from the video
     """
+    decord = import_decord()
+
     cache_dir = os.path.join(base_cache_dir, cache_name)
     video_path = doc["visual"][0]
     video_path = os.path.join(cache_dir, video_path)
@@ -80,7 +82,7 @@ def spatial_doc_to_visual_video_as_images(doc, lmms_eval_specific_kwargs=None):
     num_frames = int(_get_specific_kwarg(lmms_eval_specific_kwargs, "num_frames", 32))
 
     # Load video and sample frames uniformly
-    vr = VideoReader(video_path, ctx=cpu(0))
+    vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
     total_frames = len(vr)
 
     # Ensure we don't request more frames than available

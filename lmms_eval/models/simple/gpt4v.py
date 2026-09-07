@@ -4,23 +4,19 @@ from typing import List, Tuple, Union
 
 import numpy as np
 from accelerate import Accelerator, DistributedType
+from loguru import logger as eval_logger  # noqa: E402
 from openai import AzureOpenAI, OpenAI
+from PIL import Image  # noqa: E402
 from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.imports import optional_import
+from lmms_eval.models.model_utils.load_video import import_decord
 from lmms_eval.models.model_utils.media_encoder import (
     encode_image_to_base64,
     encode_image_to_base64_with_size_limit,
 )
-
-VideoReader, _ = optional_import("decord", "VideoReader")
-cpu, _ = optional_import("decord", "cpu")
-
-from loguru import logger as eval_logger  # noqa: E402
-from PIL import Image  # noqa: E402
 
 API_TYPE = os.getenv("API_TYPE", "openai")
 NUM_SECONDS_TO_SLEEP = 10
@@ -109,7 +105,9 @@ class GPT4V(lmms):
 
     # Function to encode the video
     def encode_video(self, video_path, for_get_frames_num):
-        vr = VideoReader(video_path, ctx=cpu(0))
+        decord = import_decord()
+
+        vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
         total_frame_num = len(vr)
         uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
 

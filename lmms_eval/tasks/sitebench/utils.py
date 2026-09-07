@@ -10,6 +10,8 @@ import yaml
 from loguru import logger as eval_logger
 from PIL import Image
 
+from lmms_eval.models.model_utils.load_video import import_decord
+
 UpperLetters = list(string.ascii_uppercase)
 Categories = {
     "counting & existence",
@@ -190,14 +192,14 @@ def sitebench_video_prompt(doc, lmmseval_specific_kwargs=None):
 
 
 def _sitebench_video_frames(doc, lmms_eval_specific_kwargs=None):
-    from decord import VideoReader, cpu
+    decord = import_decord()
 
     video_path = os.path.join(cache_dir, doc["visual"][0])
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Video path: {video_path} does not exist.")
 
     num_frames = int(_get_specific_kwarg(lmms_eval_specific_kwargs, "num_frames", 32))
-    vr = VideoReader(video_path, ctx=cpu(0))
+    vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
     total_frames = len(vr)
     num_frames = min(num_frames, total_frames)
     indices = np.linspace(0, total_frames - 1, num_frames, dtype=int)

@@ -1,15 +1,11 @@
 import logging
 from typing import List, Tuple
 
-import decord
 import numpy as np
 import torch
+import torch.nn.functional as F  # noqa: E402
 import torchvision.transforms as T
 from accelerate import Accelerator, DistributedType
-from decord import VideoReader, cpu
-
-decord.bridge.set_bridge("torch")
-import torch.nn.functional as F  # noqa: E402
 from PIL import Image  # noqa: E402
 from tqdm import tqdm  # noqa: E402
 from transformers import AutoModel, AutoTokenizer  # noqa: E402
@@ -25,6 +21,8 @@ from datetime import timedelta  # noqa: E402
 
 from accelerate.state import AcceleratorState  # noqa: E402
 from accelerate.utils import InitProcessGroupKwargs  # noqa: E402
+
+from lmms_eval.models.model_utils.load_video import import_decord  # noqa: E402
 
 DEFAULT_GEN_KWARGS = dict(
     num_beams=1,
@@ -92,7 +90,10 @@ def load_video(
     hd_num=6,
     padding=False,
 ):
-    vr = VideoReader(video_path, ctx=cpu(0), num_threads=1)
+    decord = import_decord()
+
+    decord.bridge.set_bridge("torch")
+    vr = decord.VideoReader(video_path, ctx=decord.cpu(0), num_threads=1)
     num_frames = len(vr) - 1
 
     frame_indices = get_index(

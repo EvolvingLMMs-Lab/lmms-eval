@@ -9,6 +9,8 @@ import pandas as pd
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.models.model_utils.load_video import import_decord
+
 _NUMBER_WORDS = {
     "zero": 0,
     "one": 1,
@@ -103,7 +105,7 @@ def _vsibench_video_path(doc):
 
 
 def sample_vsibench_video_frames(doc, lmms_eval_specific_kwargs=None):
-    from decord import VideoReader, cpu
+    decord = import_decord()
     from PIL import Image
 
     video_path = _vsibench_video_path(doc)
@@ -111,7 +113,7 @@ def sample_vsibench_video_frames(doc, lmms_eval_specific_kwargs=None):
         raise FileExistsError(f"video path:{video_path} does not exist.")
 
     num_frames = int(_get_specific_kwarg(lmms_eval_specific_kwargs, "num_frames", 32))
-    vr = VideoReader(video_path, ctx=cpu(0))
+    vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
     total_frames = len(vr)
     num_frames = min(num_frames, total_frames)
     indices = np.linspace(0, total_frames - 1, num_frames, dtype=int)

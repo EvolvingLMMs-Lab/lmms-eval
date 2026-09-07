@@ -2,11 +2,6 @@ import time
 from typing import List, Optional, Tuple, Union
 
 import torch
-
-try:
-    import decord
-except ImportError:
-    decord = None
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from tqdm import tqdm

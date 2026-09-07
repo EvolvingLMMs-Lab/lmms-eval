@@ -4,7 +4,6 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import torch
-from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
@@ -28,14 +27,17 @@ from lmms_eval.models.model_utils.cambrians.qwen2_monkey_patch import (
     Qwen2SdpaAttention,
     cambrian_qwen2_forward,
 )
+from lmms_eval.models.model_utils.load_video import import_decord
 from lmms_eval.models.simple.cambrians import CambrianS, is_video_file
 
 
 def process_video_with_decord_vsr(video_file: str, num_threads: int = -1):
+    decord = import_decord()
+
     if num_threads < 1:
-        vr = VideoReader(video_file, ctx=cpu(0))
+        vr = decord.VideoReader(video_file, ctx=decord.cpu(0))
     else:
-        vr = VideoReader(video_file, ctx=cpu(0), num_threads=num_threads)
+        vr = decord.VideoReader(video_file, ctx=decord.cpu(0), num_threads=num_threads)
     frame_idx = list(range(len(vr)))
     video = vr.get_batch(frame_idx).asnumpy()
     vr.seek(0)

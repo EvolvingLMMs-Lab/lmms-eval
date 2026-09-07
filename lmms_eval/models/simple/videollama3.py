@@ -3,7 +3,6 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import torch
 from accelerate import Accelerator, DistributedType
-from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
@@ -16,6 +15,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import import_decord
 
 
 @register_model("videollama3")
@@ -243,7 +243,9 @@ class VideoLLaMA3(lmms):
 
 
 def read_video_custom(video_path, fps=1, max_frames_num=180, force_include_last_frame=True):
-    vr = VideoReader(video_path, ctx=cpu(0))
+    decord = import_decord()
+
+    vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
     duration = len(vr)
     vid_fps = vr.get_avg_fps()
     fps_list = []

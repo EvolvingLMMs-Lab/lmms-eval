@@ -7,7 +7,6 @@ import requests
 import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from decord import VideoReader, cpu
 from huggingface_hub import snapshot_download
 from loguru import logger as eval_logger
 from tqdm import tqdm
@@ -15,7 +14,7 @@ from tqdm import tqdm
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video
+from lmms_eval.models.model_utils.load_video import import_decord, read_video
 
 try:
     from llamavid.constants import (
@@ -190,7 +189,9 @@ class LLaMAVid(lmms):
         return self.tokenizer.decode(tokens)
 
     def load_video(self, video_path):
-        vr = VideoReader(video_path, ctx=cpu(0))
+        decord = import_decord()
+
+        vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
         _total_frame_num = len(vr)
         fps = round(vr.get_avg_fps())
         frame_idx = [i for i in range(0, len(vr), fps)]

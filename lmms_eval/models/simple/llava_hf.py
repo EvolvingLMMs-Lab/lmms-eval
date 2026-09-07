@@ -6,7 +6,6 @@ import PIL
 import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
-from decord import VideoReader, cpu
 from tqdm import tqdm
 from transformers import (
     AutoConfig,
@@ -23,6 +22,8 @@ from lmms_eval.api.registry import register_model
 warnings.filterwarnings("ignore")
 
 from loguru import logger as eval_logger  # noqa: E402
+
+from lmms_eval.models.model_utils.load_video import import_decord  # noqa: E402
 
 DEFAULT_IMAGE_TOKEN = "<image>"
 DEFAULT_VIDEO_TOKEN = "<video>"
@@ -254,10 +255,12 @@ class LlavaHf(lmms):
         return new_list
 
     def load_video(self, video_path, max_frames_num):
+        decord = import_decord()
+
         if type(video_path) is str:
-            vr = VideoReader(video_path, ctx=cpu(0))
+            vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
         else:
-            vr = VideoReader(video_path[0], ctx=cpu(0))
+            vr = decord.VideoReader(video_path[0], ctx=decord.cpu(0))
         total_frame_num = len(vr)
         uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
         frame_idx = uniform_sampled_frames.tolist()

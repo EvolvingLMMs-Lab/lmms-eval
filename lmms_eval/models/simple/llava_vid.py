@@ -9,7 +9,6 @@ import numpy as np
 import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from decord import VideoReader, cpu
 from llava.constants import (
     DEFAULT_IM_END_TOKEN,
     DEFAULT_IM_START_TOKEN,
@@ -36,7 +35,7 @@ from transformers import AutoConfig
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import _probe_video_metadata, read_video
+from lmms_eval.models.model_utils.load_video import _probe_video_metadata, import_decord, read_video
 
 # try:
 #     from llavavid.model.builder import load_pretrained_model
@@ -332,7 +331,8 @@ class LlavaVid(lmms):
     def load_video(self, video_path, max_frames_num, fps, force_sample=False):
         if max_frames_num == 0:
             return np.zeros((1, 336, 336, 3))
-        vr = VideoReader(video_path, ctx=cpu(0), num_threads=1)
+        decord = import_decord()
+        vr = decord.VideoReader(video_path, ctx=decord.cpu(0), num_threads=1)
         total_frame_num = len(vr)
         video_time = total_frame_num / vr.get_avg_fps()
         fps = round(vr.get_avg_fps() / fps)

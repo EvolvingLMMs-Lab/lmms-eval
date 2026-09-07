@@ -10,6 +10,8 @@ import numpy as np
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.models.model_utils.load_video import import_decord
+
 # Question categories
 # Numerical Answer (NA) categories
 NA_CATEGORIES = [
@@ -233,7 +235,7 @@ def osi_bench_doc_to_visual_frames(doc, lmms_eval_specific_kwargs=None):
     """
     Return video frames as PIL Images for frame-based input mode.
     """
-    from decord import VideoReader, cpu
+    decord = import_decord()
     from PIL import Image
 
     video_file = doc.get("file_name", doc.get("video", "") + ".mp4")
@@ -251,7 +253,7 @@ def osi_bench_doc_to_visual_frames(doc, lmms_eval_specific_kwargs=None):
         num_frames = lmms_eval_specific_kwargs.get("default", {}).get("num_frames", 32)
 
     # Load video and sample frames uniformly
-    vr = VideoReader(video_path, ctx=cpu(0))
+    vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
     total_frames = len(vr)
 
     # Handle case where video has fewer frames than requested

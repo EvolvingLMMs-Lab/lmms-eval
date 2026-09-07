@@ -18,10 +18,10 @@ NUM_SECONDS_TO_SLEEP = 30
 
 from loguru import logger  # noqa: E402
 
+from lmms_eval.models.model_utils.load_video import import_decord  # noqa: E402
+
 eval_logger = logger
 
-VideoReader, _ = optional_import("decord", "VideoReader")
-cpu, _ = optional_import("decord", "cpu")
 ChatMessage, _has_reka = optional_import("reka", "ChatMessage")
 RekaClient, _ = optional_import("reka.client", "Reka")
 if not _has_reka:
@@ -86,7 +86,9 @@ class Reka(lmms):
         return f"data:image/jpeg;base64,{base64_str}"
 
     def encode_video(self, video_path):
-        vr = VideoReader(video_path, ctx=cpu(0))
+        decord = import_decord()
+
+        vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
         total_frame_num = len(vr)
         uniform_sampled_frames = np.linspace(0, total_frame_num - 1, self.max_frames_num, dtype=int)
         frame_idx = uniform_sampled_frames.tolist()

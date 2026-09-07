@@ -6,7 +6,6 @@ import numpy as np
 import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from decord import VideoReader, cpu
 from PIL import Image
 from tqdm import tqdm
 
@@ -33,6 +32,8 @@ from llava.mm_utils import (  # noqa: E402
     tokenizer_image_token,
 )
 from llava.model.builder import load_pretrained_model  # noqa: E402
+
+from lmms_eval.models.model_utils.load_video import import_decord  # noqa: E402
 
 
 @register_model("vila")
@@ -198,8 +199,10 @@ class VILA(lmms):
         return encoding
 
     def load_video(self, video_path, max_frames_num):
+        decord = import_decord()
+
         try:
-            vr = VideoReader(video_path, ctx=cpu(0))
+            vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
             total_frame_num = len(vr)
             _fps = round(vr.get_avg_fps())
             frame_idx = np.linspace(0, total_frame_num - 2, max_frames_num, dtype=int)

@@ -5,7 +5,6 @@ import PIL
 import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
-from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from PIL import Image
 from torchvision.transforms.functional import to_pil_image
@@ -16,6 +15,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import import_decord
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_data_url
 
 try:
@@ -187,10 +187,12 @@ class Llama4Scout(lmms):
         return new_list
 
     def load_video(self, video_path, max_frames_num):
+        decord = import_decord()
+
         if isinstance(video_path, str):
-            vr = VideoReader(video_path, ctx=cpu(0))
+            vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
         else:
-            vr = VideoReader(video_path[0], ctx=cpu(0))
+            vr = decord.VideoReader(video_path[0], ctx=decord.cpu(0))
         total_frame_num = len(vr)
         uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
         frame_idx = uniform_sampled_frames.tolist()

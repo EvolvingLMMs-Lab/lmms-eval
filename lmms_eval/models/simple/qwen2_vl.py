@@ -1,7 +1,6 @@
 import re
 from typing import List, Optional, Tuple, Union
 
-import decord
 import numpy as np
 import torch
 from accelerate import Accelerator, DistributedType
@@ -267,24 +266,14 @@ class Qwen2_VL(lmms):
 
                 for visual in relevant_visuals:
                     if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
-                        try:
-                            vr = decord.VideoReader(visual)
-                            if len(vr) > 0:
-                                first_frame = vr[0].asnumpy()
-                                height, width = first_frame.shape[:2]
-                                # max_pixels = height * width # This seems incorrect, should use instance config
-                                processed_visuals.append(
-                                    {
-                                        "type": "video",
-                                        "video": visual,
-                                        "max_pixels": self.max_pixels,
-                                        "min_pixels": self.min_pixels,
-                                    }
-                                )
-                            else:
-                                eval_logger.warning(f"Skipping empty video: {visual}")
-                        except Exception as e:
-                            eval_logger.error(f"Failed to process video {visual}: {e}")
+                        processed_visuals.append(
+                            {
+                                "type": "video",
+                                "video": visual,
+                                "max_pixels": self.max_pixels,
+                                "min_pixels": self.min_pixels,
+                            }
+                        )
                     elif isinstance(visual, Image.Image):  # Handle PIL Image
                         try:
                             processed_visuals.append(
@@ -554,23 +543,14 @@ class Qwen2_VL(lmms):
 
                     for visual in relevant_visuals:
                         if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
-                            try:
-                                vr = decord.VideoReader(visual)
-                                if len(vr) > 0:
-                                    first_frame = vr[0].asnumpy()
-                                    height, width = first_frame.shape[:2]
-                                    processed_visuals.append(
-                                        {
-                                            "type": "video",
-                                            "video": visual,
-                                            "max_pixels": self.max_pixels,
-                                            "min_pixels": self.min_pixels,
-                                        }
-                                    )
-                                else:
-                                    eval_logger.warning(f"Skipping empty video: {visual}")
-                            except Exception as e:
-                                eval_logger.error(f"Failed to process video {visual}: {e}")
+                            processed_visuals.append(
+                                {
+                                    "type": "video",
+                                    "video": visual,
+                                    "max_pixels": self.max_pixels,
+                                    "min_pixels": self.min_pixels,
+                                }
+                            )
                         elif isinstance(visual, Image.Image):
                             try:
                                 processed_visuals.append(

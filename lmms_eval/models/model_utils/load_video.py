@@ -30,20 +30,44 @@ def _import_pyav():
         raise ImportError("PyAV backend requires `av`. Install it via `uv add av`.") from exc
 
 
-def _import_decord():
+def import_decord():
+    """Import decord on demand.
+
+    Never import decord at module scope: `libdecord.so` statically links
+    libstdc++'s `atexit_thread.o` and re-exports `__cxa_thread_atexit`, and
+    decord dlopens it with RTLD_GLOBAL. Every shared library loaded *after*
+    libdecord therefore registers its `thread_local` destructors into decord's
+    private list instead of glibc's, and that list holds no reference on the
+    registering library. decord drains it from an `atexit` handler that runs
+    last, i.e. after Python teardown has already dlclosed some of those
+    libraries, so the interpreter dies with SIGSEGV (exit 139) through a
+    dangling destructor pointer -- after results are written, which makes it
+    look like a random crash at the end of an otherwise successful eval. This
+    is reproducible on XPU builds, where importing torch loads level-zero/libpti
+    after decord.
+
+    Importing decord from inside the function that decodes video keeps
+    libdecord out of the process unless a decord-backed decode really happens,
+    and when it does happen the accelerator runtime is already bound to glibc.
+    Callers should use this helper rather than adding their own function-local
+    `import decord`, so the deferred import lives in exactly one place.
+    """
     try:
         return importlib.import_module("decord")
     except ModuleNotFoundError as exc:
         raise ImportError("Decord backend requires the legacy video extra. Install via `uv sync --extra video-legacy`.") from exc
 
 
-def _probe_video_metadata(video_path: str) -> tuple[int, Optional[float]]:
+def _probe_video_metadata(video_path: str, *, count_frames: bool = False) -> tuple[int, Optional[float]]:
+    """Read PyAV metadata, optionally counting frames when the header omits them."""
     av = _import_pyav()
     container = av.open(video_path)
     try:
         stream = container.streams.video[0]
         total_frames = int(stream.frames or 0)
         frame_rate = float(stream.average_rate) if stream.average_rate is not None else None
+        if count_frames and total_frames <= 0:
+            total_frames = sum(1 for _ in container.decode(video=0))
         return total_frames, frame_rate
     finally:
         container.close()
@@ -81,7 +105,7 @@ def _compute_uniform_indices(total_frames: int, sampled_frm: int, force_include_
 
 
 def _open_decord_reader(video_path: Union[str, tuple, list]):
-    decord = _import_decord()
+    decord = import_decord()
     resolved_path = _resolve_video_path(video_path)
     num_threads = int(os.getenv("LMMS_VIDEO_DECORD_THREADS", "2"))
     return decord.VideoReader(resolved_path, ctx=decord.cpu(0), num_threads=num_threads)

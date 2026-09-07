@@ -2,7 +2,6 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Tuple, Union
 
-import decord
 import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
@@ -15,6 +14,7 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
+from lmms_eval.models.model_utils.load_video import _probe_video_metadata
 
 process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
 if not _has_qwen_vl:
@@ -316,8 +316,8 @@ class Qwen3_VL(lmms):
                         # when video has fewer frames than max_num_frames
                         per_video_kwargs = {**video_kwargs}
                         if "nframes" in per_video_kwargs:
-                            vr = decord.VideoReader(visual)
-                            per_video_kwargs["nframes"] = min(per_video_kwargs["nframes"], len(vr))
+                            total_frames, _ = _probe_video_metadata(visual, count_frames=True)
+                            per_video_kwargs["nframes"] = min(per_video_kwargs["nframes"], total_frames)
                         processed_visuals.append(
                             {
                                 "type": "video",

@@ -5,7 +5,6 @@ import numpy as np
 import torch
 import torchvision.transforms as T
 from accelerate import Accelerator, DistributedType
-from decord import VideoReader, cpu
 from PIL import Image
 from torchvision.transforms.functional import InterpolationMode
 from tqdm import tqdm
@@ -14,6 +13,7 @@ from transformers import AutoModel, AutoTokenizer
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import import_decord
 
 eval_logger = logging.getLogger("eval_logger")
 
@@ -113,7 +113,9 @@ def get_index(bound, fps, max_frame, first_idx=0, num_segments=32):
 
 
 def load_video(video_path, bound=None, input_size=448, max_num=1, num_segments=32):
-    vr = VideoReader(video_path, ctx=cpu(0), num_threads=1)
+    decord = import_decord()
+
+    vr = decord.VideoReader(video_path, ctx=decord.cpu(0), num_threads=1)
     max_frame = len(vr) - 1
     fps = float(vr.get_avg_fps())
 

@@ -4,6 +4,7 @@ import numpy as np
 from loguru import logger as eval_logger
 from PIL import Image
 
+from lmms_eval.models.model_utils.load_video import import_decord
 from lmms_eval.tasks.vsibench.utils import (
     _get_specific_kwarg,
     base_cache_dir,
@@ -26,7 +27,7 @@ def vsibench_doc_to_visual_as_images(doc, lmms_eval_specific_kwargs=None):
     Returns:
         List of PIL.Image objects sampled uniformly from the video
     """
-    from decord import VideoReader, cpu
+    decord = import_decord()
 
     cache_dir = os.path.join(base_cache_dir, cache_name)
     video_path = doc["dataset"] + "/" + doc["scene_name"] + ".mp4"
@@ -38,7 +39,7 @@ def vsibench_doc_to_visual_as_images(doc, lmms_eval_specific_kwargs=None):
     num_frames = int(_get_specific_kwarg(lmms_eval_specific_kwargs, "num_frames", 32))
 
     # Load video and sample frames uniformly
-    vr = VideoReader(video_path, ctx=cpu(0))
+    vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
     total_frames = len(vr)
 
     # Ensure we don't request more frames than available

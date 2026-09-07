@@ -16,7 +16,6 @@ from tqdm import tqdm
 from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.concurrency_control import (
     AdaptiveConcurrencyConfig,
     decide_next_concurrency,
@@ -24,6 +23,7 @@ from lmms_eval.models.model_utils.concurrency_control import (
     make_prefix_hash,
     parse_bool,
 )
+from lmms_eval.models.model_utils.load_video import import_decord
 from lmms_eval.models.model_utils.media_encoder import (
     encode_image_to_base64,
     encode_image_to_base64_with_size_limit,
@@ -35,8 +35,6 @@ try:
 except ImportError:
     DefaultHttpxClient = None
 
-VideoReader, _ = optional_import("decord", "VideoReader")
-cpu, _ = optional_import("decord", "cpu")
 
 load_dotenv(verbose=True)
 
@@ -234,7 +232,9 @@ class OpenAICompatible(lmms):
 
     # Function to encode the video
     def encode_video(self, video_path, for_get_frames_num):
-        vr = VideoReader(video_path, ctx=cpu(0))
+        decord = import_decord()
+
+        vr = decord.VideoReader(video_path, ctx=decord.cpu(0))
         total_frame_num = len(vr)
         if total_frame_num <= 0:
             return []

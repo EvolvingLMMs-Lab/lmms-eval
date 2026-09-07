@@ -8,7 +8,6 @@ from tqdm import tqdm
 
 from lmms_eval.api.instance import GenerationResult, TokenCounts
 from lmms_eval.api.registry import register_model
-from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.concurrency_control import (
     decide_next_concurrency,
     extract_text_prefix_from_chat_messages,
@@ -24,9 +23,6 @@ from lmms_eval.models.model_utils.usage_metrics import (
 from lmms_eval.models.simple.openai import OpenAICompatible as OpenAICompatibleSimple
 from lmms_eval.models.simple.openai import _get_max_new_tokens
 from lmms_eval.protocol import ChatMessages
-
-VideoReader, _ = optional_import("decord", "VideoReader")
-cpu, _ = optional_import("decord", "cpu")
 
 load_dotenv(verbose=True)
 
