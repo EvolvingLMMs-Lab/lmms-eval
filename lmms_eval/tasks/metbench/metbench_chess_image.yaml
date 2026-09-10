@@ -1,0 +1,13 @@
+include: _default_template_yaml
+task: metbench_chess_image
+dataset_path: vanyacohen/MET-Bench-Chess
+dataset_name: evaluation
+dataset_kwargs:
+  revision: 6fd525cd537a9c25efe64ae88102c0ab68f94b1d
+  data_files:
+    test: evaluation-test.parquet
+process_docs: !function utils.prepare_chess
+doc_to_visual: !function utils.doc_to_visual
+lmms_eval_specific_kwargs:
+  default:
+    modality: image

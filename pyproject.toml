@@ -29,6 +29,7 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
+    "chess>=1.11.2,<2", # MET-Bench board-state scoring
     "accelerate>=0.29.1",
     "ruff>=0.16.4",
     "datasets>=2.19.0",

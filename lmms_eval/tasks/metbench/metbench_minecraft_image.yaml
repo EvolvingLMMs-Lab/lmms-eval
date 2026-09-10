@@ -1,0 +1,13 @@
+include: _default_template_yaml
+task: metbench_minecraft_image
+dataset_path: vanyacohen/MET-Bench-Minecraft
+dataset_name: evaluation
+dataset_kwargs:
+  revision: ae0b474dd22986b8b292c2a42f5e81cf8675661e
+  data_files:
+    test: evaluation-test.parquet
+process_docs: !function utils.prepare_minecraft
+doc_to_visual: !function utils.doc_to_visual
+lmms_eval_specific_kwargs:
+  default:
+    modality: image
