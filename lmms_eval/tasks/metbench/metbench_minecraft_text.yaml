@@ -1,0 +1,12 @@
+include: _default_template_yaml
+task: metbench_minecraft_text
+dataset_path: vanyacohen/MET-Bench-Minecraft
+dataset_name: evaluation_text_only
+dataset_kwargs:
+  revision: ae0b474dd22986b8b292c2a42f5e81cf8675661e
+  data_files:
+    test: evaluation-text-test.parquet
+process_docs: !function utils.prepare_minecraft
+lmms_eval_specific_kwargs:
+  default:
+    modality: text

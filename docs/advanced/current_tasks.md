@@ -230,6 +230,10 @@ python -m lmms_eval --tasks list_with_num
   - llava_interleave_bench_in_domain
   - llava_interleave_bench_out_domain
   - llava_interleave_bench_multi_view
+- [MET-Bench](https://vanyacohen.com/MET-Bench/) (metbench)
+  - Minecraft next-state prediction: text (metbench_minecraft_text), image (metbench_minecraft_image)
+  - Chess board-state tracking: text (metbench_chess_text), image (metbench_chess_image)
+  - Shell Game hidden-ball tracking: text (metbench_shell_text), image (metbench_shell_image)
 - [MIRB](https://github.com/ys-zong/MIRB) (mirb)
 - [MMLongBench](https://zhaowei-wang-nlp.github.io/MMLongBench-page/) (mmlongbench)
 - [MMMU](https://mmmu-benchmark.github.io/) (mmmu)

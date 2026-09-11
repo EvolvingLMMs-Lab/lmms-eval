@@ -1,0 +1,13 @@
+include: _default_template_yaml
+task: metbench_shell_image
+dataset_path: vanyacohen/MET-Bench-Shell
+dataset_name: evaluation
+dataset_kwargs:
+  revision: 75725717b63cf6e54a5b8abd22e6ad96b47a12e3
+  data_files:
+    test: evaluation-test.parquet
+process_docs: !function utils.prepare_shell
+doc_to_visual: !function utils.doc_to_visual
+lmms_eval_specific_kwargs:
+  default:
+    modality: image
