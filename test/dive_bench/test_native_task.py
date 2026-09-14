@@ -82,6 +82,7 @@ def test_native_task_initialization_without_hub(monkeypatch, name, expected):
     assert calls
     selected_files = calls[0][1]["data_files"]
     assert selected_files == {"test": "Egodex_traj.parquet" if highmotion else "LPM_videos.parquet"}
+    assert calls[0][1]["revision"] == ("d44407f607fdf020c59b816884f06ed6d453cf26" if highmotion else "5cc61a045c8e5e95d1d9c87e22ccd0f699575aea")
     doc = task.eval_docs[0]
     target = task.doc_to_target(doc)
     metrics = task.process_results(doc, [target])
@@ -123,6 +124,20 @@ def test_prefix_is_fixed_and_repeated_qids_do_not_collapse_rows(monkeypatch):
         utils.validate_educational(fixture_dataset(False).select(range(317)))
     with pytest.raises(ValueError, match="content/order"):
         utils.validate_highmotion(full.select(list(reversed(range(3243)))))
+
+
+def test_highmotion_content_validation_ignores_parquet_serialization(monkeypatch, tmp_path):
+    source = fixture_dataset(True)
+    monkeypatch.setattr(utils, "HIGHMOTION_ORDERED_CONTENT_SHA256", fixture_fingerprint(source))
+    snappy = tmp_path / "source.parquet"
+    gzip = tmp_path / "compatible.parquet"
+    source.to_parquet(snappy, compression="snappy")
+    source.to_parquet(gzip, compression="gzip")
+    assert hashlib.sha256(snappy.read_bytes()).digest() != hashlib.sha256(gzip.read_bytes()).digest()
+    for path in (snappy, gzip):
+        reloaded = datasets.Dataset.from_parquet(str(path))
+        assert len(utils.validate_highmotion(reloaded)) == 3243
+        assert len(utils.highmotion_preview_1000(reloaded)) == 1000
 
 
 def test_video_paths_preserve_highmotion_action_directory(tmp_path, monkeypatch):
