@@ -16,6 +16,9 @@ logger.add(sys.stdout, level="WARNING", format=log_format)
 
 
 AVAILABLE_SIMPLE_MODELS = {
+    "grt_llava_hf": "GRTLlavaHf",
+    "grt_qwen2_5_vl": "GRTQwen2_5VL",
+    "grt_qwen2_5_vl_floor": "GRTQwen2_5VLFloor",
     "aero": "Aero",
     "generation_api": "GenerationApi",
     "cosmos_wm": "CosmosWorldModel",
