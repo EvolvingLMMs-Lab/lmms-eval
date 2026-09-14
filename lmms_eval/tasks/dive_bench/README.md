@@ -1,11 +1,11 @@
 # DIVE-Bench and GRT
 
 [Project / leaderboard](https://www.zhanghaichao.xyz/DenseVideoUnderstand/) ·
-[Public code and audit](https://github.com/Hai-chao-Zhang/DenseVideoUnderstand/tree/d52bfc265de858824dda0f8418fd9bcd23e184df) ·
+[Public code and audit](https://github.com/Hai-chao-Zhang/DenseVideoUnderstand/tree/release/dive-bench-minimal) ·
 [Earlier public paper](https://arxiv.org/abs/2509.14199)
 
 This integration provides DIVE-Bench's objective task metrics and isolated GRT
-(gated recompute tokenization) inference wrappers. It does not modify the stock
+(Gated Residual Tokenization) inference wrappers. It does not modify the stock
 `llava_hf` or `qwen2_5_vl` models. GRT reuses eligible video patch projections;
 it does not reduce the visual sequence length or prove an end-to-end FLOP or
 latency reduction by itself.
@@ -33,9 +33,10 @@ reproduction solely from a task name.
 
 ## Data access and installation
 
-As audited on 2026-09-13, the educational repository is gated and the high-motion
-repository was inaccessible to both anonymous and the available authenticated
-account. **A public end-to-end download/inference run is not yet verified.**
+The educational source repository is gated. On 2026-09-14, an owner-authenticated
+audit verified that the pinned high-motion source repository is **private** and
+downloaded its annotations. **A public end-to-end download/inference run is not
+yet verified.** Successful owner access does not establish public access.
 Dataset access must be granted by the owners; authentication alone may not suffice.
 The integration does not redistribute videos or annotations or change access.
 
@@ -44,18 +45,32 @@ The integration does not redistribute videos or annotations or change access.
   `LPM_videos.parquet` is loaded; `LPM_slides.parquet` is an identical duplicate
   and loading both would double the question count.
 - [High-motion data](https://huggingface.co/datasets/haichaozhang/highmotion_densevideounderstand)
-  uses `Egodex_traj.parquet`. Its remote revision cannot be pinned until owner
-  access is resolved. The audited local table has 3,243 distinct video paths and
-  SHA256 `39f9da7aca9020d79f383953646a5893f09c6f8e5f60433560011280ee987b2d`.
+  uses `Egodex_traj.parquet`, pinned to owner-verified revision
+  `d44407f607fdf020c59b816884f06ed6d453cf26`. The Hub file has SHA256
+  `518e2896749b4d6e957d7e9fb0ae16f75c28954e50ef84303889070253cf8ecd`.
+  The audited historical local serialization has SHA256
+  `39f9da7aca9020d79f383953646a5893f09c6f8e5f60433560011280ee987b2d`.
+  Both contain the same 3,243 distinct video paths and ordered task content.
   The loader also checks the ordered content hash of `(video_path, qid,
   question, answer, frame_count)` against
   `90ee915016105f6a709f391e8a03a6d0e99bc5c908f945cdf7b80d0cb289e789`.
-  A changed or reordered same-size remote table therefore fails closed even
-  before a Hub revision can be pinned.
+  A changed or reordered same-size table therefore fails closed, while differences
+  in Parquet writer metadata/compression alone do not invalidate task content.
 - Educational source terms include [LPM's CC BY-NC-SA 4.0 data terms and original
   YouTube video terms](https://github.com/dondongwon/LPMDataset#license).
   [EgoDex data](https://github.com/apple/ml-egodex#license) has CC BY-NC-ND terms.
   This repository's code license does not supersede these asset terms.
+
+On 2026-09-14, the owner configured the **private** canonical
+[`haichaozhang/DIVE-Bench`](https://huggingface.co/datasets/haichaozhang/DIVE-Bench)
+repository at revision `d80461fccf879d5efdeece0edce8608a72d64f10` with exactly two
+annotation configurations: `educational_high_fps` (634 rows) and
+`high_motion_high_fps` (3,243 rows). Named configurations were added to the old
+source cards at revisions `c3ff65dfc37239ebee05bd190cfa5b5126f49146` (educational)
+and `25cc1aeaef5209776625ce4e72a3ba425d4ae929` (high-motion), leaving non-card
+objects and access settings unchanged. This integration keeps its original
+immutable source-data pins. This is completed annotation configuration, not a
+public-download, video-redistribution, or end-to-end GPU reproduction claim.
 
 After authorized download, extract the video files manually under one root:
 
@@ -151,6 +166,13 @@ The historical website high-motion GRT row used a different
 or model revision. This integration does not relabel that result as one produced
 by the new wrapper IDs. A full 3,243-row evaluation is a different result from the
 published 1,000-row preview.
+The legacy wrapper also fails the aligned eight-frame, full-clip protocol: the
+source audit found fewer than eight input frames on 787 of the first 1,000 clips
+and a ten-second truncation affecting 148 clips. The historical row is therefore
+not a fair matched-protocol comparison against eight-frame baselines and cannot
+establish that GRT outperforms them. These counts audit the historical sampler,
+not fresh GPU generations; the integration changes neither its scores nor the
+GRT algorithms.
 
 ## Metrics and validation boundary
 
