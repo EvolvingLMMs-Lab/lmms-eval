@@ -133,6 +133,16 @@ the historical evaluator defaults. TF32 is disabled and deterministic algorithms
 are required, so unsupported deterministic operations fail instead of silently
 falling back.
 
+The strict worker rejects distributed world-size/rank environment settings and
+an already initialized multi-process group, even if each process sees one GPU.
+It accepts the explicit flags printed by the profile helper, not `--config`
+files that can override the checked environment. It forces the native CLI's
+`DEBUG` exception-propagating mode: data/model/CUDA failures therefore exit
+nonzero instead of being logged and swallowed by upstream's ordinary `INFO`
+mode. Debug logs can include dataset text and predictions; keep them private
+unless the source terms permit sharing them. These are launch/error-handling
+guards, not changes to GRT kernels or generation parameters.
+
 These commands generate predictions and native objective metrics. They do not
 run an Open MOS judge or automatically qualify a candidate for the leaderboard.
 Use the public code's separate audited judge and quality-gate workflow, which
