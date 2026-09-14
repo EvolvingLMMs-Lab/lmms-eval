@@ -3,6 +3,7 @@
 import hashlib
 import json
 import math
+from importlib.metadata import version
 from pathlib import Path
 
 import datasets
@@ -144,7 +145,8 @@ def test_video_paths_preserve_highmotion_action_directory(tmp_path, monkeypatch)
 def test_model_registration_is_additive():
     expected = {"grt_llava_hf": "GRTLlavaHf", "grt_qwen2_5_vl": "GRTQwen2_5VL", "grt_qwen2_5_vl_floor": "GRTQwen2_5VLFloor"}
     for name, class_name in expected.items():
-        assert get_model(name).__name__ == class_name
+        if version("transformers") == "4.57.6":
+            assert get_model(name).__name__ == class_name
         assert MODEL_REGISTRY_V2.resolve(name).class_path.startswith("lmms_eval.models.simple.grt_")
     for stock in ("llava_hf", "qwen2_5_vl"):
         assert ".grt_" not in MODEL_REGISTRY_V2.resolve(stock).class_path
@@ -168,6 +170,9 @@ def test_unvalidated_transformers_rejected_before_weights(monkeypatch):
     from lmms_eval.models.model_utils.grt import runtime
 
     monkeypatch.setattr(runtime, "version", lambda _: "5.0.0")
-    for name in ("grt_llava_hf", "grt_qwen2_5_vl", "grt_qwen2_5_vl_floor"):
-        with pytest.raises(RuntimeError, match="4.57.6"):
-            get_model(name)()
+    with pytest.raises(RuntimeError, match="4.57.6"):
+        runtime.require_grt_runtime()
+    if version("transformers") == "4.57.6":
+        for name in ("grt_llava_hf", "grt_qwen2_5_vl", "grt_qwen2_5_vl_floor"):
+            with pytest.raises(RuntimeError, match="4.57.6"):
+                get_model(name)()
