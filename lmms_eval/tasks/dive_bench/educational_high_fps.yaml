@@ -1,0 +1,45 @@
+task: dive_bench_educational_high_fps
+dataset_path: haichaozhang/DenseVideoEvaluation
+dataset_kwargs:
+  revision: 5cc61a045c8e5e95d1d9c87e22ccd0f699575aea
+  data_files:
+    test: LPM_videos.parquet
+  token: true
+test_split: test
+process_docs: !function utils.validate_educational
+output_type: generate_until
+doc_to_visual: !function utils.doc_to_visual
+doc_to_text: !function utils.educational_doc_to_text
+doc_to_messages: !function utils.educational_doc_to_messages
+doc_to_target: answer
+process_results: !function utils.educational_process_results
+metric_list:
+  - metric: cer
+    aggregation: mean
+    higher_is_better: false
+  - metric: wer
+    aggregation: mean
+    higher_is_better: false
+  - metric: token_f1
+    aggregation: mean
+    higher_is_better: true
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+generation_kwargs:
+  until: ["ASSISTANT:"]
+  max_new_tokens: 128
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: " Provide the most complete answer possible. For subtitle or OCR questions, reproduce the relevant text from the video instead of answering with only the video id."
+metadata:
+  version: 1.0
+  benchmark: DIVE-Bench
+  display_name: Educational High-FPS Videos
+  questions: 634
+  videos: 317

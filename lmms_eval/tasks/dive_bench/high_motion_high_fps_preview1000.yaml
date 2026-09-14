@@ -1,0 +1,9 @@
+include: high_motion_high_fps.yaml
+task: dive_bench_high_motion_high_fps_preview1000
+process_docs: !function utils.highmotion_preview_1000
+metadata:
+  version: 2.0
+  benchmark: DIVE-Bench
+  display_name: High-Motion High-FPS Videos (published 1000-clip preview)
+  examples: 1000
+  default_sampled_frames: 8
