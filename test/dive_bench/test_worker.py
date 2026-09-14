@@ -72,13 +72,47 @@ def test_worker_rejects_initialized_multiprocess_group(boundary):
     assert not boundary.output.exists()
 
 
-@pytest.mark.parametrize("extra", [["--config", "override.yaml"], ["--config=override.yaml"]])
+@pytest.mark.parametrize("extra", [["--config", "override.yaml"], ["--config=override.yaml"], ["--conf", "override.yaml"], ["--conf=override.yaml"]])
 def test_worker_rejects_config_environment_overrides(boundary, extra):
     boundary.argv.extend(extra)
     with pytest.raises(RuntimeError, match="explicit profile flags"):
         worker.main()
     boundary.evaluate.assert_not_called()
     assert not boundary.output.exists()
+
+
+@pytest.mark.parametrize(
+    "task_flags",
+    [
+        [],
+        ["--tasks", "dive_bench_high_motion_high_fps"],
+        ["--tasks=dive_bench_high_motion_high_fps_preview1000"],
+        ["--tasks", "densevideo_highmotion"],
+        ["--tasks", "densevideo,densevideo_highmotion"],
+        ["--tasks", "unknown"],
+        ["--tasks", "densevideo*"],
+        ["--tasks="],
+        ["--tasks", "densevideo,"],
+        ["--tasks", "densevideo", "--tasks", "densevideo_highmotion"],
+        ["--tasks", "densevideo", "--tas", "densevideo_highmotion"],
+        ["--ta=densevideo"],
+    ],
+)
+def test_worker_rejects_task_scope_before_cuda_and_native_cli(boundary, task_flags):
+    boundary.argv[3:5] = task_flags
+    with pytest.raises(ValueError):
+        worker.main()
+    boundary.evaluate.assert_not_called()
+    boundary.torch.assert_not_called()
+    assert not boundary.torch.mock_calls
+    assert not boundary.output.exists()
+
+
+@pytest.mark.parametrize("task_flags", [["--tasks=densevideo"], ["--tasks", "densevideo,dive_bench_educational_high_fps"]])
+def test_worker_accepts_exact_educational_aliases(boundary, task_flags):
+    boundary.argv[3:5] = task_flags
+    worker.main()
+    boundary.evaluate.assert_called_once()
 
 
 @pytest.mark.parametrize("verbosity", [None, "INFO", "WARNING", "DEBUG"])

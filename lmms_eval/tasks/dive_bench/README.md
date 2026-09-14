@@ -134,6 +134,14 @@ Three model identifiers are registered lazily:
 | `grt_qwen2_5_vl` | Qwen2.5-VL 3B t03 and non-floor Qwen controls |
 | `grt_qwen2_5_vl_floor` | Qwen2.5-VL 7B subtitle/OCR route-floor candidate |
 
+These registered GRT adapters accept only `dive_bench_educational_high_fps` and
+its `densevideo` alias. They reject every High-Motion alias, unknown task, and
+batch containing any unsupported task before routing, decoding, or backend inference. This guard also
+applies to direct native CLI calls, not just the profile helper; the strict worker
+additionally checks task flags before importing its CUDA runtime. There is no
+bypass flag. Raw High-Motion tasks, stock models, metrics, and historical evidence
+remain available; they are not released GRT model profiles.
+
 Use the bundled profiles rather than generic defaults. They include checkpoint
 revisions, eight-frame budgets, 384-pixel resizing, thresholds, the Route31
 subtitle-specific 31-token cap and the Qwen7 48-token cap. `qwen3` and `qwen7`
@@ -182,18 +190,24 @@ video model that instead uses an FPS policy or excludes the final frame is not
 protocol-equivalent. The task name's High-FPS scenario label does not mean this
 eight-frame evaluation processes a video densely.
 
-For an independent current implementation run (not a claim of reproducing the
-historical high-motion GRT website row):
+For raw-task diagnostics with an independently installed stock model (not a
+released GRT profile, approved benchmark result, or historical reproduction):
 
 ```bash
 export DIVE_BENCH_DATA_ROOT=/data/dive-bench
 export DENSEVIDEO_HIGHMOTION_NUM_FRAMES=8
-.venv-grt/bin/python -m lmms_eval \
-  --model grt_qwen2_5_vl \
-  --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct,revision=66285546d2b821cf421d4f5eb2576359d3770cd3,max_num_frames=8,max_image_size=384,use_custom_video_loader=True,use_gated_tok=False \
+python -m lmms_eval \
+  --model YOUR_STOCK_VIDEO_MODEL \
+  --model_args YOUR_MODEL_SPECIFIC_ARGS \
   --tasks dive_bench_high_motion_high_fps_preview1000 \
-  --batch_size 1 --log_samples --output_path ./runs/highmotion-baseline
+  --batch_size 1 --log_samples --output_path ./runs/highmotion-diagnostic
 ```
+
+Replace the placeholders using that stock adapter's own installation and argument
+documentation. The task's eight-frame setting does not configure the stock
+decoder or establish endpoint-inclusive sampler alignment. Verify its actual
+frame indices separately before interpreting diagnostic metrics, and keep
+predictions private. The target/reference-consistency hold remains in force.
 
 The historical website high-motion GRT row used a different
 `llava_ov_dense_video` wrapper and did not freeze a complete dirty-source snapshot
