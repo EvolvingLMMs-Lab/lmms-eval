@@ -178,3 +178,7 @@ lint-only edits are `type(x) == str` → `type(x) is str` in two legacy paths,
 removing an unused local list in Qwen generation, and narrowing a legacy decoder
 bare exception to `Exception`. No claims of a fresh GPU full-benchmark or MOS
 rerun are made by these CPU checks.
+
+The four model-kernel test modules are collected only in the pinned GRT runtime.
+This does not require upstream's stock/newer Transformers test environment to
+downgrade; native task, metric, schema and AST tests remain available there.
