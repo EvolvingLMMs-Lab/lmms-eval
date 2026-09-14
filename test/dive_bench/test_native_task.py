@@ -7,6 +7,8 @@ from importlib.metadata import version
 from pathlib import Path
 
 import datasets
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
 from lmms_eval import utils as harness_utils
@@ -131,8 +133,9 @@ def test_highmotion_content_validation_ignores_parquet_serialization(monkeypatch
     monkeypatch.setattr(utils, "HIGHMOTION_ORDERED_CONTENT_SHA256", fixture_fingerprint(source))
     snappy = tmp_path / "source.parquet"
     gzip = tmp_path / "compatible.parquet"
-    source.to_parquet(snappy, compression="snappy")
-    source.to_parquet(gzip, compression="gzip")
+    table = pa.Table.from_pydict(source.to_dict())
+    pq.write_table(table, snappy, compression="snappy")
+    pq.write_table(table, gzip, compression="gzip")
     assert hashlib.sha256(snappy.read_bytes()).digest() != hashlib.sha256(gzip.read_bytes()).digest()
     for path in (snappy, gzip):
         reloaded = datasets.Dataset.from_parquet(str(path))

@@ -3,10 +3,11 @@
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.grt.llava_hf import LlavaHf
 from lmms_eval.models.model_utils.grt.runtime import require_grt_runtime
+from lmms_eval.models.model_utils.grt.scope import EducationalGRTScope
 
 
 @register_model("grt_llava_hf")
-class GRTLlavaHf(LlavaHf):
+class GRTLlavaHf(EducationalGRTScope, LlavaHf):
     """LLaVA-OneVision with explicit patch-projection reuse controls."""
 
     def __init__(self, *args, **kwargs) -> None:

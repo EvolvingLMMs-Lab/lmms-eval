@@ -11,6 +11,8 @@ from argparse import Namespace
 from importlib.metadata import version
 from pathlib import Path
 
+from lmms_eval.models.model_utils.grt.scope import require_grt_worker_tasks
+
 _PROCESS_SIZE_ENV = ("WORLD_SIZE", "LOCAL_WORLD_SIZE", "PMI_SIZE", "OMPI_COMM_WORLD_SIZE", "MV2_COMM_WORLD_SIZE", "SLURM_NTASKS", "SLURM_NPROCS")
 _PROCESS_RANK_ENV = ("RANK", "LOCAL_RANK", "PMI_RANK", "OMPI_COMM_WORLD_RANK", "MV2_COMM_WORLD_RANK", "SLURM_PROCID")
 
@@ -37,8 +39,9 @@ def main() -> None:
     """Run native lmms-eval after setting the historical determinism policy."""
     if os.getenv("PYTHONHASHSEED") != "0" or os.getenv("CUBLAS_WORKSPACE_CONFIG") != ":4096:8":
         raise RuntimeError("Set PYTHONHASHSEED=0 and CUBLAS_WORKSPACE_CONFIG=:4096:8 before starting Python.")
-    if any(arg == "--config" or arg.startswith("--config=") for arg in sys.argv[1:]):
+    if any(arg.split("=", 1)[0].startswith("--") and "--config".startswith(arg.split("=", 1)[0]) for arg in sys.argv[1:]):
         raise RuntimeError("The strict GRT worker accepts explicit profile flags, not --config files that can override its environment.")
+    require_grt_worker_tasks(sys.argv[1:])
     if "--output_path" not in sys.argv:
         raise RuntimeError("A new --output_path is required to preserve run provenance.")
     output = Path(sys.argv[sys.argv.index("--output_path") + 1])
