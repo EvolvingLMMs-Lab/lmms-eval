@@ -1,6 +1,7 @@
 import base64
 import io
 import os
+import re
 import string
 from collections import defaultdict
 
@@ -144,3 +145,58 @@ def mmstar_aggregate_results(results):
 
     avg_score = sum(l2_category_avg_score.values()) / len(l2_category_avg_score)
     return avg_score
+
+
+# --- mmstar_hybrid -----------------------------------------------------------
+#
+# The default MMStar prompt asks for the option letter directly. Instruction-tuned
+# models comply on perception questions, but on questions that need a calculation
+# they tend to reason first and name the letter at the end, which the direct
+# protocol scores as a miss. The hybrid protocol therefore fixes the answer format
+# per question instead of per model: the three perception coarse categories keep
+# the direct prompt, the three reasoning ones get a chain-of-thought prompt with an
+# explicit final "Answer: $LETTER" line. See README.md in this directory.
+
+HYBRID_COT_CATEGORIES = {"logical reasoning", "science & technology", "math"}
+
+# Last "Answer: X" line wins, so a model that discusses options before committing
+# is still scored on its final answer.
+_ANSWER_LINE_RE = re.compile(r"(?<!\w)answer\s*(?:is\b|[=:：])\s*\(?([A-D])\)?(?!\w)", flags=re.IGNORECASE)
+
+
+def mmstar_hybrid_perception_docs(dataset):
+    return dataset.filter(lambda category: category not in HYBRID_COT_CATEGORIES, input_columns="category")
+
+
+def mmstar_hybrid_reasoning_docs(dataset):
+    return dataset.filter(lambda category: category in HYBRID_COT_CATEGORIES, input_columns="category")
+
+
+def extract_cot_answer(response):
+    """Strictly read the option letter a CoT response committed to.
+
+    Accepts only the requested format -- a final ``Answer: $LETTER`` marker, with
+    ``\\boxed{LETTER}`` as a fallback for models that ignore the instruction but
+    still mark their answer. Anything else returns ``""`` and scores 0, which is
+    the point of the protocol: the model was asked for an explicit final line.
+    """
+    from lmms_eval.tasks._task_utils.reasoning_utils import extract_boxed_answer
+
+    text = str(response or "").strip()
+    if not text:
+        return ""
+
+    matches = _ANSWER_LINE_RE.findall(text)
+    if matches:
+        return matches[-1].upper()
+
+    boxed = extract_boxed_answer(text).strip().strip("()").strip(" .,:;")
+    if re.fullmatch(r"[A-D]", boxed, flags=re.IGNORECASE):
+        return boxed.upper()
+
+    return ""
+
+
+def mmstar_cot_process_results(doc, results):
+    """Same scoring as ``mmstar_process_results``, but on the strictly parsed letter."""
+    return mmstar_process_results(doc, [extract_cot_answer(results[0])])
