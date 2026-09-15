@@ -9,6 +9,8 @@
 [![GitHub contributors](https://img.shields.io/github/contributors/EvolvingLMMs-Lab/lmms-eval)](https://github.com/EvolvingLMMs-Lab/lmms-eval/graphs/contributors)
 [![issue resolution](https://img.shields.io/github/issues-closed-raw/EvolvingLMMs-Lab/lmms-eval)](https://github.com/EvolvingLMMs-Lab/lmms-eval/issues)
 [![open issues](https://img.shields.io/github/issues-raw/EvolvingLMMs-Lab/lmms-eval)](https://github.com/EvolvingLMMs-Lab/lmms-eval/issues)
+[![Papers with Code: #2 on NLVR2](https://paperswithcode.co/api/v1/papers/2408.03326/leaderboard-badge.svg?eval=7144&live=1)](https://paperswithcode.co/api/v1/papers/2408.03326/leaderboard-badge-link?eval=7144)
+[![Papers with Code: #3 on CLIP-CC-Bench](https://paperswithcode.co/api/v1/papers/2408.03326/leaderboard-badge.svg?eval=28575&live=1)](https://paperswithcode.co/api/v1/papers/2408.03326/leaderboard-badge-link?eval=28575)
 
 > We are building the unified evaluation toolkit for frontier models and probing the abilities in real world, shape what we build next.
 
