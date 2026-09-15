@@ -162,6 +162,11 @@ HYBRID_COT_CATEGORIES = {"logical reasoning", "science & technology", "math"}
 # Last "Answer: X" line wins, so a model that discusses options before committing
 # is still scored on its final answer.
 _ANSWER_LINE_RE = re.compile(r"(?<!\w)answer\s*(?:is\b|[=:：])\s*\(?([A-D])\)?(?!\w)", flags=re.IGNORECASE)
+# Fallback for models that mark the answer but ignore the requested wording. Only a
+# bare option letter counts, so no brace balancing is needed and this stays local --
+# reusing reasoning_utils.extract_boxed_answer would pull the math_verify stack into
+# a task that only ever reads one letter.
+_BOXED_LETTER_RE = re.compile(r"\\boxed\{\s*\(?([A-D])\)?\s*\}", flags=re.IGNORECASE)
 
 
 def mmstar_hybrid_perception_docs(dataset):
@@ -180,8 +185,6 @@ def extract_cot_answer(response):
     still mark their answer. Anything else returns ``""`` and scores 0, which is
     the point of the protocol: the model was asked for an explicit final line.
     """
-    from lmms_eval.tasks._task_utils.reasoning_utils import extract_boxed_answer
-
     text = str(response or "").strip()
     if not text:
         return ""
@@ -190,9 +193,9 @@ def extract_cot_answer(response):
     if matches:
         return matches[-1].upper()
 
-    boxed = extract_boxed_answer(text).strip().strip("()").strip(" .,:;")
-    if re.fullmatch(r"[A-D]", boxed, flags=re.IGNORECASE):
-        return boxed.upper()
+    boxed = _BOXED_LETTER_RE.findall(text)
+    if boxed:
+        return boxed[-1].upper()
 
     return ""
 
