@@ -1,6 +1,7 @@
 import json
 import re
 import time  # 引入time模块
+from typing import Optional
 
 from latex2sympy2 import latex2sympy
 from tqdm import tqdm
@@ -308,7 +309,9 @@ def _fix_sqrt(string):
     for split in splits[1:]:
         # If the split portion is non-empty and the first character isn't a '{',
         # then it means the argument of the sqrt is not enclosed in braces.
-        if len(split) > 0 and split[0] != "{":
+
+        # changed the condition to not add braces
+        if len(split) > 0 and split[0] not in "{[":
             a = split[0]
             # Add braces around the first character and append the rest of the split portion.
             new_substr = "\\sqrt{" + a + "}" + split[1:]
@@ -375,8 +378,8 @@ def _strip_string(string):
     # Remove all spaces
     string = string.replace(" ", "")
 
-    # Transform certain fraction notations to the desired format. Note: The function _fix_fracs is not provided.
-    if "sqrt" in string:
+    # Calls _fix_fracs when required (fixed the sqrt call)
+    if "\\frac" in string:
         string = _fix_fracs(string)
 
     # Convert 0.5 to its fraction representation
@@ -389,16 +392,30 @@ def _strip_string(string):
     return string
 
 
+def _last_boxed_content(s: str) -> Optional[str]:
+    """Return the brace-balanced content of the last ``\\boxed{...}`` in ``s``, or None."""
+    start = s.rfind("\\boxed{")
+    if start == -1:
+        return None
+    i = start + len("\\boxed{")
+    depth = 1
+    for j in range(i, len(s)):
+        if s[j] == "{":
+            depth += 1
+        elif s[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return s[i:j]
+    return s[i:]
+
+
 def find_math_answer(s: str) -> str:
     s = s.lower()
     if "{}" in s:
         s = s.replace("{}", "")
 
-    try:
-        pattern = re.compile("oxed{(.*)}", flags=re.S)
-        ans = pattern.findall(s)[-1]
-    except Exception:
-        ans = s  # If the pattern is not found, consider the entire string as the answer.
+    boxed = _last_boxed_content(s)
+    ans = boxed if boxed is not None else s
 
     # If there's a closing bracket without an opening bracket before it, consider everything before it.
     if ans.find("}") != -1 and (ans.find("{") == -1 or ans.find("}") < ans.find("{")):
@@ -411,6 +428,8 @@ def find_math_answer(s: str) -> str:
     # Clean the string from various LaTeX formatting.
     ans = ans.replace(" ", "").replace("\\,", "").replace("∞", "\\infty")
     ans = ans.replace("+\infty", "\infty").replace("\\\\", "\\").replace("\n", "")
+    # unwrapping \text and \mbox
+    ans = re.sub(r"\\(?:text|mbox)\{([^{}]*)\}", r"\1", ans)
     ans = ans.replace("\\text", "").replace("\\mbox", "").replace("bmatrix", "pmatrix")
     ans = ans.replace("\\left", "").replace("\\right", "").replace("^{\\circ}", "")
     ans = ans.replace("^\\circ", "").replace("{m}^3", "").replace("m^3", "")
