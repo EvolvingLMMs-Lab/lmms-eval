@@ -71,7 +71,7 @@ class VLLMGenerate(VLLMChat):
             max_new_tokens=max_new_tokens,
             **kwargs,
         )
-        self.processor = AutoProcessor.from_pretrained(model)
+        self.processor = AutoProcessor.from_pretrained(model, trust_remote_code=trust_remote_code)
         if self.chat_template is not None:
             with open(self.chat_template, "r") as f:
                 chat_template = f.read()
