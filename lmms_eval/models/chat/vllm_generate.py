@@ -114,6 +114,11 @@ class VLLMGenerate(VLLMChat):
             }
             final_video, fps = fetch_video(video_dict, return_video_metadata=True, return_video_sample_fps=True)
             frames, video_metadata = final_video
+            # Set unconditionally (not gated on processor type): some processors
+            # read do_sample_frames from mm_processor_kwargs (set below) and
+            # ignore this; others (e.g. GLM-4.1V) read it from metadata instead
+            # and need it here. Processor-name checks are avoided on purpose.
+            video_metadata["do_sample_frames"] = False
             video_inputs.append(frames)
             video_metadatas.append(video_metadata)
             kwargs["fps"] = fps
