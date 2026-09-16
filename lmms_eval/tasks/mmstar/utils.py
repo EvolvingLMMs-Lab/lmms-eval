@@ -148,24 +148,15 @@ def mmstar_aggregate_results(results):
 
 
 # --- mmstar_hybrid -----------------------------------------------------------
-#
-# The default MMStar prompt asks for the option letter directly. Instruction-tuned
-# models comply on perception questions, but on questions that need a calculation
-# they tend to reason first and name the letter at the end, which the direct
-# protocol scores as a miss. The hybrid protocol therefore fixes the answer format
-# per question instead of per model: the three perception coarse categories keep
-# the direct prompt, the three reasoning ones get a chain-of-thought prompt with an
-# explicit final "Answer: $LETTER" line. See README.md in this directory.
+# Perception categories keep the direct prompt; reasoning ones get a CoT prompt
+# ending in "Answer: $LETTER". See README.md in this directory.
 
 HYBRID_COT_CATEGORIES = {"logical reasoning", "science & technology", "math"}
 
-# Last "Answer: X" line wins, so a model that discusses options before committing
-# is still scored on its final answer.
+# Last marker wins, so reasoning about options before committing is fine.
 _ANSWER_LINE_RE = re.compile(r"(?<!\w)answer\s*(?:is\b|[=:：])\s*\(?([A-D])\)?(?!\w)", flags=re.IGNORECASE)
-# Fallback for models that mark the answer but ignore the requested wording. Only a
-# bare option letter counts, so no brace balancing is needed and this stays local --
-# reusing reasoning_utils.extract_boxed_answer would pull the math_verify stack into
-# a task that only ever reads one letter.
+# Fallback for models that mark the answer but ignore the wording. Kept local:
+# reasoning_utils.extract_boxed_answer would pull in math_verify for one letter.
 _BOXED_LETTER_RE = re.compile(r"\\boxed\{\s*\(?([A-D])\)?\s*\}", flags=re.IGNORECASE)
 
 
@@ -178,13 +169,7 @@ def mmstar_hybrid_reasoning_docs(dataset):
 
 
 def extract_cot_answer(response):
-    """Strictly read the option letter a CoT response committed to.
-
-    Accepts only the requested format -- a final ``Answer: $LETTER`` marker, with
-    ``\\boxed{LETTER}`` as a fallback for models that ignore the instruction but
-    still mark their answer. Anything else returns ``""`` and scores 0, which is
-    the point of the protocol: the model was asked for an explicit final line.
-    """
+    """Read the letter a CoT response committed to, else "" (scores 0)."""
     text = str(response or "").strip()
     if not text:
         return ""
@@ -201,5 +186,5 @@ def extract_cot_answer(response):
 
 
 def mmstar_cot_process_results(doc, results):
-    """Same scoring as ``mmstar_process_results``, but on the strictly parsed letter."""
+    """``mmstar_process_results`` on the strictly parsed letter."""
     return mmstar_process_results(doc, [extract_cot_answer(results[0])])
