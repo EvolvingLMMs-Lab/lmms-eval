@@ -51,7 +51,7 @@ dependencies = [
     "ftfy",
     "openai",
     "opencv-python-headless",
-    "av<16.0.0",
+    "av>=17.1.0,<18.0.0", # PyAV 18 requires Python 3.11+
     "hf_transfer",
     "nltk",
     "sentencepiece",
