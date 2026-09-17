@@ -112,7 +112,7 @@ def build_dummy_output(length_data):
     return data
 
 
-def preprocess_descriptive_grading_queries(input, resp, num_templates=19):
+def preprocess_descriptive_grading_queries(input, resp, num_templates=19):  # noqa: A002 - Preserve the existing keyword argument name.
     # group the responses based on the template id instead of figure id
     groups = {i: [] for i in range(1, num_templates + 1)}
     for _, data in input.items():

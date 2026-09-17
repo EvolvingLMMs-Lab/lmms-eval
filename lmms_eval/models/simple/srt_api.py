@@ -141,7 +141,7 @@ class SRT_API(lmms):
 
         return base64_frames, frame_time, video_time
 
-    def flatten(self, input):
+    def flatten(self, input):  # noqa: A002 - Preserve the existing keyword argument name.
         new_list = []
         for i in input:
             for j in i:
@@ -204,7 +204,7 @@ class SRT_API(lmms):
             except Exception as e:
                 eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}.")
                 if attempt < 4:
-                    time.sleep(NUM_SECONDS_TO_SLEEP)
+                    await asyncio.sleep(NUM_SECONDS_TO_SLEEP)
                 else:  # If this was the last attempt, log and return empty string
                     eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.")
                     response_text = ""

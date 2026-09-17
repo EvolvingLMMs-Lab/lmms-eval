@@ -317,7 +317,7 @@ def voicebench_process_results_harm(_doc, results):
 
 # Evaluation method for bbh
 def voicebench_process_results_bbh(doc, results):
-    def extract_answer(response, id):
+    def extract_answer(response, id):  # noqa: A002 - Preserve the existing keyword argument name.
         response = normalize(response)
         if "sports_understanding" in id:
             return extract_answer_sports(response)

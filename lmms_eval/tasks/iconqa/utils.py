@@ -13,9 +13,9 @@ def doc_to_visual(doc):
     if "query_image" in doc:
         image_list.append(doc["query_image"].convert("RGB"))
     for i in range(5):
-        id = f"choice_image_{i}"
-        if id in doc and doc[id] is not None:
-            image_list.append(doc[id].convert("RGB"))
+        image_key = f"choice_image_{i}"
+        if image_key in doc and doc[image_key] is not None:
+            image_list.append(doc[image_key].convert("RGB"))
     assert len(image_list) < 6, "Maximum 5 images allowed for ICON-QA"
     return image_list
 

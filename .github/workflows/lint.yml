@@ -40,3 +40,5 @@ jobs:
           echo "Please run 'uv run pre-commit run --all-files' locally and push the fixes."
           git --no-pager diff --name-only
           exit 1
+      - name: Verify lint passes after autofix
+        run: uvx pre-commit run --all-files

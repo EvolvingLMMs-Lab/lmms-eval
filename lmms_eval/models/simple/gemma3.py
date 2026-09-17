@@ -161,7 +161,7 @@ class Gemma3(lmms):
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         raise NotImplementedError("Not implemented for Gemma3.")
 
-    def flatten(self, input: List[List]) -> List:
+    def flatten(self, input: List[List]) -> List:  # noqa: A002 - Preserve the existing keyword argument name.
         """Flatten a nested list into a single list.
 
         Args:

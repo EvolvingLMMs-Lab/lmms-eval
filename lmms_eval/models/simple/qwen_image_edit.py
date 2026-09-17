@@ -212,7 +212,7 @@ class QwenImageEdit(lmms):
     def device(self):
         return self._device
 
-    def flatten(self, input):
+    def flatten(self, input):  # noqa: A002 - Preserve the existing keyword argument name.
         """Flatten a list of lists into a single list."""
         new_list = []
         for i in input:

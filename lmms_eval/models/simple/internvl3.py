@@ -362,7 +362,7 @@ class InternVL3(lmms):
         """Return the world size."""
         return self._world_size
 
-    def flatten(self, input: List[List]) -> List:
+    def flatten(self, input: List[List]) -> List:  # noqa: A002 - Preserve the existing keyword argument name.
         """Flatten a nested list."""
         new_list = []
         for i in input:

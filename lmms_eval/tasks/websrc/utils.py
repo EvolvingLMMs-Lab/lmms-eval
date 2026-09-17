@@ -34,8 +34,8 @@ def websrc_doc_to_visual(doc):
 def websrc_process_results(doc, results):
     pred = results[0]
     parsed_pred = pred
-    id = doc["page_id"]
-    websrc_ans = {"id": id, "domain": doc["domain"], "parsed_pred": parsed_pred}
+    doc_id = doc["page_id"]
+    websrc_ans = {"id": doc_id, "domain": doc["domain"], "parsed_pred": parsed_pred}
     if "answer" in doc:
         websrc_ans["answer"] = doc["answer"]
 

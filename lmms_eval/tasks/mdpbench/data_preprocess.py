@@ -354,7 +354,7 @@ def normalized_latex_table(text):
     return normlized_tables
 
 
-def normalized_table(text, format="html"):
+def normalized_table(text, format="html"):  # noqa: A002 - Preserve the existing keyword argument name.
     if format not in ["html", "latex"]:
         raise ValueError("Invalid format: {}".format(format))
     else:

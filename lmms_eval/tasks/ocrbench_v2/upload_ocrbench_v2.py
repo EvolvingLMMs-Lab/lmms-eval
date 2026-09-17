@@ -90,7 +90,7 @@ with open(ocrbench_json, "r") as f:
 
 for i in tqdm(range(len(data))):
     # for i in tqdm(range(0, len(data), 100)):
-    id = data[i]["id"]
+    doc_id = data[i]["id"]
     dataset_name = data[i]["dataset_name"]
     image_path = img_dir + data[i]["image_path"]
     question = data[i]["question"]
@@ -113,7 +113,7 @@ for i in tqdm(range(len(data))):
     img = PIL_Image.open(image_path).convert("RGB")
     byte_data = image2byte(img)
     image = {"bytes": byte_data, "path": ""}
-    df_items["id"].append(int(id))
+    df_items["id"].append(int(doc_id))
     df_items["image"].append(image)
     df_items["question"].append(str(question))
     df_items["answers"].append(answers)

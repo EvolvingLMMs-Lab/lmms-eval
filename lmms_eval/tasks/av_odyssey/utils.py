@@ -121,14 +121,14 @@ def get_text(doc):
 
 def av_odyssey_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     text = get_text(doc)
-    id = 0
+    media_index = 0
     result = []
     for t in text:
         if isinstance(t, str):
             result.append(t)
         else:
-            result.append(f"<media_{id}>")
-            id += 1
+            result.append(f"<media_{media_index}>")
+            media_index += 1
     return "".join(result)
 
 

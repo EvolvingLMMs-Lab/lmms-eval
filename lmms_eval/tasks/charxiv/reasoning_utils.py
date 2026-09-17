@@ -70,7 +70,7 @@ def get_number_instruction(answer):
     return inst
 
 
-def build_reasoning_grading_queries(input, resp):
+def build_reasoning_grading_queries(input, resp):  # noqa: A002 - Preserve the existing keyword argument name.
     queries = {}
     for _, data in input.items():
         figure_id = str(data["figure_id"])

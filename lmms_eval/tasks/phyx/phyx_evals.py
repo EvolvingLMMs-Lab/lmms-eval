@@ -190,7 +190,7 @@ class PhyXEvaluator:
         prompt += "Judegement:"
         return prompt
 
-    def mapping_str(self, input):
+    def mapping_str(self, input):  # noqa: A002 - Preserve the existing keyword argument name.
         d = {"\dfrac": "\\frac", "\pi": "3.14"}
         output = input
         for k, v in d.items():

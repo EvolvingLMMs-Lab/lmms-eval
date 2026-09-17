@@ -430,7 +430,7 @@ class VideoChat2(lmms):
         conv.messages[-1][1] = output_text + "</s>"
         return output_text, output_token.cpu().numpy()
 
-    def flatten(self, input):
+    def flatten(self, input):  # noqa: A002 - Preserve the existing keyword argument name.
         new_list = []
         for i in input:
             for j in i:

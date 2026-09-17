@@ -640,8 +640,8 @@ def test_create_graph_from_cogmap():
             {"name": "view2", "position": [3, 4], "facing": "down"},
         ],
     }
-    map = create_graph_from_cogmap(json_obj)
-    print(map)
+    graph = create_graph_from_cogmap(json_obj)
+    print(graph)
 
     # second is simple format
     json_obj = {

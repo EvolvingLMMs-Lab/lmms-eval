@@ -127,7 +127,7 @@ def is_equal(asw: str, gt_asw: str) -> bool:
         return False
 
 
-def in_area(id: str, area: str) -> bool:
+def in_area(id: str, area: str) -> bool:  # noqa: A002 - Preserve the existing keyword argument name.
     """Determine if a given ID falls within a specified area.
 
     This function checks if a provided ID contains the specified area string

@@ -183,7 +183,7 @@ class TinyLlava(lmms):
         except Exception:
             return self.tokenizer.decode([tokens])
 
-    def flatten(self, input):
+    def flatten(self, input):  # noqa: A002 - Preserve the existing keyword argument name.
         if not input or any(i is None for i in input):
             return []
         new_list = []

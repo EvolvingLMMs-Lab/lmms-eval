@@ -167,8 +167,8 @@ def naturalbench_process_results(doc, results):
         a dictionary with key: metric name (in this case mme score), value: metric value
     """
     pred = results[0]
-    type = doc["Question_Type"]
-    gt_ans = extract_answer(pred, task_type=type)
+    question_type = doc["Question_Type"]
+    gt_ans = extract_answer(pred, task_type=question_type)
     return {
         "naturalbench_G_ACC": {"id": doc["Index"], "score": gt_ans},
         "naturalbench_Q_ACC": {"id": doc["Index"], "score": gt_ans},

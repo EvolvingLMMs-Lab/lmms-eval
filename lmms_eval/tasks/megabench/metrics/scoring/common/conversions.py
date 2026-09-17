@@ -21,15 +21,15 @@ def freeze_structure(obj):
         return obj
 
 
-def cast_to_set(object) -> set:
+def cast_to_set(object) -> set:  # noqa: A002 - Preserve the existing keyword argument name.
     """Try to cast an object as a set."""
-    object = freeze_structure(object)
-    if isinstance(object, (frozenset, set, tuple)):
-        return set(object)
-    return str_to_set(object)
+    frozen_object = freeze_structure(object)
+    if isinstance(frozen_object, (frozenset, set, tuple)):
+        return set(frozen_object)
+    return str_to_set(frozen_object)
 
 
-def cast_to_dict(object) -> dict:
+def cast_to_dict(object) -> dict:  # noqa: A002 - Preserve the existing keyword argument name.
     """Try to cast an object as a dict."""
     if isinstance(object, dict):
         return {key: cast_to_dict(val) for key, val in object.items()}
