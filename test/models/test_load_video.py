@@ -85,10 +85,10 @@ def test_legacy_decord_helper_keeps_duplicate_short_video_indices(monkeypatch):
     assert frames[:, 0, 0, 0].tolist() == [0, 0, 1, 1, 2]
 
 
-def _write_matroska_video(path, frame_count):
+def _write_matroska_video(path, frame_count, codec="ffv1"):
     av = pytest.importorskip("av")
     container = av.open(str(path), mode="w")
-    stream = container.add_stream("ffv1", rate=10)
+    stream = container.add_stream(codec, rate=10)
     stream.width = 16
     stream.height = 16
     stream.pix_fmt = "yuv420p"
@@ -159,3 +159,60 @@ def test_probe_video_metadata_counts_matroska_frames(tmp_path):
 
     assert total_frames == 4
     assert fps == pytest.approx(10)
+
+
+@pytest.mark.parametrize("frame_count,num_frm,fps,force_last,expected", [(200, 4, None, False, [0, 66, 132, 199]), (20, 8, 1, False, [0, 19]), (20, 1, None, True, [19]), (3, 8, None, False, [0, 1, 2])])
+def test_packet_sampling_retains_only_selected_frames(frame_count, num_frm, fps, force_last, expected):
+    import weakref
+
+    live_frames = weakref.WeakSet()
+    peak_frames = 0
+
+    class Frame:
+        def __init__(self, index):
+            nonlocal peak_frames
+            self.index = index
+            live_frames.add(self)
+            peak_frames = max(peak_frames, len(live_frames))
+
+    class Packet:
+        def __init__(self, index):
+            self.index = index
+
+        def decode(self):
+            return [Frame(self.index)]
+
+    class Container:
+        streams = SimpleNamespace(video=[SimpleNamespace(average_rate=10)])
+
+        def demux(self, video):
+            return (Packet(index) for index in range(frame_count))
+
+        def seek(self, offset):
+            assert offset == 0
+
+    frames = load_video.load_video_packet(Container(), num_frm=num_frm, fps=fps, force_include_last_frame=force_last)
+    assert [frame.index for frame in frames] == expected
+    # Include decoder/iterator lookahead; retaining all decoded frames exceeds
+    # this bound even though the returned frame count is already correct.
+    assert peak_frames <= len(expected) + 3
+
+
+@pytest.mark.parametrize("extension,codec", [("mkv", "ffv1"), ("webm", "libvpx-vp9"), ("mp4", "mpeg4")])
+@pytest.mark.parametrize("num_frm,fps,force_last,expected_indices", [(3, None, False, [0, 5, 11]), (8, 2, False, [0, 11]), (1, None, True, [11])])
+def test_packet_scan_matches_sampling_policy_on_real_video(tmp_path, monkeypatch, extension, codec, num_frm, fps, force_last, expected_indices):
+    video_path = tmp_path / f"sampling.{extension}"
+    _write_matroska_video(video_path, frame_count=12, codec=codec)
+    av = pytest.importorskip("av")
+    with av.open(str(video_path)) as container:
+        reference_frames = np.stack([frame.to_ndarray(format="rgb24") for frame in container.decode(video=0)])
+    if extension == "mp4":
+        # Exercise the reopen-and-packet-scan path after an unsuccessful fast
+        # decode, as well as WebM/Matroska's direct packet path.
+        def failed_stream(*args, **kwargs):
+            raise RuntimeError("inaccurate frame count")
+
+        monkeypatch.setattr(load_video, "load_video_stream", failed_stream)
+    frames = load_video.read_video(str(video_path), num_frm=num_frm, fps=fps, force_include_last_frame=force_last)
+    assert frames.shape == (len(expected_indices), 16, 16, 3)
+    assert np.array_equal(frames, reference_frames[expected_indices])

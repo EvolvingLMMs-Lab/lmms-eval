@@ -1,6 +1,6 @@
 import importlib
 import os
-from typing import Optional, Union
+from typing import Any, Iterator, Optional, Union
 
 import numpy as np
 
@@ -173,16 +173,10 @@ def record_video_length_stream(container, indices):
     return frames
 
 
-# This one works for all types of video
-def record_video_length_packet(container):
-    frames = []
-    # https://github.com/PyAV-Org/PyAV/issues/1269
-    # https://www.cnblogs.com/beyond-tester/p/17641872.html
-    # context = CodecContext.create("libvpx-vp9", "r")
+def _iter_video_frames_packet(container: Any) -> Iterator[Any]:
+    """Yield decoded frames, including frames flushed by the final packet."""
     for packet in container.demux(video=0):
-        for frame in packet.decode():
-            frames.append(frame)
-    return frames
+        yield from packet.decode()
 
 
 def load_video_stream(container, num_frm: int = 8, fps: Optional[float] = None, force_include_last_frame=False):
@@ -201,13 +195,23 @@ def load_video_stream(container, num_frm: int = 8, fps: Optional[float] = None, 
 
 
 def load_video_packet(container, num_frm: int = 8, fps: Optional[float] = None, force_include_last_frame=False):
-    frames = record_video_length_packet(container)
-    total_frames = len(frames)
+    # Containers such as WebM/Matroska often omit the frame count. Count
+    # without retaining decoded frames, then rewind and keep only the sample.
+    # This trades a second decode pass for memory bounded by num_frm.
+    total_frames = sum(1 for _ in _iter_video_frames_packet(container))
     stream = container.streams.video[0]
     frame_rate = float(stream.average_rate) if stream.average_rate is not None else None
     sampled_frm = _compute_sample_count(total_frames, num_frm, fps, frame_rate)
     indices = _compute_uniform_indices(total_frames, sampled_frm, force_include_last_frame=force_include_last_frame)
-    return [frames[i] for i in indices]
+    container.seek(0)
+    index_set = set(indices.tolist())
+    frames = []
+    for index, frame in enumerate(_iter_video_frames_packet(container)):
+        if index in index_set:
+            frames.append(frame)
+        if index >= indices[-1]:
+            break
+    return frames
 
 
 def _frames_to_ndarray(frames, format: str) -> np.ndarray:
