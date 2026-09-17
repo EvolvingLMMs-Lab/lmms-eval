@@ -199,10 +199,13 @@ def test_packet_sampling_retains_only_selected_frames(frame_count, num_frm, fps,
 
 
 @pytest.mark.parametrize("extension,codec", [("mkv", "ffv1"), ("webm", "libvpx-vp9"), ("mp4", "mpeg4")])
-@pytest.mark.parametrize("num_frm,fps,force_last,expected", [(3, None, False, [0, 50, 110]), (8, 2, False, [0, 110]), (1, None, True, [110])])
-def test_packet_scan_matches_sampling_policy_on_real_video(tmp_path, monkeypatch, extension, codec, num_frm, fps, force_last, expected):
+@pytest.mark.parametrize("num_frm,fps,force_last,expected_indices", [(3, None, False, [0, 5, 11]), (8, 2, False, [0, 11]), (1, None, True, [11])])
+def test_packet_scan_matches_sampling_policy_on_real_video(tmp_path, monkeypatch, extension, codec, num_frm, fps, force_last, expected_indices):
     video_path = tmp_path / f"sampling.{extension}"
     _write_matroska_video(video_path, frame_count=12, codec=codec)
+    av = pytest.importorskip("av")
+    with av.open(str(video_path)) as container:
+        reference_frames = np.stack([frame.to_ndarray(format="rgb24") for frame in container.decode(video=0)])
     if extension == "mp4":
         # Exercise the reopen-and-packet-scan path after an unsuccessful fast
         # decode, as well as WebM/Matroska's direct packet path.
@@ -211,5 +214,5 @@ def test_packet_scan_matches_sampling_policy_on_real_video(tmp_path, monkeypatch
 
         monkeypatch.setattr(load_video, "load_video_stream", failed_stream)
     frames = load_video.read_video(str(video_path), num_frm=num_frm, fps=fps, force_include_last_frame=force_last)
-    assert frames.shape == (len(expected), 16, 16, 3)
-    assert np.allclose(frames.mean(axis=(1, 2, 3)), expected, atol=2)
+    assert frames.shape == (len(expected_indices), 16, 16, 3)
+    assert np.array_equal(frames, reference_frames[expected_indices])
