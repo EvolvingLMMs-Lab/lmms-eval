@@ -480,6 +480,10 @@ async def get_tasks() -> list[TaskInfo]:
 
 @app.get("/tasks/{task_id}/yaml")
 async def get_task_yaml(task_id: str) -> dict[str, str]:
+    return await asyncio.to_thread(_get_task_yaml, task_id)
+
+
+def _get_task_yaml(task_id: str) -> dict[str, str]:
     tasks_dir = Path(__file__).resolve().parent.parent / "tasks"
     if not tasks_dir.exists():
         raise HTTPException(status_code=500, detail="Tasks directory not found")

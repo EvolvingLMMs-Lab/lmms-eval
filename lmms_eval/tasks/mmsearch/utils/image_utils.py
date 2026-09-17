@@ -128,14 +128,14 @@ def crop_and_split(fullpage_path, fullpage_split_dict, save_slice_path=None):
             top = i * slice_height
             bottom = min((i + 1) * slice_height, height)
 
-            slice = img.crop((0, top, width, bottom))
+            image_slice = img.crop((0, top, width, bottom))
 
             # Save the slice
             if save_slice_path is not None:
                 output_path = os.path.join(save_slice_path, f"slice_{i}.jpg")
-                slice.save(output_path)
+                image_slice.save(output_path)
             else:
-                output_path = pil_image_to_bytes(slice)
+                output_path = pil_image_to_bytes(image_slice)
             return_list.append(output_path)
 
     return return_list
@@ -192,7 +192,7 @@ def crop_image_search_results(image_path, save_path):
 
 # convert pil images to bytes to unify the loading method
 # the object returned by the function can be loaded with Image.open function
-def pil_image_to_bytes(pil_image, format="PNG"):
+def pil_image_to_bytes(pil_image, format="PNG"):  # noqa: A002 - Preserve the existing keyword argument name.
     img_byte_arr = BytesIO()
     pil_image.save(img_byte_arr, format=format)
     return BytesIO(img_byte_arr.getvalue())

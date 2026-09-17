@@ -674,14 +674,14 @@ def FALCONbench_process_results_mcq(doc, results):
         all_choices.append(chr(ord("A") + i))
 
     parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
-    id = doc["question_id"]
+    doc_id = doc["question_id"]
     gt_option = [chr(ord("A") + i) for i in range(len(doc["options"]))][doc["gt_option_idx"]]
-    acc = {"id": id, "dataset": doc["dataset"], "category": doc["category"], "answer": gt_option, "parsed_pred": parsed_pred}
+    acc = {"id": doc_id, "dataset": doc["dataset"], "category": doc["category"], "answer": gt_option, "parsed_pred": parsed_pred}
 
     return {
         "acc": acc,
         "submission": {
-            id: pred,
+            doc_id: pred,
         },
     }
 
@@ -705,20 +705,20 @@ def FALCONbench_process_results_mcq_temploc(doc, results):
         all_choices.append(chr(ord("A") + i))
 
     parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
-    id = doc["question_id"]
+    doc_id = doc["question_id"]
     gt_option = [chr(ord("A") + i) for i in range(len(doc["options"]))][doc["gt_option_idx"]]
-    acc = {"id": id, "dataset": doc["dataset"], "category": doc["category"], "answer": gt_option, "parsed_pred": parsed_pred}
+    acc = {"id": doc_id, "dataset": doc["dataset"], "category": doc["category"], "answer": gt_option, "parsed_pred": parsed_pred}
 
     acc["pred_dict"] = pred_dict
     if "temporal_window" in pred_dict:
         temp_loc_dict = evaluate_temporal_localization(pred_dict["temporal_window"], doc["gt_time_interval"])
         acc["temp_loc"] = temp_loc_dict
     else:
-        raise ValueError(f"No temporal_window found in prediction for question_id {id}. The output must be a dictionary with 'response' and 'temporal_window' keys.")
+        raise ValueError(f"No temporal_window found in prediction for question_id {doc_id}. The output must be a dictionary with 'response' and 'temporal_window' keys.")
     return {
         "acc": acc,
         "submission": {
-            id: pred,
+            doc_id: pred,
         },
     }
 

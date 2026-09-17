@@ -175,29 +175,29 @@ def mindcube_process_results(doc, results):
     # get type
     row_id = doc["id"]
     first = row_id.split("_", 1)[0]
-    type = None
+    question_type = None
     if first == "among":
-        type = "among"
+        question_type = "among"
     elif first == "rotation":
-        type = "rotation"
+        question_type = "rotation"
     elif first in ("around", "aroundnew"):
-        type = "around"
+        question_type = "around"
     else:
-        type = "other"
+        question_type = "other"
 
     return {
         "overall_accuracy": {"score": score},
         "around_accuracy": {
             "score": score,
-            "type": type,
+            "type": question_type,
         },
         "among_accuracy": {
             "score": score,
-            "type": type,
+            "type": question_type,
         },
         "rotation_accuracy": {
             "score": score,
-            "type": type,
+            "type": question_type,
         },
     }
 

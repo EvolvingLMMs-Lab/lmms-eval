@@ -166,12 +166,12 @@ class EnglishNumberNormalizer:
         if len(words) == 0:
             return
 
-        for prev, current, next in windowed([None] + words + [None], 3):
+        for prev, current, next_word in windowed([None] + words + [None], 3):
             if skip:
                 skip = False
                 continue
 
-            next_is_numeric = next is not None and re.match(r"^\d+(\.\d+)?$", next)
+            next_is_numeric = next_word is not None and re.match(r"^\d+(\.\d+)?$", next_word)
             has_prefix = current[0] in self.prefixes
             current_without_prefix = current[1:] if has_prefix else current
             if re.match(r"^\d+(\.\d+)?$", current_without_prefix):
@@ -303,7 +303,7 @@ class EnglishNumberNormalizer:
                 if value is not None:
                     yield output(value)
 
-                if next in self.words or next_is_numeric:
+                if next_word in self.words or next_is_numeric:
                     prefix = self.preceding_prefixers[current]
                 else:
                     yield output(current)
@@ -319,8 +319,8 @@ class EnglishNumberNormalizer:
                 if value is not None:
                     suffix = self.suffixers[current]
                     if isinstance(suffix, dict):
-                        if next in suffix:
-                            yield output(str(value) + suffix[next])
+                        if next_word in suffix:
+                            yield output(str(value) + suffix[next_word])
                             skip = True
                         else:
                             yield output(value)
@@ -330,7 +330,7 @@ class EnglishNumberNormalizer:
                 else:
                     yield output(current)
             elif current in self.specials:
-                if next not in self.words and not next_is_numeric:
+                if next_word not in self.words and not next_is_numeric:
                     # apply special handling only if the next word can be numeric
                     if value is not None:
                         yield output(value)
@@ -342,9 +342,9 @@ class EnglishNumberNormalizer:
                             yield output(value)
                         yield output(current)
                 elif current == "double" or current == "triple":
-                    if next in self.ones or next in self.zeros:
+                    if next_word in self.ones or next_word in self.zeros:
                         repeats = 2 if current == "double" else 3
-                        ones = self.ones.get(next, 0)
+                        ones = self.ones.get(next_word, 0)
                         value = str(value or "") + str(ones) * repeats
                         skip = True
                     else:
@@ -352,7 +352,7 @@ class EnglishNumberNormalizer:
                             yield output(value)
                         yield output(current)
                 elif current == "point":
-                    if next in self.decimals or next_is_numeric:
+                    if next_word in self.decimals or next_is_numeric:
                         value = str(value or "") + "."
                 else:
                     # should all have been covered at this point

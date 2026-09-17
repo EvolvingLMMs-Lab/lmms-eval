@@ -46,8 +46,8 @@ def extract_and_remove_subfolders(cache_dir):
                 shutil.move(source, destination)
 
     for root, dirs, files in os.walk(cache_dir, topdown=False):
-        for dir in dirs:
-            os.rmdir(os.path.join(root, dir))
+        for subdir in dirs:
+            os.rmdir(os.path.join(root, subdir))
 
 
 def mmworld_doc_to_visual(doc):

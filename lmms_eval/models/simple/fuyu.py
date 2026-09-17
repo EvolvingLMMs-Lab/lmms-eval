@@ -142,7 +142,7 @@ class Fuyu(lmms):
     def world_size(self):
         return self._world_size
 
-    def flatten(self, input, only_get_first=False):
+    def flatten(self, input, only_get_first=False):  # noqa: A002 - Preserve the existing keyword argument name.
         new_list = []
         for i in input:
             for j in i:

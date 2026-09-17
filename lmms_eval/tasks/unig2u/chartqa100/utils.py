@@ -11,11 +11,11 @@ def chartqa_doc_to_text(doc, lmms_eval_specific_kwargs):
 
 def chartqa_process_results(doc, results):
     pred = results[0]
-    type = doc["type"]
+    question_type = doc["type"]
     score = relaxed_correctness(pred, doc["answer"])
     score = 1.0 if score else 0.0
     return_dict = {"relaxed_overall": score}
-    if type == "human_test":
+    if question_type == "human_test":
         return_dict["relaxed_human_split"] = score
     else:
         return_dict["relaxed_augmented_split"] = score

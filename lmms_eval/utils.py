@@ -223,11 +223,11 @@ def simple_parse_args_string(args_string):
 
 
 def join_iters(iters):
-    for iter in iters:
-        yield from iter
+    for iterable in iters:
+        yield from iterable
 
 
-def chunks(iter, n: int = 0, fn=None):
+def chunks(iter, n: int = 0, fn=None):  # noqa: A002 - Preserve the existing keyword argument name.
     """
     Divides an iterable into chunks of specified size or based on a given function.
     Useful for batching

@@ -162,7 +162,7 @@ class Qwen2_VL(lmms):
         raise NotImplementedError("Loglikelihood is not implemented for Qwen2_VL")
 
     # TODO: Consider moving flatten to lmms_eval.utils if it's general purpose
-    def flatten(self, input):
+    def flatten(self, input):  # noqa: A002 - Preserve the existing keyword argument name.
         new_list = []
         for i in input:
             for j in i:

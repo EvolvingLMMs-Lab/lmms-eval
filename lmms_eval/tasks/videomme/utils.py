@@ -128,7 +128,7 @@ def extract_subtitles(video_path, subtitle_path):
     return subtitle_frames, total_frame
 
 
-def videmme_process_docs_base(dataset: datasets.Dataset, type: str) -> datasets.Dataset:
+def videmme_process_docs_base(dataset: datasets.Dataset, type: str) -> datasets.Dataset:  # noqa: A002 - Preserve the existing keyword argument name.
     return dataset.filter(lambda x: x["duration"] == type)
 
 

@@ -76,14 +76,14 @@ def jmmmu_pro_process_results(doc, results):
     pred = results[0]
     index2ans, all_choices = get_multi_choice_info(ast.literal_eval(doc["options"]))
     parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
-    id = doc["id"]
+    doc_id = doc["id"]
     # Calculate correct flag by comparing answer and parsed_pred
     correct = eval_multi_choice(doc["answer"], parsed_pred)
-    jmmmu_pro_acc = {"id": id, "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "parsed_pred": parsed_pred}
+    jmmmu_pro_acc = {"id": doc_id, "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "parsed_pred": parsed_pred}
     return {
         "jmmmu_pro_acc": jmmmu_pro_acc,
         "submission": {
-            id: pred,
+            doc_id: pred,
         },
         "correct": correct,
     }

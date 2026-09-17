@@ -122,7 +122,7 @@ class Qwen_VL_API(lmms):
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         assert False, "Not supported for claude"
 
-    def flatten(self, input):
+    def flatten(self, input):  # noqa: A002 - Preserve the existing keyword argument name.
         new_list = []
         for i in input:
             for j in i:

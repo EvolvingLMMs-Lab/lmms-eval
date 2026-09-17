@@ -63,9 +63,9 @@ class FromLog(lmms):
                             # load logs
                             logs = {}
                             for data in log_data["logs"]:
-                                id = data["doc_id"]
+                                doc_id = data["doc_id"]
                                 response = data["resps"][0]
-                                logs[id] = response
+                                logs[doc_id] = response
 
                             task = log_data["model_configs"]["task"]
 

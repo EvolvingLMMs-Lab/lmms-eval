@@ -43,9 +43,9 @@ def coco_process_result_karpathy(doc, result):
     question_id = doc["filename"]
     # The question id in our dataset is the image file itself
     image_id = int(question_id.split("_")[-1].split(".")[0])
-    id = doc["imgid"]
+    doc_id = doc["imgid"]
 
-    data_dict = {"answer": doc["sentences"], "pred": pred, "image_id": image_id, "id": id}
+    data_dict = {"answer": doc["sentences"], "pred": pred, "image_id": image_id, "id": doc_id}
 
     return {f"coco_{metric}": data_dict for metric in COCO_METRICS}
 
@@ -62,9 +62,9 @@ def coco_process_result(doc, result):
     question_id = doc["question_id"]
     # The question id in our dataset is the image file itself
     image_id = int(question_id.split("_")[-1].split(".")[0])
-    id = doc["id"]
+    doc_id = doc["id"]
 
-    data_dict = {"answer": doc["answer"], "pred": pred, "image_id": image_id, "id": id}
+    data_dict = {"answer": doc["answer"], "pred": pred, "image_id": image_id, "id": doc_id}
 
     return {f"coco_{metric}": data_dict for metric in COCO_METRICS}
 

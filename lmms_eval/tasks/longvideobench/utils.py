@@ -274,12 +274,12 @@ def longvideobench_process_results(doc, results):
         all_choices.append(chr(ord("A") + i))
 
     parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
-    id = doc["id"]
-    lvb_acc = {"id": id, "duration_group": doc["duration_group"], "question_category": doc["question_category"], "answer": chr(ord("A") + doc["correct_choice"]), "parsed_pred": parsed_pred}
+    doc_id = doc["id"]
+    lvb_acc = {"id": doc_id, "duration_group": doc["duration_group"], "question_category": doc["question_category"], "answer": chr(ord("A") + doc["correct_choice"]), "parsed_pred": parsed_pred}
     return {
         "lvb_acc": lvb_acc,
         "submission": {
-            id: pred,
+            doc_id: pred,
         },
     }
 

@@ -161,12 +161,12 @@ def q_bench_process_results(doc, results):
         all_choices.append(chr(ord("A") + i))
 
     parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
-    id = doc["id"]
-    qbench_acc = {"id": id, "question_concern": doc["question_concern"], "question_type": doc["question_type"], "answer": doc["correct_choice"], "parsed_pred": parsed_pred}
+    doc_id = doc["id"]
+    qbench_acc = {"id": doc_id, "question_concern": doc["question_concern"], "question_type": doc["question_type"], "answer": doc["correct_choice"], "parsed_pred": parsed_pred}
     return {
         "qbench_acc": qbench_acc,
         "submission": {
-            id: pred,
+            doc_id: pred,
         },
     }
 
@@ -213,12 +213,12 @@ def a_bench_process_results(doc, results):
         all_choices.append(chr(ord("A") + i))
 
     parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
-    id = doc["id"]
-    abench_acc = {"id": id, "category": doc["category"], "answer": doc["correct_choice"], "parsed_pred": parsed_pred}
+    doc_id = doc["id"]
+    abench_acc = {"id": doc_id, "category": doc["category"], "answer": doc["correct_choice"], "parsed_pred": parsed_pred}
     return {
         "abench_acc": abench_acc,
         "submission": {
-            id: pred,
+            doc_id: pred,
         },
     }
 

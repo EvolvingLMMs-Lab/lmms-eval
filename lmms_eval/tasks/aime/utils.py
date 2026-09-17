@@ -153,7 +153,7 @@ class ChatCompletionSampler:
         self.max_tokens = max_tokens
         self.image_format = "url"
 
-    def _handle_image(self, image: str, encoding: str = "base64", format: str = "png", fovea: int = 768):
+    def _handle_image(self, image: str, encoding: str = "base64", format: str = "png", fovea: int = 768):  # noqa: A002 - Preserve the existing keyword argument name.
         new_image = {
             "type": "image_url",
             "image_url": {

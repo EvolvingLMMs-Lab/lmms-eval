@@ -138,7 +138,7 @@ def read_video_decord(
     *,
     num_frm: int = 8,
     fps: Optional[float] = None,
-    format="rgb24",
+    format="rgb24",  # noqa: A002 - Preserve the existing keyword argument name.
     force_include_last_frame=False,
 ) -> np.ndarray:
     if format != "rgb24":
@@ -214,7 +214,7 @@ def load_video_packet(container, num_frm: int = 8, fps: Optional[float] = None, 
     return frames
 
 
-def _frames_to_ndarray(frames, format: str) -> np.ndarray:
+def _frames_to_ndarray(frames, format: str) -> np.ndarray:  # noqa: A002 - Preserve the existing keyword argument name.
     if not frames:
         raise ValueError("Cannot decode frames from an empty video")
 
@@ -232,7 +232,7 @@ def read_video_torchcodec(
     *,
     num_frm: int = 8,
     fps: Optional[float] = None,
-    format="rgb24",
+    format="rgb24",  # noqa: A002 - Preserve the existing keyword argument name.
     force_include_last_frame=False,
 ) -> np.ndarray:
     resolved_path = _resolve_video_path(video_path)
@@ -294,7 +294,7 @@ def read_video_dali(
     *,
     num_frm: int = 8,
     fps: Optional[float] = None,
-    format="rgb24",
+    format="rgb24",  # noqa: A002 - Preserve the existing keyword argument name.
     force_include_last_frame=False,
 ) -> np.ndarray:
     resolved_path = _resolve_video_path(video_path)
@@ -352,7 +352,7 @@ def read_video(
     *,
     num_frm: int = 8,
     fps: Optional[float] = None,
-    format="rgb24",
+    format="rgb24",  # noqa: A002 - Preserve the existing keyword argument name.
     force_include_last_frame=False,
     backend: Optional[str] = None,
 ) -> np.ndarray:
@@ -416,7 +416,7 @@ def read_video_pyav(
     *,
     num_frm: int = 8,
     fps: Optional[float] = None,
-    format="rgb24",
+    format="rgb24",  # noqa: A002 - Preserve the existing keyword argument name.
     force_include_last_frame=False,
 ) -> np.ndarray:
     """Decode with PyAV, falling back to a full packet scan when needed."""

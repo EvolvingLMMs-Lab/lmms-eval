@@ -79,12 +79,12 @@ def jmmmu_process_results(doc, results):
         parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
     else:
         parsed_pred = parse_open_response(pred)
-    id = doc["id"]
-    jmmmu_acc = {"id": id, "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "parsed_pred": parsed_pred}
+    doc_id = doc["id"]
+    jmmmu_acc = {"id": doc_id, "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "parsed_pred": parsed_pred}
     return {
         "jmmmu_acc": jmmmu_acc,
         "submission": {
-            id: pred,
+            doc_id: pred,
         },
     }
 

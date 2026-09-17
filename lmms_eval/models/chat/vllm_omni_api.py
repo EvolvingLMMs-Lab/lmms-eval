@@ -323,14 +323,27 @@ class VLLMOmniAPI(lmms):
         payload = {"text": "", "videos": [mp4_path], "metadata": metadata}
         return GenerationResult(text=json.dumps(payload), token_counts=TokenCounts())
 
+    def _cached_video_path(self, output_path: str) -> Optional[str]:
+        if os.path.isfile(output_path) and os.path.getsize(output_path) > 0 and not self.overwrite:
+            return os.path.abspath(output_path)
+        return None
+
+    @staticmethod
+    def _write_video(output_path: str, content: bytes) -> str:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        with open(output_path, "wb") as handle:
+            handle.write(content)
+        return os.path.abspath(output_path)
+
     async def _post_one(self, client: httpx.AsyncClient, prep: Dict[str, Any], idx: int) -> tuple[GenerationResult, int]:
         output_path = prep["output_path"]
         prompt = prep["prompt"]
         base_url = self.base_urls[idx % len(self.base_urls)]
         if not prompt:
             return self._empty_result("empty_prompt"), idx
-        if os.path.isfile(output_path) and os.path.getsize(output_path) > 0 and not self.overwrite:
-            return self._pack_result(os.path.abspath(output_path), {"cached": True}), idx
+        cached_path = await asyncio.to_thread(self._cached_video_path, output_path)
+        if cached_path is not None:
+            return self._pack_result(cached_path, {"cached": True}), idx
 
         params = dict(prep["params"])
         data = {key: str(value) for key, value in params.items() if value is not None}
@@ -359,9 +372,7 @@ class VLLMOmniAPI(lmms):
                 if response.status_code >= 400:
                     raise RuntimeError(f"HTTP {response.status_code}: {response.text[:500]}")
 
-                os.makedirs(os.path.dirname(output_path), exist_ok=True)
-                with open(output_path, "wb") as handle:
-                    handle.write(response.content)
+                saved_path = await asyncio.to_thread(self._write_video, output_path, response.content)
                 metadata = {
                     "cached": False,
                     "elapsed_s": elapsed,
@@ -371,7 +382,7 @@ class VLLMOmniAPI(lmms):
                     "peak_memory_mb": response.headers.get("X-Peak-Memory-MB"),
                     "server_url": base_url,
                 }
-                return self._pack_result(os.path.abspath(output_path), metadata), idx
+                return self._pack_result(saved_path, metadata), idx
             except Exception as exc:  # noqa: BLE001
                 last_error = str(exc)
                 eval_logger.info(f"vllm_omni_api attempt {attempt + 1}/{self.max_retries} failed for {output_path}: {last_error[:300]}")
