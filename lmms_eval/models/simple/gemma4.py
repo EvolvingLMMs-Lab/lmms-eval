@@ -15,6 +15,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.audio_processing import downsample_audio
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_data_url
 
 warnings.simplefilter("ignore", category=DeprecationWarning)
@@ -25,6 +26,10 @@ ALLOWED_MAX_SOFT_TOKENS = frozenset({70, 140, 280, 560, 1120})
 DEFAULT_MAX_SOFT_TOKENS = 280
 DEFAULT_MAX_FRAMES = 32
 VIDEO_EXTENSIONS = (".mp4", ".avi", ".mov", ".mkv", ".webm", ".mpeg", ".mpg")
+AUDIO_EXTENSIONS = (".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac")
+# Google Gemma 4 audio encoding: 16 kHz, mono, float32 in [-1, 1], max 30s.
+# https://ai.google.dev/gemma/docs/capabilities/audio
+TARGET_AUDIO_SR = 16000
 
 
 @register_model("gemma4")
@@ -85,6 +90,9 @@ class Gemma4(lmms):
         self.interleave_visuals = interleave_visuals
         self.max_soft_tokens = max_soft_tokens
         self.max_num_frames = max_num_frames
+        # Audio on E2B/E4B/12B only (non-null audio_config). 
+        # https://ai.google.dev/gemma/docs/core/model_card_4
+        self.supports_audio = getattr(self._config, "audio_config", None) is not None
 
         if reasoning_prompt:
             self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
@@ -165,6 +173,50 @@ class Gemma4(lmms):
         num_frames = min(num_frames or self.max_num_frames, metadata.total_num_frames)
         return np.linspace(0, metadata.total_num_frames - 1, num_frames, dtype=int)
 
+    def _audio_content(self, visual) -> Optional[dict]:
+        """Chat-template audio part, or None if `visual` is not audio.
+
+        Google requires mono-channel, 16 kHz, float32 waveforms in [-1, 1]:
+        https://ai.google.dev/gemma/docs/capabilities/audio
+        The HF feature extractor does not resample, so we match that spec here.
+        """
+        # Path: processor loads the file (same pattern as video paths above).
+        if isinstance(visual, str) and visual.lower().endswith(AUDIO_EXTENSIONS):
+            if not os.path.exists(visual):
+                raise FileNotFoundError(f"Audio file not found: {visual}")
+            return {"type": "audio", "audio": visual}
+
+        # datasets 3.x Audio column: {"array", "sampling_rate"} (FLEURS/MMAU).
+        if isinstance(visual, dict) and "array" in visual and "sampling_rate" in visual:
+            array, sr = visual["array"], int(visual["sampling_rate"])
+        # datasets 4.x torchcodec AudioDecoder.
+        elif type(visual).__name__ == "AudioDecoder":
+            if hasattr(visual, "get_all_samples"):
+                decoded = visual.get_all_samples()
+                array = getattr(decoded, "samples", getattr(decoded, "array", decoded))
+                if hasattr(array, "cpu"):
+                    array = array.cpu().numpy()
+                sr = getattr(decoded, "sample_rate", None) or getattr(decoded, "sampling_rate", None) or TARGET_AUDIO_SR
+            elif hasattr(visual, "array") and hasattr(visual, "sampling_rate"):
+                array, sr = visual.array, int(visual.sampling_rate)
+            else:
+                raise ValueError("Failed to decode AudioDecoder input.")
+        else:
+            return None
+
+        array = np.asarray(array)
+        # Google: "processed as a single audio channel"; downmix stereo by averaging.
+        if array.ndim == 2:
+            array = np.mean(array, axis=0 if array.shape[0] <= array.shape[1] else 1)
+        elif array.ndim > 2:
+            array = array.reshape(-1, array.shape[-1]).mean(axis=0)
+        # HF datasets Audio is already float in [-1, 1]; just match Google's float32 dtype.
+        array = array.astype(np.float32)
+        # Google: resample to 16 kHz if the clip is not already at that rate.
+        if int(sr) != TARGET_AUDIO_SR:
+            array = downsample_audio(array, int(sr), TARGET_AUDIO_SR)
+        return {"type": "audio", "audio": array}
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
 
@@ -195,6 +247,7 @@ class Gemma4(lmms):
                     contexts[i] = contexts[i].replace("<image>", "")
 
             batched_messages = []
+            batch_has_audio = False
             for i, context in enumerate(contexts):
                 message = [{"role": "system", "content": [{"type": "text", "text": self.system_prompt}]}]
 
@@ -216,6 +269,21 @@ class Gemma4(lmms):
                             visual_group.append({"type": "image", "image": self._encode_image_data_url(visual)})
                     except Exception as e:
                         eval_logger.error(f"Failed to process visual: {e}")
+                    # Audio only when config.audio_config is set (E2B/E4B/12B). Kept outside
+                    # the original except so a bad clip fails the eval instead of text-only scoring.
+                    if not isinstance(visual, Image.Image) and not (
+                        isinstance(visual, str) and visual.lower().endswith(VIDEO_EXTENSIONS)
+                    ):
+                        audio_content = self._audio_content(visual)
+                        if audio_content is not None:
+                            if not self.supports_audio:
+                                raise ValueError(
+                                    "This Gemma 4 checkpoint cannot ingest audio. "
+                                    "Audio is supported on E2B, E4B, and 12B "
+                                    "(non-null config.audio_config), not 31B."
+                                )
+                            visual_group.append(audio_content)
+                            batch_has_audio = True
                     visual_groups.append(visual_group)
                     processed_visuals.extend(visual_group)
 
@@ -257,6 +325,8 @@ class Gemma4(lmms):
                         "num_frames": self.max_num_frames,
                         "do_sample_frames": True,
                     },
+                    # Adding audio kwargs only if batch_has_audio is True.
+                    **({"audio_kwargs": {"sampling_rate": TARGET_AUDIO_SR}} if batch_has_audio else {}),
                 },
             ).to(self.model.device, dtype=torch.bfloat16)
 
