@@ -1,3 +1,14 @@
+## Request cache
+
+`--cache_requests true` reuses document IDs and few-shot contexts. On a cache hit, the task constructs fresh requests with its current callbacks, generation settings, and metadata. Cached data never replaces live request objects or binds callbacks to an earlier task.
+
+- Omit `--cache_requests` to disable both reads and writes.
+- Use `--cache_requests refresh` to rebuild contexts without reading old cache files.
+- Request cache files use bounded, hashed names that distinguish task classes and output types. Older Instance-based cache files are ignored and remain on disk.
+- Cache publication replaces the old file only after the new data is fully serialized and written. A failed write preserves the previous file.
+
+Request caching does not yet fingerprint every input to context construction. Use `refresh` when the dataset, prompt, few-shot seed, or context-building settings change. Request caches use pickle and must come from a trusted directory.
+
 ## Response Cache
 
 `lmms-eval` includes a unified response cache backed by SQLite + JSONL write-ahead log. When enabled, deterministic model responses are stored and reused across runs, skipping redundant inference.
