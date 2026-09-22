@@ -90,7 +90,7 @@ class Gemma4(lmms):
         self.interleave_visuals = interleave_visuals
         self.max_soft_tokens = max_soft_tokens
         self.max_num_frames = max_num_frames
-        # Audio on E2B/E4B/12B only (non-null audio_config). 
+        # Audio on E2B/E4B/12B only (non-null audio_config).
         # https://ai.google.dev/gemma/docs/core/model_card_4
         self.supports_audio = getattr(self._config, "audio_config", None) is not None
 
@@ -271,17 +271,11 @@ class Gemma4(lmms):
                         eval_logger.error(f"Failed to process visual: {e}")
                     # Audio only when config.audio_config is set (E2B/E4B/12B). Kept outside
                     # the original except so a bad clip fails the eval instead of text-only scoring.
-                    if not isinstance(visual, Image.Image) and not (
-                        isinstance(visual, str) and visual.lower().endswith(VIDEO_EXTENSIONS)
-                    ):
+                    if not isinstance(visual, Image.Image) and not (isinstance(visual, str) and visual.lower().endswith(VIDEO_EXTENSIONS)):
                         audio_content = self._audio_content(visual)
                         if audio_content is not None:
                             if not self.supports_audio:
-                                raise ValueError(
-                                    "This Gemma 4 checkpoint cannot ingest audio. "
-                                    "Audio is supported on E2B, E4B, and 12B "
-                                    "(non-null config.audio_config), not 31B."
-                                )
+                                raise ValueError("This Gemma 4 checkpoint cannot ingest audio. Audio is supported on E2B, E4B, and 12B (non-null config.audio_config), not 31B.")
                             visual_group.append(audio_content)
                             batch_has_audio = True
                     visual_groups.append(visual_group)
