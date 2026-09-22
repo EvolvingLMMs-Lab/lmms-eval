@@ -1,3 +1,5 @@
+import csv
+import json
 import re
 import unicodedata
 import zipfile
@@ -7,7 +9,7 @@ from typing import Any, Callable, Dict, List
 
 import datasets
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
 from lmms_eval.tasks._task_utils.point_format import parse_point2d
@@ -106,6 +108,13 @@ def _build_member_map(zip_path: str, suffixes: tuple) -> Dict[str, str]:
 
 
 @lru_cache(maxsize=1)
+def _steerable_points() -> Dict[str, list]:
+    # image_filename -> [{"x": %, "y": %}] reference points of steerable questions
+    with open(_zip_path("pixmo_metadata.csv"), newline="", encoding="utf-8") as f:
+        return {_zip_basename_key(r["image_filename"]): json.loads(r["points"]) for r in csv.DictReader(f)}
+
+
+@lru_cache(maxsize=1)
 def _mask_member_map() -> Dict[str, str]:
     return _build_member_map(_mask_zip_path(), (".png",))
 
@@ -133,6 +142,13 @@ def pointbench_doc_to_visual(doc: Dict[str, Any]) -> List[Image.Image]:
     except Exception as exc:
         eval_logger.warning("pointbench: failed to load image for file={} ({})", image_filename, exc)
         return []
+    if doc.get("category") == "steerable":
+        # Blue dot as in PointArena app.py::draw_points_on_image
+        draw = ImageDraw.Draw(image)
+        r = max(5, min(image.size) // 100)
+        for p in _steerable_points().get(_zip_basename_key(image_filename), []):
+            x, y = p["x"] * image.width / 100, p["y"] * image.height / 100
+            draw.ellipse([(x - r, y - r), (x + r, y + r)], fill="blue")
     return [image]
 
 
