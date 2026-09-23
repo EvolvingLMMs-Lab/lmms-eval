@@ -114,7 +114,7 @@ def mmmu_pro_reward_process_results(doc, results):
 # MMMU-PRO's all questions are multiple-choice questions
 def mmmu_pro_process_results(doc, results):
     pred = results[0]
-    if "question" in doc and "options" in doc:
+    if "options" in doc:
         index2ans, all_choices = get_multi_choice_info(ast.literal_eval(doc["options"]))
         parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
     else:

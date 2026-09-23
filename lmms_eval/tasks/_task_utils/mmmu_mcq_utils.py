@@ -3,6 +3,8 @@ import re
 
 import numpy as np
 
+ANSWER_MARKER_RE = re.compile(r"(?i:answer)\s*[:：]\s*[\*\(\[]*([A-Z])\b")
+
 
 def get_multi_choice_info(options, start_chr="A"):
     all_choices = []
@@ -15,6 +17,11 @@ def get_multi_choice_info(options, start_chr="A"):
 
 
 def parse_mmmu_multi_choice_response(response, all_choices, index2ans):
+    """Prefer the last explicit 'Answer: X'; unparsed responses score 0."""
+    markers = [m for m in ANSWER_MARKER_RE.findall(response) if m in all_choices]
+    if markers:
+        return markers[-1]
+
     for char in [",", ".", "!", "?", ";", ":", "'"]:
         response = response.strip(char)
     response = " " + response + " "
@@ -45,7 +52,7 @@ def parse_mmmu_multi_choice_response(response, all_choices, index2ans):
                 index_ans = False
 
     if len(candidates) == 0:
-        pred_index = random.choice(all_choices)
+        pred_index = ""
     elif len(candidates) > 1:
         start_indexes = []
         if index_ans:
