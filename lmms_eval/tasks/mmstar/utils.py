@@ -149,7 +149,7 @@ def mmstar_aggregate_results(results):
 
 # --- mmstar_hybrid -----------------------------------------------------------
 # Perception categories keep the direct prompt; reasoning ones get a CoT prompt
-# ending in "Answer: $LETTER". See README.md in this directory.
+# ending in "Answer: $LETTER".
 
 HYBRID_COT_CATEGORIES = {"logical reasoning", "science & technology", "math"}
 
