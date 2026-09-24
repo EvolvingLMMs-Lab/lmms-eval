@@ -308,12 +308,15 @@ def _fix_sqrt(string):
     for split in splits[1:]:
         # If the split portion is non-empty and the first character isn't a '{',
         # then it means the argument of the sqrt is not enclosed in braces.
-        if len(split) > 0 and split[0] != "{":
+        # An optional root index ("\\sqrt[3]{8}") starts with '[' and is already
+        # well-formed: bracing its '[' corrupted it to '\\sqrt{[}3]{8}', invalid
+        # LaTeX that kills the latex2sympy equivalence path in is_equal.
+        if len(split) > 0 and split[0] not in "{[":
             a = split[0]
             # Add braces around the first character and append the rest of the split portion.
             new_substr = "\\sqrt{" + a + "}" + split[1:]
         else:
-            # If the split portion starts with a '{', then it's already correct.
+            # If the split portion starts with a '{' or a root index '[', it's already correct.
             new_substr = "\\sqrt" + split
         # Add the new substring to our result string.
         new_string += new_substr
@@ -375,9 +378,12 @@ def _strip_string(string):
     # Remove all spaces
     string = string.replace(" ", "")
 
-    # Transform certain fraction notations to the desired format. Note: The function _fix_fracs is not provided.
-    if "sqrt" in string:
-        string = _fix_fracs(string)
+    # Transform certain fraction notations to the desired format.
+    # Unconditional, matching the canonical hendrycks math_equivalence:
+    # the "sqrt" guard here was a copy of the _fix_sqrt guard above and
+    # made \frac12-style shorthand unreachable for every sqrt-free
+    # answer, which latex2sympy then fails to parse inside is_equal.
+    string = _fix_fracs(string)
 
     # Convert 0.5 to its fraction representation
     if string == "0.5":
@@ -411,7 +417,16 @@ def find_math_answer(s: str) -> str:
     # Clean the string from various LaTeX formatting.
     ans = ans.replace(" ", "").replace("\\,", "").replace("∞", "\\infty")
     ans = ans.replace("+\infty", "\infty").replace("\\\\", "\\").replace("\n", "")
-    ans = ans.replace("\\text", "").replace("\\mbox", "").replace("bmatrix", "pmatrix")
+    # Unwrap \text{...}/\mbox{...} content instead of deleting only the
+    # command name: leftover braces corrupt the answer (\text{Sunday} ->
+    # "{sunday}", which latex2sympy cannot post-process, so is_equal
+    # scores False against the bare gold "Sunday"). Only brace-balanced
+    # spans are unwrapped; anything with nested braces falls back to the
+    # legacy bare replace, because "{\frac{1}{2}}" parses and must keep
+    # doing so.
+    ans = re.sub(r"\\(?:text|mbox)\{([^{}]*)\}", r"\1", ans)
+    ans = ans.replace("\\text", "").replace("\\mbox", "")
+    ans = ans.replace("bmatrix", "pmatrix")
     ans = ans.replace("\\left", "").replace("\\right", "").replace("^{\\circ}", "")
     ans = ans.replace("^\\circ", "").replace("{m}^3", "").replace("m^3", "")
     ans = ans.replace("{units}", "").replace("units", "").replace("{km}", "").replace("km", "")
