@@ -3,8 +3,6 @@ import re
 
 import numpy as np
 
-ANSWER_MARKER_RE = re.compile(r"(?i:answer)\s*[:：]\s*[\*\(\[]*([A-Z])\b")
-
 
 def get_multi_choice_info(options, start_chr="A"):
     all_choices = []
@@ -17,11 +15,6 @@ def get_multi_choice_info(options, start_chr="A"):
 
 
 def parse_mmmu_multi_choice_response(response, all_choices, index2ans):
-    """Prefer the last explicit 'Answer: X'; unparsed responses score 0."""
-    markers = [m for m in ANSWER_MARKER_RE.findall(response) if m in all_choices]
-    if markers:
-        return markers[-1]
-
     for char in [",", ".", "!", "?", ";", ":", "'"]:
         response = response.strip(char)
     response = " " + response + " "
@@ -52,7 +45,7 @@ def parse_mmmu_multi_choice_response(response, all_choices, index2ans):
                 index_ans = False
 
     if len(candidates) == 0:
-        pred_index = ""
+        pred_index = random.choice(all_choices)
     elif len(candidates) > 1:
         start_indexes = []
         if index_ans:
@@ -70,6 +63,26 @@ def parse_mmmu_multi_choice_response(response, all_choices, index2ans):
         pred_index = candidates[0]
 
     return pred_index
+
+
+def parse_mmmu_pro_multi_choice_response(response, all_choices, index2ans):
+    """
+    Official MMMU-Pro parser: read the last 'Answer:' line first, then fall back to the MMMU heuristic.
+    https://github.com/MMMU-Benchmark/MMMU/blob/268471d0d488258990025331c7528359c324aa25/mmmu-pro/evaluate.py#L213-L289
+    """
+    last_answer_pos = response.rfind("Answer:")
+    if last_answer_pos != -1:
+        # Extract the string after "Answer:"
+        answer_str = response[last_answer_pos + len("Answer:") :].strip()
+
+        # Find a unique match in the options
+        matching_options = [option for option in all_choices if option in answer_str]
+
+        # If a unique match is found, return that option
+        if len(matching_options) == 1:
+            return matching_options[0]
+
+    return parse_mmmu_multi_choice_response(response, all_choices, index2ans)
 
 
 def parse_jmmmu_multi_choice_response(response, all_choices, index2ans):
