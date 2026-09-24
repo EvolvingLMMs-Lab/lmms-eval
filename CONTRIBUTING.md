@@ -42,6 +42,48 @@ python -m lmms_eval \
 5. **Commit** with a descriptive message (see [Commit Style](#commit-style))
 6. **Open a pull request** against `main`
 
+### End-to-end validation
+
+Human and agent contributions follow the same
+[PR template](.github/pull_request_template.md). Ask coding agents to read this
+section before making changes. For bug fixes, attempt to reproduce the failure
+before editing, then rerun the same case after the fix. Report failed attempts
+and blockers honestly.
+
+Changes to evaluation behavior require real E2E evidence before review,
+including fixes and refactors of existing models/tasks, shared evaluation code,
+dependencies, and new integrations. Fill in the existing E2E fields: `PASS`,
+the exact public `lmms_eval` command, model/backend, dataset split and positive
+sample count (`N=8`, for example), hardware, result, evidence, and attestation.
+A small representative real dataset sample is sufficient. Include the setup,
+relevant dependency versions, and source of any reproduction helper with the
+command so reviewers can repeat it. Logs or artifacts should show data/media
+loading, inference, non-empty predictions, and emitted metrics.
+
+Lint, compilation, mocks, and helper tests alone do not count as E2E validation.
+If hardware, data, credentials, or dependencies block the run, record the
+attempted command and blocker, set `NOT RUN`, and keep the PR in draft until
+real evidence is available. Never invent results or claim `PASS` without a
+completed run. Recheck affected behavior after subsequent edits.
+
+Docs/tests/CI-only changes may use `NOT APPLICABLE`; list their actual checks
+and results in Validation. The check determines E2E applicability from all
+changed paths, including deletions and both sides of renames. Selecting
+Documentation update does not exempt runtime changes.
+
+The `validate-e2e-evidence` check validates the original template's fields; it
+does not run model inference or prove the submitted evidence is genuine.
+Reviewers must verify that the reported run exercises the change. Run the
+validator's regression tests with
+`node --test .github/pr-evidence/validate.test.cjs`.
+
+**Maintainer setup:** configure `validate-e2e-evidence` from GitHub Actions as a
+required status check for `main` in branch protection/rulesets. A workflow by
+itself does not block merging. Policy updates take effect after merging because
+the metadata check executes trusted base-branch code using `pull_request_target`.
+For existing PRs, trigger a new run by editing their description after the
+policy lands; rerunning an old workflow run uses its old workflow revision.
+
 ### Contributor Funnel and Labels
 
 To make onboarding predictable, we use a lightweight funnel:

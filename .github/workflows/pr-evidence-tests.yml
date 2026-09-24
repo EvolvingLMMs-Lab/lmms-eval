@@ -1,0 +1,31 @@
+name: PR Evidence Validator Tests
+
+on:
+  pull_request:
+    paths:
+      - '.github/pr-evidence/**'
+      - '.github/workflows/pr-e2e-evidence.yml'
+      - '.github/workflows/pr-evidence-tests.yml'
+      - '.github/pull_request_template.md'
+  push:
+    branches: [main]
+    paths:
+      - '.github/pr-evidence/**'
+      - '.github/workflows/pr-e2e-evidence.yml'
+      - '.github/workflows/pr-evidence-tests.yml'
+      - '.github/pull_request_template.md'
+
+permissions:
+  contents: read
+
+jobs:
+  test-pr-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test .github/pr-evidence/validate.test.cjs
