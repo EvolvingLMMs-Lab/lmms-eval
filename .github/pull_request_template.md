@@ -22,9 +22,12 @@ Use this format (max 3 bullets):
 
 ### End-to-end validation
 <!--
-Required for new benchmark/task and new model integration PRs before they are
-marked ready for review. Run through the public lmms_eval CLI using a real
-dataset sample, real media, and an actual supported model/backend.
+Required for changes to evaluation behavior, including fixes/refactors of
+existing models/tasks, shared evaluation code, dependencies, and new
+integrations, before the PR is marked ready for review. Run through the public
+lmms_eval CLI using a real dataset sample, real media, and an actual supported
+model/backend. Docs/tests/CI-only PRs may use NOT APPLICABLE and list their
+checks in Validation above.
 
 Mock-only tests, helper-function tests, compilation, lint, and temporary
 uncommitted scripts do not count as end-to-end validation. If the run cannot

@@ -2,101 +2,31 @@ name: PR E2E Evidence
 
 on:
   pull_request_target:
-    types: [opened, edited, synchronize, reopened, ready_for_review]
+    types: [opened, edited, synchronize, reopened, ready_for_review, converted_to_draft]
 
 permissions:
   contents: read
   pull-requests: read
 
+concurrency:
+  group: pr-e2e-evidence-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   validate-e2e-evidence:
     runs-on: ubuntu-latest
     steps:
-      - name: Require real end-to-end evidence for new tasks and models
+      # pull_request_target must only execute trusted repository code.
+      # Never check out the contributor's head/merge ref or execute PR commands.
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout: .github/pr-evidence
+      - name: Require E2E evidence for new and existing evaluation code
         uses: actions/github-script@v7
         with:
           script: |
-            const pull = context.payload.pull_request;
-            if (pull.draft) {
-              core.notice("Draft PR: end-to-end evidence will be required when the PR is marked ready for review.");
-              return;
-            }
-
-            const files = await github.paginate(github.rest.pulls.listFiles, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: pull.number,
-              per_page: 100,
-            });
-
-            const body = pull.body || "";
-            const declaresNewIntegration =
-              /^\s*-\s*\[[xX]\]\s*New benchmark\/task\s*$/m.test(body) ||
-              /^\s*-\s*\[[xX]\]\s*New model integration\s*$/m.test(body);
-            const addsIntegrationFiles = files.some(({ filename, status }) => {
-              if (status !== "added") return false;
-              const addsTaskConfig =
-                filename.startsWith("lmms_eval/tasks/") && /\.ya?ml$/i.test(filename);
-              const addsModel =
-                filename.startsWith("lmms_eval/models/") && filename.endsWith(".py");
-              return addsTaskConfig || addsModel;
-            });
-
-            if (!declaresNewIntegration && !addsIntegrationFiles) {
-              core.notice("This PR does not add a task configuration or model integration; E2E evidence is not required by this check.");
-              return;
-            }
-
-            const errors = [];
-            if (!/^\s*-\s*E2E status:\s*`?PASS`?\s*$/im.test(body)) {
-              errors.push("Set `E2E status` to `PASS` after completing a real run.");
-            }
-
-            const command = body.match(
-              /^\s*-\s*Exact command:\s*\r?\n\s*```(?:bash|sh|shell)?\s*\r?\n([\s\S]*?)```/im,
-            )?.[1]?.trim();
-            if (
-              !command ||
-              !/(?:\bpython(?:3)?\s+-m\s+lmms_eval\b|\blmms-eval\b)/i.test(command) ||
-              /<[^>]+>/.test(command)
-            ) {
-              errors.push("Provide the exact public `lmms_eval` CLI command in the fenced command block.");
-            }
-
-            const readField = (label) => {
-              const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-              return body.match(new RegExp(`^\\s*-\\s*${escaped}:\\s*(.+)$`, "im"))?.[1]?.trim() || "";
-            };
-            const isFilled = (value) =>
-              value.length >= 3 &&
-              !/^(?:`?\s*)?(?:n\/?a|not run|not applicable|none|todo|tbd|<[^>]+>)(?:\s*`?)?$/i.test(value) &&
-              !value.includes("<!--");
-
-            const model = readField("Model/backend");
-            if (!isFilled(model)) errors.push("Identify the real model/backend used for the run.");
-
-            const dataset = readField("Dataset split and sample size");
-            if (!isFilled(dataset) || !/\bN\s*=\s*[1-9]\d*\b/i.test(dataset)) {
-              errors.push("Provide the dataset split and a positive sample count in the form `N=<number>`.");
-            }
-
-            const hardware = readField("Hardware");
-            if (!isFilled(hardware)) errors.push("Identify the hardware or hosted inference service used.");
-
-            const result = readField("Result");
-            if (!isFilled(result)) errors.push("Report the completed run result and key metric(s).");
-
-            const evidence = readField("Evidence");
-            if (!isFilled(evidence) || evidence.length < 10) {
-              errors.push("Link a run log/artifact or provide a concise, concrete output excerpt in `Evidence`.");
-            }
-
-            if (!/^\s*-\s*\[[xX]\]\s*I verified this change end-to-end through `lmms_eval` with real data\/media and a supported model backend\.\s*$/m.test(body)) {
-              errors.push("Check the end-to-end verification attestation after completing the run.");
-            }
-
-            if (errors.length > 0) {
-              core.setFailed(`Missing required end-to-end validation evidence:\n- ${errors.join("\n- ")}`);
-            } else {
-              core.notice("Required end-to-end validation evidence is present.");
-            }
+            const { run } = require('./.github/pr-evidence/validate.cjs');
+            await run({ github, context, core });
