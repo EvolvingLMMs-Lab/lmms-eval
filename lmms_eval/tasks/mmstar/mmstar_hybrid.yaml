@@ -1,0 +1,8 @@
+group: mmstar_hybrid
+task:
+  - mmstar_hybrid_perception
+  - mmstar_hybrid_reasoning
+aggregate_metric_list:
+  - metric: average
+    aggregation: mean
+    weight_by_size: true
