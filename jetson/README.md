@@ -113,6 +113,7 @@ jetson/
   run_matrix.sh                         many runs in sequence + summary
   download_assets.sh                    models/datasets into /opt/hf-cache (offline-ready)
   summarize.py                          results/SUMMARY.md
+  compute_flops.sh, flops.py            analytical FLOPs per sample (vision / prefill / decode); run_eval.sh calls it
   frameworks/
     common.sh                           argument parsing + Hub cache helpers
     hf.sh, vllm.sh, llamacpp.sh, trt_edgellm.sh   one file per framework: precisions, assets, backend args, server start/stop
@@ -122,6 +123,7 @@ jetson/
     run_info.txt      board, L4T, power mode, git commit, image ids, other running containers, exact command
     run.log           full console output (+ server.log for llama.cpp, trt_profile.json for TensorRT)
     tegrastats.log    1 Hz RAM / GPU / power
+    flops.json        analytical FLOPs per sample: vision encoder, LLM prefill, LLM decode (+ flops.log)
     lmms_eval/        *_results.json (scores, config), *_samples_<task>.jsonl (per-sample outputs + latency)
 ```
 

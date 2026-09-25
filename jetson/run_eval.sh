@@ -16,11 +16,12 @@
 #   RESULTS_DIR  results root relative to the repo (default jetson/results; e.g. jetson/results-thor)
 #   WAIT_GPU_IDLE  default 1: before starting, wait until no other process uses the GPU (checked with
 #             nvidia-smi, e.g. another user's host job that `docker ps` cannot see); 0 = start anyway
+#   FLOPS     default 1: after the run, write analytical FLOPs per sample to flops.json (jetson/compute_flops.sh)
 #   EVAL_ENV  space-separated KEY=VALUE pairs passed into the eval container
 #             (e.g. EVAL_ENV="LMMS_IMAGE_PNG_COMPRESS_LEVEL=1")
 #
 # Each run writes jetson/results/<model>/<tasks>/<framework>-<precision>[+<tag>]/<timestamp>[_limitN]/:
-#   run_info.txt, run.log, tegrastats.log, [server.log | trt_profile.json],
+#   run_info.txt, run.log, tegrastats.log, flops.json, [server.log | trt_profile.json],
 #   lmms_eval/<date>_results.json and lmms_eval/<date>_samples_<task>.jsonl
 set -uo pipefail
 
@@ -108,5 +109,9 @@ if ls "$OUT"/*_results.json >/dev/null 2>&1; then
 fi
 
 grep -m1 '^torch ' "$OUT/run.log" | sed 's/^/versions:    /' >>"$OUT/run_info.txt" || true
+# Analytical FLOPs per sample -> $OUT/flops.json (CPU; a failure here does not fail the run).
+if [ "$STATUS" -eq 0 ] && [ "${FLOPS:-1}" = 1 ]; then
+  "$REPO/jetson/compute_flops.sh" "$OUT" >"$OUT/flops.log" 2>&1 || echo "FLOPs computation failed, see $OUT/flops.log" >&2
+fi
 echo "results in: $OUT (exit $STATUS)"
 exit "$STATUS"

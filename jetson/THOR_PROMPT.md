@@ -20,7 +20,8 @@ Read `jetson/README.md` and `jetson/THOR.md` first. They describe the harness an
   - Before benchmarking, list running containers and GPU users (`docker ps`, `tegrastats` RAM). Stop other containers using the GPU or large amounts of memory, and record their names in `jetson/results-thor/NOTES.md`. On Orin a co-resident vLLM server caused an out-of-memory failure. Restart everything you stopped (`docker start <name>`) when you're done, even if you finish with failures.
   - Never run two benchmarks, or a benchmark and a Docker build, at the same time. Downloads during a run are OK.
 - **Don't disturb running scripts.** Bash reads scripts as it executes them. Never edit `jetson/run_eval.sh` in place while a run is active: write a copy and `mv` it over. Don't `git stash`, `git checkout` or reset the working tree while anything runs.
-- **Long jobs:** start them in the background and wait on completion (for example an `until grep ...; do sleep 60; done` loop); don't poll every few seconds. A full-MME run takes 30–120 min.
+- **Long jobs:** start them in the background and wait on completion (for example an `until grep ...; do sleep 60; done` loop); don't poll every few seconds. A full-MME run takes 30–120 min, a full-GQA run 35 min to 4 h.
+- **Watch for hangs.** If a run's `run.log` hasn't grown for 30 min while its process is still alive, it's stuck (on Thor a llama.cpp MME run once hung for 27 h on a single request). Kill that `run_eval.sh` (its exit trap stops llama-server), save `docker logs` of the server first, log it in `NOTES.md` and let the matrix go on.
 - **Commit and push after each phase:** `git add jetson/results-thor <changed scripts> && git commit && git push`. Use conventional commit messages. Commit only files you created or changed, plus results.
 - **Fixes:** when a step fails, read the log (`run.log`, `server.log`), fix the cause in the scripts or backends, and re-run. At most 3 attempts per item; then log it as failed in `NOTES.md` and move on. Keep fixes general (for example a build argument, or detection of the Thor image's versions), not Thor-only hacks, and describe each in `NOTES.md` and the commit message. Run `uvx ruff check` / `uvx ruff format` on Python you change, and the relevant tests in `test/models` inside the image.
 
@@ -32,6 +33,7 @@ Read `jetson/README.md` and `jetson/THOR.md` first. They describe the harness an
 - Out of memory on Jetson shows up as `NVML_SUCCESS == r INTERNAL ASSERT FAILED` in PyTorch's CUDA allocator.
 - The default image transport (PNG/base64) is slow for MME's large `landmark` photos. `+pil` (vLLM) and `+png1` (llama.cpp) variants exist; the follow-up experiments measure the difference.
 - `docker build` has no GPU driver, so don't run CUDA binaries during builds.
+- **FLOPs** are computed analytically after every run: `run_eval.sh` calls `jetson/compute_flops.sh`, which writes `flops.json` (vision encoder / LLM prefill / LLM decode / total per sample) and `flops.log` to the run dir, on CPU. `summarize.py` puts them in the "Compute (FLOPs)" table with achieved TFLOP/s. For runs without `flops.json`, run `jetson/compute_flops.sh <run dir> ...`. FLOPs are identical across frameworks and precisions (up to prompt-token counting), so a big difference between frameworks points at different image sizes or prompts: investigate it.
 
 ## Phases
 
@@ -55,7 +57,14 @@ Read `jetson/README.md` and `jetson/THOR.md` first. They describe the harness an
 
 Summarize, commit and push.
 
-**5. Wrap-up**
+**5. GQA** — visual question answering, `gqa` task = GQA testdev-balanced, 12,578 questions on 398 images, exact match on a single word or phrase.
+1. Download `dataset:lmms-lab-encoder/GQA:testdev_balanced_instructions` and `dataset:lmms-lab-encoder/GQA:testdev_balanced_images` with `download_assets.sh` (skip if `$HF_CACHE/datasets/lmms-lab-encoder___gqa/testdev_balanced_*` exist). The first run's task load joins images to questions (a few minutes, cached afterwards).
+2. Smoke test: `jetson/run_matrix.sh gqa 8 -- hf 3b`. Check that the answers are sensible and that `flops.json` exists.
+3. Full runs: `jetson/run_matrix.sh gqa "" -- hf 3b hf 7b vllm 3b vllm 3b-awq vllm 7b vllm 7b-awq llamacpp 3b-q8_0 llamacpp 3b-q4_k_m llamacpp 7b-q8_0 llamacpp 7b-q4_k_m`, plus every TensorRT Edge-LLM engine that gave sensible MME answers (e.g. `trt_edgellm 3b-fp16 trt_edgellm 3b-fp8 trt_edgellm 3b-int4_awq`). About 9 runs x 1–4 h: expect roughly a day.
+
+Summarize, commit and push.
+
+**6. Wrap-up**
 1. Restart the containers you stopped. Restore the power mode if you changed it.
 2. `python3 jetson/summarize.py` → `jetson/results-thor/SUMMARY.md`.
 3. Write `jetson/results-thor/REPORT.md` for the user. Lead with the answer, then support it:
@@ -64,5 +73,7 @@ Summarize, commit and push.
    - COCO captioning: CIDEr/BLEU-4 and decode speed per framework (this is where decode speed shows).
    - Resolution sweep: accuracy vs TTFT for 256/512/1024/2048 tokens.
    - TensorRT Edge-LLM results by precision (averages only), or where it failed.
+   - GQA: exact match per framework/precision next to TTFT, answer latency and wall time; does the MME ranking hold?
+   - Compute: FLOPs per sample split into vision encoder / prefill / decode / total for 3B and 7B on MME and GQA, and achieved TFLOP/s per framework/precision (which share of the work is the vision encoder, and how close each framework gets to the GPU's peak).
    - Everything that deviated from Orin (`ATTN=sdpa`, loosened pins, fallback paths, failed items), and all fixes made to scripts or backends.
 4. Commit and push. End with a short message giving the report path, the headline findings, and anything that needs the user's action.

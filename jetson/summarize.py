@@ -68,6 +68,8 @@ def latency_stats(samples_path):
         "gen_p50": percentile(gen, 50),
         "gen_p90": percentile(gen, 90),
         "decode_ms_p50": percentile(decode_ms, 50),
+        "ttft_mean": sum(ttft) / len(ttft),
+        "gen_mean": sum(gen) / len(gen),
     }
 
 
@@ -81,6 +83,26 @@ def trt_profile_stats(path):
     ttft = (vision_ms + profile.get("prefill", {}).get("average_time_per_run_ms", 0)) / 1000
     decode = profile.get("generation", {}).get("average_time_per_token_ms")
     return {"ttft_avg": ttft, "decode_ms_p50": decode}
+
+
+def flops_stats(run_dir, task):
+    """Mean analytical FLOPs per sample from flops.json (jetson/flops.py)."""
+    path = os.path.join(run_dir, "flops.json")
+    task_flops = json.load(open(path))["tasks"].get(task) if os.path.exists(path) else None
+    return {f"flops_{k}": v for k, v in task_flops["mean"].items()} if task_flops else {}
+
+
+def flops_rates(row):
+    """Achieved TFLOP/s: (vision + prefill) FLOPs over TTFT, all FLOPs over the whole answer."""
+    if row.get("flops_total_flops") is None:
+        return "-", "-"
+    ttft, answer = row.get("ttft_mean"), row.get("gen_mean")
+    if ttft is None and row.get("ttft_avg") is not None:  # TensorRT Edge-LLM: averages only
+        ttft = row["ttft_avg"]
+        answer = ttft + (row.get("decode_ms_p50") or 0) / 1000 * max(0, row["flops_output_tokens"] - 1)
+    first = (row["flops_vision_flops"] + row["flops_prefill_flops"]) / ttft / 1e12 if ttft else None
+    total = row["flops_total_flops"] / answer / 1e12 if answer else None
+    return tuple(f"{v:.1f}" if v is not None else "-" for v in (first, total))
 
 
 def run_info_field(run_dir, field):
@@ -144,6 +166,7 @@ def main():
                     "board": run_info_field(run_dir, "board"),
                     "power_mode": (run_info_field(run_dir, "power mode") or "").replace("NV Power Mode:", "").strip(),
                     **stats,
+                    **flops_stats(run_dir, task),
                 }
             )
 
@@ -170,6 +193,26 @@ def main():
             f"{fmt_ms(row, 'ttft_p50', 'ttft_p90')} | {fmt_ms(row, 'gen_p50', 'gen_p90')} | {decode} | "
             f"{fmt_gb(row.get('base_ram'))} | {fmt_gb(row.get('peak_ram'))} | {power} | {row['others']} | [{row['run']}]({row['run']}) |"
         )
+    lines += [
+        "",
+        "## Compute (FLOPs)",
+        "",
+        "Analytical FLOPs per sample from `flops.json` (`jetson/flops.py`): matrix multiplies at 2 FLOPs per multiply-accumulate",
+        "(linear layers + attention), for each sample's actual image grid and prompt / output token counts; identical for every",
+        "framework and precision. Vision = ViT encoder + patch merger; prefill = LLM over the prompt (text + image tokens) incl. the",
+        "first token; decode = the remaining output tokens. Achieved TFLOP/s: (vision + prefill) / mean TTFT, and total / mean answer",
+        "time (TensorRT Edge-LLM: from its averages). Means per sample; total = whole run.",
+        "",
+        "| Model | Framework | Task | N | Image / text / output tokens | Vision (GFLOP) | Prefill (GFLOP) | Decode (GFLOP) | Total (GFLOP) | Run total (TFLOP) | TFLOP/s to 1st token | TFLOP/s answer |",
+        "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for row in rows:
+        if row.get("flops_total_flops") is None:
+            continue
+        gflop = " | ".join(f"{row[f'flops_{k}_flops'] / 1e9:.0f}" for k in ("vision", "prefill", "decode", "total"))
+        tokens = " / ".join(f"{row[f'flops_{k}_tokens']:.0f}" for k in ("image", "text", "output"))
+        first, answer = flops_rates(row)
+        lines.append(f"| {row['model']} | {row['framework']} | {row['task']} | {row['n']} | {tokens} | {gflop} | {row['flops_total_flops'] * row['n'] / 1e12:.0f} | {first} | {answer} |")
     os.makedirs(RESULTS, exist_ok=True)
     out = os.path.join(RESULTS, "SUMMARY.md")
     open(out, "w").write("\n".join(lines) + "\n")
