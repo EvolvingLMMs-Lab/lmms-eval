@@ -25,7 +25,7 @@ from PIL import Image
 
 from lmms_eval.models.model_utils.load_video import import_decord
 
-HF_REPO_ID = "GMLRVigil/Video-Index"
+HF_REPO_ID = "Video-Index/Video-Index"
 
 LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 ANSWER_INSTR = "Reply with ONLY the option letter (or the exact short answer if no options)."

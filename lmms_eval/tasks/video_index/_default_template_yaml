@@ -1,6 +1,5 @@
-dataset_path: GMLRVigil/Video-Index
-dataset_name: meta_benchmark
-test_split: train
+dataset_path: Video-Index/Video-Index
+test_split: test
 output_type: generate_until
 doc_to_target: !function utils.video_index_doc_to_target
 generation_kwargs:

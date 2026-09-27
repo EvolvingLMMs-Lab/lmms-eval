@@ -1,6 +1,6 @@
 # Video-Index
 
-[Video-Index](https://huggingface.co/datasets/GMLRVigil/Video-Index) holds 840 multiple-choice
+[Video-Index](https://huggingface.co/datasets/Video-Index/Video-Index) holds 840 multiple-choice
 video questions drawn from 76 public video benchmarks: one question per video and 210 questions
 in each of four capability groups (perception, temporal, spatial / physical, reasoning /
 knowledge). Every item passed a screen with text-only, single-frame, options-only and

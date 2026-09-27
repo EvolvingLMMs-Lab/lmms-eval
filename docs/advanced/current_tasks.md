@@ -362,7 +362,7 @@ python -m lmms_eval --tasks list_with_num
   - Video-ChatGPT Generic (videochatgpt_gen)
   - Video-ChatGPT Temporal (videochatgpt_temporal)
   - Video-ChatGPT Consistency (videochatgpt_consistency)
-- [Video-Index](https://huggingface.co/datasets/GMLRVigil/Video-Index) (video_index) - 840 multiple-choice questions from 76 video benchmarks, four capability groups, rule-based scoring
+- [Video-Index](https://huggingface.co/datasets/Video-Index/Video-Index) (video_index) - 840 multiple-choice questions from 76 video benchmarks, four capability groups, rule-based scoring
   - Video file (video_index)
   - Frames of the paper protocol (video_index_1fps, video_index_64frame, video_index_32frame, video_index_8frame)
   - Question and options only, four option permutations (video_index_blind)
