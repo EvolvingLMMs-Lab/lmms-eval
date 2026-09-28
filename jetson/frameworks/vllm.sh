@@ -15,10 +15,11 @@ fw_assets() {
 fw_setup() {
   BACKEND=vllm
   # Fraction of the board's unified memory vLLM may take (weights + KV cache + activations). The default is a fixed
-  # budget in GB (13.8, or 18.4 for 7B bf16: 0.45 / 0.6 of the Orin 32GB), so boards with more memory (Thor) keep the
+  # budget in GB (13.8, or 21.0 for 7B bf16: ~0.45 / 0.70 of the Orin 32GB), so boards with more memory (Thor) keep the
   # same KV-cache budget and memory footprint instead of reserving e.g. 57-74 GB.
+  # 7B bf16 needs 21.0: with 18.4 (0.6 on Orin) nothing is left for the KV cache after profiling and vLLM refuses to start.
   local budget_gb=13.8
-  [ "$SIZE" = 7b ] && [ "$PRECISION" = bf16 ] && budget_gb=18.4
+  [ "$SIZE" = 7b ] && [ "$PRECISION" = bf16 ] && budget_gb=21.0
   local default_mem
   default_mem=$(awk -v gb="$budget_gb" '/^MemTotal:/ {printf "%.2f", gb * 1048576 / $2}' /proc/meminfo)
   # Same image resolution range as the other frameworks (IMAGE_MIN/MAX_PIXELS from the model file).

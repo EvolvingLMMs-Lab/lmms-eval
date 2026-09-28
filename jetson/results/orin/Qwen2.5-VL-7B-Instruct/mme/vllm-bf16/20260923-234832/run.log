@@ -1,0 +1,137 @@
+/opt/venv/lib/python3.10/site-packages/requests/__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (6.0.0.post1)/charset_normalizer (3.4.4) doesn't match a supported version!
+  warnings.warn(
+/opt/venv/lib/python3.10/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+torch 2.10.0 transformers 4.57.3
+/opt/venv/lib/python3.10/site-packages/requests/__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (6.0.0.post1)/charset_normalizer (3.4.4) doesn't match a supported version!
+  warnings.warn(
+/opt/venv/lib/python3.10/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+[32m2026-09-23 21:48:48[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate[0m:[36m516[0m - [1mVerbosity set to INFO[0m
+[32m2026-09-23 21:48:54[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate_single[0m:[36m653[0m - [1mEvaluation tracker args: {'output_path': 'jetson/results/Qwen2.5-VL-7B-Instruct/mme/vllm-bf16/20260923-234832'}[0m
+[32m2026-09-23 21:48:54[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate_single[0m:[36m737[0m - [1mSelected Tasks: ['mme'][0m
+[32m2026-09-23 21:48:54[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36msimple_evaluate[0m:[36m486[0m - [1mSetting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234[0m
+INFO 09-23 21:48:59 [utils.py:233] non-default args: {'trust_remote_code': True, 'seed': 1, 'max_model_len': 4096, 'enable_prefix_caching': False, 'gpu_memory_utilization': 0.6, 'mm_processor_kwargs': {'min_pixels': 200704, 'max_pixels': 1605632}, 'mm_processor_cache_gb': 0, 'model': '/opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-7B-Instruct/snapshots/cc594898137f460bfe9f0759e9844b3ce807cfb5'}
+INFO 09-23 21:48:59 [model.py:549] Resolved architecture: Qwen2_5_VLForConditionalGeneration
+INFO 09-23 21:48:59 [model.py:1678] Using max model len 4096
+INFO 09-23 21:48:59 [scheduler.py:238] Chunked prefill is enabled with max_num_batched_tokens=8192.
+INFO 09-23 21:48:59 [vllm.py:790] Asynchronous scheduling is enabled.
+The image processor of type `Qwen2VLImageProcessor` is now loaded as a fast processor by default, even if the model checkpoint was saved with a slow processor. This is a breaking change and may produce slightly different outputs. To continue using the slow processor, instantiate this class with `use_fast=False`. Note that this behavior will be extended to all models in a future release.
+/opt/venv/lib/python3.10/site-packages/requests/__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (6.0.0.post1)/charset_normalizer (3.4.4) doesn't match a supported version!
+  warnings.warn(
+/opt/venv/lib/python3.10/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+(EngineCore pid=102) INFO 09-23 21:49:21 [core.py:105] Initializing a V1 LLM engine (v0.19.0) with config: model='/opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-7B-Instruct/snapshots/cc594898137f460bfe9f0759e9844b3ce807cfb5', speculative_config=None, tokenizer='/opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-7B-Instruct/snapshots/cc594898137f460bfe9f0759e9844b3ce807cfb5', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=True, dtype=torch.bfloat16, max_seq_len=4096, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=1, served_model_name=/opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-7B-Instruct/snapshots/cc594898137f460bfe9f0759e9844b3ce807cfb5, enable_prefix_caching=False, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'splitting_ops': ['vllm::unified_attention', 'vllm::unified_attention_with_output', 'vllm::unified_mla_attention', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::gdn_attention_core', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_images_per_batch': 0, 'compile_sizes': [], 'compile_ranges_endpoints': [8192], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480, 496, 512], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 512, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': True, 'static_all_moe_layers': []}
+(EngineCore pid=102) INFO 09-23 21:49:24 [parallel_state.py:1400] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.17.0.2:36425 backend=nccl
+(EngineCore pid=102) INFO 09-23 21:49:24 [parallel_state.py:1716] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
+(EngineCore pid=102) The image processor of type `Qwen2VLImageProcessor` is now loaded as a fast processor by default, even if the model checkpoint was saved with a slow processor. This is a breaking change and may produce slightly different outputs. To continue using the slow processor, instantiate this class with `use_fast=False`. Note that this behavior will be extended to all models in a future release.
+(EngineCore pid=102) INFO 09-23 21:49:29 [gpu_model_runner.py:4735] Starting to load model /opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-7B-Instruct/snapshots/cc594898137f460bfe9f0759e9844b3ce807cfb5...
+(EngineCore pid=102) INFO 09-23 21:49:30 [cuda.py:390] Using backend AttentionBackendEnum.FLASH_ATTN for vit attention
+(EngineCore pid=102) INFO 09-23 21:49:30 [mm_encoder_attention.py:230] Using AttentionBackendEnum.FLASH_ATTN for MMEncoderAttention.
+(EngineCore pid=102) INFO 09-23 21:49:30 [vllm.py:790] Asynchronous scheduling is enabled.
+(EngineCore pid=102) INFO 09-23 21:49:31 [cuda.py:334] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=102) INFO 09-23 21:49:31 [flash_attn.py:596] Using FlashAttention version 2
+(EngineCore pid=102) Loading safetensors checkpoint shards:   0% Completed | 0/5 [00:00<?, ?it/s]
+(EngineCore pid=102) Loading safetensors checkpoint shards:  20% Completed | 1/5 [00:02<00:09,  2.35s/it]
+(EngineCore pid=102) Loading safetensors checkpoint shards:  40% Completed | 2/5 [00:04<00:06,  2.16s/it]
+(EngineCore pid=102) Loading safetensors checkpoint shards:  60% Completed | 3/5 [00:06<00:04,  2.16s/it]
+(EngineCore pid=102) Loading safetensors checkpoint shards:  80% Completed | 4/5 [00:09<00:02,  2.38s/it]
+(EngineCore pid=102) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:10<00:00,  1.82s/it]
+(EngineCore pid=102) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:10<00:00,  2.02s/it]
+(EngineCore pid=102) 
+(EngineCore pid=102) INFO 09-23 21:49:45 [default_loader.py:384] Loading weights took 10.14 seconds
+(EngineCore pid=102) INFO 09-23 21:49:46 [gpu_model_runner.py:4820] Model loading took 15.63 GiB memory and 14.966929 seconds
+(EngineCore pid=102) INFO 09-23 21:49:46 [gpu_model_runner.py:5753] Encoder cache will be initialized with a budget of 8192 tokens, and profiled with 2 video items of the maximum feature size.
+(EngineCore pid=102) INFO 09-23 21:49:59 [backends.py:1051] Using cache directory: /home/michal/dev/lmms-eval/jetson/.cache/vllm/torch_compile_cache/aabee36220/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore pid=102) INFO 09-23 21:49:59 [backends.py:1111] Dynamo bytecode transform time: 4.44 s
+(EngineCore pid=102) INFO 09-23 21:50:01 [backends.py:285] Directly load the compiled graph(s) for compile range (1, 8192) from the cache, took 1.737 s
+(EngineCore pid=102) INFO 09-23 21:50:01 [decorators.py:303] Directly load AOT compilation from path /home/michal/dev/lmms-eval/jetson/.cache/vllm/torch_compile_cache/torch_aot_compile/fcdb4fb9f86d2c52aa2243238bc4a72060001aa6d524daf8de864869191d6d40/rank_0_0/model
+(EngineCore pid=102) INFO 09-23 21:50:01 [monitor.py:48] torch.compile took 6.63 s in total
+(EngineCore pid=102) INFO 09-23 21:50:01 [monitor.py:76] Initial profiling/warmup run took 0.22 s
+(EngineCore pid=102) INFO 09-23 21:50:20 [kv_cache_utils.py:829] Overriding num_gpu_blocks=0 with num_gpu_blocks_override=512
+(EngineCore pid=102) INFO 09-23 21:50:20 [gpu_model_runner.py:5876] Profiling CUDA graph memory: PIECEWISE=51 (largest=512), FULL=35 (largest=256)
+(EngineCore pid=102) INFO 09-23 21:50:23 [gpu_model_runner.py:5955] Estimated CUDA graph memory: 0.13 GiB total
+(EngineCore pid=102) INFO 09-23 21:50:24 [gpu_worker.py:436] Available KV cache memory: -0.97 GiB
+(EngineCore pid=102) INFO 09-23 21:50:24 [gpu_worker.py:470] In v0.19, CUDA graph memory profiling will be enabled by default (VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1), which more accurately accounts for CUDA graph memory during KV cache allocation. To try it now, set VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1 and increase --gpu-memory-utilization from 0.6000 to 0.6042 to maintain the same effective KV cache size.
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108] EngineCore failed to start.
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108] Traceback (most recent call last):
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]   File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 1082, in run_engine_core
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]   File "/opt/venv/lib/python3.10/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]     return func(*args, **kwargs)
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]   File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 848, in __init__
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]     super().__init__(
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]   File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 124, in __init__
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]     kv_cache_config = self._initialize_kv_caches(vllm_config)
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]   File "/opt/venv/lib/python3.10/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]     return func(*args, **kwargs)
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]   File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 258, in _initialize_kv_caches
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]     kv_cache_configs = get_kv_cache_configs(
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]   File "/opt/venv/lib/python3.10/site-packages/vllm/v1/core/kv_cache_utils.py", line 1579, in get_kv_cache_configs
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]     _check_enough_kv_cache_memory(
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]   File "/opt/venv/lib/python3.10/site-packages/vllm/v1/core/kv_cache_utils.py", line 626, in _check_enough_kv_cache_memory
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108]     raise ValueError(
+(EngineCore pid=102) ERROR 09-23 21:50:24 [core.py:1108] ValueError: No available memory for the cache blocks. Try increasing `gpu_memory_utilization` when initializing the engine. See https://docs.vllm.ai/en/latest/configuration/conserving_memory/ for more details.
+(EngineCore pid=102) Process EngineCore:
+(EngineCore pid=102) Traceback (most recent call last):
+(EngineCore pid=102)   File "/root/.local/share/uv/python/cpython-3.10-linux-aarch64-gnu/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+(EngineCore pid=102)     self.run()
+(EngineCore pid=102)   File "/root/.local/share/uv/python/cpython-3.10-linux-aarch64-gnu/lib/python3.10/multiprocessing/process.py", line 108, in run
+(EngineCore pid=102)     self._target(*self._args, **self._kwargs)
+(EngineCore pid=102)   File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 1112, in run_engine_core
+(EngineCore pid=102)     raise e
+(EngineCore pid=102)   File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 1082, in run_engine_core
+(EngineCore pid=102)     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)
+(EngineCore pid=102)   File "/opt/venv/lib/python3.10/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=102)     return func(*args, **kwargs)
+(EngineCore pid=102)   File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 848, in __init__
+(EngineCore pid=102)     super().__init__(
+(EngineCore pid=102)   File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 124, in __init__
+(EngineCore pid=102)     kv_cache_config = self._initialize_kv_caches(vllm_config)
+(EngineCore pid=102)   File "/opt/venv/lib/python3.10/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=102)     return func(*args, **kwargs)
+(EngineCore pid=102)   File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 258, in _initialize_kv_caches
+(EngineCore pid=102)     kv_cache_configs = get_kv_cache_configs(
+(EngineCore pid=102)   File "/opt/venv/lib/python3.10/site-packages/vllm/v1/core/kv_cache_utils.py", line 1579, in get_kv_cache_configs
+(EngineCore pid=102)     _check_enough_kv_cache_memory(
+(EngineCore pid=102)   File "/opt/venv/lib/python3.10/site-packages/vllm/v1/core/kv_cache_utils.py", line 626, in _check_enough_kv_cache_memory
+(EngineCore pid=102)     raise ValueError(
+(EngineCore pid=102) ValueError: No available memory for the cache blocks. Try increasing `gpu_memory_utilization` when initializing the engine. See https://docs.vllm.ai/en/latest/configuration/conserving_memory/ for more details.
+[rank0]:[W923 21:50:25.497695584 ProcessGroupNCCL.cpp:1553] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+Traceback (most recent call last):
+  File "/home/michal/dev/lmms-eval/lmms_eval/__main__.py", line 584, in cli_evaluate
+    results, samples = cli_evaluate_single(args)
+  File "/home/michal/dev/lmms-eval/lmms_eval/__main__.py", line 741, in cli_evaluate_single
+    results = evaluator.simple_evaluate(
+  File "/home/michal/dev/lmms-eval/lmms_eval/utils.py", line 737, in _wrapper
+    return fn(*args, **kwargs)
+  File "/home/michal/dev/lmms-eval/lmms_eval/evaluator.py", line 518, in simple_evaluate
+    lm = models.get_model(model, force_simple).create_from_arg_string(
+  File "/home/michal/dev/lmms-eval/lmms_eval/api/model.py", line 145, in create_from_arg_string
+    return cls(**args, **args2)
+  File "/home/michal/dev/lmms-eval/lmms_eval/models/chat/vllm.py", line 47, in __init__
+    super().__init__(
+  File "/home/michal/dev/lmms-eval/lmms_eval/models/simple/vllm.py", line 239, in __init__
+    self.client = LLM(
+  File "/opt/venv/lib/python3.10/site-packages/vllm/entrypoints/llm.py", line 382, in __init__
+    self.llm_engine = LLMEngine.from_engine_args(
+  File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/llm_engine.py", line 177, in from_engine_args
+    return cls(
+  File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/llm_engine.py", line 111, in __init__
+    self.engine_core = EngineCoreClient.make_client(
+  File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/core_client.py", line 101, in make_client
+    return SyncMPClient(vllm_config, executor_class, log_stats)
+  File "/opt/venv/lib/python3.10/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+    return func(*args, **kwargs)
+  File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/core_client.py", line 710, in __init__
+    super().__init__(
+  File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/core_client.py", line 535, in __init__
+    with launch_core_engines(
+  File "/root/.local/share/uv/python/cpython-3.10-linux-aarch64-gnu/lib/python3.10/contextlib.py", line 142, in __exit__
+    next(self.gen)
+  File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/utils.py", line 998, in launch_core_engines
+    wait_for_engine_startup(
+  File "/opt/venv/lib/python3.10/site-packages/vllm/v1/engine/utils.py", line 1057, in wait_for_engine_startup
+    raise RuntimeError(
+RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}
+[32m2026-09-23 21:50:29[0m | [31m[1mERROR   [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate[0m:[36m615[0m - [31m[1mError during evaluation: Engine core initialization failed. See root cause above. Failed core proc(s): {}. Please set `--verbosity=DEBUG` to get more information.[0m

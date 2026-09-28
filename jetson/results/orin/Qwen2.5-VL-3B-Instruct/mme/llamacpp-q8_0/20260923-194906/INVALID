@@ -1,0 +1,2 @@
+Invalid: from sample 1070 (commonsense_reasoning/0064.png) on, every answer is "????????????????".
+That image overflows fp16 cuBLAS accumulation in llama.cpp and poisons the server; fixed by GGML_CUDA_CUBLAS_COMPUTE_TYPE=bf16 (jetson/frameworks/llamacpp.sh).

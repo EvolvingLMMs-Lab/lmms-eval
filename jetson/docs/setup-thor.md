@@ -60,7 +60,7 @@ jetson/experiments/qwen2_5_vl/gqa.sh             # full GQA (35 min to 1.5 h per
 jetson/experiments/qwen2_5_vl/followups.sh       # transport, COCO captioning, resolution sweep
 ```
 
-TensorRT Edge-LLM needs its engines first: [tensorrt-edgellm.md](tensorrt-edgellm.md). Thor has 4× Orin's memory; the vLLM memory budget is a fixed number of GB (13.8, or 18.4 for 7B bf16), so the KV cache is the same size as on Orin.
+TensorRT Edge-LLM needs its engines first: [tensorrt-edgellm.md](tensorrt-edgellm.md). Thor has 4× Orin's memory; the vLLM memory budget is a fixed number of GB (13.8, or 21.0 for 7B bf16), so the KV cache is the same size as on Orin.
 
 Watch long runs: if a run's `run.log` stops growing for 30 min while it is still running, it is stuck (a llama.cpp MME run once hung for 27 h on one request). Kill that `run_eval.sh`; its exit handler stops llama-server.
 

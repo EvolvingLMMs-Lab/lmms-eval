@@ -67,5 +67,6 @@ Run IDs with `_limitN` are smoke tests; `summarize.py` leaves them out unless `-
 - Models load from local snapshot paths, because transformers 4.57.3 queries the Hub for repo IDs even in offline mode.
 - lmms-eval exits 0 when evaluation fails, so `run_eval.sh` checks the log for `Error during evaluation`.
 - The repo is mounted at its host path: `lmms_eval/llm_judge/factory.py` fails when it is mounted at a shallow path such as `/workspace`.
+- llama.cpp runs with `GGML_CUDA_CUBLAS_COMPUTE_TYPE=bf16`: with fp16 accumulation one MME image overflows Qwen2.5-VL-3B and every later answer is `????` until the server restarts. A run found invalid keeps its files plus an `INVALID` file saying why; `summarize.py` skips it.
 - Out of memory on Jetson shows up as `NVML_SUCCESS == r INTERNAL ASSERT FAILED` in PyTorch's CUDA allocator.
 - `docker build` has no GPU driver, so the Dockerfiles do not run CUDA binaries.

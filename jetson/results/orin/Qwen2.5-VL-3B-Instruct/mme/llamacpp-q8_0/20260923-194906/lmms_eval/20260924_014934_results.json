@@ -1,0 +1,267 @@
+{
+  "results": {
+    "mme": {
+      "alias": "mme",
+      "mme_cognition_score,none": 576.0714285714286,
+      "mme_cognition_score_stderr,none": "N/A",
+      "mme_cognition_score_stderr_clt,none": 0.029147764849916744,
+      "mme_cognition_score_stderr_clustered,none": "N/A",
+      "mme_perception_score,none": 578.936274509804,
+      "mme_perception_score_stderr,none": "N/A",
+      "mme_perception_score_stderr_clt,none": 0.010042871962077612,
+      "mme_perception_score_stderr_clustered,none": "N/A"
+    }
+  },
+  "group_subtasks": {
+    "mme": []
+  },
+  "configs": {
+    "mme": {
+      "task": "mme",
+      "dataset_path": "lmms-lab-encoder/MME",
+      "dataset_kwargs": {
+        "token": true
+      },
+      "test_split": "test",
+      "full_docs": false,
+      "process_results_use_image": false,
+      "doc_to_visual": "<function mme_doc_to_visual at 0xfffeae7ac790>",
+      "doc_to_text": "<function mme_doc_to_text at 0xfffeae7acc10>",
+      "doc_to_target": "answer",
+      "process_results": "<function mme_process_results at 0xfffeae7ad120>",
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "mme_perception_score",
+          "aggregation": "<function mme_aggregate_results at 0xfffeae7ad630>",
+          "higher_is_better": true
+        },
+        {
+          "metric": "mme_cognition_score",
+          "aggregation": "<function mme_aggregate_results at 0xfffeae7adab0>",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "generate_until",
+      "generation_kwargs": {
+        "max_new_tokens": 16,
+        "temperature": 0.0,
+        "top_p": 1.0,
+        "num_beams": 1,
+        "do_sample": false,
+        "until": [
+          "\n\n"
+        ]
+      },
+      "repeats": 1,
+      "should_decontaminate": false,
+      "score_key": "score",
+      "metadata": [
+        {
+          "version": 0.0
+        }
+      ],
+      "lmms_eval_specific_kwargs": {
+        "default": {
+          "pre_prompt": "",
+          "post_prompt": "\nAnswer the question using a single word or phrase."
+        },
+        "gpt4v": {
+          "pre_prompt": "",
+          "post_prompt": "\nAnswer the question with Yes or No."
+        },
+        "qwen_vl": {
+          "pre_prompt": "",
+          "post_prompt": " Answer:"
+        },
+        "otterhd": {
+          "pre_prompt": "",
+          "post_prompt": " Answer:"
+        },
+        "xcomposer2_4khd": {
+          "pre_prompt": "[UNUSED_TOKEN_146]user\n",
+          "post_prompt": " Answer this question briefly[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\n"
+        },
+        "plm": {
+          "pre_prompt": "",
+          "post_prompt": ""
+        },
+        "pre_prompt": "",
+        "post_prompt": "\nAnswer the question using a single word or phrase."
+      },
+      "auto_strip_thinking": false
+    }
+  },
+  "versions": {
+    "mme": "Yaml"
+  },
+  "n-shot": {
+    "mme": 0
+  },
+  "higher_is_better": {
+    "mme": {
+      "mme_perception_score": true,
+      "mme_cognition_score": true
+    }
+  },
+  "n-samples": {
+    "mme": {
+      "original": 2374,
+      "effective": 2374
+    }
+  },
+  "config": {
+    "model": "openai",
+    "model_args": "model_version=Qwen2.5-VL-3B-Instruct-q8_0,base_url=http://127.0.0.1:8090/v1,api_key=[REDACTED],stream_timing=True,num_concurrent=1,prefix_aware_queue=False,timeout=600,max_retries=2",
+    "model_backend": "lmms_eval.models.chat.openai.OpenAICompatible (chat)",
+    "batch_size": "1",
+    "batch_sizes": [],
+    "device": null,
+    "use_cache": null,
+    "limit": null,
+    "offset": 0,
+    "bootstrap_iters": 100000,
+    "process_docs_parallel": 4,
+    "gen_kwargs": "",
+    "random_seed": 0,
+    "numpy_seed": 1234,
+    "torch_seed": 1234,
+    "fewshot_seed": 1234,
+    "resolved_cli_args": {
+      "config": "",
+      "model": "openai",
+      "tasks": "mme",
+      "model_args": "model_version=Qwen2.5-VL-3B-Instruct-q8_0,base_url=http://127.0.0.1:8090/v1,api_key=[REDACTED],stream_timing=True,num_concurrent=1,prefix_aware_queue=False,timeout=600,max_retries=2",
+      "launcher_args": null,
+      "num_fewshot": null,
+      "batch_size": "1",
+      "max_batch_size": null,
+      "device": null,
+      "output_path": "jetson/results/Qwen2.5-VL-3B-Instruct/mme/llamacpp-q8_0/20260923-194906",
+      "limit": null,
+      "offset": 0,
+      "use_cache": null,
+      "cache_requests": null,
+      "check_integrity": false,
+      "write_out": false,
+      "log_samples": true,
+      "wandb_log_samples": false,
+      "swanlab_log_samples": false,
+      "log_samples_suffix": "model_outputs",
+      "system_instruction": null,
+      "apply_chat_template": false,
+      "fewshot_as_multiturn": false,
+      "show_config": false,
+      "include_path": null,
+      "gen_kwargs": "",
+      "reasoning_tags": "[[\"<think>\", \"</think>\"], [\"<analysis>\", \"</analysis>\"]]",
+      "verbosity": "INFO",
+      "wandb_args": "",
+      "swanlab_args": "",
+      "timezone": "Asia/Singapore",
+      "hf_hub_log_args": ",output_path=jetson/results/Qwen2.5-VL-3B-Instruct/mme/llamacpp-q8_0/20260923-194906",
+      "predict_only": false,
+      "seed": [
+        0,
+        1234,
+        1234,
+        1234
+      ],
+      "trust_remote_code": false,
+      "process_with_media": false,
+      "process_docs_parallel": 4,
+      "agentic_trace_mode": "basic",
+      "force_simple": false,
+      "tui": false,
+      "repeats": 1,
+      "baseline": null,
+      "max_tokens": null,
+      "power_analysis": false,
+      "effect_size": 0.03,
+      "alpha": 0.05,
+      "power": 0.8,
+      "correlation": 0.5,
+      "std_a": null,
+      "std_b": null
+    }
+  },
+  "git_hash": "v0.6-244-gf6a72e74",
+  "git_branch": "jetson-benchmark",
+  "lmms_eval_version": "jetson-benchmark@v0.6-244",
+  "date": "20260924_014934",
+  "throughput": {
+    "total_gen_tokens": 23007,
+    "total_elapsed_time": 5401.319677829742,
+    "avg_speed": 4.259514595004354
+  },
+  "usage": {
+    "total": {
+      "input_tokens": 2163341,
+      "output_tokens": 23007,
+      "reasoning_tokens": 0,
+      "total_tokens": 2186348,
+      "n_api_calls": 2374
+    },
+    "by_task": {
+      "_unknown": {
+        "input_tokens": 2163341,
+        "output_tokens": 23007,
+        "reasoning_tokens": 0,
+        "total_tokens": 2186348,
+        "n_api_calls": 2374
+      }
+    },
+    "by_source": {
+      "model": {
+        "input_tokens": 2163341,
+        "output_tokens": 23007,
+        "reasoning_tokens": 0,
+        "total_tokens": 2186348,
+        "n_api_calls": 2374
+      }
+    },
+    "budget_exceeded": false,
+    "budget_total_tokens": null
+  },
+  "efficiency": {
+    "by_task": {
+      "mme": {
+        "docs": 2374.0,
+        "docs_with_token_counts": 2374.0,
+        "total_input_tokens": 2163341.0,
+        "total_output_tokens": 23007.0,
+        "total_tokens": 2186348.0,
+        "total_correct_score": 826.0,
+        "avg_output_tokens_per_sample": 9.691238416175231,
+        "tokens_per_correct_answer": 27.853510895883776
+      }
+    },
+    "overall": {
+      "docs": 2374.0,
+      "docs_with_token_counts": 2374.0,
+      "total_input_tokens": 2163341.0,
+      "total_output_tokens": 23007.0,
+      "total_tokens": 2186348.0,
+      "total_correct_score": 826.0,
+      "avg_output_tokens_per_sample": 9.691238416175231,
+      "tokens_per_correct_answer": 27.853510895883776
+    }
+  },
+  "task_hashes": {
+    "mme": "57a563a0eb8e69e609dd1256bfb43c881ea2e05ea8a2d972a4a99529653d184a"
+  },
+  "model_source": "openai",
+  "model_name": "Qwen2.5-VL-3B-Instruct-q8_0",
+  "model_name_sanitized": "Qwen2.5-VL-3B-Instruct-q8_0",
+  "system_instruction": null,
+  "system_instruction_sha": null,
+  "fewshot_as_multiturn": false,
+  "chat_template": null,
+  "chat_template_sha": null,
+  "start_time": 977070.692931712,
+  "end_time": 984237.8788392,
+  "total_evaluation_time_seconds": "7167.18590748799"
+}

@@ -135,3 +135,7 @@ Unattended run following `jetson/THOR_PROMPT.md`, started 2026-09-23.
   image range, FLOPs) and `experiments/<model>/`; results moved to `jetson/results/<board>/` (this file:
   `results/thor/`, Orin: `results/orin/`), picked from the board automatically. Paths above are the old ones.
   Orchestration logs moved to `logs/`.
+- Merged the Orin session's fix (2026-09-28, commit fc0079af from 2026-09-24): llama.cpp now accumulates in bf16
+  (`GGML_CUDA_CUBLAS_COMPUTE_TYPE=bf16`) because fp16 overflows on one MME image for 3B and every later answer becomes
+  `????`; vLLM 7B bf16 budget 21.0 GB. The Thor llama.cpp 3B q8_0 MME run that hung (started before this fix, stuck at
+  935/2374) may be the same problem showing differently; re-run it with the fix and check for `??` answers.

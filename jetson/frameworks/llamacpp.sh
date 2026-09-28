@@ -33,7 +33,10 @@ fw_start() {
   mmproj=$(hf_file "$(_gguf_repo)" "$(_mmproj_file)") || return 1
   # Image token range matches the other frameworks (IMAGE_MIN/MAX_TOKENS from the model file). Prompt caching is off, as for vLLM:
   # MME asks two questions per image, so a cache would skip the image work on every second sample.
+  # cuBLAS accumulates in bf16 instead of fp16: with fp16, one MME image (commonsense_reasoning/0064.png) overflows
+  # Qwen2.5-VL-3B and every later request returns "????..." until the server restarts. bf16 keeps fp32's range.
   docker run -d --name "$LLAMACPP_CONTAINER" --runtime nvidia --network host \
+    -e GGML_CUDA_CUBLAS_COMPUTE_TYPE="${LLAMACPP_CUBLAS_COMPUTE:-bf16}" \
     -v "$HF_CACHE":"$HF_CACHE":ro "$LLAMACPP_IMAGE" \
     llama-server -m "$gguf" --mmproj "$mmproj" -ngl 999 -c 4096 -np 1 --jinja \
       --image-min-tokens "$IMAGE_MIN_TOKENS" --image-max-tokens "$IMAGE_MAX_TOKENS" --no-cache-prompt --cache-ram 0 \

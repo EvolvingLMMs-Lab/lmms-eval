@@ -1,0 +1,242 @@
+{
+  "results": {
+    "mme": {
+      "alias": "mme",
+      "mme_cognition_score,none": 623.2142857142858,
+      "mme_cognition_score_stderr,none": "N/A",
+      "mme_cognition_score_stderr_clt,none": 0.02391197790161455,
+      "mme_cognition_score_stderr_clustered,none": "N/A",
+      "mme_perception_score,none": 1543.700380152061,
+      "mme_perception_score_stderr,none": "N/A",
+      "mme_perception_score_stderr_clt,none": 0.008231074363814445,
+      "mme_perception_score_stderr_clustered,none": "N/A"
+    }
+  },
+  "group_subtasks": {
+    "mme": []
+  },
+  "configs": {
+    "mme": {
+      "task": "mme",
+      "dataset_path": "lmms-lab-encoder/MME",
+      "dataset_kwargs": {
+        "token": true
+      },
+      "test_split": "test",
+      "full_docs": false,
+      "process_results_use_image": false,
+      "doc_to_visual": "<function mme_doc_to_visual at 0xfffe54303e20>",
+      "doc_to_text": "<function mme_doc_to_text at 0xfffe54303520>",
+      "doc_to_target": "answer",
+      "process_results": "<function mme_process_results at 0xfffe54303010>",
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "mme_perception_score",
+          "aggregation": "<function mme_aggregate_results at 0xfffe54302b90>",
+          "higher_is_better": true
+        },
+        {
+          "metric": "mme_cognition_score",
+          "aggregation": "<function mme_aggregate_results at 0xfffe54302710>",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "generate_until",
+      "generation_kwargs": {
+        "max_new_tokens": 16,
+        "temperature": 0.0,
+        "top_p": 1.0,
+        "num_beams": 1,
+        "do_sample": false,
+        "until": [
+          "\n\n"
+        ]
+      },
+      "repeats": 1,
+      "should_decontaminate": false,
+      "score_key": "score",
+      "metadata": [
+        {
+          "version": 0.0
+        }
+      ],
+      "lmms_eval_specific_kwargs": {
+        "default": {
+          "pre_prompt": "",
+          "post_prompt": "\nAnswer the question using a single word or phrase."
+        },
+        "gpt4v": {
+          "pre_prompt": "",
+          "post_prompt": "\nAnswer the question with Yes or No."
+        },
+        "qwen_vl": {
+          "pre_prompt": "",
+          "post_prompt": " Answer:"
+        },
+        "otterhd": {
+          "pre_prompt": "",
+          "post_prompt": " Answer:"
+        },
+        "xcomposer2_4khd": {
+          "pre_prompt": "[UNUSED_TOKEN_146]user\n",
+          "post_prompt": " Answer this question briefly[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\n"
+        },
+        "plm": {
+          "pre_prompt": "",
+          "post_prompt": ""
+        },
+        "pre_prompt": "",
+        "post_prompt": "\nAnswer the question using a single word or phrase."
+      },
+      "auto_strip_thinking": false
+    }
+  },
+  "versions": {
+    "mme": "Yaml"
+  },
+  "n-shot": {
+    "mme": 0
+  },
+  "higher_is_better": {
+    "mme": {
+      "mme_perception_score": true,
+      "mme_cognition_score": true
+    }
+  },
+  "n-samples": {
+    "mme": {
+      "original": 2374,
+      "effective": 2374
+    }
+  },
+  "config": {
+    "model": "vllm",
+    "model_args": "model=/opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-3B-Instruct/snapshots/66285546d2b821cf421d4f5eb2576359d3770cd3,gpu_memory_utilization=0.45,max_model_len=4096,max_pixels=1605632,mm_processor_kwargs={\"min_pixels\":200704,\"max_pixels\":1605632},enable_prefix_caching=False,mm_processor_cache_gb=0",
+    "model_backend": "lmms_eval.models.chat.vllm.VLLM (chat)",
+    "batch_size": "1",
+    "batch_sizes": [],
+    "device": null,
+    "use_cache": null,
+    "limit": null,
+    "offset": 0,
+    "bootstrap_iters": 100000,
+    "process_docs_parallel": 4,
+    "gen_kwargs": "",
+    "random_seed": 0,
+    "numpy_seed": 1234,
+    "torch_seed": 1234,
+    "fewshot_seed": 1234,
+    "resolved_cli_args": {
+      "config": "",
+      "model": "vllm",
+      "tasks": "mme",
+      "model_args": "model=/opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-3B-Instruct/snapshots/66285546d2b821cf421d4f5eb2576359d3770cd3,gpu_memory_utilization=0.45,max_model_len=4096,max_pixels=1605632,mm_processor_kwargs={\"min_pixels\":200704,\"max_pixels\":1605632},enable_prefix_caching=False,mm_processor_cache_gb=0",
+      "launcher_args": null,
+      "num_fewshot": null,
+      "batch_size": "1",
+      "max_batch_size": null,
+      "device": null,
+      "output_path": "jetson/results/Qwen2.5-VL-3B-Instruct/mme/vllm-bf16/20260923-174326",
+      "limit": null,
+      "offset": 0,
+      "use_cache": null,
+      "cache_requests": null,
+      "check_integrity": false,
+      "write_out": false,
+      "log_samples": true,
+      "wandb_log_samples": false,
+      "swanlab_log_samples": false,
+      "log_samples_suffix": "model_outputs",
+      "system_instruction": null,
+      "apply_chat_template": false,
+      "fewshot_as_multiturn": false,
+      "show_config": false,
+      "include_path": null,
+      "gen_kwargs": "",
+      "reasoning_tags": "[[\"<think>\", \"</think>\"], [\"<analysis>\", \"</analysis>\"]]",
+      "verbosity": "INFO",
+      "wandb_args": "",
+      "swanlab_args": "",
+      "timezone": "Asia/Singapore",
+      "hf_hub_log_args": ",output_path=jetson/results/Qwen2.5-VL-3B-Instruct/mme/vllm-bf16/20260923-174326",
+      "predict_only": false,
+      "seed": [
+        0,
+        1234,
+        1234,
+        1234
+      ],
+      "trust_remote_code": false,
+      "process_with_media": false,
+      "process_docs_parallel": 4,
+      "agentic_trace_mode": "basic",
+      "force_simple": false,
+      "tui": false,
+      "repeats": 1,
+      "baseline": null,
+      "max_tokens": null,
+      "power_analysis": false,
+      "effect_size": 0.03,
+      "alpha": 0.05,
+      "power": 0.8,
+      "correlation": 0.5,
+      "std_a": null,
+      "std_b": null
+    }
+  },
+  "git_hash": "v0.6-241-g2c92bad9",
+  "git_branch": "jetson-benchmark",
+  "lmms_eval_version": "jetson-benchmark@v0.6-241",
+  "date": "20260923_234349",
+  "throughput": {
+    "total_gen_tokens": 4767,
+    "total_elapsed_time": 1945.3677305568708,
+    "avg_speed": 2.4504364522564703,
+    "avg_ttft": 0.7794119963248236,
+    "avg_tpot": 0.038302279562624046,
+    "avg_rank": 0.0
+  },
+  "usage": {},
+  "efficiency": {
+    "by_task": {
+      "mme": {
+        "docs": 2374.0,
+        "docs_with_token_counts": 2374.0,
+        "total_input_tokens": 2162447.0,
+        "total_output_tokens": 4767.0,
+        "total_tokens": 2167214.0,
+        "total_correct_score": 1961.0,
+        "avg_output_tokens_per_sample": 2.0080033698399324,
+        "tokens_per_correct_answer": 2.4309026007139214
+      }
+    },
+    "overall": {
+      "docs": 2374.0,
+      "docs_with_token_counts": 2374.0,
+      "total_input_tokens": 2162447.0,
+      "total_output_tokens": 4767.0,
+      "total_tokens": 2167214.0,
+      "total_correct_score": 1961.0,
+      "avg_output_tokens_per_sample": 2.0080033698399324,
+      "tokens_per_correct_answer": 2.4309026007139214
+    }
+  },
+  "task_hashes": {
+    "mme": "57a563a0eb8e69e609dd1256bfb43c881ea2e05ea8a2d972a4a99529653d184a"
+  },
+  "model_source": "vllm",
+  "model_name": "/opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-3B-Instruct/snapshots/66285546d2b821cf421d4f5eb2576359d3770cd3",
+  "model_name_sanitized": "snapshots__66285546d2b821cf421d4f5eb2576359d3770cd3",
+  "system_instruction": null,
+  "system_instruction_sha": null,
+  "fewshot_as_multiturn": false,
+  "chat_template": null,
+  "chat_template_sha": null,
+  "start_time": 969526.024179392,
+  "end_time": 973354.163316352,
+  "total_evaluation_time_seconds": "3828.139136959915"
+}

@@ -162,6 +162,8 @@ def main():
         model, _task_dir, framework, run_id = os.path.relpath(run_dir, RESULTS).split(os.sep)
         if "_limit" in run_id and not include_smoke:
             continue
+        if os.path.exists(os.path.join(run_dir, "INVALID")):  # kept as evidence; the file says why
+            continue
         r = json.load(open(results_json))
         n = sum(r["n-samples"][t]["effective"] for t in r["n-samples"])
         samples = glob.glob(os.path.join(os.path.dirname(results_json), "*_samples_*.jsonl*"))

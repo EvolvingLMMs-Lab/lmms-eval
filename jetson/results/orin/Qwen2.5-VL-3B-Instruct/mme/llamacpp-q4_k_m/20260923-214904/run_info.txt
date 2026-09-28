@@ -1,0 +1,12 @@
+date:        2026-09-23T21:49:04+02:00
+board:       NVIDIA Jetson AGX Orin Developer Kit
+l4t:         # R36 (release), REVISION: 4.7, GCID: 42132812, BOARD: generic, EABI: aarch64, DATE: Thu Sep 18 22:54:44 UTC 2025
+power mode:  NV Power Mode: MAXN
+git commit:  f6a72e74 (dirty)
+framework:   llamacpp
+precision:   q4_k_m
+image:       lmms-eval-jetson:latest (sha256:69907aeeb402)
+server image: llamacpp-jetson:b11135 (sha256:48f840ba79db)
+other containers: 
+command:     python -m lmms_eval --model openai --model_args model_version=Qwen2.5-VL-3B-Instruct-q4_k_m,base_url=http://127.0.0.1:8090/v1,api_key=local,stream_timing=True,num_concurrent=1,prefix_aware_queue=False,timeout=600,max_retries=2 --tasks mme --batch_size 1 --log_samples --output_path jetson/results/Qwen2.5-VL-3B-Instruct/mme/llamacpp-q4_k_m/20260923-214904
+versions:    torch 2.10.0 transformers 4.57.3
