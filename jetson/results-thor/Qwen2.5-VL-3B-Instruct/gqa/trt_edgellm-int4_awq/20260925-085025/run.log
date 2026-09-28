@@ -1,0 +1,258 @@
+/opt/venv/lib/python3.12/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+torch 2.10.0 transformers 4.57.3
+/opt/venv/lib/python3.12/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+[32m2026-09-25 06:50:36[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate[0m:[36m516[0m - [1mVerbosity set to INFO[0m
+[32m2026-09-25 06:50:38[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate_single[0m:[36m653[0m - [1mEvaluation tracker args: {'output_path': 'jetson/results-thor/Qwen2.5-VL-3B-Instruct/gqa/trt_edgellm-int4_awq/20260925-085025'}[0m
+[32m2026-09-25 06:50:38[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate_single[0m:[36m737[0m - [1mSelected Tasks: ['gqa'][0m
+[32m2026-09-25 06:50:38[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36msimple_evaluate[0m:[36m486[0m - [1mSetting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234[0m
+Using the latest cached version of the dataset since lmms-lab-encoder/GQA couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'testdev_balanced_instructions' at /opt/hf-cache/datasets/lmms-lab-encoder___gqa/testdev_balanced_instructions/0.0.0/a6e72d6e1b912da88af8b2f9eba05d5ea8ec2dd8 (last modified on Fri Sep 25 04:23:15 2026).
+Using the latest cached version of the dataset since lmms-lab-encoder/GQA couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'testdev_balanced_images' at /opt/hf-cache/datasets/lmms-lab-encoder___gqa/testdev_balanced_images/0.0.0/a6e72d6e1b912da88af8b2f9eba05d5ea8ec2dd8 (last modified on Wed Sep 23 07:26:32 2026).
+Loading GQA images: 100%|██████████| 398/398 [00:01<00:00, 320.84it/s]
+[32m2026-09-25 06:50:40[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36mevaluate[0m:[36m1047[0m - [1mRunning on rank 0 (local rank 0)[0m
+[32m2026-09-25 06:50:40[0m | [1mINFO    [0m | [36mlmms_eval.evaluator_utils[0m:[36mfrom_taskdict[0m:[36m100[0m - [1mNo metadata found in task config for gqa, using default n_shot=0[0m
+  0%|          | 0/12578 [00:00<?, ?it/s][32m2026-09-25 06:50:40[0m | [1mINFO    [0m | [36mlmms_eval.api.task[0m:[36mbuild_all_requests[0m:[36m473[0m - [1mBuilding contexts for gqa on rank 0...[0m
+100%|██████████| 12578/12578 [00:00<00:00, 15564.96it/s]
+[32m2026-09-25 06:50:41[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36mevaluate[0m:[36m1202[0m - [1mRunning generate_until requests[0m
+[32m2026-09-25 07:06:41[0m | [1mINFO    [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m108[0m - [1mRunning TensorRT Edge-LLM: llm_inference --engineDir /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/llm --inputFile /tmp/trt_edgellm_8xhe63vd/input.json --outputFile /tmp/trt_edgellm_8xhe63vd/output.json --dumpProfile --profileOutputFile /tmp/trt_edgellm_8xhe63vd/profile.json --warmup 1 --multimodalEngineDir /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/visual --encoderCacheBudgetBytes 0[0m
+[07:06:41.157] [INFO] [llm_inference.cpp:809:parseLLMInferenceArgs] args.inputFile: /tmp/trt_edgellm_8xhe63vd/input.json
+[07:06:41.158] [INFO] [llm_inference.cpp:815:parseLLMInferenceArgs] args.engineDir: /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/llm
+[07:06:41.158] [INFO] [llm_inference.cpp:823:parseLLMInferenceArgs] args.multimodalEngineDir: /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/visual
+[07:06:41.158] [INFO] [llm_inference.cpp:831:parseLLMInferenceArgs] args.outputFile: /tmp/trt_edgellm_8xhe63vd/output.json
+[07:06:41.158] [INFO] [llm_inference.cpp:840:parseLLMInferenceArgs] args.profileOutputFile: /tmp/trt_edgellm_8xhe63vd/profile.json
+[07:06:41.158] [INFO] [llm_inference.cpp:845:parseLLMInferenceArgs] Profile dumping to console is enabled
+[07:06:41.158] [INFO] [llm_inference.cpp:850:parseLLMInferenceArgs] Warmup runs: 1
+[07:06:41.158] [INFO] [trtUtils.h:71:loadEdgellmPluginLib] EDGELLM_PLUGIN_PATH: /opt/TensorRT-Edge-LLM/build/libNvInfer_edgellm_plugin.so
+[07:08:16.087] [INFO] [llm_inference.cpp:1480:main] Successfully parsed 0 LoRA weights from input file.
+[07:08:16.087] [INFO] [llm_inference.cpp:1481:main] Successfully parsed 12578 batches of requests from input file.
+[07:08:16.115] [INFO] [memoryMonitor.cpp:267:start] Memory Monitor Started - metric: nvml_process_allocation
+[07:08:16.427] [INFO] [llmRuntimeUtils.cpp:715:loadEmbeddingTable] Loaded FP16 embedding: [151936, 2048]
+[07:08:16.427] [INFO] [llmEngineConfig.cpp:672:parseEngineConfig] reading /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/llm/config.json
+[07:08:16.427] [INFO] [llmRuntimeUtils.cpp:422:collectRopeConfig] Collected rope config: RopeConfig:  type: MRope  rotaryScale: 1  rotaryTheta: 1e+06  partialRotaryFactor: 1  maxPositionEmbeddings: 128000
+[07:08:16.427] [INFO] [llmEngineConfig.cpp:887:parseEngineConfig] LLMEngineConfig{ hiddenSize=2048 vocabSize=151936 outputVocabSize=151936 numDecoderLayers=36 numAttentionLayers=36 numKVHeads=2 headDim=128 rotaryDim=128 maxBatch=1 maxInputLen=2560 maxKVCapacity=3072 kvPoolPages=24 pleEnabled=false numPleInputs=0 pleHiddenSize=0 isSpecDecodeBase=false specDecodeType=0 loraRank=0 eosTokenIds=[151645,151643] }
+[07:08:16.427] [INFO] [engineExecutor.cpp:135:TrtEngineExecutor] loading engine file: /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/llm/llm.engine
+[07:08:17.085] [INFO] [TensorRT] [MS] Running engine with multi stream info
+[07:08:17.085] [INFO] [TensorRT] [MS] Number of aux streams is 2
+[07:08:17.085] [INFO] [TensorRT] [MS] Number of total worker streams is 3
+[07:08:17.085] [INFO] [TensorRT] [MS] The main stream provided by execute/enqueue calls is the first worker stream
+[07:08:17.246] [INFO] [TensorRT] [MemUsageChange] TensorRT-managed allocation in IExecutionContext creation: CPU +0, GPU +0, now: CPU 0, GPU 1958 (MiB)
+[07:08:17.246] [INFO] [trtUtils.cpp:374:setNonBlockingAuxStreams] configured 2 non-blocking auxiliary stream(s) for execution context
+[07:08:17.246] [INFO] [engineExecutor.cpp:166:TrtEngineExecutor] engine loaded successfully (80 I/O tensors)
+[07:08:17.246] [INFO] [modelArtifacts.cpp:213:loadFromEngineDir] Base EngineExecutor successfully loaded from /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/llm/llm.engine.
+[07:08:17.246] [INFO] [modelArtifacts.cpp:144:loadTokenizer] Start loading tokenizer from model directory: /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/llm
+[07:08:17.570] [INFO] [tokenizer.cpp:603:loadVocabulary] Loaded 151643 vocabulary tokens
+[07:08:17.656] [INFO] [tokenizer.cpp:135:loadFromHF] Loaded 22 special tokens
+[07:08:17.697] [INFO] [tokenizer.cpp:1090:loadChatTemplate] Successfully loaded chat template from /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/llm/processed_chat_template.json (for model: /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/quantized)
+[07:08:17.697] [INFO] [tokenizer.cpp:167:loadFromHF] Successfully loaded tokenizer from /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/llm (vocab_size=151665)
+[07:08:17.716] [INFO] [modelArtifacts.cpp:147:loadTokenizer] Tokenizer successfully loaded from model directory: /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/llm
+[07:08:17.716] [INFO] [modelArtifacts.cpp:154:loadTokenizer] Loaded 2 EOS token IDs from config
+[07:08:17.716] [INFO] [runtimeCoordinator.cpp:70:RuntimeCoordinator] RuntimeCoordinator running single-device inline (no worker thread).
+[07:08:17.716] [INFO] [llmRankRuntime.cpp:364:initializeCommon] Runtime batch size set to: 1 (from engine bundle)
+[07:08:17.780] [INFO] [llmRankRuntime.cpp:533:initializeCommon] Runtime tensors successfully allocated.
+[07:08:18.229] [INFO] [TensorRT] [MemUsageChange] TensorRT-managed allocation in IExecutionContext creation: CPU +0, GPU +0, now: CPU 0, GPU 3235 (MiB)
+[07:08:18.232] [INFO] [llmRankRuntime.cpp:571:operator()] Vision runner successfully initialized
+[07:08:18.232] [INFO] [llmRankRuntime.cpp:589:initializeCommon] Attempting to load Action runner from /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/visual/action
+[07:08:18.237] [INFO] [llmRankRuntime.cpp:601:initializeCommon] Failed to load Action runner from /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/visual/action: Failed to open engine file: /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/visual/action/action.engine: No such file or directory
+[07:08:18.244] [INFO] [llmRankRuntime.cpp:676:initializeCommon] Setup shared execution context memory: 275816960 bytes (base requires: 221511680, strategy requires: 0, vision requires: 275816960, audio requires: 0, action requires: 0)
+[07:08:18.245] [INFO] [runtimeCoordinator.cpp:299:operator()] [parallel rank 0/1] Runtime initialized.
+[07:08:18.440] [INFO] [engineExecutor.cpp:360:captureGraph] captured graph (hash=0x4c57e6312802dcf)
+[07:08:18.440] [INFO] [decoderRegistry.cpp:126:captureCudaGraphs] Successfully captured decoding CUDA graphs for active decoding strategies.
+[07:08:18.440] [INFO] [llm_inference.cpp:1669:main] Starting warmup with 1 runs using the first request...
+[07:08:18.579] [INFO] [llm_inference.cpp:1691:main] Warmup of 1 runs completed. Starting actual benchmark runs...
+[07:08:18.579] [INFO] [llm_inference.cpp:1716:main] Processing 12578 batched requests...
+[07:08:18.579] [INFO] [llm_inference.cpp:1726:main] Progress: 1/12578 (0.007950%)
+[07:08:30.552] [INFO] [llm_inference.cpp:1726:main] Progress: 100/12578 (0.795039%)
+[07:08:42.598] [INFO] [llm_inference.cpp:1726:main] Progress: 200/12578 (1.590078%)
+[07:08:54.644] [INFO] [llm_inference.cpp:1726:main] Progress: 300/12578 (2.385117%)
+[07:09:06.453] [INFO] [llm_inference.cpp:1726:main] Progress: 400/12578 (3.180156%)
+[07:09:18.437] [INFO] [llm_inference.cpp:1726:main] Progress: 500/12578 (3.975195%)
+[07:09:30.293] [INFO] [llm_inference.cpp:1726:main] Progress: 600/12578 (4.770234%)
+[07:09:42.107] [INFO] [llm_inference.cpp:1726:main] Progress: 700/12578 (5.565273%)
+[07:09:53.780] [INFO] [llm_inference.cpp:1726:main] Progress: 800/12578 (6.360312%)
+[07:10:05.903] [INFO] [llm_inference.cpp:1726:main] Progress: 900/12578 (7.155351%)
+[07:10:17.507] [INFO] [llm_inference.cpp:1726:main] Progress: 1000/12578 (7.950390%)
+[07:10:29.584] [INFO] [llm_inference.cpp:1726:main] Progress: 1100/12578 (8.745429%)
+[07:10:41.407] [INFO] [llm_inference.cpp:1726:main] Progress: 1200/12578 (9.540467%)
+[07:10:53.373] [INFO] [llm_inference.cpp:1726:main] Progress: 1300/12578 (10.335506%)
+[07:11:05.263] [INFO] [llm_inference.cpp:1726:main] Progress: 1400/12578 (11.130545%)
+[07:11:17.308] [INFO] [llm_inference.cpp:1726:main] Progress: 1500/12578 (11.925584%)
+[07:11:29.301] [INFO] [llm_inference.cpp:1726:main] Progress: 1600/12578 (12.720623%)
+[07:11:41.130] [INFO] [llm_inference.cpp:1726:main] Progress: 1700/12578 (13.515662%)
+[07:11:52.932] [INFO] [llm_inference.cpp:1726:main] Progress: 1800/12578 (14.310701%)
+[07:12:04.533] [INFO] [llm_inference.cpp:1726:main] Progress: 1900/12578 (15.105740%)
+[07:12:16.431] [INFO] [llm_inference.cpp:1726:main] Progress: 2000/12578 (15.900779%)
+[07:12:28.176] [INFO] [llm_inference.cpp:1726:main] Progress: 2100/12578 (16.695818%)
+[07:12:40.047] [INFO] [llm_inference.cpp:1726:main] Progress: 2200/12578 (17.490857%)
+[07:12:51.673] [INFO] [llm_inference.cpp:1726:main] Progress: 2300/12578 (18.285896%)
+[07:13:03.613] [INFO] [llm_inference.cpp:1726:main] Progress: 2400/12578 (19.080935%)
+[07:13:15.207] [INFO] [llm_inference.cpp:1726:main] Progress: 2500/12578 (19.875974%)
+[07:13:27.105] [INFO] [llm_inference.cpp:1726:main] Progress: 2600/12578 (20.671013%)
+[07:13:39.196] [INFO] [llm_inference.cpp:1726:main] Progress: 2700/12578 (21.466052%)
+[07:13:50.937] [INFO] [llm_inference.cpp:1726:main] Progress: 2800/12578 (22.261091%)
+[07:14:02.997] [INFO] [llm_inference.cpp:1726:main] Progress: 2900/12578 (23.056130%)
+[07:14:14.886] [INFO] [llm_inference.cpp:1726:main] Progress: 3000/12578 (23.851169%)
+[07:14:26.713] [INFO] [llm_inference.cpp:1726:main] Progress: 3100/12578 (24.646208%)
+[07:14:38.766] [INFO] [llm_inference.cpp:1726:main] Progress: 3200/12578 (25.441247%)
+[07:14:50.641] [INFO] [llm_inference.cpp:1726:main] Progress: 3300/12578 (26.236286%)
+[07:15:02.585] [INFO] [llm_inference.cpp:1726:main] Progress: 3400/12578 (27.031325%)
+[07:15:14.449] [INFO] [llm_inference.cpp:1726:main] Progress: 3500/12578 (27.826363%)
+[07:15:26.454] [INFO] [llm_inference.cpp:1726:main] Progress: 3600/12578 (28.621402%)
+[07:15:38.353] [INFO] [llm_inference.cpp:1726:main] Progress: 3700/12578 (29.416441%)
+[07:15:50.343] [INFO] [llm_inference.cpp:1726:main] Progress: 3800/12578 (30.211480%)
+[07:16:01.854] [INFO] [llm_inference.cpp:1726:main] Progress: 3900/12578 (31.006519%)
+[07:16:13.334] [INFO] [llm_inference.cpp:1726:main] Progress: 4000/12578 (31.801558%)
+[07:16:25.249] [INFO] [llm_inference.cpp:1726:main] Progress: 4100/12578 (32.596597%)
+[07:16:36.696] [INFO] [llm_inference.cpp:1726:main] Progress: 4200/12578 (33.391636%)
+[07:16:48.455] [INFO] [llm_inference.cpp:1726:main] Progress: 4300/12578 (34.186675%)
+[07:17:00.348] [INFO] [llm_inference.cpp:1726:main] Progress: 4400/12578 (34.981714%)
+[07:17:11.957] [INFO] [llm_inference.cpp:1726:main] Progress: 4500/12578 (35.776753%)
+[07:17:23.735] [INFO] [llm_inference.cpp:1726:main] Progress: 4600/12578 (36.571792%)
+[07:17:35.648] [INFO] [llm_inference.cpp:1726:main] Progress: 4700/12578 (37.366831%)
+[07:17:47.372] [INFO] [llm_inference.cpp:1726:main] Progress: 4800/12578 (38.161870%)
+[07:17:59.016] [INFO] [llm_inference.cpp:1726:main] Progress: 4900/12578 (38.956909%)
+[07:18:10.790] [INFO] [llm_inference.cpp:1726:main] Progress: 5000/12578 (39.751948%)
+[07:18:22.490] [INFO] [llm_inference.cpp:1726:main] Progress: 5100/12578 (40.546987%)
+[07:18:34.350] [INFO] [llm_inference.cpp:1726:main] Progress: 5200/12578 (41.342026%)
+[07:18:46.165] [INFO] [llm_inference.cpp:1726:main] Progress: 5300/12578 (42.137065%)
+[07:18:58.184] [INFO] [llm_inference.cpp:1726:main] Progress: 5400/12578 (42.932104%)
+[07:19:09.747] [INFO] [llm_inference.cpp:1726:main] Progress: 5500/12578 (43.727143%)
+[07:19:21.747] [INFO] [llm_inference.cpp:1726:main] Progress: 5600/12578 (44.522182%)
+[07:19:33.487] [INFO] [llm_inference.cpp:1726:main] Progress: 5700/12578 (45.317221%)
+[07:19:44.915] [INFO] [llm_inference.cpp:1726:main] Progress: 5800/12578 (46.112260%)
+[07:19:56.712] [INFO] [llm_inference.cpp:1726:main] Progress: 5900/12578 (46.907298%)
+[07:20:08.760] [INFO] [llm_inference.cpp:1726:main] Progress: 6000/12578 (47.702337%)
+[07:20:20.687] [INFO] [llm_inference.cpp:1726:main] Progress: 6100/12578 (48.497376%)
+[07:20:32.529] [INFO] [llm_inference.cpp:1726:main] Progress: 6200/12578 (49.292415%)
+[07:20:44.018] [INFO] [llm_inference.cpp:1726:main] Progress: 6300/12578 (50.087454%)
+[07:20:55.745] [INFO] [llm_inference.cpp:1726:main] Progress: 6400/12578 (50.882493%)
+[07:21:07.847] [INFO] [llm_inference.cpp:1726:main] Progress: 6500/12578 (51.677532%)
+[07:21:19.871] [INFO] [llm_inference.cpp:1726:main] Progress: 6600/12578 (52.472571%)
+[07:21:31.746] [INFO] [llm_inference.cpp:1726:main] Progress: 6700/12578 (53.267610%)
+[07:21:43.366] [INFO] [llm_inference.cpp:1726:main] Progress: 6800/12578 (54.062649%)
+[07:21:55.332] [INFO] [llm_inference.cpp:1726:main] Progress: 6900/12578 (54.857688%)
+[07:22:07.079] [INFO] [llm_inference.cpp:1726:main] Progress: 7000/12578 (55.652727%)
+[07:22:19.064] [INFO] [llm_inference.cpp:1726:main] Progress: 7100/12578 (56.447766%)
+[07:22:31.009] [INFO] [llm_inference.cpp:1726:main] Progress: 7200/12578 (57.242805%)
+[07:22:42.970] [INFO] [llm_inference.cpp:1726:main] Progress: 7300/12578 (58.037844%)
+[07:22:54.758] [INFO] [llm_inference.cpp:1726:main] Progress: 7400/12578 (58.832883%)
+[07:23:06.485] [INFO] [llm_inference.cpp:1726:main] Progress: 7500/12578 (59.627922%)
+[07:23:18.603] [INFO] [llm_inference.cpp:1726:main] Progress: 7600/12578 (60.422961%)
+[07:23:30.451] [INFO] [llm_inference.cpp:1726:main] Progress: 7700/12578 (61.218000%)
+[07:23:42.209] [INFO] [llm_inference.cpp:1726:main] Progress: 7800/12578 (62.013039%)
+[07:23:53.988] [INFO] [llm_inference.cpp:1726:main] Progress: 7900/12578 (62.808078%)
+[07:24:06.113] [INFO] [llm_inference.cpp:1726:main] Progress: 8000/12578 (63.603117%)
+[07:24:18.158] [INFO] [llm_inference.cpp:1726:main] Progress: 8100/12578 (64.398156%)
+[07:24:29.850] [INFO] [llm_inference.cpp:1726:main] Progress: 8200/12578 (65.193194%)
+[07:24:41.809] [INFO] [llm_inference.cpp:1726:main] Progress: 8300/12578 (65.988233%)
+[07:24:53.808] [INFO] [llm_inference.cpp:1726:main] Progress: 8400/12578 (66.783272%)
+[07:25:05.697] [INFO] [llm_inference.cpp:1726:main] Progress: 8500/12578 (67.578311%)
+[07:25:17.475] [INFO] [llm_inference.cpp:1726:main] Progress: 8600/12578 (68.373350%)
+[07:25:29.343] [INFO] [llm_inference.cpp:1726:main] Progress: 8700/12578 (69.168389%)
+[07:25:41.186] [INFO] [llm_inference.cpp:1726:main] Progress: 8800/12578 (69.963428%)
+[07:25:52.940] [INFO] [llm_inference.cpp:1726:main] Progress: 8900/12578 (70.758467%)
+[07:26:04.919] [INFO] [llm_inference.cpp:1726:main] Progress: 9000/12578 (71.553506%)
+[07:26:16.582] [INFO] [llm_inference.cpp:1726:main] Progress: 9100/12578 (72.348545%)
+[07:26:28.492] [INFO] [llm_inference.cpp:1726:main] Progress: 9200/12578 (73.143584%)
+[07:26:40.340] [INFO] [llm_inference.cpp:1726:main] Progress: 9300/12578 (73.938623%)
+[07:26:52.480] [INFO] [llm_inference.cpp:1726:main] Progress: 9400/12578 (74.733662%)
+[07:27:04.276] [INFO] [llm_inference.cpp:1726:main] Progress: 9500/12578 (75.528701%)
+[07:27:15.887] [INFO] [llm_inference.cpp:1726:main] Progress: 9600/12578 (76.323740%)
+[07:27:28.013] [INFO] [llm_inference.cpp:1726:main] Progress: 9700/12578 (77.118779%)
+[07:27:39.748] [INFO] [llm_inference.cpp:1726:main] Progress: 9800/12578 (77.913818%)
+[07:27:51.433] [INFO] [llm_inference.cpp:1726:main] Progress: 9900/12578 (78.708857%)
+[07:28:03.424] [INFO] [llm_inference.cpp:1726:main] Progress: 10000/12578 (79.503896%)
+[07:28:15.360] [INFO] [llm_inference.cpp:1726:main] Progress: 10100/12578 (80.298935%)
+[07:28:27.316] [INFO] [llm_inference.cpp:1726:main] Progress: 10200/12578 (81.093974%)
+[07:28:39.279] [INFO] [llm_inference.cpp:1726:main] Progress: 10300/12578 (81.889013%)
+[07:28:51.074] [INFO] [llm_inference.cpp:1726:main] Progress: 10400/12578 (82.684052%)
+[07:29:02.666] [INFO] [llm_inference.cpp:1726:main] Progress: 10500/12578 (83.479090%)
+[07:29:14.437] [INFO] [llm_inference.cpp:1726:main] Progress: 10600/12578 (84.274129%)
+[07:29:26.239] [INFO] [llm_inference.cpp:1726:main] Progress: 10700/12578 (85.069168%)
+[07:29:37.894] [INFO] [llm_inference.cpp:1726:main] Progress: 10800/12578 (85.864207%)
+[07:29:49.499] [INFO] [llm_inference.cpp:1726:main] Progress: 10900/12578 (86.659246%)
+[07:30:01.204] [INFO] [llm_inference.cpp:1726:main] Progress: 11000/12578 (87.454285%)
+[07:30:13.071] [INFO] [llm_inference.cpp:1726:main] Progress: 11100/12578 (88.249324%)
+[07:30:25.061] [INFO] [llm_inference.cpp:1726:main] Progress: 11200/12578 (89.044363%)
+[07:30:36.973] [INFO] [llm_inference.cpp:1726:main] Progress: 11300/12578 (89.839402%)
+[07:30:48.642] [INFO] [llm_inference.cpp:1726:main] Progress: 11400/12578 (90.634441%)
+[07:31:00.199] [INFO] [llm_inference.cpp:1726:main] Progress: 11500/12578 (91.429480%)
+[07:31:11.756] [INFO] [llm_inference.cpp:1726:main] Progress: 11600/12578 (92.224519%)
+[07:31:23.533] [INFO] [llm_inference.cpp:1726:main] Progress: 11700/12578 (93.019558%)
+[07:31:35.274] [INFO] [llm_inference.cpp:1726:main] Progress: 11800/12578 (93.814597%)
+[07:31:47.385] [INFO] [llm_inference.cpp:1726:main] Progress: 11900/12578 (94.609636%)
+[07:31:59.032] [INFO] [llm_inference.cpp:1726:main] Progress: 12000/12578 (95.404675%)
+[07:32:10.963] [INFO] [llm_inference.cpp:1726:main] Progress: 12100/12578 (96.199714%)
+[07:32:22.670] [INFO] [llm_inference.cpp:1726:main] Progress: 12200/12578 (96.994753%)
+[07:32:34.346] [INFO] [llm_inference.cpp:1726:main] Progress: 12300/12578 (97.789792%)
+[07:32:46.060] [INFO] [llm_inference.cpp:1726:main] Progress: 12400/12578 (98.584831%)
+[07:32:57.757] [INFO] [llm_inference.cpp:1726:main] Progress: 12500/12578 (99.379870%)
+[07:33:07.165] [INFO] [llm_inference.cpp:1726:main] Progress: 12578/12578 (100.000000%)
+[07:33:07.319] [INFO] [llm_inference.cpp:2093:main] Processing complete: 12578/12578 batched requests successful
+[07:33:07.352] [INFO] [llm_inference.cpp:2159:main] 
+=== Performance Summary ===
+=== LLM Prefill ===
+Reused Tokens: 0
+Computed Tokens: 5020943
+Average Tokens per Run: 399.18
+Average Time per Run: 74.1764 ms
+Tokens/Second: 5381.6
+Average Time per Token: 0.1858 ms
+LLM Prefill - Total Runs: 12578, Total GPU Time: 932991.25 ms, Average: 74.18 ms
+=== LLM Generation (Excluding sampling after prefill) ===
+Generated Tokens: 27935
+Average Tokens per Run: 2.22
+Tokens/Second: 159.6
+Average Time per Token: 6.2642 ms
+LLM Generation - Total Runs: 15357, Total GPU Time: 174991.39 ms, Average: 11.39 ms
+=== Multimodal Processing ===
+Total Images: 12578
+Total Image Tokens: 4509171
+Total Multimodal Tokens: 4509171
+Average Time per Token: 0.0817 ms
+Vision Encoder - Total Runs: 12578, Total GPU Time: 368247.34 ms, Average: 29.28 ms
+=== Memory Usage ===
+Peak GPU Memory: 4572.96 MB (4795097088 bytes)
+Peak CPU Memory: 12327.09 MB (12925894656 bytes)
+GPU Memory Metric: nvml_process_allocation
+=== Wall-Clock (end-to-end, prefill + generation) ===
+TP Size: 1
+Total Generated Tokens: 27935
+Total Wall-Clock Time: 1488740.29 ms
+Wall-Clock Tokens/Second: 18.8
+Wall-Clock ms/Token: 53.293
+=====================================
+
+[07:33:07.359] [INFO] [llm_inference.cpp:2218:main] Profile data exported to: /tmp/trt_edgellm_8xhe63vd/profile.json
+[07:33:07.466] [INFO] [llm_inference.cpp:2243:main] All responses exported to: /tmp/trt_edgellm_8xhe63vd/output.json
+[32m2026-09-25 07:33:12[0m | [1mINFO    [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36mgenerate_until[0m:[36m159[0m - [1mTensorRT Edge-LLM profile saved to jetson/results-thor/Qwen2.5-VL-3B-Instruct/gqa/trt_edgellm-int4_awq/20260925-085025/trt_profile.json[0m
+[32m2026-09-25 07:33:12[0m | [1mINFO    [0m | [36mlmms_eval.models.model_utils.gen_metrics[0m:[36mlog_metrics[0m:[36m136[0m - [1mMetric summary - Total elapsed time: 2550.845s, Total gen tokens: 0, Avg speed: 0.0 tokens/s[0m
+Postprocessing: 100%|██████████| 12578/12578 [00:05<00:00, 2275.40it/s]
+[32m2026-09-25 07:33:18[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36mevaluate[0m:[36m1402[0m - [1mPostprocessed 12578 docs for gqa/none with 4 worker(s) in 5.53s[0m
+[32m2026-09-25 07:33:18[0m | [1mINFO    [0m | [36mlmms_eval.loggers.evaluation_tracker[0m:[36msave_results_aggregated[0m:[36m187[0m - [1mSaving results aggregated[0m
+[32m2026-09-25 07:33:18[0m | [1mINFO    [0m | [36mlmms_eval.loggers.evaluation_tracker[0m:[36msave_results_samples[0m:[36m300[0m - [1mSaving samples to jetson/results-thor/Qwen2.5-VL-3B-Instruct/gqa/trt_edgellm-int4_awq/20260925-085025/20260925_145038_samples_gqa.jsonl[0m
+trt_edgellm (engine_dir=/home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/llm,multimodal_engine_dir=/home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/visual,profile_output=jetson/results-thor/Qwen2.5-VL-3B-Instruct/gqa/trt_edgellm-int4_awq/20260925-085025/trt_profile.json,encoder_cache_budget_bytes=0,max_image_side=4096), gen_kwargs: (), limit: None, offset: 0, num_fewshot: None, batch_size: 1
+
+LMMs-Eval: Probing Intelligence in the Real World
+> Good evaluation shapes what we build next.
+
+branch: jetson-benchmark
+commit: v0.6-249-g6acf8765
+
+|Tasks|Filter|n-shot|  Metric   |   |Value |   |Stderr|Stderr_CLT|
+|-----|------|-----:|-----------|---|-----:|---|-----:|---------:|
+|gqa  |none  |     0|exact_match|↑  |0.5756|±  |0.0044|    0.0044|
+
+
+Throughput Summary
+
+|      Metric      | Value  |  Unit  |
+|------------------|-------:|--------|
+|total_gen_tokens  |   0.000|tokens  |
+|total_elapsed_time|2550.845|seconds |
+|avg_speed         |   0.000|tokens/s|
+
+
+[slim_run.py: dropped 25159 per-request progress/profile lines]

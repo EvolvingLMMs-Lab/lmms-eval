@@ -109,3 +109,25 @@ Unattended run following `jetson/THOR_PROMPT.md`, started 2026-09-23.
     pre-quantized `nvidia/Qwen2.5-VL-7B-Instruct-NVFP4` to separate the kernels from the 3B quantization.
 - Disk reached 4.5 GB free after the 3B Edge-LLM engines + calibration data; deleted my calibration dataset cache
   (2.1 GB, re-downloaded for 7B). Plan: evaluate the Edge-LLM 3B engines early in phase 2 and then delete them.
+- Phase 2 (main MME matrix) stopped at llama.cpp: `llamacpp 3b-q8_0` hung at sample 935/2374 for ~27 h (llama-server
+  stuck on one request, one CPU core at 100%, `run.log` not growing). Killed on 2026-09-25 together with the matrix, so
+  llama.cpp 3B q4_k_m and 7B q8_0 / q4_k_m full MME were never run. The hung run dir
+  (`Qwen2.5-VL-3B-Instruct/mme/llamacpp-q8_0/20260924-015342`) is kept as evidence; it has no results.
+  `THOR_PROMPT.md` now has a watchdog rule (kill a run whose `run.log` hasn't grown for 30 min).
+- FLOPs (2026-09-25): `jetson/flops.py` / `compute_flops.sh` compute analytical FLOPs per sample (vision encoder,
+  LLM prefill, LLM decode) into `flops.json`; `run_eval.sh` runs it after every eval, older runs were backfilled.
+  Validated against torch's `FlopCounterMode` on a scaled-down random Qwen2.5-VL built from the real transformers
+  code (eager attention): vision exact on 4 image shapes; LLM exact except that `flops.py` counts causal attention
+  as L(L+1)/2 (what FlashAttention-style kernels compute), while eager attention computes the full L x L.
+- Phase 5 GQA (2026-09-25, testdev-balanced, 12,578 questions): HF bf16 3B/7B, vLLM bf16/AWQ 3B/7B, Edge-LLM 3B
+  fp16/fp8/int4_awq. llama.cpp left out until its hang is understood.
+  - **HF 7B GQA timings are not valid**: 427 min, ~1.9 s per sample (TTFT ~0.94 s) from start to end, against
+    0.28 s TTFT on MME with 2.4x more image tokens and 83-87 min for vLLM 7B GQA. GPU rail only ~11 W, i.e. the GPU
+    was mostly idle. tegrastats shows one CPU core pinned at 100% @ 2.6 GHz by something outside the run during the
+    GQA runs (also seen during the llama.cpp hang, not during MME); gone by 2026-09-28, cause unknown. Accuracy is
+    unaffected (0.6088); the run is to be repeated.
+- Result size (2026-09-28): `jetson/slim_run.py` (run by `run_eval.sh` after every run) strips per-request progress
+  bars and Edge-LLM profile-switch lines from `run.log`, gzips `tegrastats.log` and `*_samples_*.jsonl`, and moves
+  per-sample FLOPs to `flops_samples.jsonl.gz`. results-thor went from 218 MB to 16 MB; SUMMARY.md is unchanged.
+  Thor `run.log` / `tegrastats.log` had never been committed (`.gitignore` only re-included `results/**/*.log`);
+  fixed, so they are committed from now on.

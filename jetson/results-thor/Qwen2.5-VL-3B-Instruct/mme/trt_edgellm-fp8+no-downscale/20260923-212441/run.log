@@ -1,0 +1,681 @@
+/opt/venv/lib/python3.12/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+torch 2.10.0 transformers 4.57.3
+/opt/venv/lib/python3.12/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+[32m2026-09-23 19:24:53[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate[0m:[36m516[0m - [1mVerbosity set to INFO[0m
+[32m2026-09-23 19:24:56[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate_single[0m:[36m653[0m - [1mEvaluation tracker args: {'output_path': 'jetson/results-thor/Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-fp8/20260923-212441'}[0m
+[32m2026-09-23 19:24:56[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate_single[0m:[36m737[0m - [1mSelected Tasks: ['mme'][0m
+[32m2026-09-23 19:24:56[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36msimple_evaluate[0m:[36m486[0m - [1mSetting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234[0m
+Using the latest cached version of the dataset since lmms-lab-encoder/MME couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'default' at /opt/hf-cache/datasets/lmms-lab-encoder___mme/default/0.0.0/d6c9023f017b564f7b3ccccf5348166bce8fdbcd (last modified on Wed Sep  9 15:10:54 2026).
+[32m2026-09-23 19:24:56[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36mevaluate[0m:[36m1047[0m - [1mRunning on rank 0 (local rank 0)[0m
+[32m2026-09-23 19:24:56[0m | [1mINFO    [0m | [36mlmms_eval.evaluator_utils[0m:[36mfrom_taskdict[0m:[36m100[0m - [1mNo metadata found in task config for mme, using default n_shot=0[0m
+[32m2026-09-23 19:24:56[0m | [1mINFO    [0m | [36mlmms_eval.api.task[0m:[36mbuild_all_requests[0m:[36m473[0m - [1mBuilding contexts for mme on rank 0...[0m
+100%|██████████| 2374/2374 [00:00<00:00, 46036.49it/s]
+[32m2026-09-23 19:24:56[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36mevaluate[0m:[36m1202[0m - [1mRunning generate_until requests[0m
+[32m2026-09-23 19:46:38[0m | [1mINFO    [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m97[0m - [1mRunning TensorRT Edge-LLM: llm_inference --engineDir /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/llm --inputFile /tmp/trt_edgellm_at01n70r/input.json --outputFile /tmp/trt_edgellm_at01n70r/output.json --dumpProfile --profileOutputFile /tmp/trt_edgellm_at01n70r/profile.json --warmup 1 --multimodalEngineDir /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/visual --encoderCacheBudgetBytes 0[0m
+[19:46:38.907] [INFO] [llm_inference.cpp:809:parseLLMInferenceArgs] args.inputFile: /tmp/trt_edgellm_at01n70r/input.json
+[19:46:38.908] [INFO] [llm_inference.cpp:815:parseLLMInferenceArgs] args.engineDir: /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/llm
+[19:46:38.908] [INFO] [llm_inference.cpp:823:parseLLMInferenceArgs] args.multimodalEngineDir: /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/visual
+[19:46:38.908] [INFO] [llm_inference.cpp:831:parseLLMInferenceArgs] args.outputFile: /tmp/trt_edgellm_at01n70r/output.json
+[19:46:38.908] [INFO] [llm_inference.cpp:840:parseLLMInferenceArgs] args.profileOutputFile: /tmp/trt_edgellm_at01n70r/profile.json
+[19:46:38.908] [INFO] [llm_inference.cpp:845:parseLLMInferenceArgs] Profile dumping to console is enabled
+[19:46:38.908] [INFO] [llm_inference.cpp:850:parseLLMInferenceArgs] Warmup runs: 1
+[19:46:38.908] [INFO] [trtUtils.h:71:loadEdgellmPluginLib] EDGELLM_PLUGIN_PATH: /opt/TensorRT-Edge-LLM/build/libNvInfer_edgellm_plugin.so
+[19:48:15.932] [INFO] [llm_inference.cpp:1480:main] Successfully parsed 0 LoRA weights from input file.
+[19:48:15.932] [INFO] [llm_inference.cpp:1481:main] Successfully parsed 2374 batches of requests from input file.
+[19:48:15.955] [INFO] [memoryMonitor.cpp:267:start] Memory Monitor Started - metric: nvml_process_allocation
+[19:48:16.058] [INFO] [llmRuntimeUtils.cpp:715:loadEmbeddingTable] Loaded FP16 embedding: [151936, 2048]
+[19:48:16.058] [INFO] [llmEngineConfig.cpp:672:parseEngineConfig] reading /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/llm/config.json
+[19:48:16.058] [INFO] [llmRuntimeUtils.cpp:422:collectRopeConfig] Collected rope config: RopeConfig:  type: MRope  rotaryScale: 1  rotaryTheta: 1e+06  partialRotaryFactor: 1  maxPositionEmbeddings: 128000
+[19:48:16.058] [INFO] [llmEngineConfig.cpp:887:parseEngineConfig] LLMEngineConfig{ hiddenSize=2048 vocabSize=151936 outputVocabSize=151936 numDecoderLayers=36 numAttentionLayers=36 numKVHeads=2 headDim=128 rotaryDim=128 maxBatch=1 maxInputLen=2560 maxKVCapacity=3072 kvPoolPages=24 pleEnabled=false numPleInputs=0 pleHiddenSize=0 isSpecDecodeBase=false specDecodeType=0 loraRank=0 eosTokenIds=[151645,151643] }
+[19:48:16.058] [INFO] [engineExecutor.cpp:135:TrtEngineExecutor] loading engine file: /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/llm/llm.engine
+[19:48:17.177] [INFO] [TensorRT] [MS] Running engine with multi stream info
+[19:48:17.177] [INFO] [TensorRT] [MS] Number of aux streams is 2
+[19:48:17.177] [INFO] [TensorRT] [MS] Number of total worker streams is 3
+[19:48:17.177] [INFO] [TensorRT] [MS] The main stream provided by execute/enqueue calls is the first worker stream
+[19:48:17.324] [INFO] [TensorRT] [MemUsageChange] TensorRT-managed allocation in IExecutionContext creation: CPU +0, GPU +0, now: CPU 0, GPU 3240 (MiB)
+[19:48:17.324] [INFO] [trtUtils.cpp:374:setNonBlockingAuxStreams] configured 2 non-blocking auxiliary stream(s) for execution context
+[19:48:17.324] [INFO] [engineExecutor.cpp:166:TrtEngineExecutor] engine loaded successfully (80 I/O tensors)
+[19:48:17.324] [INFO] [modelArtifacts.cpp:213:loadFromEngineDir] Base EngineExecutor successfully loaded from /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/llm/llm.engine.
+[19:48:17.324] [INFO] [modelArtifacts.cpp:144:loadTokenizer] Start loading tokenizer from model directory: /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/llm
+[19:48:17.627] [INFO] [tokenizer.cpp:603:loadVocabulary] Loaded 151643 vocabulary tokens
+[19:48:17.696] [INFO] [tokenizer.cpp:135:loadFromHF] Loaded 22 special tokens
+[19:48:17.735] [INFO] [tokenizer.cpp:1090:loadChatTemplate] Successfully loaded chat template from /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/llm/processed_chat_template.json (for model: /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/quantized)
+[19:48:17.735] [INFO] [tokenizer.cpp:167:loadFromHF] Successfully loaded tokenizer from /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/llm (vocab_size=151665)
+[19:48:17.750] [INFO] [modelArtifacts.cpp:147:loadTokenizer] Tokenizer successfully loaded from model directory: /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/llm
+[19:48:17.750] [INFO] [modelArtifacts.cpp:154:loadTokenizer] Loaded 2 EOS token IDs from config
+[19:48:17.750] [INFO] [runtimeCoordinator.cpp:70:RuntimeCoordinator] RuntimeCoordinator running single-device inline (no worker thread).
+[19:48:17.750] [INFO] [llmRankRuntime.cpp:364:initializeCommon] Runtime batch size set to: 1 (from engine bundle)
+[19:48:17.817] [INFO] [llmRankRuntime.cpp:533:initializeCommon] Runtime tensors successfully allocated.
+[19:48:18.153] [INFO] [TensorRT] [MemUsageChange] TensorRT-managed allocation in IExecutionContext creation: CPU +0, GPU +0, now: CPU 0, GPU 4517 (MiB)
+[19:48:18.156] [INFO] [llmRankRuntime.cpp:571:operator()] Vision runner successfully initialized
+[19:48:18.156] [INFO] [llmRankRuntime.cpp:589:initializeCommon] Attempting to load Action runner from /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/visual/action
+[19:48:18.164] [INFO] [llmRankRuntime.cpp:601:initializeCommon] Failed to load Action runner from /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/visual/action: Failed to open engine file: /home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/visual/action/action.engine: No such file or directory
+[19:48:18.166] [INFO] [llmRankRuntime.cpp:676:initializeCommon] Setup shared execution context memory: 275816960 bytes (base requires: 177602560, strategy requires: 0, vision requires: 275816960, audio requires: 0, action requires: 0)
+[19:48:18.166] [INFO] [runtimeCoordinator.cpp:299:operator()] [parallel rank 0/1] Runtime initialized.
+[19:48:18.399] [INFO] [engineExecutor.cpp:360:captureGraph] captured graph (hash=0x2e398cbdbbe854cc)
+[19:48:18.399] [INFO] [decoderRegistry.cpp:126:captureCudaGraphs] Successfully captured decoding CUDA graphs for active decoding strategies.
+[19:48:18.399] [INFO] [llm_inference.cpp:1669:main] Starting warmup with 1 runs using the first request...
+[19:48:18.496] [INFO] [llm_inference.cpp:1691:main] Warmup of 1 runs completed. Starting actual benchmark runs...
+[19:48:18.496] [INFO] [llm_inference.cpp:1716:main] Processing 2374 batched requests...
+[19:48:18.496] [INFO] [llm_inference.cpp:1726:main] Progress: 1/2374 (0.042123%)
+[19:48:34.154] [INFO] [llm_inference.cpp:1726:main] Progress: 100/2374 (4.212300%)
+[19:48:54.616] [INFO] [llm_inference.cpp:1726:main] Progress: 200/2374 (8.424600%)
+[19:49:15.280] [INFO] [llm_inference.cpp:1726:main] Progress: 300/2374 (12.636900%)
+[19:49:35.780] [INFO] [llm_inference.cpp:1726:main] Progress: 400/2374 (16.849200%)
+[19:49:49.452] [INFO] [llm_inference.cpp:1726:main] Progress: 500/2374 (21.061500%)
+[19:49:57.548] [INFO] [llm_inference.cpp:1726:main] Progress: 600/2374 (25.273799%)
+[19:50:05.637] [INFO] [llm_inference.cpp:1726:main] Progress: 700/2374 (29.486099%)
+[19:50:13.760] [INFO] [llm_inference.cpp:1726:main] Progress: 800/2374 (33.698399%)
+[19:50:22.228] [INFO] [llm_inference.cpp:1726:main] Progress: 900/2374 (37.910699%)
+[19:50:33.651] [INFO] [llm_inference.cpp:1726:main] Progress: 1000/2374 (42.122999%)
+[19:50:56.447] [INFO] [llm_inference.cpp:1726:main] Progress: 1100/2374 (46.335299%)
+[19:51:06.538] [INFO] [llm_inference.cpp:1726:main] Progress: 1200/2374 (50.547599%)
+[19:51:09.702] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3056x4592 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:09.702] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:09.702] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1226 failed to process!
+[19:51:09.703] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3056x4592 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:09.703] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:09.703] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1227 failed to process!
+[19:51:11.479] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2848x4288 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:11.479] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:11.479] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1236 failed to process!
+[19:51:11.479] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2848x4288 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:11.479] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:11.479] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1237 failed to process!
+[19:51:14.475] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2848x4288 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:14.475] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:14.475] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1250 failed to process!
+[19:51:14.475] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2848x4288 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:14.475] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:14.475] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1251 failed to process!
+[19:51:15.036] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4608x3456 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:15.036] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:15.036] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1254 failed to process!
+[19:51:15.036] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4608x3456 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:15.036] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:15.036] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1255 failed to process!
+[19:51:15.578] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4140x5520 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:15.578] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:15.578] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1258 failed to process!
+[19:51:15.579] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4140x5520 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:15.579] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:15.579] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1259 failed to process!
+[19:51:19.040] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4288x2848 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:19.040] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:19.040] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1274 failed to process!
+[19:51:19.040] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4288x2848 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:19.040] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:19.040] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1275 failed to process!
+[19:51:19.040] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 1582x4678 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:19.040] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:19.040] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1276 failed to process!
+[19:51:19.040] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 1582x4678 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:19.040] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:19.040] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1277 failed to process!
+[19:51:20.163] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2483x6554 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:20.163] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:20.163] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1282 failed to process!
+[19:51:20.163] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2483x6554 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:20.163] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:20.163] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1283 failed to process!
+[19:51:24.183] [INFO] [llm_inference.cpp:1726:main] Progress: 1300/2374 (54.759899%)
+[19:51:25.538] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3680x5520 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:25.538] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:25.538] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1304 failed to process!
+[19:51:25.538] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3680x5520 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:25.538] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:25.538] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1305 failed to process!
+[19:51:25.900] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3110x4665 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:25.900] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:25.900] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1308 failed to process!
+[19:51:25.900] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3110x4665 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:25.900] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:25.900] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1309 failed to process!
+[19:51:26.460] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3456x5184 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:26.461] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:26.461] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1312 failed to process!
+[19:51:26.461] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3456x5184 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:26.461] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:26.461] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1313 failed to process!
+[19:51:28.917] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2848x4288 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:28.917] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:28.917] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1324 failed to process!
+[19:51:28.917] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2848x4288 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:28.917] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:28.917] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1325 failed to process!
+[19:51:32.073] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3216x4288 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:32.073] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:32.073] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1338 failed to process!
+[19:51:32.074] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3216x4288 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:32.074] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:32.074] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1339 failed to process!
+[19:51:32.074] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4608x3072 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:32.074] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:32.074] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1340 failed to process!
+[19:51:32.074] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4608x3072 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:32.074] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:32.074] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1341 failed to process!
+[19:51:33.827] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2322x4128 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:33.827] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:33.828] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1350 failed to process!
+[19:51:33.828] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2322x4128 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:33.828] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:33.828] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1351 failed to process!
+[19:51:35.844] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4000x6000 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:35.844] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:35.844] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1362 failed to process!
+[19:51:35.844] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4000x6000 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:35.844] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:35.844] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1363 failed to process!
+[19:51:35.844] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3311x4653 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:35.844] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:35.844] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1364 failed to process!
+[19:51:35.844] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3311x4653 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:35.844] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:35.844] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1365 failed to process!
+[19:51:37.511] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3456x5184 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:37.511] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:37.511] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1372 failed to process!
+[19:51:37.511] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3456x5184 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:37.512] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:37.512] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1373 failed to process!
+[19:51:38.466] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4539x6444 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:38.466] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:38.466] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1378 failed to process!
+[19:51:38.466] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4539x6444 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:38.466] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:38.466] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1379 failed to process!
+[19:51:40.819] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3051x4514 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:40.819] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:40.819] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1390 failed to process!
+[19:51:40.819] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3051x4514 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:40.819] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:40.819] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1391 failed to process!
+[19:51:40.819] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3078x5472 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:40.819] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:40.819] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1392 failed to process!
+[19:51:40.819] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3078x5472 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:40.819] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:40.819] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1393 failed to process!
+[19:51:41.869] [INFO] [llm_inference.cpp:1726:main] Progress: 1400/2374 (58.972199%)
+[19:51:42.685] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3845x8688 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:42.685] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:42.685] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1402 failed to process!
+[19:51:42.685] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3845x8688 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:42.685] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:42.685] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1403 failed to process!
+[19:51:42.685] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3456x4608 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:42.685] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:42.685] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1404 failed to process!
+[19:51:42.685] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3456x4608 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:42.685] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:42.685] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1405 failed to process!
+[19:51:44.533] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2688x5376 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:44.533] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:44.533] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1414 failed to process!
+[19:51:44.533] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2688x5376 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:44.533] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:44.533] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1415 failed to process!
+[19:51:45.093] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4817x3211 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:45.093] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:45.093] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1418 failed to process!
+[19:51:45.093] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4817x3211 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:45.093] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:45.093] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1419 failed to process!
+[19:51:45.093] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2364x5472 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:45.093] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:45.093] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1420 failed to process!
+[19:51:45.093] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2364x5472 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:45.093] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:45.093] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1421 failed to process!
+[19:51:45.652] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4272x2848 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:45.653] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:45.653] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1424 failed to process!
+[19:51:45.653] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4272x2848 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:45.653] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:45.653] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1425 failed to process!
+[19:51:49.372] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4752x3168 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:49.372] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:49.372] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1442 failed to process!
+[19:51:49.373] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4752x3168 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:49.373] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:49.373] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1443 failed to process!
+[19:51:49.784] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3240x4320 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:49.784] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:49.784] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1446 failed to process!
+[19:51:49.785] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3240x4320 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:49.785] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:49.785] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1447 failed to process!
+[19:51:50.156] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2592x4608 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:50.156] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:50.156] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1450 failed to process!
+[19:51:50.156] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2592x4608 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:50.156] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:50.156] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1451 failed to process!
+[19:51:50.454] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 5120x3407 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:50.454] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:50.454] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1454 failed to process!
+[19:51:50.454] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 5120x3407 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:50.454] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:50.454] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1455 failed to process!
+[19:51:51.741] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3604x5406 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:51.742] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:51.742] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1462 failed to process!
+[19:51:51.742] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3604x5406 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:51.742] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:51.742] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1463 failed to process!
+[19:51:54.176] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4305x3442 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:54.176] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:54.176] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1474 failed to process!
+[19:51:54.176] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4305x3442 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:54.176] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:54.176] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1475 failed to process!
+[19:51:57.119] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2848x4272 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:57.119] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:57.119] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1488 failed to process!
+[19:51:57.119] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2848x4272 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:57.119] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:57.119] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1489 failed to process!
+[19:51:58.243] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 5700x3900 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:58.243] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:58.243] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1494 failed to process!
+[19:51:58.243] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 5700x3900 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:58.243] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:58.243] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1495 failed to process!
+[19:51:58.753] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3648x5472 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.[19:51:58.753] [INFO] [llm_inference.cpp:1726:main] Progress: 1500/2374 (63.184499%)
+
+[19:51:58.753] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:58.753] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1498 failed to process!
+[19:51:58.754] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3648x5472 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:58.754] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:58.754] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1499 failed to process!
+[19:51:58.754] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3264x4896 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:58.754] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:58.754] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1500 failed to process!
+[19:51:58.754] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3264x4896 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:58.754] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:58.754] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1501 failed to process!
+[19:51:58.754] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2832x4256 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:58.754] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:58.754] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1502 failed to process!
+[19:51:58.754] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2832x4256 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:58.754] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:58.754] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1503 failed to process!
+[19:51:58.914] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 5472x3648 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:58.914] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:58.914] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1506 failed to process!
+[19:51:58.914] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 5472x3648 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:58.914] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:58.914] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1507 failed to process!
+[19:51:58.914] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2905x4516 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:58.914] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:58.914] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1508 failed to process!
+[19:51:58.914] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2905x4516 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:58.914] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:58.914] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1509 failed to process!
+[19:51:58.914] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4003x5996 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:58.914] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:58.914] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1510 failed to process!
+[19:51:58.915] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4003x5996 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:51:58.915] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:51:58.915] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1511 failed to process!
+[19:52:00.437] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4608x3456 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:00.437] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:00.437] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1518 failed to process!
+[19:52:00.437] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4608x3456 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:00.437] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:00.437] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1519 failed to process!
+[19:52:01.146] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3815x6000 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:01.146] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:01.146] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1524 failed to process!
+[19:52:01.147] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3815x6000 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:01.147] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:01.147] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1525 failed to process!
+[19:52:02.735] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2848x4288 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:02.735] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:02.735] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1534 failed to process!
+[19:52:02.735] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2848x4288 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:02.735] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:02.735] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1535 failed to process!
+[19:52:02.735] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3744x5616 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:02.735] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:02.735] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1536 failed to process!
+[19:52:02.736] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3744x5616 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:02.736] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:02.736] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1537 failed to process!
+[19:52:03.299] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3864x5152 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:03.299] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:03.299] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1540 failed to process!
+[19:52:03.299] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3864x5152 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:03.299] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:03.299] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1541 failed to process!
+[19:52:03.299] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3456x4608 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:03.299] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:03.299] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1542 failed to process!
+[19:52:03.299] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3456x4608 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:03.299] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:03.299] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1543 failed to process!
+[19:52:03.300] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3094x4125 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:03.300] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:03.300] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1544 failed to process!
+[19:52:03.300] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3094x4125 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:03.300] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:03.300] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1545 failed to process!
+[19:52:04.432] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3434x5152 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:04.432] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:04.432] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1550 failed to process!
+[19:52:04.432] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3434x5152 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:04.432] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:04.432] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1551 failed to process!
+[19:52:04.433] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4368x2685 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:04.433] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:04.433] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1552 failed to process!
+[19:52:04.433] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4368x2685 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:04.433] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:04.433] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1553 failed to process!
+[19:52:04.978] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3456x4608 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:04.979] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:04.979] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1556 failed to process!
+[19:52:04.979] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3456x4608 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:04.979] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:04.979] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1557 failed to process!
+[19:52:04.979] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 5278x3514 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:04.979] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:04.979] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1558 failed to process!
+[19:52:04.979] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 5278x3514 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:04.979] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:04.979] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1559 failed to process!
+[19:52:04.979] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2592x4608 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:04.979] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:04.979] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1560 failed to process!
+[19:52:04.979] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2592x4608 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:04.979] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:04.979] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1561 failed to process!
+[19:52:04.979] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2848x4288 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:04.979] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:04.979] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1562 failed to process!
+[19:52:04.980] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2848x4288 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:04.980] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:04.980] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1563 failed to process!
+[19:52:05.689] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 5184x3456 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:05.690] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:05.690] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1568 failed to process!
+[19:52:05.690] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 5184x3456 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:05.690] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:05.690] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1569 failed to process!
+[19:52:07.356] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3586x4703 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:07.356] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:07.356] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1576 failed to process!
+[19:52:07.356] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3586x4703 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:07.356] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:07.356] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1577 failed to process!
+[19:52:07.356] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3456x4608 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:07.356] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:07.356] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1578 failed to process!
+[19:52:07.356] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3456x4608 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:07.356] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:07.356] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1579 failed to process!
+[19:52:08.871] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4608x3456 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:08.871] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:08.871] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1586 failed to process!
+[19:52:08.871] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4608x3456 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:08.871] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:08.871] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1587 failed to process!
+[19:52:10.001] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2848x4288 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:10.001] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:10.001] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1592 failed to process!
+[19:52:10.001] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2848x4288 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:10.001] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:10.001] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1593 failed to process!
+[19:52:10.956] [INFO] [llm_inference.cpp:1726:main] Progress: 1600/2374 (67.396799%)
+[19:52:12.017] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2716x7087 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:12.017] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:12.017] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1604 failed to process!
+[19:52:12.017] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 2716x7087 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:12.017] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:12.017] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1605 failed to process!
+[19:52:12.583] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3930x5895 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:12.583] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:12.583] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1608 failed to process!
+[19:52:12.583] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3930x5895 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:12.583] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:12.583] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1609 failed to process!
+[19:52:13.149] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4320x3240 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:13.149] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:13.149] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1612 failed to process!
+[19:52:13.149] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 4320x3240 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:13.149] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:13.149] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1613 failed to process!
+[19:52:13.149] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3456x5184 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:13.149] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:13.149] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1614 failed to process!
+[19:52:13.149] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3456x5184 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:13.149] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:13.149] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1615 failed to process!
+[19:52:13.149] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3264x4896 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:13.149] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:13.149] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1616 failed to process!
+[19:52:13.149] [ERROR] [qwenViTRunner.cpp:781:preprocess] Failed: /opt/TensorRT-Edge-LLM/cpp/kernels/preprocessKernels/imageUtilKernels.cu:863: Raw image 3264x4896 exceeds the GPU-resize budget of 4096x4096 pixels; downscale the input image.
+[19:52:13.149] [ERROR] [llmRankRuntime.cpp:1990:multiModalRuntimePreprocess] Vision preprocessing failed. This request cannot be handled.
+[19:52:13.149] [ERROR] [llm_inference.cpp:2009:main] *** FAILED *** Request 1617 failed to process!
+[19:52:20.538] [INFO] [llm_inference.cpp:1726:main] Progress: 1700/2374 (71.609099%)
+[19:52:29.047] [INFO] [llm_inference.cpp:1726:main] Progress: 1800/2374 (75.821398%)
+[19:52:38.030] [INFO] [llm_inference.cpp:1726:main] Progress: 1900/2374 (80.033698%)
+[19:52:46.602] [INFO] [llm_inference.cpp:1726:main] Progress: 2000/2374 (84.245998%)
+[19:52:55.041] [INFO] [llm_inference.cpp:1726:main] Progress: 2100/2374 (88.458298%)
+[19:53:06.804] [INFO] [llm_inference.cpp:1726:main] Progress: 2200/2374 (92.670598%)
+[19:53:18.848] [INFO] [llm_inference.cpp:1726:main] Progress: 2300/2374 (96.882898%)
+[19:53:32.624] [INFO] [llm_inference.cpp:1726:main] Progress: 2374/2374 (100.000000%)
+[19:53:32.694] [ERROR] [llm_inference.cpp:2097:main] *** 128 BATCHED REQUESTS FAILED ***
+[19:53:32.694] [INFO] [llm_inference.cpp:2093:main] Processing complete: 2246/2374 batched requests successful
+[19:53:32.740] [INFO] [llm_inference.cpp:2159:main] 
+=== Performance Summary ===
+=== LLM Prefill ===
+Reused Tokens: 0
+Computed Tokens: 1901394
+Average Tokens per Run: 846.57
+Average Time per Run: 44.2935 ms
+Tokens/Second: 19112.7
+Average Time per Token: 0.0523 ms
+LLM Prefill - Total Runs: 2246, Total GPU Time: 99483.11 ms, Average: 44.29 ms
+=== LLM Generation (Excluding sampling after prefill) ===
+Generated Tokens: 4991
+Average Tokens per Run: 2.22
+Tokens/Second: 102.4
+Average Time per Token: 9.7613 ms
+LLM Generation - Total Runs: 2745, Total GPU Time: 48718.40 ms, Average: 17.75 ms
+=== Multimodal Processing ===
+Total Images: 2246
+Total Image Tokens: 1804172
+Total Multimodal Tokens: 1804172
+Average Time per Token: 0.0897 ms
+Vision Encoder - Total Runs: 2246, Total GPU Time: 161798.17 ms, Average: 72.04 ms
+=== Memory Usage ===
+Peak GPU Memory: 5856.96 MB (6141468672 bytes)
+Peak CPU Memory: 13942.72 MB (14620004352 bytes)
+GPU Memory Metric: nvml_process_allocation
+=== Wall-Clock (end-to-end, prefill + generation) ===
+TP Size: 1
+Total Generated Tokens: 4991
+Total Wall-Clock Time: 314198.18 ms
+Wall-Clock Tokens/Second: 15.9
+Wall-Clock ms/Token: 62.953
+=====================================
+
+[19:53:32.741] [INFO] [llm_inference.cpp:2218:main] Profile data exported to: /tmp/trt_edgellm_at01n70r/profile.json
+[19:53:32.770] [INFO] [llm_inference.cpp:2243:main] All responses exported to: /tmp/trt_edgellm_at01n70r/output.json
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1226 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1227 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1236 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1237 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1250 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1251 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1254 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1255 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1258 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1259 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1274 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1275 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1276 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1277 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1282 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1283 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1304 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1305 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1308 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1309 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1312 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1313 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1324 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1325 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1338 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1339 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1340 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1341 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1350 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1351 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1362 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1363 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1364 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1365 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1372 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1373 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1378 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1379 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1390 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1391 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1392 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1393 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1402 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1403 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1404 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1405 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1414 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1415 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1418 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1419 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1420 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1421 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1424 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1425 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1442 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1443 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1446 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1447 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1450 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1451 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1454 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1455 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1462 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1463 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1474 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1475 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1488 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1489 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1494 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1495 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1498 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1499 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1500 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1501 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1502 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1503 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1506 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1507 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1508 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1509 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1510 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1511 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1518 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1519 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1524 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1525 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1534 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1535 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1536 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1537 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1540 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1541 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1542 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1543 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1544 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1545 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1550 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1551 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1552 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1553 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1556 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1557 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1558 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1559 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1560 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1561 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1562 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1563 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1568 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1569 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1576 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1577 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1578 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1579 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1586 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1587 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1592 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1593 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1604 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1605 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1608 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1609 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1612 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1613 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1614 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1615 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1616 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:35[0m | [33m[1mWARNING [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36m_run[0m:[36m110[0m - [33m[1mTensorRT Edge-LLM request 1617 failed: TensorRT Edge LLM cannot handle this request. Fails.[0m
+[32m2026-09-23 19:53:36[0m | [1mINFO    [0m | [36mlmms_eval.models.chat.trt_edgellm[0m:[36mgenerate_until[0m:[36m148[0m - [1mTensorRT Edge-LLM profile saved to jetson/results-thor/Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-fp8/20260923-212441/trt_profile.json[0m
+[32m2026-09-23 19:53:36[0m | [1mINFO    [0m | [36mlmms_eval.models.model_utils.gen_metrics[0m:[36mlog_metrics[0m:[36m136[0m - [1mMetric summary - Total elapsed time: 1720.130s, Total gen tokens: 0, Avg speed: 0.0 tokens/s[0m
+Postprocessing: 100%|██████████| 2374/2374 [00:00<00:00, 5761.32it/s]
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36mevaluate[0m:[36m1402[0m - [1mPostprocessed 2374 docs for mme/none with 4 worker(s) in 0.41s[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mcode_reasoning: 170.00[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mnumerical_calculation: 117.50[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mtext_translation: 200.00[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mcommonsense_reasoning: 126.43[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1martwork: 122.75[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mcelebrity: 122.65[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mcount: 160.00[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mcolor: 170.00[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mposition: 168.33[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mOCR: 102.50[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mlandmark: 126.25[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mscene: 162.75[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mexistence: 190.00[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mposters: 124.83[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mlmms_eval.loggers.evaluation_tracker[0m:[36msave_results_aggregated[0m:[36m187[0m - [1mSaving results aggregated[0m
+[32m2026-09-23 19:53:37[0m | [1mINFO    [0m | [36mlmms_eval.loggers.evaluation_tracker[0m:[36msave_results_samples[0m:[36m300[0m - [1mSaving samples to jetson/results-thor/Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-fp8/20260923-212441/20260924_032456_samples_mme.jsonl[0m
+trt_edgellm (engine_dir=/home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/llm,multimodal_engine_dir=/home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-fp8/engines/visual,profile_output=jetson/results-thor/Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-fp8/20260923-212441/trt_profile.json,encoder_cache_budget_bytes=0), gen_kwargs: (), limit: None, offset: 0, num_fewshot: None, batch_size: 1
+
+LMMs-Eval: Probing Intelligence in the Real World
+> Good evaluation shapes what we build next.
+
+branch: jetson-benchmark
+commit: v0.6-247-gc0fa060c
+
+|Tasks|Filter|n-shot|       Metric       |   |  Value  |   |Stderr|Stderr_CLT|
+|-----|------|-----:|--------------------|---|--------:|---|------|---------:|
+|mme  |none  |     0|mme_cognition_score |↑  | 613.9286|±  |N/A   |    0.0252|
+|mme  |none  |     0|mme_perception_score|↑  |1450.0603|±  |N/A   |    0.0094|
+
+
+Throughput Summary
+
+|      Metric      |  Value  |  Unit  |
+|------------------|--------:|--------|
+|total_gen_tokens  |   0.0000|tokens  |
+|total_elapsed_time|1720.1296|seconds |
+|avg_speed         |   0.0000|tokens/s|
+
+
+[slim_run.py: dropped 4495 per-request progress/profile lines]

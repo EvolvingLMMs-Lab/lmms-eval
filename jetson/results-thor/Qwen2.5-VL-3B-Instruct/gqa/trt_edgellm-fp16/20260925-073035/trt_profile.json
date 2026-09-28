@@ -1,0 +1,97 @@
+[
+  {
+    "max_new_tokens": 16,
+    "num_requests": 12578,
+    "profile": {
+      "generation": {
+        "average_time_per_token_ms": 15.223671913146973,
+        "average_tokens_per_run": 2.2556846141815186,
+        "generated_tokens": 28372,
+        "tokens_per_second": 65.68717193603516,
+        "total_runs": 12578
+      },
+      "gpu_memory_metric": "nvml_process_allocation",
+      "multimodal": {
+        "average_time_per_token_ms": 0.09712272137403488,
+        "total_audio_tokens": 0,
+        "total_audios": 0,
+        "total_image_tokens": 4509171,
+        "total_images": 12578,
+        "total_multimodal_tokens": 4509171,
+        "total_runs": 12578
+      },
+      "peak_cpu_memory_bytes": 12934930432,
+      "peak_cpu_memory_mb": 12335.7109375,
+      "peak_gpu_memory_bytes": 8888737792,
+      "peak_gpu_memory_mb": 8476.9609375,
+      "prefill": {
+        "average_time_per_run_ms": 39.134544372558594,
+        "average_time_per_token_ms": 0.09803622215986252,
+        "average_tokens_per_run": 399.1845397949219,
+        "computed_tokens": 5020943,
+        "pruned_tokens": 0,
+        "reused_tokens": 0,
+        "tokens_per_second": 10200.3115234375,
+        "total_runs": 12578
+      },
+      "stages": [
+        {
+          "average_time_per_run_ms": 34.818172454833984,
+          "gpu_time_stats": {
+            "count": 12578,
+            "max_ms": 52.63683319091797,
+            "mean_ms": 34.81817843391247,
+            "median_ms": 33.66611099243164,
+            "min_ms": 26.604896545410156,
+            "p95_ms": 40.03120040893555,
+            "p99_ms": 48.609344482421875,
+            "stddev_ms": 4.468535814161929
+          },
+          "stage_id": "vision_encoder",
+          "total_gpu_time_ms": 437942.96875,
+          "total_runs": 12578
+        },
+        {
+          "average_time_per_run_ms": 27.347475051879883,
+          "gpu_time_stats": {
+            "count": 15794,
+            "max_ms": 37.08476638793945,
+            "mean_ms": 27.34750087088809,
+            "median_ms": 27.296159744262695,
+            "min_ms": 26.456768035888672,
+            "p95_ms": 27.816511154174805,
+            "p99_ms": 29.48531150817871,
+            "stddev_ms": 0.45041663272453863
+          },
+          "stage_id": "llm_generation",
+          "total_gpu_time_ms": 431926.03125,
+          "total_runs": 15794
+        },
+        {
+          "average_time_per_run_ms": 39.134544372558594,
+          "gpu_time_stats": {
+            "count": 12578,
+            "max_ms": 53.885982513427734,
+            "mean_ms": 39.13456848964609,
+            "median_ms": 38.930686950683594,
+            "min_ms": 36.06924819946289,
+            "p95_ms": 44.44572830200195,
+            "p99_ms": 47.150657653808594,
+            "stddev_ms": 2.0246913097676376
+          },
+          "stage_id": "llm_prefill",
+          "total_gpu_time_ms": 492234.28125,
+          "total_runs": 12578
+        }
+      ],
+      "wall_clock": {
+        "generated_tokens": 28372,
+        "ms_per_token": 48.478751517728746,
+        "tokens_per_second": 20.627593918838826,
+        "total_time_ms": 1375439.138061,
+        "tp_size": 1
+      },
+      "failed_requests": 0
+    }
+  }
+]

@@ -1,0 +1,21 @@
+/opt/venv/lib/python3.12/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+torch 2.10.0 transformers 4.57.3
+/opt/venv/lib/python3.12/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+[32m2026-09-23 23:53:55[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate[0m:[36m516[0m - [1mVerbosity set to INFO[0m
+[32m2026-09-23 23:53:57[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate_single[0m:[36m653[0m - [1mEvaluation tracker args: {'output_path': 'jetson/results-thor/Qwen2.5-VL-3B-Instruct/mme/llamacpp-q8_0/20260924-015342'}[0m
+[32m2026-09-23 23:53:57[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate_single[0m:[36m737[0m - [1mSelected Tasks: ['mme'][0m
+[32m2026-09-23 23:53:57[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36msimple_evaluate[0m:[36m486[0m - [1mSetting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234[0m
+Using the latest cached version of the dataset since lmms-lab-encoder/MME couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'default' at /opt/hf-cache/datasets/lmms-lab-encoder___mme/default/0.0.0/d6c9023f017b564f7b3ccccf5348166bce8fdbcd (last modified on Wed Sep  9 15:10:54 2026).
+[32m2026-09-23 23:53:58[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36mevaluate[0m:[36m1047[0m - [1mRunning on rank 0 (local rank 0)[0m
+[32m2026-09-23 23:53:58[0m | [1mINFO    [0m | [36mlmms_eval.evaluator_utils[0m:[36mfrom_taskdict[0m:[36m100[0m - [1mNo metadata found in task config for mme, using default n_shot=0[0m
+[32m2026-09-23 23:53:58[0m | [1mINFO    [0m | [36mlmms_eval.api.task[0m:[36mbuild_all_requests[0m:[36m473[0m - [1mBuilding contexts for mme on rank 0...[0m
+100%|██████████| 2374/2374 [00:00<00:00, 45604.67it/s]
+[32m2026-09-23 23:53:58[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36mevaluate[0m:[36m1202[0m - [1mRunning generate_until requests[0m
+Model Responding:  39%|███▉      | 935/2374 [19:08<13:26,  1.78it/s, tokens=716,342][32m2026-09-25 04:20:33[0m | [1mINFO    [0m | [36mlmms_eval.models.chat.openai[0m:[36mprocess_single_request[0m:[36m165[0m - [1mAttempt 1/2 failed with error: peer closed connection without sending complete message body (incomplete chunked read)[0m
+[32m2026-09-25 04:20:35[0m | [1mINFO    [0m | [36mlmms_eval.models.chat.openai[0m:[36mprocess_single_request[0m:[36m165[0m - [1mAttempt 2/2 failed with error: Connection error.[0m
+[32m2026-09-25 04:20:35[0m | [31m[1mERROR   [0m | [36mlmms_eval.models.chat.openai[0m:[36mprocess_single_request[0m:[36m167[0m - [31m[1mAll 2 attempts failed. Last error: Connection error.[0m
+
+[slim_run.py: dropped 1 per-request progress/profile lines]

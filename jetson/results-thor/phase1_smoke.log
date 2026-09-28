@@ -1,0 +1,15 @@
+=== 14:59:13 hf 3b mme limit=8
+=== 19:55:48 hf 7b mme limit=8
+=== 19:56:25 vllm 3b mme limit=8
+=== 19:58:13 vllm 3b-awq mme limit=8
+=== 20:00:10 vllm 7b mme limit=8
+=== 20:02:01 vllm 7b-awq mme limit=8
+=== 20:04:09 llamacpp 3b-q8_0 mme limit=8
+=== 20:04:32 llamacpp 3b-q4_k_m mme limit=8
+=== 20:04:54 llamacpp 7b-q8_0 mme limit=8
+=== 20:05:19 llamacpp 7b-q4_k_m mme limit=8
+=== 20:05:43 trt_edgellm 3b-fp16 mme limit=8
+=== 20:06:05 trt_edgellm 3b-int4_awq mme limit=8
+=== 20:06:26 trt_edgellm 3b-fp8 mme limit=8
+=== 20:06:48 trt_edgellm 3b-nvfp4 mme limit=8
+summary: /home/michal/dev/lmms-eval/jetson/results-thor/SUMMARY.md

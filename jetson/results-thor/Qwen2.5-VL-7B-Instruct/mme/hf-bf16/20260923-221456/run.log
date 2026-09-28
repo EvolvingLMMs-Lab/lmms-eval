@@ -1,0 +1,63 @@
+/opt/venv/lib/python3.12/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+torch 2.10.0 transformers 4.57.3
+/opt/venv/lib/python3.12/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+[32m2026-09-23 20:15:09[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate[0m:[36m516[0m - [1mVerbosity set to INFO[0m
+[32m2026-09-23 20:15:11[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate_single[0m:[36m653[0m - [1mEvaluation tracker args: {'output_path': 'jetson/results-thor/Qwen2.5-VL-7B-Instruct/mme/hf-bf16/20260923-221456'}[0m
+[32m2026-09-23 20:15:11[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate_single[0m:[36m737[0m - [1mSelected Tasks: ['mme'][0m
+[32m2026-09-23 20:15:11[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36msimple_evaluate[0m:[36m486[0m - [1mSetting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234[0m
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards: 100%|██████████| 5/5 [00:13<00:00,  2.67s/it]
+The image processor of type `Qwen2VLImageProcessor` is now loaded as a fast processor by default, even if the model checkpoint was saved with a slow processor. This is a breaking change and may produce slightly different outputs. To continue using the slow processor, instantiate this class with `use_fast=False`. Note that this behavior will be extended to all models in a future release.
+Using the latest cached version of the dataset since lmms-lab-encoder/MME couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'default' at /opt/hf-cache/datasets/lmms-lab-encoder___mme/default/0.0.0/d6c9023f017b564f7b3ccccf5348166bce8fdbcd (last modified on Wed Sep  9 15:10:54 2026).
+[32m2026-09-23 20:15:26[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36mevaluate[0m:[36m1047[0m - [1mRunning on rank 0 (local rank 0)[0m
+[32m2026-09-23 20:15:26[0m | [1mINFO    [0m | [36mlmms_eval.evaluator_utils[0m:[36mfrom_taskdict[0m:[36m100[0m - [1mNo metadata found in task config for mme, using default n_shot=0[0m
+[32m2026-09-23 20:15:26[0m | [1mINFO    [0m | [36mlmms_eval.api.task[0m:[36mbuild_all_requests[0m:[36m473[0m - [1mBuilding contexts for mme on rank 0...[0m
+100%|██████████| 2374/2374 [00:00<00:00, 46377.20it/s]
+[32m2026-09-23 20:15:26[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36mevaluate[0m:[36m1202[0m - [1mRunning generate_until requests[0m
+Model Responding: 100%|██████████| 2374/2374 [26:00<00:00,  1.68it/s][32m2026-09-23 20:41:26[0m | [1mINFO    [0m | [36mlmms_eval.models.model_utils.gen_metrics[0m:[36mlog_metrics[0m:[36m136[0m - [1mMetric summary - Total elapsed time: 1407.003s, Total gen tokens: 4794, Avg speed: 3.4 tokens/s, Additional metrics: rank: 0[0m
+Postprocessing:  94%|█████████▍| 2233/2374 [00:00<00:00, 5335.36it/s][32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36mevaluate[0m:[36m1402[0m - [1mPostprocessed 2374 docs for mme/none with 4 worker(s) in 0.44s[0m
+Postprocessing: 100%|██████████| 2374/2374 [00:00<00:00, 5356.50it/s]
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mcode_reasoning: 155.00[0m
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mnumerical_calculation: 130.00[0m
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mtext_translation: 185.00[0m
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mcommonsense_reasoning: 146.43[0m
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1martwork: 146.50[0m
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mcelebrity: 147.94[0m
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mcount: 165.00[0m
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mcolor: 185.00[0m
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mposition: 160.00[0m
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mOCR: 162.50[0m
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mlandmark: 187.25[0m
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mscene: 165.25[0m
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mexistence: 195.00[0m
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mutils[0m:[36mmme_aggregate_results[0m:[36m120[0m - [1mposters: 165.99[0m
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mlmms_eval.loggers.evaluation_tracker[0m:[36msave_results_aggregated[0m:[36m187[0m - [1mSaving results aggregated[0m
+[32m2026-09-23 20:41:28[0m | [1mINFO    [0m | [36mlmms_eval.loggers.evaluation_tracker[0m:[36msave_results_samples[0m:[36m300[0m - [1mSaving samples to jetson/results-thor/Qwen2.5-VL-7B-Instruct/mme/hf-bf16/20260923-221456/snapshots__cc594898137f460bfe9f0759e9844b3ce807cfb5/20260924_041511_samples_mme.jsonl[0m
+qwen2_5_vl (pretrained=/opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-7B-Instruct/snapshots/cc594898137f460bfe9f0759e9844b3ce807cfb5,attn_implementation=flash_attention_2), gen_kwargs: (), limit: None, offset: 0, num_fewshot: None, batch_size: 1
+
+LMMs-Eval: Probing Intelligence in the Real World
+> Good evaluation shapes what we build next.
+
+branch: jetson-benchmark
+commit: v0.6-248-g7d7bc0a8
+
+|Tasks|Filter|n-shot|       Metric       |   |  Value  |   |Stderr|Stderr_CLT|
+|-----|------|-----:|--------------------|---|--------:|---|------|---------:|
+|mme  |none  |     0|mme_cognition_score |↑  | 616.4286|±  |N/A   |    0.0231|
+|mme  |none  |     0|mme_perception_score|↑  |1680.4276|±  |N/A   |    0.0072|
+
+
+Throughput Summary
+
+|      Metric      |  Value  |  Unit  |
+|------------------|--------:|--------|
+|total_gen_tokens  |4794.0000|tokens  |
+|total_elapsed_time|1407.0034|seconds |
+|avg_speed         |   3.4072|tokens/s|
+|avg_rank          |   0.0000|varies  |
+
+
+[slim_run.py: dropped 1 per-request progress/profile lines]

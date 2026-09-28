@@ -1,0 +1,216 @@
+{
+  "results": {
+    "gqa": {
+      "alias": "gqa",
+      "exact_match,none": 0.5756082048020353,
+      "exact_match_stderr,none": 0.004407156238267467,
+      "exact_match_stderr_clt,none": 0.004407156238267565,
+      "exact_match_stderr_clustered,none": "N/A"
+    }
+  },
+  "group_subtasks": {
+    "gqa": []
+  },
+  "configs": {
+    "gqa": {
+      "task": "gqa",
+      "dataset_path": "lmms-lab-encoder/GQA",
+      "dataset_name": "testdev_balanced_instructions",
+      "dataset_kwargs": {
+        "token": true
+      },
+      "test_split": "testdev",
+      "full_docs": false,
+      "process_results_use_image": false,
+      "process_docs": "<function gqa_process_docs at 0xfffedbdb6160>",
+      "doc_to_visual": "<function gqa_doc_to_visual at 0xfffedbdb5e40>",
+      "doc_to_text": "<function gqa_doc_to_text at 0xfffedbdb60c0>",
+      "doc_to_target": "answer",
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "exact_match",
+          "aggregation": "mean",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": true
+        }
+      ],
+      "output_type": "generate_until",
+      "generation_kwargs": {
+        "max_new_tokens": 16,
+        "temperature": 0.0,
+        "top_p": 1.0,
+        "num_beams": 1,
+        "do_sample": false,
+        "until": [
+          "\n\n"
+        ]
+      },
+      "repeats": 1,
+      "should_decontaminate": false,
+      "score_key": "score",
+      "metadata": [
+        {
+          "version": 0.0
+        }
+      ],
+      "lmms_eval_specific_kwargs": {
+        "default": {
+          "pre_prompt": "",
+          "post_prompt": "\nAnswer the question using a single word or phrase."
+        },
+        "qwen_vl": {
+          "pre_prompt": "",
+          "post_prompt": " Answer:"
+        },
+        "pre_prompt": "",
+        "post_prompt": "\nAnswer the question using a single word or phrase."
+      },
+      "auto_strip_thinking": false
+    }
+  },
+  "versions": {
+    "gqa": "Yaml"
+  },
+  "n-shot": {
+    "gqa": 0
+  },
+  "higher_is_better": {
+    "gqa": {
+      "exact_match": true
+    }
+  },
+  "n-samples": {
+    "gqa": {
+      "original": 12578,
+      "effective": 12578
+    }
+  },
+  "config": {
+    "model": "trt_edgellm",
+    "model_args": "engine_dir=/home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/llm,multimodal_engine_dir=/home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/visual,profile_output=jetson/results-thor/Qwen2.5-VL-3B-Instruct/gqa/trt_edgellm-int4_awq/20260925-085025/trt_profile.json,encoder_cache_budget_bytes=0,max_image_side=4096",
+    "model_backend": "lmms_eval.models.chat.trt_edgellm.TRTEdgeLLM (chat)",
+    "batch_size": "1",
+    "batch_sizes": [],
+    "device": null,
+    "use_cache": null,
+    "limit": null,
+    "offset": 0,
+    "bootstrap_iters": 100000,
+    "process_docs_parallel": 4,
+    "gen_kwargs": "",
+    "random_seed": 0,
+    "numpy_seed": 1234,
+    "torch_seed": 1234,
+    "fewshot_seed": 1234,
+    "resolved_cli_args": {
+      "config": "",
+      "model": "trt_edgellm",
+      "tasks": "gqa",
+      "model_args": "engine_dir=/home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/llm,multimodal_engine_dir=/home/michal/opt-fallback/models/trt-edgellm/Qwen2.5-VL-3B-Instruct-int4_awq/engines/visual,profile_output=jetson/results-thor/Qwen2.5-VL-3B-Instruct/gqa/trt_edgellm-int4_awq/20260925-085025/trt_profile.json,encoder_cache_budget_bytes=0,max_image_side=4096",
+      "launcher_args": null,
+      "num_fewshot": null,
+      "batch_size": "1",
+      "max_batch_size": null,
+      "device": null,
+      "output_path": "jetson/results-thor/Qwen2.5-VL-3B-Instruct/gqa/trt_edgellm-int4_awq/20260925-085025",
+      "limit": null,
+      "offset": 0,
+      "use_cache": null,
+      "cache_requests": null,
+      "check_integrity": false,
+      "write_out": false,
+      "log_samples": true,
+      "wandb_log_samples": false,
+      "swanlab_log_samples": false,
+      "log_samples_suffix": "model_outputs",
+      "system_instruction": null,
+      "apply_chat_template": false,
+      "fewshot_as_multiturn": false,
+      "show_config": false,
+      "include_path": null,
+      "gen_kwargs": "",
+      "reasoning_tags": "[[\"<think>\", \"</think>\"], [\"<analysis>\", \"</analysis>\"]]",
+      "verbosity": "INFO",
+      "wandb_args": "",
+      "swanlab_args": "",
+      "timezone": "Asia/Singapore",
+      "hf_hub_log_args": ",output_path=jetson/results-thor/Qwen2.5-VL-3B-Instruct/gqa/trt_edgellm-int4_awq/20260925-085025",
+      "predict_only": false,
+      "seed": [
+        0,
+        1234,
+        1234,
+        1234
+      ],
+      "trust_remote_code": false,
+      "process_with_media": false,
+      "process_docs_parallel": 4,
+      "agentic_trace_mode": "basic",
+      "force_simple": false,
+      "tui": false,
+      "repeats": 1,
+      "baseline": null,
+      "max_tokens": null,
+      "power_analysis": false,
+      "effect_size": 0.03,
+      "alpha": 0.05,
+      "power": 0.8,
+      "correlation": 0.5,
+      "std_a": null,
+      "std_b": null
+    }
+  },
+  "git_hash": "v0.6-249-g6acf8765",
+  "git_branch": "jetson-benchmark",
+  "lmms_eval_version": "jetson-benchmark@v0.6-249",
+  "date": "20260925_145038",
+  "throughput": {
+    "total_gen_tokens": 0,
+    "total_elapsed_time": 2550.8450198320206,
+    "avg_speed": 0.0
+  },
+  "usage": {},
+  "efficiency": {
+    "by_task": {
+      "gqa": {
+        "docs": 12578.0,
+        "docs_with_token_counts": 12578.0,
+        "total_input_tokens": 0.0,
+        "total_output_tokens": 0.0,
+        "total_tokens": 0.0,
+        "total_correct_score": 7240.0,
+        "avg_output_tokens_per_sample": 0.0,
+        "tokens_per_correct_answer": 0.0
+      }
+    },
+    "overall": {
+      "docs": 12578.0,
+      "docs_with_token_counts": 12578.0,
+      "total_input_tokens": 0.0,
+      "total_output_tokens": 0.0,
+      "total_tokens": 0.0,
+      "total_correct_score": 7240.0,
+      "avg_output_tokens_per_sample": 0.0,
+      "tokens_per_correct_answer": 0.0
+    }
+  },
+  "task_hashes": {
+    "gqa": "18948436bb8c1b6a0d75584944cb5c8a739680ba5d9d1b246de1c086ed61decb"
+  },
+  "model_source": "trt_edgellm",
+  "model_name": "",
+  "model_name_sanitized": "",
+  "system_instruction": null,
+  "system_instruction_sha": null,
+  "fewshot_as_multiturn": false,
+  "chat_template": null,
+  "chat_template_sha": null,
+  "start_time": 633016.812438544,
+  "end_time": 635576.774360489,
+  "total_evaluation_time_seconds": "2559.9619219449814"
+}

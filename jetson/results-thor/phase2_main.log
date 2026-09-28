@@ -1,0 +1,10 @@
+=== 20:22:13 trt_edgellm 3b-fp16 mme 
+=== 20:52:35 trt_edgellm 3b-int4_awq mme 
+=== 21:24:41 trt_edgellm 3b-fp8 mme 
+=== 21:53:39 hf 3b mme 
+=== 22:14:55 hf 7b mme 
+=== 22:41:30 vllm 3b mme 
+=== 23:25:07 vllm 3b-awq mme 
+=== 00:09:51 vllm 7b mme 
+=== 01:01:00 vllm 7b-awq mme 
+=== 01:53:42 llamacpp 3b-q8_0 mme 

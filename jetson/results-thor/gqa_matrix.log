@@ -1,0 +1,10 @@
+=== 06:24:06 hf 3b gqa 
+=== 07:30:35 trt_edgellm 3b-fp16 gqa 
+=== 08:13:33 trt_edgellm 3b-fp8 gqa 
+=== 08:50:25 trt_edgellm 3b-int4_awq gqa 
+=== 09:35:20 vllm 3b gqa 
+=== 10:42:02 vllm 3b-awq gqa 
+=== 11:51:39 hf 7b gqa 
+=== 19:00:32 vllm 7b gqa 
+=== 20:25:38 vllm 7b-awq gqa 
+summary: /home/michal/dev/lmms-eval/jetson/results-thor/SUMMARY.md

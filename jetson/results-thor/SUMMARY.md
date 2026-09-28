@@ -10,18 +10,50 @@ llama.cpp is measured client side over HTTP (streaming); TensorRT Edge-LLM only 
 
 | Model | Framework | Task | Scores | N | Wall time (min) | TTFT p50 / p90 (ms) | Answer p50 / p90 (ms) | Decode (ms/token) | Base RAM (GB) | Peak RAM (GB) | Avg GPU rail (W) | Avg module (W) | Other containers / GPU processes | Run dir |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
-| Qwen2.5-VL-3B-Instruct | hf-bf16 | mme | mme_cognition_score: 162.50 | 8 | 0.2 | 208 / 233 | 278 / 303 | 71 | 36.4 | 39.8 | 5.5 | 19.5 | none | [Qwen2.5-VL-3B-Instruct/mme/hf-bf16/20260923-145913_limit8](Qwen2.5-VL-3B-Instruct/mme/hf-bf16/20260923-145913_limit8) |
-| Qwen2.5-VL-3B-Instruct | llamacpp-q4_k_m | mme | mme_cognition_score: 200.00 | 8 | 0.1 | 318 / 326 | 336 / 344 | 17 | 38.1 | 38.8 | 6.1 | 20.9 | none | [Qwen2.5-VL-3B-Instruct/mme/llamacpp-q4_k_m/20260923-200432_limit8](Qwen2.5-VL-3B-Instruct/mme/llamacpp-q4_k_m/20260923-200432_limit8) |
-| Qwen2.5-VL-3B-Instruct | llamacpp-q8_0 | mme | mme_cognition_score: 162.50 | 8 | 0.1 | 309 / 321 | 328 / 340 | 19 | 38.2 | 39.1 | 6.2 | 21.4 | none | [Qwen2.5-VL-3B-Instruct/mme/llamacpp-q8_0/20260923-200409_limit8](Qwen2.5-VL-3B-Instruct/mme/llamacpp-q8_0/20260923-200409_limit8) |
-| Qwen2.5-VL-3B-Instruct | trt_edgellm-fp16 | mme | mme_cognition_score: 162.50 | 8 | 0.1 | ~75 (avg) | - | 16 | 34.2 | 34.8 | 5.6 | 17.7 | none | [Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-fp16/20260923-200543_limit8](Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-fp16/20260923-200543_limit8) |
-| Qwen2.5-VL-3B-Instruct | trt_edgellm-fp8 | mme | mme_cognition_score: 162.50 | 8 | 0.1 | ~67 (avg) | - | 11 | 33.2 | 33.8 | 4.8 | 16.1 | none | [Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-fp8/20260923-200626_limit8](Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-fp8/20260923-200626_limit8) |
-| Qwen2.5-VL-3B-Instruct | trt_edgellm-int4_awq+qwen-awq-ckpt | mme | mme_cognition_score: 0.00 | 8 | 0.1 | ~89 (avg) | - | 12 | 34.0 | 34.5 | 6.8 | 18.1 | none | [Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-int4_awq+qwen-awq-ckpt/20260923-200605_limit8](Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-int4_awq+qwen-awq-ckpt/20260923-200605_limit8) |
-| Qwen2.5-VL-3B-Instruct | trt_edgellm-int4_awq | mme | mme_cognition_score: 162.50 | 8 | 0.1 | ~92 (avg) | - | 7 | 32.3 | 33.2 | 6.0 | 19.3 | none | [Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-int4_awq/20260923-202127_limit8](Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-int4_awq/20260923-202127_limit8) |
-| Qwen2.5-VL-3B-Instruct | trt_edgellm-nvfp4 | mme | mme_cognition_score: 0.00 | 8 | 0.1 | ~46 (avg) | - | 13 | 32.9 | 33.4 | 6.4 | 18.9 | none | [Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-nvfp4/20260923-200648_limit8](Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-nvfp4/20260923-200648_limit8) |
-| Qwen2.5-VL-3B-Instruct | vllm-awq | mme | mme_cognition_score: 200.00 | 8 | 1.7 | 167 / 299 | 182 / 314 | 16 | 36.4 | 41.6 | 5.9 | 20.7 | none | [Qwen2.5-VL-3B-Instruct/mme/vllm-awq/20260923-195813_limit8](Qwen2.5-VL-3B-Instruct/mme/vllm-awq/20260923-195813_limit8) |
-| Qwen2.5-VL-3B-Instruct | vllm-bf16 | mme | mme_cognition_score: 162.50 | 8 | 1.5 | 173 / 307 | 215 / 349 | 42 | 36.4 | 41.8 | 5.1 | 20.3 | none | [Qwen2.5-VL-3B-Instruct/mme/vllm-bf16/20260923-195625_limit8](Qwen2.5-VL-3B-Instruct/mme/vllm-bf16/20260923-195625_limit8) |
-| Qwen2.5-VL-7B-Instruct | hf-bf16 | mme | mme_cognition_score: 162.50 | 8 | 0.3 | 294 / 310 | 416 / 432 | 122 | 36.9 | 40.4 | 6.7 | 20.0 | none | [Qwen2.5-VL-7B-Instruct/mme/hf-bf16/20260923-195548_limit8](Qwen2.5-VL-7B-Instruct/mme/hf-bf16/20260923-195548_limit8) |
-| Qwen2.5-VL-7B-Instruct | llamacpp-q4_k_m | mme | mme_cognition_score: 125.00 | 8 | 0.1 | 471 / 476 | 500 / 507 | 30 | 35.2 | 35.3 | 7.5 | 23.0 | none | [Qwen2.5-VL-7B-Instruct/mme/llamacpp-q4_k_m/20260923-200519_limit8](Qwen2.5-VL-7B-Instruct/mme/llamacpp-q4_k_m/20260923-200519_limit8) |
-| Qwen2.5-VL-7B-Instruct | llamacpp-q8_0 | mme | mme_cognition_score: 162.50 | 8 | 0.1 | 465 / 474 | 503 / 511 | 37 | 37.7 | 37.9 | 7.0 | 23.0 | none | [Qwen2.5-VL-7B-Instruct/mme/llamacpp-q8_0/20260923-200454_limit8](Qwen2.5-VL-7B-Instruct/mme/llamacpp-q8_0/20260923-200454_limit8) |
-| Qwen2.5-VL-7B-Instruct | vllm-awq | mme | mme_cognition_score: 162.50 | 8 | 1.8 | 243 / 374 | 273 / 404 | 30 | 39.6 | 44.0 | 8.6 | 24.3 | none | [Qwen2.5-VL-7B-Instruct/mme/vllm-awq/20260923-200201_limit8](Qwen2.5-VL-7B-Instruct/mme/vllm-awq/20260923-200201_limit8) |
-| Qwen2.5-VL-7B-Instruct | vllm-bf16 | mme | mme_cognition_score: 162.50 | 8 | 1.5 | 283 / 403 | 389 / 511 | 108 | 36.5 | 43.2 | 6.9 | 23.3 | none | [Qwen2.5-VL-7B-Instruct/mme/vllm-bf16/20260923-200010_limit8](Qwen2.5-VL-7B-Instruct/mme/vllm-bf16/20260923-200010_limit8) |
+| Qwen2.5-VL-3B-Instruct | hf-bf16 | gqa | exact_match: 0.60 | 12578 | 64.3 | 199 / 221 | 265 / 318 | 55 | 37.4 | 42.2 | 27.6 | 53.5 | none | [Qwen2.5-VL-3B-Instruct/gqa/hf-bf16/20260925-062406](Qwen2.5-VL-3B-Instruct/gqa/hf-bf16/20260925-062406) |
+| Qwen2.5-VL-3B-Instruct | trt_edgellm-fp16 | gqa | exact_match: 0.60 | 12578 | 40.8 | ~74 (avg) | - | 15 | 40.2 | 41.7 | 33.6 | 59.0 | none | [Qwen2.5-VL-3B-Instruct/gqa/trt_edgellm-fp16/20260925-073035](Qwen2.5-VL-3B-Instruct/gqa/trt_edgellm-fp16/20260925-073035) |
+| Qwen2.5-VL-3B-Instruct | trt_edgellm-fp8 | gqa | exact_match: 0.60 | 12578 | 34.7 | ~59 (avg) | - | 9 | 37.4 | 39.3 | 28.2 | 51.9 | none | [Qwen2.5-VL-3B-Instruct/gqa/trt_edgellm-fp8/20260925-081333](Qwen2.5-VL-3B-Instruct/gqa/trt_edgellm-fp8/20260925-081333) |
+| Qwen2.5-VL-3B-Instruct | trt_edgellm-int4_awq | gqa | exact_match: 0.58 | 12578 | 42.7 | ~103 (avg) | - | 6 | 37.0 | 38.8 | 35.6 | 56.8 | none | [Qwen2.5-VL-3B-Instruct/gqa/trt_edgellm-int4_awq/20260925-085025](Qwen2.5-VL-3B-Instruct/gqa/trt_edgellm-int4_awq/20260925-085025) |
+| Qwen2.5-VL-3B-Instruct | vllm-awq | gqa | exact_match: 0.59 | 12578 | 67.5 | 217 / 239 | 231 / 255 | 12 | 46.9 | 50.9 | 25.2 | 48.1 | none | [Qwen2.5-VL-3B-Instruct/gqa/vllm-awq/20260925-104202](Qwen2.5-VL-3B-Instruct/gqa/vllm-awq/20260925-104202) |
+| Qwen2.5-VL-3B-Instruct | vllm-bf16 | gqa | exact_match: 0.60 | 12578 | 64.6 | 185 / 201 | 216 / 249 | 28 | 36.5 | 52.5 | 23.1 | 50.5 | none | [Qwen2.5-VL-3B-Instruct/gqa/vllm-bf16/20260925-093520](Qwen2.5-VL-3B-Instruct/gqa/vllm-bf16/20260925-093520) |
+| Qwen2.5-VL-3B-Instruct | hf-bf16 | mme | mme_cognition_score: 623.93<br>mme_perception_score: 1548.29 | 2374 | 21.0 | 241 / 907 | 299 / 972 | 57 | 27.2 | 31.1 | 33.3 | 58.6 | none | [Qwen2.5-VL-3B-Instruct/mme/hf-bf16/20260923-215339](Qwen2.5-VL-3B-Instruct/mme/hf-bf16/20260923-215339) |
+| Qwen2.5-VL-3B-Instruct | trt_edgellm-fp16+no-downscale | mme | mme_cognition_score: 613.93<br>mme_perception_score: 1448.41 | 2374 | 30.1 | ~143 (avg) | - | 15 | 32.2 | 32.8 | 16.4 | 33.7 | none | [Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-fp16+no-downscale/20260923-202213](Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-fp16+no-downscale/20260923-202213) |
+| Qwen2.5-VL-3B-Instruct | trt_edgellm-fp8+no-downscale | mme | mme_cognition_score: 613.93<br>mme_perception_score: 1450.06 | 2374 | 28.7 | ~116 (avg) | - | 10 | 27.5 | 28.8 | 13.3 | 29.8 | none | [Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-fp8+no-downscale/20260923-212441](Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-fp8+no-downscale/20260923-212441) |
+| Qwen2.5-VL-3B-Instruct | trt_edgellm-int4_awq+no-downscale | mme | mme_cognition_score: 551.79<br>mme_perception_score: 1459.30 | 2374 | 31.8 | ~208 (avg) | - | 7 | 27.5 | 28.9 | 18.0 | 34.4 | none | [Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-int4_awq+no-downscale/20260923-205235](Qwen2.5-VL-3B-Instruct/mme/trt_edgellm-int4_awq+no-downscale/20260923-205235) |
+| Qwen2.5-VL-3B-Instruct | vllm-awq | mme | mme_cognition_score: 602.86<br>mme_perception_score: 1544.02 | 2374 | 44.4 | 282 / 1269 | 295 / 1282 | 13 | 27.3 | 31.4 | 16.7 | 34.7 | none | [Qwen2.5-VL-3B-Instruct/mme/vllm-awq/20260923-232507](Qwen2.5-VL-3B-Instruct/mme/vllm-awq/20260923-232507) |
+| Qwen2.5-VL-3B-Instruct | vllm-bf16 | mme | mme_cognition_score: 613.57<br>mme_perception_score: 1540.61 | 2374 | 43.3 | 241 / 1127 | 285 / 1171 | 44 | 27.2 | 32.6 | 14.8 | 34.0 | none | [Qwen2.5-VL-3B-Instruct/mme/vllm-bf16/20260923-224130](Qwen2.5-VL-3B-Instruct/mme/vllm-bf16/20260923-224130) |
+| Qwen2.5-VL-7B-Instruct | hf-bf16 | gqa | exact_match: 0.61 | 12578 | 426.7 | 944 / 1054 | 1886 / 2903 | 900 | 46.6 | 55.8 | 10.6 | 29.7 | none | [Qwen2.5-VL-7B-Instruct/gqa/hf-bf16/20260925-115139](Qwen2.5-VL-7B-Instruct/gqa/hf-bf16/20260925-115139) |
+| Qwen2.5-VL-7B-Instruct | vllm-awq | gqa | exact_match: 0.61 | 12578 | 87.3 | 300 / 324 | 325 / 360 | 21 | 36.4 | 41.9 | 32.2 | 55.7 | none | [Qwen2.5-VL-7B-Instruct/gqa/vllm-awq/20260925-202538](Qwen2.5-VL-7B-Instruct/gqa/vllm-awq/20260925-202538) |
+| Qwen2.5-VL-7B-Instruct | vllm-bf16 | gqa | exact_match: 0.61 | 12578 | 83.0 | 223 / 237 | 289 / 360 | 63 | 21.1 | 40.3 | 27.2 | 56.8 | none | [Qwen2.5-VL-7B-Instruct/gqa/vllm-bf16/20260925-190032](Qwen2.5-VL-7B-Instruct/gqa/vllm-bf16/20260925-190032) |
+| Qwen2.5-VL-7B-Instruct | hf-bf16 | mme | mme_cognition_score: 616.43<br>mme_perception_score: 1680.43 | 2374 | 26.3 | 283 / 1138 | 373 / 1223 | 83 | 27.2 | 31.6 | 36.8 | 64.9 | none | [Qwen2.5-VL-7B-Instruct/mme/hf-bf16/20260923-221456](Qwen2.5-VL-7B-Instruct/mme/hf-bf16/20260923-221456) |
+| Qwen2.5-VL-7B-Instruct | vllm-awq | mme | mme_cognition_score: 610.71<br>mme_perception_score: 1686.57 | 2374 | 52.4 | 396 / 1698 | 420 / 1724 | 25 | 39.0 | 43.7 | 22.8 | 43.3 | none | [Qwen2.5-VL-7B-Instruct/mme/vllm-awq/20260924-010100](Qwen2.5-VL-7B-Instruct/mme/vllm-awq/20260924-010100) |
+| Qwen2.5-VL-7B-Instruct | vllm-bf16 | mme | mme_cognition_score: 621.07<br>mme_perception_score: 1687.05 | 2374 | 50.8 | 367 / 1511 | 468 / 1617 | 102 | 27.3 | 43.1 | 18.4 | 40.5 | none | [Qwen2.5-VL-7B-Instruct/mme/vllm-bf16/20260924-000951](Qwen2.5-VL-7B-Instruct/mme/vllm-bf16/20260924-000951) |
+
+## Compute (FLOPs)
+
+Analytical FLOPs per sample from `flops.json` (`jetson/flops.py`): matrix multiplies at 2 FLOPs per multiply-accumulate
+(linear layers + attention), for each sample's actual image grid and prompt / output token counts; identical for every
+framework and precision. Vision = ViT encoder + patch merger; prefill = LLM over the prompt (text + image tokens) incl. the
+first token; decode = the remaining output tokens. Achieved TFLOP/s: (vision + prefill) / mean TTFT, and total / mean answer
+time (TensorRT Edge-LLM: from its averages). Means per sample; total = whole run.
+
+| Model | Framework | Task | N | Image / text / output tokens | Vision (GFLOP) | Prefill (GFLOP) | Decode (GFLOP) | Total (GFLOP) | Run total (TFLOP) | TFLOP/s to 1st token | TFLOP/s answer |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Qwen2.5-VL-3B-Instruct | hf-bf16 | gqa | 12578 | 358 / 41 / 2 | 1892 | 2240 | 8 | 4141 | 52082 | 20.8 | 15.5 |
+| Qwen2.5-VL-3B-Instruct | trt_edgellm-fp16 | gqa | 12578 | 358 / 41 / 2 | 1892 | 2240 | 8 | 4140 | 52074 | 55.9 | 44.5 |
+| Qwen2.5-VL-3B-Instruct | trt_edgellm-fp8 | gqa | 12578 | 358 / 41 / 2 | 1892 | 2240 | 8 | 4140 | 52074 | 69.8 | 59.0 |
+| Qwen2.5-VL-3B-Instruct | trt_edgellm-int4_awq | gqa | 12578 | 358 / 41 / 2 | 1892 | 2240 | 8 | 4140 | 52071 | 39.9 | 37.3 |
+| Qwen2.5-VL-3B-Instruct | vllm-awq | gqa | 12578 | 358 / 41 / 2 | 1892 | 2240 | 8 | 4140 | 52072 | 19.3 | 18.1 |
+| Qwen2.5-VL-3B-Instruct | vllm-bf16 | gqa | 12578 | 358 / 41 / 2 | 1892 | 2240 | 8 | 4140 | 52074 | 22.6 | 19.0 |
+| Qwen2.5-VL-3B-Instruct | hf-bf16 | mme | 2374 | 868 / 42 / 2 | 4861 | 5233 | 7 | 10100 | 23978 | 24.6 | 21.5 |
+| Qwen2.5-VL-3B-Instruct | trt_edgellm-fp16+no-downscale | mme | 2374 | 868 / 43 / 2 | 4861 | 5239 | 6 | 10106 | 23992 | 70.5 | 64.2 |
+| Qwen2.5-VL-3B-Instruct | trt_edgellm-fp8+no-downscale | mme | 2374 | 868 / 43 / 2 | 4861 | 5239 | 6 | 10106 | 23992 | 86.8 | 80.5 |
+| Qwen2.5-VL-3B-Instruct | trt_edgellm-int4_awq+no-downscale | mme | 2374 | 868 / 43 / 2 | 4861 | 5239 | 6 | 10106 | 23992 | 48.6 | 47.3 |
+| Qwen2.5-VL-3B-Instruct | vllm-awq | mme | 2374 | 868 / 43 / 2 | 4861 | 5239 | 6 | 10107 | 23993 | 19.4 | 19.0 |
+| Qwen2.5-VL-3B-Instruct | vllm-bf16 | mme | 2374 | 868 / 43 / 2 | 4861 | 5239 | 6 | 10107 | 23993 | 21.7 | 19.8 |
+| Qwen2.5-VL-7B-Instruct | hf-bf16 | gqa | 12578 | 358 / 41 / 2 | 1898 | 5245 | 18 | 7161 | 90072 | 8.0 | 3.6 |
+| Qwen2.5-VL-7B-Instruct | vllm-awq | gqa | 12578 | 358 / 41 / 2 | 1898 | 5243 | 18 | 7160 | 90052 | 24.1 | 22.2 |
+| Qwen2.5-VL-7B-Instruct | vllm-bf16 | gqa | 12578 | 358 / 41 / 2 | 1898 | 5243 | 18 | 7160 | 90053 | 32.1 | 23.6 |
+| Qwen2.5-VL-7B-Instruct | hf-bf16 | mme | 2374 | 868 / 42 / 2 | 4874 | 12124 | 15 | 17014 | 40390 | 33.5 | 28.7 |
+| Qwen2.5-VL-7B-Instruct | vllm-awq | mme | 2374 | 868 / 43 / 2 | 4874 | 12139 | 15 | 17028 | 40425 | 24.1 | 23.3 |
+| Qwen2.5-VL-7B-Instruct | vllm-bf16 | mme | 2374 | 868 / 43 / 2 | 4874 | 12139 | 15 | 17028 | 40425 | 28.1 | 24.5 |

@@ -1,0 +1,51 @@
+/opt/venv/lib/python3.12/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+torch 2.10.0 transformers 4.57.3
+/opt/venv/lib/python3.12/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+[32m2026-09-25 09:51:50[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate[0m:[36m516[0m - [1mVerbosity set to INFO[0m
+[32m2026-09-25 09:51:52[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate_single[0m:[36m653[0m - [1mEvaluation tracker args: {'output_path': 'jetson/results-thor/Qwen2.5-VL-7B-Instruct/gqa/hf-bf16/20260925-115139'}[0m
+[32m2026-09-25 09:51:52[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate_single[0m:[36m737[0m - [1mSelected Tasks: ['gqa'][0m
+[32m2026-09-25 09:51:52[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36msimple_evaluate[0m:[36m486[0m - [1mSetting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234[0m
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards: 100%|██████████| 5/5 [00:04<00:00,  1.22it/s]
+Some parameters are on the meta device because they were offloaded to the cpu.
+The image processor of type `Qwen2VLImageProcessor` is now loaded as a fast processor by default, even if the model checkpoint was saved with a slow processor. This is a breaking change and may produce slightly different outputs. To continue using the slow processor, instantiate this class with `use_fast=False`. Note that this behavior will be extended to all models in a future release.
+Using the latest cached version of the dataset since lmms-lab-encoder/GQA couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'testdev_balanced_instructions' at /opt/hf-cache/datasets/lmms-lab-encoder___gqa/testdev_balanced_instructions/0.0.0/a6e72d6e1b912da88af8b2f9eba05d5ea8ec2dd8 (last modified on Fri Sep 25 04:23:15 2026).
+Using the latest cached version of the dataset since lmms-lab-encoder/GQA couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'testdev_balanced_images' at /opt/hf-cache/datasets/lmms-lab-encoder___gqa/testdev_balanced_images/0.0.0/a6e72d6e1b912da88af8b2f9eba05d5ea8ec2dd8 (last modified on Wed Sep 23 07:26:32 2026).
+Loading GQA images: 100%|██████████| 398/398 [00:01<00:00, 336.72it/s]
+[32m2026-09-25 09:52:00[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36mevaluate[0m:[36m1047[0m - [1mRunning on rank 0 (local rank 0)[0m
+[32m2026-09-25 09:52:00[0m | [1mINFO    [0m | [36mlmms_eval.evaluator_utils[0m:[36mfrom_taskdict[0m:[36m100[0m - [1mNo metadata found in task config for gqa, using default n_shot=0[0m
+[32m2026-09-25 09:52:00[0m | [1mINFO    [0m | [36mlmms_eval.api.task[0m:[36mbuild_all_requests[0m:[36m473[0m - [1mBuilding contexts for gqa on rank 0...[0m
+100%|██████████| 12578/12578 [00:01<00:00, 12217.49it/s]
+[32m2026-09-25 09:52:01[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36mevaluate[0m:[36m1202[0m - [1mRunning generate_until requests[0m
+Model Responding: 100%|██████████| 12578/12578 [7:06:28<00:00,  2.03s/it]
+[32m2026-09-25 16:58:29[0m | [1mINFO    [0m | [36mlmms_eval.models.model_utils.gen_metrics[0m:[36mlog_metrics[0m:[36m136[0m - [1mMetric summary - Total elapsed time: 25194.021s, Total gen tokens: 28664, Avg speed: 1.1 tokens/s, Additional metrics: rank: 0[0m
+Postprocessing: 100%|██████████| 12578/12578 [00:05<00:00, 2315.62it/s]
+[32m2026-09-25 16:58:36[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36mevaluate[0m:[36m1402[0m - [1mPostprocessed 12578 docs for gqa/none with 4 worker(s) in 5.43s[0m
+[32m2026-09-25 16:58:37[0m | [1mINFO    [0m | [36mlmms_eval.loggers.evaluation_tracker[0m:[36msave_results_aggregated[0m:[36m187[0m - [1mSaving results aggregated[0m
+[32m2026-09-25 16:58:37[0m | [1mINFO    [0m | [36mlmms_eval.loggers.evaluation_tracker[0m:[36msave_results_samples[0m:[36m300[0m - [1mSaving samples to jetson/results-thor/Qwen2.5-VL-7B-Instruct/gqa/hf-bf16/20260925-115139/snapshots__cc594898137f460bfe9f0759e9844b3ce807cfb5/20260925_175152_samples_gqa.jsonl[0m
+qwen2_5_vl (pretrained=/opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-7B-Instruct/snapshots/cc594898137f460bfe9f0759e9844b3ce807cfb5,attn_implementation=flash_attention_2), gen_kwargs: (), limit: None, offset: 0, num_fewshot: None, batch_size: 1
+
+LMMs-Eval: Probing Intelligence in the Real World
+> Good evaluation shapes what we build next.
+
+branch: jetson-benchmark
+commit: v0.6-249-g6acf8765
+
+|Tasks|Filter|n-shot|  Metric   |   |Value |   |Stderr|Stderr_CLT|
+|-----|------|-----:|-----------|---|-----:|---|-----:|---------:|
+|gqa  |none  |     0|exact_match|↑  |0.6088|±  |0.0044|    0.0044|
+
+
+Throughput Summary
+
+|      Metric      |  Value   |  Unit  |
+|------------------|---------:|--------|
+|total_gen_tokens  |28664.0000|tokens  |
+|total_elapsed_time|25194.0207|seconds |
+|avg_speed         |    1.1377|tokens/s|
+|avg_rank          |    0.0000|varies  |
+
