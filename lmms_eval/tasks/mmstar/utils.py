@@ -1,6 +1,7 @@
 import base64
 import io
 import os
+import re
 import string
 from collections import defaultdict
 
@@ -144,3 +145,46 @@ def mmstar_aggregate_results(results):
 
     avg_score = sum(l2_category_avg_score.values()) / len(l2_category_avg_score)
     return avg_score
+
+
+# --- mmstar_hybrid -----------------------------------------------------------
+# Perception categories keep the direct prompt; reasoning ones get a CoT prompt
+# ending in "Answer: $LETTER".
+
+HYBRID_COT_CATEGORIES = {"logical reasoning", "science & technology", "math"}
+
+# Last marker wins, so reasoning about options before committing is fine.
+_ANSWER_LINE_RE = re.compile(r"(?<!\w)answer\s*(?:is\b|[=:：])\s*\(?([A-D])\)?(?!\w)", flags=re.IGNORECASE)
+# Fallback for models that mark the answer but ignore the wording. Kept local:
+# reasoning_utils.extract_boxed_answer would pull in math_verify for one letter.
+_BOXED_LETTER_RE = re.compile(r"\\boxed\{\s*\(?([A-D])\)?\s*\}", flags=re.IGNORECASE)
+
+
+def mmstar_hybrid_perception_docs(dataset):
+    return dataset.filter(lambda category: category not in HYBRID_COT_CATEGORIES, input_columns="category")
+
+
+def mmstar_hybrid_reasoning_docs(dataset):
+    return dataset.filter(lambda category: category in HYBRID_COT_CATEGORIES, input_columns="category")
+
+
+def extract_cot_answer(response):
+    """Read the letter a CoT response committed to, else "" (scores 0)."""
+    text = str(response or "").strip()
+    if not text:
+        return ""
+
+    matches = _ANSWER_LINE_RE.findall(text)
+    if matches:
+        return matches[-1].upper()
+
+    boxed = _BOXED_LETTER_RE.findall(text)
+    if boxed:
+        return boxed[-1].upper()
+
+    return ""
+
+
+def mmstar_cot_process_results(doc, results):
+    """``mmstar_process_results`` on the strictly parsed letter."""
+    return mmstar_process_results(doc, [extract_cot_answer(results[0])])

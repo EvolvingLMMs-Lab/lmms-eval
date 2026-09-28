@@ -1,0 +1,17 @@
+task: "mmstar_hybrid_perception"
+include: mmstar.yaml
+process_docs: !function utils.mmstar_hybrid_perception_docs
+tag: []
+metric_list:
+  - metric: coarse perception
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+  - metric: fine-grained perception
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+  - metric: instance reasoning
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+  - metric: average
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
