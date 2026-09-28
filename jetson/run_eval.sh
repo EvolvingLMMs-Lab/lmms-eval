@@ -21,8 +21,8 @@
 #             (e.g. EVAL_ENV="LMMS_IMAGE_PNG_COMPRESS_LEVEL=1")
 #
 # Each run writes jetson/results/<model>/<tasks>/<framework>-<precision>[+<tag>]/<timestamp>[_limitN]/:
-#   run_info.txt, run.log, tegrastats.log, flops.json, [server.log | trt_profile.json],
-#   lmms_eval/<date>_results.json and lmms_eval/<date>_samples_<task>.jsonl
+#   run_info.txt, run.log, tegrastats.log.gz, flops.json (+ flops_samples.jsonl.gz), [server.log | trt_profile.json],
+#   lmms_eval/<date>_results.json and lmms_eval/<date>_samples_<task>.jsonl.gz
 set -uo pipefail
 
 FRAMEWORK=${1:?usage: $0 <hf|vllm|llamacpp|trt_edgellm> <3b|7b>[-precision] [tasks] [limit]}
@@ -113,5 +113,7 @@ grep -m1 '^torch ' "$OUT/run.log" | sed 's/^/versions:    /' >>"$OUT/run_info.tx
 if [ "$STATUS" -eq 0 ] && [ "${FLOPS:-1}" = 1 ]; then
   "$REPO/jetson/compute_flops.sh" "$OUT" >"$OUT/flops.log" 2>&1 || echo "FLOPs computation failed, see $OUT/flops.log" >&2
 fi
+# Shrink for git: strip progress-bar redraws from logs, gzip tegrastats and per-sample files (jetson/slim_run.py).
+python3 "$REPO/jetson/slim_run.py" "$OUT" || true
 echo "results in: $OUT (exit $STATUS)"
 exit "$STATUS"

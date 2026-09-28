@@ -8,6 +8,7 @@ Usage: [RESULTS_DIR=jetson/results-thor] python3 jetson/summarize.py [--include-
 """
 
 import glob
+import gzip
 import json
 import os
 import re
@@ -24,10 +25,17 @@ GPU_RAILS = ("VDD_GPU_SOC", "VDD_GPU")
 TOTAL_RAILS = ("VDD_GPU_SOC", "VDD_CPU_CV", "VDD_GPU", "VDD_CPU_SOC_MSS", "VIN_SYS_5V0")
 
 
+def open_text(path):
+    """Open a text file that slim_run.py may have gzipped (path or path + ".gz")."""
+    if not os.path.exists(path) and os.path.exists(path + ".gz"):
+        path += ".gz"
+    return gzip.open(path, "rt") if path.endswith(".gz") else open(path)
+
+
 def tegrastats_stats(path):
     ram, gpu_mw, total_mw = [], [], []
-    if os.path.exists(path):
-        for line in open(path):
+    if os.path.exists(path) or os.path.exists(path + ".gz"):
+        for line in open_text(path):
             if m := re.search(r"RAM (\d+)/", line):
                 ram.append(int(m.group(1)))
             rails = {name: int(mw) for name, mw in re.findall(r"\b([A-Z][A-Z0-9_]+) (\d+)mW/", line)}
@@ -52,7 +60,7 @@ def percentile(values, q):
 def latency_stats(samples_path):
     """Per-sample latency recorded by backends that fill TokenCounts timing fields."""
     ttft, gen, decode_ms = [], [], []
-    for line in open(samples_path):
+    for line in open_text(samples_path):
         counts = (json.loads(line).get("token_counts") or [None])[0] or {}
         if counts.get("time_to_first_token_seconds") is None or counts.get("generation_seconds") is None:
             continue
@@ -145,7 +153,7 @@ def main():
             continue
         r = json.load(open(results_json))
         n = sum(r["n-samples"][t]["effective"] for t in r["n-samples"])
-        samples = glob.glob(os.path.join(os.path.dirname(results_json), "*_samples_*.jsonl"))
+        samples = glob.glob(os.path.join(os.path.dirname(results_json), "*_samples_*.jsonl*"))
         stats = {
             **tegrastats_stats(os.path.join(run_dir, "tegrastats.log")),
             **(latency_stats(samples[0]) if samples else {}),

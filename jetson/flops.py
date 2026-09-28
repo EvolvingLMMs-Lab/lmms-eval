@@ -20,6 +20,7 @@ Usage: python jetson/flops.py <run dir> [<run dir> ...]
 """
 
 import glob
+import gzip
 import json
 import os
 import re
@@ -97,11 +98,11 @@ def run_flops(run_dir):
     tokenizer = None
 
     tasks = {}
-    for samples_path in sorted(glob.glob(os.path.join(run_dir, "lmms_eval", "*_samples_*.jsonl"))):
-        task_name = re.sub(r"^.*?_samples_", "", os.path.basename(samples_path))[: -len(".jsonl")]
+    for samples_path in sorted(glob.glob(os.path.join(run_dir, "lmms_eval", "*_samples_*.jsonl*"))):
+        task_name = re.sub(r"\.jsonl(\.gz)?$", "", re.sub(r"^.*?_samples_", "", os.path.basename(samples_path)))
         task, docs = task_docs(task_name)
         rows, recounted = [], 0
-        for line in open(samples_path):
+        for line in gzip.open(samples_path, "rt") if samples_path.endswith(".gz") else open(samples_path):
             sample = json.loads(line)
             images = [im for im in task.doc_to_visual(docs[sample["doc_id"]]) or [] if hasattr(im, "size")]
             grids = [image_grid(vision_cfg, *im.size, max_side=max_side) for im in images]
