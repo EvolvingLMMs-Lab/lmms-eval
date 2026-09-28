@@ -65,6 +65,26 @@ def parse_mmmu_multi_choice_response(response, all_choices, index2ans):
     return pred_index
 
 
+def parse_mmmu_pro_multi_choice_response(response, all_choices, index2ans):
+    """
+    Official MMMU-Pro parser: read the last 'Answer:' line first, then fall back to the MMMU heuristic.
+    https://github.com/MMMU-Benchmark/MMMU/blob/268471d0d488258990025331c7528359c324aa25/mmmu-pro/evaluate.py#L213-L289
+    """
+    last_answer_pos = response.rfind("Answer:")
+    if last_answer_pos != -1:
+        # Extract the string after "Answer:"
+        answer_str = response[last_answer_pos + len("Answer:") :].strip()
+
+        # Find a unique match in the options
+        matching_options = [option for option in all_choices if option in answer_str]
+
+        # If a unique match is found, return that option
+        if len(matching_options) == 1:
+            return matching_options[0]
+
+    return parse_mmmu_multi_choice_response(response, all_choices, index2ans)
+
+
 def parse_jmmmu_multi_choice_response(response, all_choices, index2ans):
     for char in [",", ".", "!", "?", ";", ":", "'", "、", "。", "！", "？", "；", "："]:
         response = response.strip(char)

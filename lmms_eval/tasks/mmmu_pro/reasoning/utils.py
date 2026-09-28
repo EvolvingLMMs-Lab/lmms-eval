@@ -9,7 +9,7 @@ from lmms_eval.tasks._task_utils.mmmu_mcq_utils import (
     get_multi_choice_info as shared_get_multi_choice_info,
 )
 from lmms_eval.tasks._task_utils.mmmu_mcq_utils import (
-    parse_mmmu_multi_choice_response,
+    parse_mmmu_pro_multi_choice_response,
 )
 from lmms_eval.tasks._task_utils.reasoning_utils import compute_score
 
@@ -114,7 +114,7 @@ def mmmu_pro_reward_process_results(doc, results):
 # MMMU-PRO's all questions are multiple-choice questions
 def mmmu_pro_process_results(doc, results):
     pred = results[0]
-    if "question" in doc and "options" in doc:
+    if "options" in doc:
         index2ans, all_choices = get_multi_choice_info(ast.literal_eval(doc["options"]))
         parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
     else:
@@ -322,9 +322,9 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     """
     Parse the prediction from the generated response.
     Return the predicted index e.g., A, B, C, D.
-    https://github.com/MMMU-Benchmark/MMMU/blob/51ce7f3e829c16bb44bc5445782686b4c3508794/eval/eval_utils.py#L10
+    https://github.com/MMMU-Benchmark/MMMU/blob/268471d0d488258990025331c7528359c324aa25/mmmu-pro/evaluate.py#L213-L289
     """
-    return parse_mmmu_multi_choice_response(response, all_choices, index2ans)
+    return parse_mmmu_pro_multi_choice_response(response, all_choices, index2ans)
 
 
 def extract_numbers(string):
