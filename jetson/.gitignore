@@ -1,3 +1,2 @@
 # Run logs are part of the benchmark evidence (the repo root ignores *.log).
 !results/**/*.log
-!results-*/**/*.log

@@ -18,7 +18,7 @@ ARG L4T_RELEASE=r36.4
 ARG L4T_SOC=t234
 ARG CUDA_CTK_VERSION=""
 ARG ENABLE_CUTE_DSL=""
-# e.g. "-o Acquire::Check-Date=false" when the board clock is not synchronized (see jetson/Dockerfile)
+# e.g. "-o Acquire::Check-Date=false" when the board clock is not synchronized (see jetson/docker/Dockerfile)
 ARG APT_OPTS=""
 
 # TensorRT headers/libs from NVIDIA's L4T apt repo (same versions JetPack installs on the host).

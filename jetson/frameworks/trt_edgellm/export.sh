@@ -7,7 +7,7 @@
 #   workspace default: $TRT_WORKSPACE, else /opt/models/trt-edgellm -> <workspace>/<model>-<precision>/onnx/{llm,visual}
 #   fp16      the Hugging Face checkpoint as is
 #   int4_awq  tensorrt-edgellm-quantize (AWQ, default text calibration) on the Hugging Face checkpoint.
-#             AWQ_SOURCE=qwen exports Qwen's AWQ checkpoint instead (Qwen/<model>-AWQ, as used by the vLLM awq runs);
+#             AWQ_SOURCE=qwen exports Qwen's AWQ checkpoint instead ($AWQ_REPO, as used by the vLLM awq runs);
 #             with Edge-LLM v0.10.1 on Thor that engine answers text prompts but returns an empty answer for every
 #             image prompt, so it is not the default.
 #   The vision encoder is always exported in FP16 from the Hugging Face checkpoint. (The AWQ repos' config.json
@@ -15,7 +15,7 @@
 #   vision weights are bit-identical to the base checkpoint's.)
 #   fp8/nvfp4 tensorrt-edgellm-quantize on the Hugging Face checkpoint (default text calibration, LM head and
 #             vision encoder unquantized), then export; fp8/nvfp4 engines run only on Thor (SM110) and Blackwell.
-# Checkpoints come from $HF_CACHE (download them first: jetson/download_assets.sh hf <size> / vllm <size>-awq).
+# Checkpoints come from $HF_CACHE (download them first: jetson/scripts/download_assets.sh hf <size> / vllm <size>-awq).
 # The quantized checkpoint is deleted after a successful export unless KEEP_QUANTIZED=1.
 # Env: EDGELLM_REF (v0.10.1), BASE_IMAGE (nvcr.io/nvidia/pytorch:26.05-py3), EXPORT_IMAGE (built if missing),
 #      GPU_FLAGS (default --runtime nvidia; x86 hosts: --gpus all), HF_CACHE, SHARED_GROUP.
@@ -33,23 +33,23 @@ REPO=$(cd "$(dirname "$0")/../../.." && pwd)
 OFFLINE=1
 source "$REPO/jetson/frameworks/common.sh"
 
-case "${SIZE,,}" in 3b) MODEL=Qwen2.5-VL-3B-Instruct ;; 7b) MODEL=Qwen2.5-VL-7B-Instruct ;; *) echo "unknown size $SIZE" >&2; exit 1 ;; esac
-SRC=$(hf_snapshot "Qwen/$MODEL")
+load_model "$SIZE" || exit 1
+SRC=$(hf_snapshot "$HF_REPO")
 case "$PRECISION" in
   fp16|fp8|nvfp4) LLM_CKPT=$SRC ;;
-  int4_awq) [ "${AWQ_SOURCE:-quantize}" = qwen ] && LLM_CKPT=$(hf_snapshot "Qwen/$MODEL-AWQ") || LLM_CKPT=$SRC ;;
+  int4_awq) [ "${AWQ_SOURCE:-quantize}" = qwen ] && LLM_CKPT=$(hf_snapshot "$AWQ_REPO") || LLM_CKPT=$SRC ;;
   *) echo "precision must be fp16, int4_awq, fp8 or nvfp4" >&2; exit 1 ;;
 esac
 for d in "$SRC" "$LLM_CKPT"; do
-  [ -d "$d" ] || { echo "checkpoint $d not in $HF_CACHE - run jetson/download_assets.sh first" >&2; exit 1; }
+  [ -d "$d" ] || { echo "checkpoint $d not in $HF_CACHE - run jetson/scripts/download_assets.sh first" >&2; exit 1; }
 done
 
 if ! docker image inspect "$EXPORT_IMAGE" >/dev/null 2>&1; then
   docker build --build-arg BASE_IMAGE="$BASE_IMAGE" --build-arg EDGELLM_REF="$EDGELLM_REF" \
-    -f "$REPO/jetson/frameworks/trt_edgellm/Dockerfile.export" -t "$EXPORT_IMAGE" "$REPO/jetson/frameworks/trt_edgellm"
+    -f "$JETSON/frameworks/trt_edgellm/Dockerfile.export" -t "$EXPORT_IMAGE" "$JETSON/frameworks/trt_edgellm"
 fi
 
-OUT=$WORKSPACE/$MODEL-$PRECISION
+OUT=$WORKSPACE/$MODEL_TAG-$PRECISION
 mkdir -p "$OUT"
 # Calibration datasets (fp8/nvfp4) are downloaded into the shared HF cache, so the Hub is reachable here.
 # They are public: HF_TOKEN_PATH points away from a token file in the shared cache that may belong to someone else.

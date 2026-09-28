@@ -1,0 +1,117 @@
+/opt/venv/lib/python3.12/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+torch 2.10.0 transformers 4.57.3
+/opt/venv/lib/python3.12/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+[32m2026-09-28 02:23:01[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate[0m:[36m516[0m - [1mVerbosity set to INFO[0m
+[32m2026-09-28 02:23:03[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate_single[0m:[36m653[0m - [1mEvaluation tracker args: {'output_path': 'jetson/results/thor/Qwen2.5-VL-3B-Instruct/mme/vllm-awq/20260928-042251_limit8'}[0m
+[32m2026-09-28 02:23:03[0m | [33m[1mWARNING [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate_single[0m:[36m683[0m - [33m[1m --limit SHOULD ONLY BE USED FOR TESTING.REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.[0m
+[32m2026-09-28 02:23:03[0m | [1mINFO    [0m | [36mlmms_eval.__main__[0m:[36mcli_evaluate_single[0m:[36m737[0m - [1mSelected Tasks: ['mme'][0m
+[32m2026-09-28 02:23:03[0m | [1mINFO    [0m | [36mlmms_eval.evaluator[0m:[36msimple_evaluate[0m:[36m486[0m - [1mSetting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234[0m
+INFO 09-28 02:23:07 [utils.py:233] non-default args: {'trust_remote_code': True, 'seed': 1, 'max_model_len': 4096, 'enable_prefix_caching': False, 'gpu_memory_utilization': 0.11, 'mm_processor_kwargs': {'min_pixels': 200704, 'max_pixels': 1605632}, 'mm_processor_cache_gb': 0, 'model': '/opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-3B-Instruct-AWQ/snapshots/e7b623934290c5a4da0ee3c6e1e57bfb6b5abbf2'}
+INFO 09-28 02:23:07 [model.py:549] Resolved architecture: Qwen2_5_VLForConditionalGeneration
+INFO 09-28 02:23:07 [model.py:1678] Using max model len 4096
+INFO 09-28 02:23:08 [awq_marlin.py:245] The model is convertible to awq_marlin during runtime. Using awq_marlin kernel.
+INFO 09-28 02:23:08 [scheduler.py:238] Chunked prefill is enabled with max_num_batched_tokens=8192.
+INFO 09-28 02:23:08 [vllm.py:790] Asynchronous scheduling is enabled.
+The image processor of type `Qwen2VLImageProcessor` is now loaded as a fast processor by default, even if the model checkpoint was saved with a slow processor. This is a breaking change and may produce slightly different outputs. To continue using the slow processor, instantiate this class with `use_fast=False`. Note that this behavior will be extended to all models in a future release.
+/opt/venv/lib/python3.12/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+(EngineCore pid=103) INFO 09-28 02:23:23 [core.py:105] Initializing a V1 LLM engine (v0.19.0) with config: model='/opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-3B-Instruct-AWQ/snapshots/e7b623934290c5a4da0ee3c6e1e57bfb6b5abbf2', speculative_config=None, tokenizer='/opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-3B-Instruct-AWQ/snapshots/e7b623934290c5a4da0ee3c6e1e57bfb6b5abbf2', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=True, dtype=torch.bfloat16, max_seq_len=4096, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=awq_marlin, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=1, served_model_name=/opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-3B-Instruct-AWQ/snapshots/e7b623934290c5a4da0ee3c6e1e57bfb6b5abbf2, enable_prefix_caching=False, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'splitting_ops': ['vllm::unified_attention', 'vllm::unified_attention_with_output', 'vllm::unified_mla_attention', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::gdn_attention_core', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_images_per_batch': 0, 'compile_sizes': [], 'compile_ranges_endpoints': [8192], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480, 496, 512], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 512, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': True, 'static_all_moe_layers': []}
+(EngineCore pid=103) INFO 09-28 02:23:24 [parallel_state.py:1400] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.17.0.2:60413 backend=nccl
+(EngineCore pid=103) INFO 09-28 02:23:24 [parallel_state.py:1716] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
+(EngineCore pid=103) The image processor of type `Qwen2VLImageProcessor` is now loaded as a fast processor by default, even if the model checkpoint was saved with a slow processor. This is a breaking change and may produce slightly different outputs. To continue using the slow processor, instantiate this class with `use_fast=False`. Note that this behavior will be extended to all models in a future release.
+(EngineCore pid=103) INFO 09-28 02:23:28 [gpu_model_runner.py:4735] Starting to load model /opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-3B-Instruct-AWQ/snapshots/e7b623934290c5a4da0ee3c6e1e57bfb6b5abbf2...
+(EngineCore pid=103) INFO 09-28 02:23:28 [cuda.py:390] Using backend AttentionBackendEnum.FLASH_ATTN for vit attention
+(EngineCore pid=103) INFO 09-28 02:23:28 [mm_encoder_attention.py:230] Using AttentionBackendEnum.FLASH_ATTN for MMEncoderAttention.
+(EngineCore pid=103) INFO 09-28 02:23:28 [vllm.py:790] Asynchronous scheduling is enabled.
+(EngineCore pid=103) INFO 09-28 02:23:28 [awq_marlin.py:408] Using MarlinLinearKernel for AWQMarlinLinearMethod
+(EngineCore pid=103) INFO 09-28 02:23:29 [cuda.py:334] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=103) INFO 09-28 02:23:29 [flash_attn.py:596] Using FlashAttention version 2
+Loading safetensors checkpoint shards:   0% Completed | 0/1 [00:00<?, ?it/s]
+Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:02<00:00,  2.86s/it]
+Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:02<00:00,  2.86s/it]
+(EngineCore pid=103) 
+(EngineCore pid=103) INFO 09-28 02:23:32 [default_loader.py:384] Loading weights took 3.11 seconds
+(EngineCore pid=103) INFO 09-28 02:23:34 [gpu_model_runner.py:4820] Model loading took 3.32 GiB memory and 5.532130 seconds
+(EngineCore pid=103) INFO 09-28 02:23:35 [gpu_model_runner.py:5753] Encoder cache will be initialized with a budget of 8192 tokens, and profiled with 2 video items of the maximum feature size.
+(EngineCore pid=103) INFO 09-28 02:23:42 [backends.py:1051] Using cache directory: /home/michal/dev/lmms-eval/jetson/.cache/vllm/torch_compile_cache/56fc17ad2a/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore pid=103) INFO 09-28 02:23:42 [backends.py:1111] Dynamo bytecode transform time: 2.69 s
+(EngineCore pid=103) INFO 09-28 02:23:44 [backends.py:285] Directly load the compiled graph(s) for compile range (1, 8192) from the cache, took 1.498 s
+(EngineCore pid=103) INFO 09-28 02:23:44 [decorators.py:303] Directly load AOT compilation from path /home/michal/dev/lmms-eval/jetson/.cache/vllm/torch_compile_cache/torch_aot_compile/7bbf737dfd9555cf228e569da3c8e4fe299b20d27121547f4650c9ac995c022c/rank_0_0/model
+(EngineCore pid=103) INFO 09-28 02:23:44 [monitor.py:48] torch.compile took 4.62 s in total
+(EngineCore pid=103) INFO 09-28 02:24:01 [monitor.py:76] Initial profiling/warmup run took 17.44 s
+(EngineCore pid=103) INFO 09-28 02:24:09 [kv_cache_utils.py:829] Overriding num_gpu_blocks=0 with num_gpu_blocks_override=512
+(EngineCore pid=103) INFO 09-28 02:24:09 [gpu_model_runner.py:5876] Profiling CUDA graph memory: PIECEWISE=51 (largest=512), FULL=35 (largest=256)
+(EngineCore pid=103) INFO 09-28 02:24:11 [gpu_model_runner.py:5955] Estimated CUDA graph memory: 0.08 GiB total
+(EngineCore pid=103) INFO 09-28 02:24:12 [gpu_worker.py:436] Available KV cache memory: 11.15 GiB
+(EngineCore pid=103) INFO 09-28 02:24:12 [gpu_worker.py:470] In v0.19, CUDA graph memory profiling will be enabled by default (VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1), which more accurately accounts for CUDA graph memory during KV cache allocation. To try it now, set VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1 and increase --gpu-memory-utilization from 0.1100 to 0.1107 to maintain the same effective KV cache size.
+(EngineCore pid=103) INFO 09-28 02:24:12 [kv_cache_utils.py:1319] GPU KV cache size: 324,688 tokens
+(EngineCore pid=103) INFO 09-28 02:24:12 [kv_cache_utils.py:1324] Maximum concurrency for 4,096 tokens per request: 79.27x
+(EngineCore pid=103) 2026-09-28 02:24:12,215 - INFO - autotuner.py:262 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
+(EngineCore pid=103) 2026-09-28 02:24:12,245 - INFO - autotuner.py:268 - flashinfer.jit: [Autotuner]: Autotuning process ends
+Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 51/51 [00:03<00:00, 14.27it/s]
+Capturing CUDA graphs (decode, FULL): 100%|██████████| 35/35 [00:01<00:00, 18.83it/s]
+(EngineCore pid=103) INFO 09-28 02:24:19 [gpu_model_runner.py:6046] Graph capturing finished in 7 secs, took 0.10 GiB
+(EngineCore pid=103) INFO 09-28 02:24:19 [gpu_worker.py:597] CUDA graph pool memory: 0.1 GiB (actual), 0.08 GiB (estimated), difference: 0.02 GiB (19.0%).
+(EngineCore pid=103) INFO 09-28 02:24:19 [core.py:283] init engine (profile, create kv cache, warmup model) took 44.81 seconds
+Using the latest cached version of the dataset since lmms-lab-encoder/MME couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'default' at /opt/hf-cache/datasets/lmms-lab-encoder___mme/default/0.0.0/d6c9023f017b564f7b3ccccf5348166bce8fdbcd (last modified on Wed Sep  9 15:10:54 2026).
+2026-09-28T02:24:20.263742+0000 | evaluate | INFO - Running on rank 0 (local rank 0)
+2026-09-28T02:24:20.264007+0000 | from_taskdict | INFO - No metadata found in task config for mme, using default n_shot=0
+2026-09-28T02:24:20.264151+0000 | build_all_requests | INFO - Building contexts for mme on rank 0...
+100%|██████████| 8/8 [00:00<00:00, 19937.27it/s]
+Model Responding:   0%|          | 0/8 [00:00<?, ?it/s]2026-09-28T02:24:20.265274+0000 | evaluate | INFO - Running generate_until requests
+
+
+
+Model Responding:  12%|█▎        | 1/8 [00:05<00:37,  5.35s/it]
+
+Model Responding:  25%|██▌       | 2/8 [00:05<00:14,  2.38s/it]
+
+Model Responding:  38%|███▊      | 3/8 [00:05<00:06,  1.37s/it]
+
+Model Responding:  50%|█████     | 4/8 [00:06<00:03,  1.11it/s]
+
+Model Responding:  62%|██████▎   | 5/8 [00:06<00:01,  1.55it/s]
+
+Model Responding:  75%|███████▌  | 6/8 [00:06<00:00,  2.09it/s]
+
+Model Responding:  88%|████████▊ | 7/8 [00:06<00:00,  2.68it/s]
+
+Model Responding: 100%|██████████| 8/8 [00:06<00:00,  3.30it/s]2026-09-28T02:24:26.924491+0000 | log_metrics | INFO - Metric summary - Total elapsed time: 6.592s, Total gen tokens: 16, Avg speed: 2.4 tokens/s, Additional metrics: ttft: 0.8102, tpot: 0.0130, rank: 0
+Postprocessing: 100%|██████████| 8/8 [00:00<00:00, 2881.94it/s]
+2026-09-28T02:24:27.537067+0000 | evaluate | INFO - Postprocessed 8 docs for mme/none with 4 worker(s) in 0.00s
+2026-09-28T02:24:27.537279+0000 | mme_aggregate_results | INFO - code_reasoning: 200.00
+2026-09-28T02:24:27.694464+0000 | save_results_aggregated | INFO - Saving results aggregated
+2026-09-28T02:24:27.695402+0000 | save_results_samples | INFO - Saving samples to jetson/results/thor/Qwen2.5-VL-3B-Instruct/mme/vllm-awq/20260928-042251_limit8/snapshots__e7b623934290c5a4da0ee3c6e1e57bfb6b5abbf2/20260928_102303_samples_mme.jsonl
+vllm (model=/opt/hf-cache/hub/models--Qwen--Qwen2.5-VL-3B-Instruct-AWQ/snapshots/e7b623934290c5a4da0ee3c6e1e57bfb6b5abbf2,gpu_memory_utilization=0.11,max_model_len=4096,max_pixels=1605632,mm_processor_kwargs={"min_pixels":200704,"max_pixels":1605632},enable_prefix_caching=False,mm_processor_cache_gb=0), gen_kwargs: (), limit: 8.0, offset: 0, num_fewshot: None, batch_size: 1
+
+LMMs-Eval: Probing Intelligence in the Real World
+> Good evaluation shapes what we build next.
+
+branch: jetson-benchmark
+commit: v0.6-251-g2c989505
+
+|Tasks|Filter|n-shot|      Metric       |   |Value|   |Stderr|Stderr_CLT|
+|-----|------|-----:|-------------------|---|----:|---|------|---------:|
+|mme  |none  |     0|mme_cognition_score|↑  |  200|±  |N/A   |         0|
+
+
+Throughput Summary
+
+|      Metric      | Value |  Unit  |
+|------------------|------:|--------|
+|total_gen_tokens  |16.0000|tokens  |
+|total_elapsed_time| 6.5920|seconds |
+|avg_speed         | 2.4272|tokens/s|
+|avg_rank          | 0.0000|varies  |
+|avg_tpot          | 0.0130|varies  |
+|avg_ttft          | 0.8102|varies  |
+
+(EngineCore pid=103) INFO 09-28 02:24:27 [core.py:1210] Shutdown initiated (timeout=0)
+(EngineCore pid=103) INFO 09-28 02:24:27 [core.py:1233] Shutdown complete
+[rank0]:[W928 02:24:27.089279964 ProcessGroupNCCL.cpp:1553] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+ERROR 09-28 02:24:28 [core_client.py:667] Engine core proc EngineCore died unexpectedly, shutting down client.
+
+[slim_run.py: dropped 34 per-request progress/profile lines]

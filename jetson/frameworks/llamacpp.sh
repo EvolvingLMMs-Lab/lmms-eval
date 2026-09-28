@@ -4,7 +4,7 @@ FW_PRECISIONS="q4_k_m q8_0 f16"
 LLAMACPP_IMAGE=${LLAMACPP_IMAGE:-llamacpp-jetson:b11135}
 LLAMACPP_PORT=${LLAMACPP_PORT:-8090}
 
-_gguf_repo() { echo "ggml-org/$MODEL_TAG-GGUF"; }
+_gguf_repo() { echo "$GGUF_REPO"; }
 _gguf_file() {
   case "$PRECISION" in
     q4_k_m) echo "$MODEL_TAG-Q4_K_M.gguf" ;;
@@ -31,12 +31,12 @@ fw_start() {
   local gguf mmproj
   gguf=$(hf_file "$(_gguf_repo)" "$(_gguf_file)") || return 1
   mmproj=$(hf_file "$(_gguf_repo)" "$(_mmproj_file)") || return 1
-  # Image token range matches the HF/vLLM runs (256..2048 visual tokens). Prompt caching is off, as for vLLM:
+  # Image token range matches the other frameworks (IMAGE_MIN/MAX_TOKENS from the model file). Prompt caching is off, as for vLLM:
   # MME asks two questions per image, so a cache would skip the image work on every second sample.
   docker run -d --name "$LLAMACPP_CONTAINER" --runtime nvidia --network host \
     -v "$HF_CACHE":"$HF_CACHE":ro "$LLAMACPP_IMAGE" \
     llama-server -m "$gguf" --mmproj "$mmproj" -ngl 999 -c 4096 -np 1 --jinja \
-      --image-min-tokens 256 --image-max-tokens 2048 --no-cache-prompt --cache-ram 0 \
+      --image-min-tokens "$IMAGE_MIN_TOKENS" --image-max-tokens "$IMAGE_MAX_TOKENS" --no-cache-prompt --cache-ram 0 \
       --host 127.0.0.1 --port "$LLAMACPP_PORT" >/dev/null
   echo "llama-server: $LLAMACPP_IMAGE $(_gguf_file) (waiting for /health)"
   for _ in $(seq 300); do

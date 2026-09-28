@@ -3,10 +3,10 @@
 FW_PRECISIONS="bf16"
 
 fw_assets() {
-  echo "model:Qwen/$MODEL_TAG"
+  echo "model:$HF_REPO"
 }
 
 fw_setup() {
-  BACKEND=qwen2_5_vl
-  MODEL_ARGS="pretrained=$(hf_snapshot "Qwen/$MODEL_TAG"),attn_implementation=${ATTN:-flash_attention_2}"
+  BACKEND=$HF_BACKEND
+  MODEL_ARGS="pretrained=$(hf_snapshot "$HF_REPO"),attn_implementation=${ATTN:-flash_attention_2}"
 }

@@ -1,16 +1,31 @@
-# Shared helpers for run_eval.sh and download_assets.sh (sourced, not executed).
+# Shared helpers for the scripts in jetson/scripts and jetson/frameworks (sourced, not executed; REPO must be set).
 #
-# resolve_framework <framework> <size>[-<precision>] sources jetson/frameworks/<framework>.sh and sets:
-#   FRAMEWORK, SIZE (3b|7b), PRECISION, MODEL_TAG (e.g. Qwen2.5-VL-3B-Instruct)
+# resolve_framework <framework> <size>[-<precision>] sources jetson/models/$MODEL/model.sh and
+# jetson/frameworks/<framework>.sh and sets FRAMEWORK, SIZE, PRECISION plus the model's variables
+# (MODEL_TAG, HF_REPO, AWQ_REPO, GGUF_REPO, IMAGE_* - see models/qwen2_5_vl/model.sh).
 # A framework file defines FW_PRECISIONS (first = default), fw_assets (Hub specs to download),
 # fw_setup (sets BACKEND, MODEL_ARGS, appends to DOCKER_ARGS; may override IMAGE) and optionally
 # fw_start / fw_stop (for server-based frameworks). It can use hf_snapshot / hf_file below and
-# REPO, OUT, OUT_REL, HF_CACHE, OFFLINE.
+# REPO, JETSON, OUT, OUT_REL, HF_CACHE, OFFLINE.
 
+JETSON=$REPO/jetson
+MODEL=${MODEL:-qwen2_5_vl}
 HF_CACHE=${HF_CACHE:-/opt/hf-cache}
 OFFLINE=${OFFLINE:-1}
 # Containers run as the calling user; if this group exists it is added so shared caches stay group-writable.
 SHARED_GROUP=${SHARED_GROUP:-mlusers}
+
+# Results go to jetson/results/<board> (orin, thor, ...) unless RESULTS_DIR (relative to the repo) is set.
+board_name() {
+  local model
+  model=$(tr -d '\0' </proc/device-tree/model 2>/dev/null)
+  case "$model" in
+    *Thor*) echo thor ;;
+    *Orin*) echo orin ;;
+    *) echo "${model:-unknown}" | tr '[:upper:] ' '[:lower:]-' ;;
+  esac
+}
+export RESULTS_DIR=${RESULTS_DIR:-jetson/results/$(board_name)}
 
 shared_group_args() {
   local gid
@@ -18,12 +33,20 @@ shared_group_args() {
   [ -z "$gid" ] || echo "--group-add $gid"
 }
 
+# load_model <size>: source jetson/models/$MODEL/model.sh and resolve the size (sets MODEL_TAG, HF_REPO, ...).
+load_model() {
+  local model_file=$JETSON/models/$MODEL/model.sh
+  [ -f "$model_file" ] || { echo "unknown model '$MODEL' (available: $(ls "$JETSON/models" | tr '\n' ' '))" >&2; return 1; }
+  source "$model_file"
+  model_resolve "$1"
+}
+
 resolve_framework() {
   FRAMEWORK=$1
   local spec=${2,,}
-  local fw_file=$REPO/jetson/frameworks/$FRAMEWORK.sh
+  local fw_file=$JETSON/frameworks/$FRAMEWORK.sh
   if [ ! -f "$fw_file" ]; then
-    echo "unknown framework '$FRAMEWORK' (available: $(cd "$REPO/jetson/frameworks" && ls *.sh | grep -v common.sh | sed 's/\.sh$//' | tr '\n' ' '))" >&2
+    echo "unknown framework '$FRAMEWORK' (available: $(cd "$JETSON/frameworks" && ls *.sh | grep -v common.sh | sed 's/\.sh$//' | tr '\n' ' '))" >&2
     return 1
   fi
   source "$fw_file"
@@ -31,11 +54,7 @@ resolve_framework() {
   PRECISION=${spec#"$SIZE"}
   PRECISION=${PRECISION#-}
   PRECISION=${PRECISION:-${FW_PRECISIONS%% *}}
-  case "$SIZE" in
-    3b) MODEL_TAG=Qwen2.5-VL-3B-Instruct ;;
-    7b) MODEL_TAG=Qwen2.5-VL-7B-Instruct ;;
-    *) echo "unknown model size '$SIZE' (use 3b or 7b)" >&2; return 1 ;;
-  esac
+  load_model "$SIZE" || return 1
   if [[ " $FW_PRECISIONS " != *" $PRECISION "* ]]; then
     echo "precision '$PRECISION' not available for $FRAMEWORK (choose: $FW_PRECISIONS)" >&2
     return 1
@@ -58,7 +77,7 @@ hf_file() {
   local ref=$HF_CACHE/hub/models--${1//\//--}/refs/main
   local path=$HF_CACHE/hub/models--${1//\//--}/snapshots/$(cat "$ref" 2>/dev/null)/$2
   if [ ! -f "$path" ]; then
-    echo "missing $1/$2 in $HF_CACHE - run jetson/download_assets.sh $FRAMEWORK $SIZE-$PRECISION" >&2
+    echo "missing $1/$2 in $HF_CACHE - run jetson/scripts/download_assets.sh $FRAMEWORK $SIZE-$PRECISION" >&2
     return 1
   fi
   echo "$path"
