@@ -1,0 +1,56 @@
+dataset_path: SNU-ISLAB/E3VQA
+test_split: test
+
+output_type: generate_until
+
+doc_to_visual: !function utils.e3vqa_doc_to_visual
+doc_to_text: !function utils.e3vqa_doc_to_text
+doc_to_target: !function utils.e3vqa_doc_to_target
+doc_to_messages: !function utils.e3vqa_doc_to_messages
+
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  do_sample: false
+
+process_results: !function utils.e3vqa_process_results
+
+metric_list:
+  - metric: overall_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: action_ego_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: action_exo_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: object_ego_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: object_exo_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: numerical_ego_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: numerical_exo_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: spatial_ego_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: spatial_exo_acc
+    aggregation: mean
+    higher_is_better: true
+
+metadata:
+  version: 0.0

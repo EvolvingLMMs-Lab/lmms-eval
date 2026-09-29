@@ -1,0 +1,50 @@
+include: _default_template_yaml
+
+task: e3vqa
+
+process_results: !function utils.e3vqa_process_results_full
+
+metric_list:
+  - metric: overall_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: egoexo4d_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: lemma_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: action_ego_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: action_exo_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: object_ego_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: object_exo_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: numerical_ego_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: numerical_exo_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: spatial_ego_acc
+    aggregation: mean
+    higher_is_better: true
+
+  - metric: spatial_exo_acc
+    aggregation: mean
+    higher_is_better: true
