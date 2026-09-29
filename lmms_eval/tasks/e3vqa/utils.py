@@ -19,11 +19,17 @@ SYSTEM_PROMPT = (
 
 
 def e3vqa_filter_egoexo4d(dataset):
-    return dataset.filter(lambda x: x["source"] == "Ego-Exo4D")
+    return dataset.filter(
+        lambda source: source == "Ego-Exo4D",
+        input_columns=["source"],
+    )
 
 
 def e3vqa_filter_lemma(dataset):
-    return dataset.filter(lambda x: x["source"] == "LEMMA")
+    return dataset.filter(
+        lambda source: source == "LEMMA",
+        input_columns=["source"],
+    )
 
 
 def e3vqa_doc_to_visual(doc):
