@@ -46,6 +46,9 @@ _ANSWER_PHRASES = [
     "选",
     # Japanese
     "答えは",
+    # Markup-style answer tags
+    "<answer",
+    "answer>",
 ]
 
 # Higher = more confident that this is the intended answer.
@@ -92,58 +95,104 @@ def extract_mcq_answer(response: str, choices: Optional[List[str]] = None) -> st
 
     candidates: list = []  # (letter, position, format_name)
 
+    # Match both cases of each choice so lowercase model output ("the answer
+    # is b", "(b) ...") is recognized; candidates always carry the choice
+    # letter exactly as given in ``choices``.
+    case_variants = [(ch, letter) for ch in all_choices for letter in dict.fromkeys([ch, ch.lower()])]
+
     # --- (A) ---
-    for ch in all_choices:
-        if f"({ch})" in text:
-            candidates.append((ch, text.rfind(f"({ch})"), "parentheses"))
+    for ch, letter in case_variants:
+        if f"({letter})" in text:
+            candidates.append((ch, text.rfind(f"({letter})"), "parentheses"))
 
     # --- A. ---
-    for ch in all_choices:
-        if f"{ch}." in text:
-            candidates.append((ch, text.rfind(f"{ch}."), "period"))
+    for ch, letter in case_variants:
+        if f"{letter}." in text:
+            candidates.append((ch, text.rfind(f"{letter}."), "period"))
 
     # --- A: ---
-    for ch in all_choices:
-        if f"{ch}:" in text:
-            candidates.append((ch, text.rfind(f"{ch}:"), "colon"))
+    for ch, letter in case_variants:
+        if f"{letter}:" in text:
+            candidates.append((ch, text.rfind(f"{letter}:"), "colon"))
 
     # --- A) ---
-    for ch in all_choices:
-        if f"{ch})" in text:
-            candidates.append((ch, text.rfind(f"{ch})"), "right_paren"))
+    for ch, letter in case_variants:
+        if f"{letter})" in text:
+            candidates.append((ch, text.rfind(f"{letter})"), "right_paren"))
 
     # --- A followed by space ---
-    for ch in all_choices:
-        if f"{ch} " in text:
-            candidates.append((ch, text.rfind(f"{ch} "), "space"))
+    # Requires a real character before the letter: the padding space must not
+    # count as a boundary, and the trailing "A " of an acronym ("DNA helix")
+    # must not match.  Stays uppercase-only because lowercase " a " is the
+    # English article and appears throughout ordinary prose.
+    for ch, letter in case_variants:
+        if not letter.isupper():
+            continue
+        pos = text.rfind(f"{letter} ")
+        if pos >= 2 and not text[pos - 1].isalnum():
+            candidates.append((ch, pos, "space"))
 
     # --- Common answer phrases ("the answer is A", etc.) ---
     text_lower = text.lower()
-    for phrase in _ANSWER_PHRASES:
-        idx = text_lower.find(phrase)
-        if idx != -1:
-            after = idx + len(phrase)
-            for ch in all_choices:
-                ch_pos = text.find(ch, after)
-                if ch_pos != -1:
-                    candidates.append((ch, ch_pos, "phrase"))
+    # Prefer uppercase letters: trailing prose after the letter ("C and
+    # stop") contains lowercase a-h words ("and") that must not win.  A
+    # lowercase letter is only accepted when no uppercase one follows.
+    for uppercase_only in (True, False):
+        found_before = len(candidates)
+        for phrase in _ANSWER_PHRASES:
+            idx = text_lower.find(phrase)
+            if idx != -1:
+                after = idx + len(phrase)
+                for ch, letter in case_variants:
+                    if uppercase_only != letter.isupper():
+                        continue
+                    if uppercase_only:
+                        ch_pos = text.find(letter, after)
+                    else:
+                        ch_pos = text_lower.find(letter.lower(), after)
+                    if ch_pos != -1:
+                        candidates.append((ch, ch_pos, "phrase"))
+        if len(candidates) > found_before:
+            break
 
     # --- Starts with standalone choice letter (not part of a word) ---
     stripped = text.strip()
-    for ch in all_choices:
-        if stripped.startswith(ch) and (len(stripped) == 1 or not stripped[1].isalpha()):
+    for ch, letter in case_variants:
+        if not stripped.startswith(letter):
+            continue
+        rest = stripped[len(letter) :]
+        first_word = rest.split()[0] if rest.split() else ""
+        # A response-initial "A" followed by a lowercase word is the English
+        # article ("A triangle has three sides"), not a choice; "B is
+        # correct" style statements stay valid.
+        if ch == "A" and first_word and first_word[0].islower() and first_word != "is":
+            continue
+        if len(rest) == 0 or not rest[0].isalpha():
             candidates.append((ch, 0, "start"))
 
     # --- Ends with standalone choice letter ---
-    for ch in all_choices:
-        if stripped.endswith(ch) and (len(stripped) == 1 or not stripped[-2].isalpha()):
+    # Stays uppercase-only: prose routinely ends in a lowercase letter
+    # ("the value of c", "plan b") that is not a choice.
+    for ch, letter in case_variants:
+        if not letter.isupper():
+            continue
+        if stripped.endswith(letter) and (len(stripped) == len(letter) or not stripped[-2].isalpha()):
             candidates.append((ch, len(text) - 1, "end"))
 
     # --- Fallback: any occurrence (lowest priority) ---
     if not candidates:
         for ch in all_choices:
-            if ch in text:
-                candidates.append((ch, text.rfind(ch), "fallback"))
+            pos = text.rfind(ch)
+            if pos == -1:
+                continue
+            # A letter embedded in a larger token ("DNA") is not an answer.
+            if text[pos - 1].isalnum() or text[pos + 1].isalnum():
+                continue
+            # Same article guard as the start format, for a bare sentence-
+            # initial "A" that no other format matched.
+            if ch == "A" and pos == 1 and text[pos + 1 :].lstrip()[:1].islower():
+                continue
+            candidates.append((ch, pos, "fallback"))
 
     if not candidates:
         return ""
