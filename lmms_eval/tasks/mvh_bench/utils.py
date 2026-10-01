@@ -130,6 +130,8 @@ def _groups(results):
 
 
 def mvh_aggregate_acc(results):
+    if not results:
+        return float("nan")
     return 100.0 * sum(r["correct"] for r in results) / len(results)
 
 
