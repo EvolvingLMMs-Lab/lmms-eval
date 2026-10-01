@@ -398,11 +398,17 @@ class Qwen2_5_VL_Interleave(lmms):
             texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in messages]
             image_inputs, video_inputs = process_vision_info(messages)
 
+            # Qwen2.5-VL ships no padding_side in tokenizer_config.json, so it falls back
+            # to "right". Right-padding a decoder-only model puts pad tokens after the
+            # prompt, and generation then continues from padding instead of from the
+            # prompt - silently, with no error. Matches chat/qwen2_5_vl.py.
+            padding_side = "left" if self.batch_size > 1 else "right"
             inputs = self.processor(
                 text=texts,
                 images=image_inputs,
                 videos=video_inputs,
                 padding=True,
+                padding_side=padding_side,
                 # fps=self.fps,
                 return_tensors="pt",
             )
