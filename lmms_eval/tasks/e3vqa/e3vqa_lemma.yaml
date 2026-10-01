@@ -1,0 +1,5 @@
+include: _default_template_yaml
+
+task: e3vqa_lemma
+
+process_docs: !function utils.e3vqa_filter_lemma
