@@ -331,6 +331,24 @@ def parse_mcq(predict_str: str) -> str:
     return ""
 
 
+MCQ_CHOICE_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"]
+
+
+def is_mcq_ground_truth(ground_truth: str) -> bool:
+    """Check whether the ground truth is itself a bare option letter.
+
+    parse_mcq extracts option letters from free text (e.g. "Africa" -> "A"),
+    so it cannot decide whether a question is multiple choice. An MCQ ground
+    truth is just the letter, optionally with wrappers like "(A)" or "A.".
+    """
+    normalized = ground_truth.strip()
+    for char in [",", ".", "!", "?", ";", ":", "'", '"']:
+        normalized = normalized.strip(char)
+    if len(normalized) > 2 and normalized.startswith("(") and normalized.endswith(")"):
+        normalized = normalized[1:-1].strip()
+    return normalized in MCQ_CHOICE_LETTERS
+
+
 def relax_exact_match(predict_str: str, ground_truth: str, relax_portion: float = 0.9) -> float:
     """Check if the prediction string matches the ground truth exactly.
 
@@ -343,16 +361,17 @@ def relax_exact_match(predict_str: str, ground_truth: str, relax_portion: float 
         float: 1.0 if the prediction matches the ground truth, otherwise 0.0.
     """
     # If the question is an mcq
-    if parse_mcq(ground_truth) in ["A", "B", "C", "D", "E", "F", "G", "H"]:
+    if is_mcq_ground_truth(ground_truth):
+        gold_letter = parse_mcq(ground_truth)
         predict_str = parse_mcq(predict_str)
-        if predict_str.lower().strip() == parse_mcq(ground_truth).lower().strip():
+        if predict_str.lower().strip() == gold_letter.lower().strip():
             return 1.0
         return 0.0
     if predict_str in ground_truth and len(predict_str) >= relax_portion * len(ground_truth):
         return 1.0
     if ground_truth in predict_str and len(ground_truth) >= relax_portion * len(predict_str):
         return 1.0
-    return 1.0 if predict_str.strip() == ground_truth.strip() else 0.0
+    return 1.0 if predict_str.strip().casefold() == ground_truth.strip().casefold() else 0.0
 
 
 def llm_as_judge_sync(predict_str, ground_truth, extra_info):
