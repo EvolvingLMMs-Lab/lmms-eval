@@ -449,8 +449,14 @@ class Task(abc.ABC):
         else:
             assert False, f"Task dataset (path={self.DATASET_PATH}, name={self.DATASET_NAME}) must have valid or test docs!"
 
-        # used with caching
-        og_limit = limit
+        # Cached contexts contain this rank's documents, while limit is global.
+        rank_limit = None if limit is None else len(range(offset + rank, offset + limit, world_size))
+
+        def request_metadata(doc_id):
+            metadata = {"task": self.config["task"], "doc_id": doc_id, "repeats": self.config.repeats, "split": split}
+            if isinstance(self.config.metadata, dict):
+                metadata.update(self.config.metadata)
+            return metadata
 
         cache_key = f"requests-{self._config.task}-{self.config.num_fewshot}shot-rank{rank}-world_size{world_size}"
         if offset:
@@ -459,23 +465,28 @@ class Task(abc.ABC):
         cache_key += "-fewshot_as_multiturn" if fewshot_as_multiturn else ""
         cache_key += f"-system_prompt_hash{utils.hash_string(system_instruction)}" if system_instruction is not None else ""
         cache_key += f"-tokenizer{tokenizer_name}"
+        cache_key += f"-request_type{type(self).__module__}.{type(self).__qualname__}-{self.OUTPUT_TYPE}"
+        cache_key = f"requests-v2-{utils.hash_string(cache_key)}"
 
-        cached_instances = load_from_cache(file_name=cache_key)
+        cached_contexts = load_from_cache(file_name=cache_key) if cache_requests and not rewrite_requests_cache else None
 
-        if cache_requests and cached_instances and not rewrite_requests_cache:
-            cached_instances = cached_instances[:limit]
-
-            flattened_instances = [instance for instance_group in cached_instances for instance in instance_group]
-
-            self._instances = flattened_instances
-            return
+        if cached_contexts:
+            instances = []
+            for cached in cached_contexts[:rank_limit]:
+                doc_id = cached["doc_id"]
+                restored = self.construct_requests(doc_id=doc_id, ctx=cached["context"], metadata=request_metadata(doc_id))
+                instances.append(restored if isinstance(restored, list) else [restored])
+            self._instances = [instance for instance_group in instances for instance in instance_group]
+            if self._instances:
+                return
 
         eval_logger.info(f"Building contexts for {self.config.task} on rank {rank}...")
 
         instances = []
+        request_contexts = []
 
         # process all documents when caching is specified for simplicity
-        if cache_requests and (not cached_instances or rewrite_requests_cache) and limit is not None:
+        if cache_requests and not cached_contexts and limit is not None:
             limit = None
 
         doc_id_docs = utils.create_iterator(
@@ -520,20 +531,18 @@ class Task(abc.ABC):
             )
 
             # TODO: we should override self.config.repeats if doing greedy gen so users don't waste time+compute
-            per_task_metadata = {"task": self.config["task"], "doc_id": doc_id, "repeats": self.config.repeats, "split": split}
-            if self.config.metadata and type(self.config.metadata) is dict:  # TODO: temporary fix for metadata loading, ignore the list of dict type.
-                per_task_metadata.update(self.config.metadata)
-
-            inst = self.construct_requests(doc_id=doc_id, ctx=fewshot_ctx, metadata=per_task_metadata)
+            inst = self.construct_requests(doc_id=doc_id, ctx=fewshot_ctx, metadata=request_metadata(doc_id))
 
             if not isinstance(inst, list):
                 inst = [inst]
 
             instances.append(inst)
+            if cache_requests:
+                request_contexts.append({"doc_id": doc_id, "context": fewshot_ctx})
 
         # now flatten, this is to allow slicing to work with pickles
 
-        sliced_instances = instances[:og_limit]
+        sliced_instances = instances[:rank_limit]
 
         flattened_instances = [instance for instance_group in sliced_instances for instance in instance_group]
 
@@ -566,17 +575,8 @@ class Task(abc.ABC):
             else:
                 raise ValueError("task.build_requests() did not find any docs!")
 
-        if cache_requests and (not cached_instances or rewrite_requests_cache):
-            save_to_cache(file_name=cache_key, obj=instances)
-
-        # FIXME: Bo - We need to check if the doc_to_visual if it's exists and restore it. If we use cache, the doc_to_visual will be None since it's not serializable
-        for instance in self._instances:
-            if instance.arguments[2] is None:
-                arguments = (instance.arguments[0], instance.arguments[1], self.doc_to_visual, *instance.arguments[3:])
-            else:
-                arguments = instance.arguments
-
-            instance.arguments = arguments
+        if cache_requests and not cached_contexts:
+            save_to_cache(file_name=cache_key, obj=request_contexts)
 
     @abc.abstractmethod
     def construct_requests(self, doc_id, ctx, **kwargs):
