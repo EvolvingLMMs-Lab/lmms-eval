@@ -27,6 +27,7 @@ metric_list:
 
   - metric: aer
     aggregation: !function utils.mvh_aggregate_aer
+    higher_is_better: null
 
   - metric: binary_acc
     aggregation: !function utils.mvh_aggregate_acc
@@ -42,6 +43,7 @@ metric_list:
 
   - metric: yer
     aggregation: !function utils.mvh_aggregate_yer
+    higher_is_better: null
 
   - metric: mvh_score
     aggregation: !function utils.mvh_aggregate_mvh_score
