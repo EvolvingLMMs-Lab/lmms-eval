@@ -1,0 +1,69 @@
+include: _default_template_yaml
+
+task: mvh_bench
+process_results: !function utils.mvh_process_results_full
+
+metric_list:
+  - metric: cross_instance_mc_acc
+    aggregation: !function utils.mvh_aggregate_acc
+    higher_is_better: true
+
+  - metric: cross_instance_mc_pacc
+    aggregation: !function utils.mvh_aggregate_mc_pacc
+    higher_is_better: true
+
+  - metric: cross_instance_aer
+    aggregation: !function utils.mvh_aggregate_aer
+
+  - metric: cross_instance_binary_acc
+    aggregation: !function utils.mvh_aggregate_acc
+    higher_is_better: true
+
+  - metric: cross_instance_binary_pacc
+    aggregation: !function utils.mvh_aggregate_binary_pacc
+    higher_is_better: true
+
+  - metric: cross_instance_binary_qacc
+    aggregation: !function utils.mvh_aggregate_binary_qacc
+    higher_is_better: true
+
+  - metric: cross_instance_yer
+    aggregation: !function utils.mvh_aggregate_yer
+
+  - metric: cross_instance_mvh_score
+    aggregation: !function utils.mvh_aggregate_mvh_score
+    higher_is_better: true
+
+  - metric: cross_view_mc_acc
+    aggregation: !function utils.mvh_aggregate_acc
+    higher_is_better: true
+
+  - metric: cross_view_mc_pacc
+    aggregation: !function utils.mvh_aggregate_mc_pacc
+    higher_is_better: true
+
+  - metric: cross_view_aer
+    aggregation: !function utils.mvh_aggregate_aer
+
+  - metric: cross_view_binary_acc
+    aggregation: !function utils.mvh_aggregate_acc
+    higher_is_better: true
+
+  - metric: cross_view_binary_pacc
+    aggregation: !function utils.mvh_aggregate_binary_pacc
+    higher_is_better: true
+
+  - metric: cross_view_binary_qacc
+    aggregation: !function utils.mvh_aggregate_binary_qacc
+    higher_is_better: true
+
+  - metric: cross_view_yer
+    aggregation: !function utils.mvh_aggregate_yer
+
+  - metric: cross_view_mvh_score
+    aggregation: !function utils.mvh_aggregate_mvh_score
+    higher_is_better: true
+
+  - metric: mvh_score
+    aggregation: !function utils.mvh_aggregate_total_score
+    higher_is_better: true

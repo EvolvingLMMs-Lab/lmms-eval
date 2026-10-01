@@ -1,0 +1,51 @@
+dataset_path: SNU-ISLAB/MVH-Bench
+test_split: test
+
+output_type: generate_until
+process_docs: !function utils.mvh_process_docs
+
+doc_to_visual: !function utils.mvh_doc_to_visual
+doc_to_text: !function utils.mvh_doc_to_text
+doc_to_target: !function utils.mvh_doc_to_target
+doc_to_messages: !function utils.mvh_doc_to_messages
+
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  do_sample: false
+
+process_results: !function utils.mvh_process_results
+
+metric_list:
+  - metric: mc_acc
+    aggregation: !function utils.mvh_aggregate_acc
+    higher_is_better: true
+
+  - metric: mc_pacc
+    aggregation: !function utils.mvh_aggregate_mc_pacc
+    higher_is_better: true
+
+  - metric: aer
+    aggregation: !function utils.mvh_aggregate_aer
+
+  - metric: binary_acc
+    aggregation: !function utils.mvh_aggregate_acc
+    higher_is_better: true
+
+  - metric: binary_pacc
+    aggregation: !function utils.mvh_aggregate_binary_pacc
+    higher_is_better: true
+
+  - metric: binary_qacc
+    aggregation: !function utils.mvh_aggregate_binary_qacc
+    higher_is_better: true
+
+  - metric: yer
+    aggregation: !function utils.mvh_aggregate_yer
+
+  - metric: mvh_score
+    aggregation: !function utils.mvh_aggregate_mvh_score
+    higher_is_better: true
+
+metadata:
+  version: 0.0

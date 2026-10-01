@@ -1,0 +1,4 @@
+include: _default_template_yaml
+
+task: mvh_bench_cross_instance
+process_docs: !function utils.mvh_process_docs_cross_instance
