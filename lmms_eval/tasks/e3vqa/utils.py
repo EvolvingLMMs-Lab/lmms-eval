@@ -1,6 +1,5 @@
 from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
 
-
 SYSTEM_PROMPT = (
     "You are a helpful assistant.\n"
     "You are provided with two visual inputs in sequence, each captured from a different perspective:\n"
@@ -40,19 +39,9 @@ def e3vqa_doc_to_visual(doc):
 
 
 def _build_question_prompt(doc):
-    formatted_options = "\n".join(
-        f"{chr(65 + i)}) {option}"
-        for i, option in enumerate(doc["options"])
-    )
+    formatted_options = "\n".join(f"{chr(65 + i)}) {option}" for i, option in enumerate(doc["options"]))
 
-    return (
-        f"Question:\n"
-        f"{doc['question']}\n\n"
-        f"Choices:\n"
-        f"{formatted_options}\n\n"
-        f"Only one option is correct.\n"
-        f"Present the answer in the form X).\n\n"
-    )
+    return f"Question:\n{doc['question']}\n\nChoices:\n{formatted_options}\n\nOnly one option is correct.\nPresent the answer in the form X).\n\n"
 
 
 def e3vqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
@@ -101,9 +90,7 @@ def e3vqa_doc_to_target(doc):
         if gold_answer == str(option).strip().lower():
             return chr(65 + i)
 
-    raise ValueError(
-        f"Answer '{doc['answer']}' is not found in options for sample {doc['id']}."
-    )
+    raise ValueError(f"Answer '{doc['answer']}' is not found in options for sample {doc['id']}.")
 
 
 def _score_sample(doc, results):
@@ -157,8 +144,6 @@ def e3vqa_process_results_full(doc, results):
     elif doc["source"] == "LEMMA":
         metrics["lemma_acc"] = score
     else:
-        raise ValueError(
-            f"Unknown source '{doc['source']}' for sample {doc['id']}."
-        )
+        raise ValueError(f"Unknown source '{doc['source']}' for sample {doc['id']}.")
 
     return metrics
