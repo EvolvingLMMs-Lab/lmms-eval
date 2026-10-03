@@ -90,6 +90,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+grt = [
+    "transformers==4.57.6",
+    "qwen-vl-utils==0.0.14",
+    "torch>=2.9,<2.10",
+    "torchvision>=0.24,<0.25",
+    "accelerate>=1.12,<2",
+    "av>=15,<16",
+]
 core = [
     "lmms_eval[server]",
     "lmms_eval[audio]",
@@ -174,6 +182,9 @@ all = [
 "lmms_eval" = ["**/*.yaml", "**/*.yml", "**/*.json", "**/*.txt", "tasks/**/*"]
 "lmms_eval.tui.web.dist" = ["**/*"]
 "lmms_eval.tui.web.dist.assets" = ["**/*"]
+
+[tool.setuptools.exclude-package-data]
+"*" = ["**/__pycache__/*", "**/*.pyc", "**/*.pyo"]
 
 [tool.setuptools.packages.find]
 include = ["lmms_eval*"]

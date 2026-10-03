@@ -1,0 +1,3 @@
+# Compatibility name for the historical educational evaluation.
+include: educational_high_fps.yaml
+task: densevideo
