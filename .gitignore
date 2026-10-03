@@ -16,7 +16,6 @@ dist
 
 # Package manager
 node_modules/
-uv.lock
 
 # IDE / Editor
 .idea
