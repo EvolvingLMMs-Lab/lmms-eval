@@ -534,6 +534,8 @@ python -m lmms_eval --tasks list_with_num
 - [MathVision](https://huggingface.co/datasets/MathLLMs/MathVision) (mathvision)
   - MathVision TestMini (mathvision_testmini)
   - MathVision Test (mathvision_test)
+  - MathVision Relaxed TestMini (mathvision_relaxed_testmini)
+  - MathVision Relaxed Test (mathvision_relaxed_test)
   - MathVision Reason TestMini (mathvision_reason_testmini)
   - MathVision Reason Test (mathvision_reason_test)
 - [MathVista](https://mathvista.github.io/) (mathvista)
