@@ -46,6 +46,7 @@ jobs:
           test/eval/test_task_pipeline.py
           test/eval/test_evaluator.py
           test/eval/test_evaluator_sample_limits.py
+          test/eval/test_math_parser_dependencies.py
           test/eval/test_relax_exact_match_mcq.py
           test/entrypoints/test_job_scheduler_subprocess.py
           test/tui/test_server.py

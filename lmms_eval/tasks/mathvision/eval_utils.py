@@ -2,7 +2,7 @@ import json
 import re
 import time  # 引入time模块
 
-from latex2sympy2 import latex2sympy
+from latex2sympy2_extended import latex2sympy
 from tqdm import tqdm
 
 

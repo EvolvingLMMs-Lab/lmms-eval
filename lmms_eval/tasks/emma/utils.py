@@ -5,7 +5,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import yaml
-from latex2sympy2 import latex2sympy
+from latex2sympy2_extended import latex2sympy
 from sympy import simplify
 from word2number import w2n
 
