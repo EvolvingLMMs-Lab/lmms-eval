@@ -83,7 +83,7 @@ def test_video_index_frame_rule():
 
 
 def test_video_index_frames_come_from_the_local_copy(monkeypatch, tmp_path):
-    pytest.importorskip("decord")
+    pytest.importorskip("av")
     _write_test_video(tmp_path / "videos" / "demo.mp4")
     monkeypatch.setenv("VIDEO_INDEX_DIR", str(tmp_path))
     kwargs = {"intro": video_index_utils.INTRO_FRAMES, "fps": 1.0, "max_frames": 8, "short_side": 32}

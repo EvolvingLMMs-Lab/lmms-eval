@@ -16,14 +16,12 @@ import random
 import re
 from collections import defaultdict
 from functools import lru_cache
-from typing import Any, Sequence
+from typing import Sequence
 
 import numpy as np
 from datasets import Dataset
 from loguru import logger as eval_logger
 from PIL import Image
-
-from lmms_eval.models.model_utils.load_video import import_decord
 
 HF_REPO_ID = "Video-Index/Video-Index"
 
@@ -142,20 +140,38 @@ def one_fps_indices(n_frames: int, native_fps: float, duration: float | None, ra
     return idx
 
 
-def read_frames(reader: Any, indices: Sequence[int]) -> list[np.ndarray]:
-    """Frames (numpy arrays, RGB) at the given indices of a decord VideoReader, decoded in stream order.
+def read_frames(video_file: str, indices: Sequence[int]) -> list[np.ndarray]:
+    """Frames (numpy arrays, RGB) at the given indices of the first video stream, decoded in stream order.
     Random access returns a neighbouring frame on some of the videos; the videos hold at most 1,024
     stored frames, so decoding from the first frame is affordable."""
+    import av
+
     wanted = set(int(i) for i in indices)
     if not wanted:
         return []
     frames = {}
-    reader.seek(0)
-    for i in range(max(wanted) + 1):
-        frame = reader.next()
-        if i in wanted:
-            frames[i] = frame.asnumpy()
+    last = max(wanted)
+    with av.open(video_file) as container:
+        stream = container.streams.video[0]
+        for i, frame in enumerate(container.decode(stream)):
+            if i in wanted:
+                frames[i] = frame.to_ndarray(format="rgb24")
+            if i >= last:
+                break
     return [frames[int(i)] for i in indices]
+
+
+def video_stream_info(video_file: str) -> tuple[int, float]:
+    """Number of stored frames and average frame rate of the first video stream."""
+    import av
+
+    with av.open(video_file) as container:
+        stream = container.streams.video[0]
+        rate = stream.average_rate or stream.guessed_rate or stream.base_rate
+        n_frames = int(stream.frames or 0)
+        if n_frames <= 0:
+            n_frames = sum(1 for _ in container.decode(stream))
+    return n_frames, float(rate) if rate else 0.0
 
 
 # ------------------------------------------------------------------ documents
@@ -202,9 +218,8 @@ def _video_file(doc: dict) -> str:
 
 @lru_cache(maxsize=4096)
 def _frame_indices(video_file: str, duration: float | None, fps: float, max_frames: int) -> tuple[int, ...]:
-    decord = import_decord()
-    reader = decord.VideoReader(video_file, ctx=decord.cpu(0), num_threads=1)
-    return tuple(one_fps_indices(len(reader), reader.get_avg_fps(), duration, rate=fps, cap=max_frames))
+    n_frames, avg_fps = video_stream_info(video_file)
+    return tuple(one_fps_indices(n_frames, avg_fps, duration, rate=fps, cap=max_frames))
 
 
 def _frame_settings(kwargs: dict | None) -> tuple[float, int, int]:
@@ -227,10 +242,8 @@ def video_index_doc_to_visual_frames(doc: dict, lmms_eval_specific_kwargs: dict 
     fps, max_frames, short_side = _frame_settings(lmms_eval_specific_kwargs)
     video_file = _video_file(doc)
     indices = _frame_indices(video_file, doc.get("duration_s"), fps, max_frames)
-    decord = import_decord()
-    reader = decord.VideoReader(video_file, ctx=decord.cpu(0), num_threads=1)
     frames = []
-    for frame in read_frames(reader, indices):
+    for frame in read_frames(video_file, indices):
         image = Image.fromarray(frame).convert("RGB")
         width, height = image.size
         if short_side and min(width, height) > short_side:
