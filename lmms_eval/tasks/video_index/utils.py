@@ -58,6 +58,7 @@ def permutations_for(item_id: str, k: int, n_perm: int = N_PERM, seed: int = PER
 
 
 def render_options(texts: list[str]) -> str:
+    """Render option texts as lettered lines ("A. ...", "B. ...")."""
     return "\n".join(f"{LETTERS[i]}. {t}" for i, t in enumerate(texts))
 
 
@@ -293,20 +294,25 @@ def _accuracy(results: list[dict], group: str | None = None) -> float:
 
 
 def video_index_aggregate_overall(results: list[dict]) -> float:
+    """Accuracy in percent over all items."""
     return _accuracy(results)
 
 
 def video_index_aggregate_perception(results: list[dict]) -> float:
+    """Accuracy in percent over the perception items."""
     return _accuracy(results, "perception")
 
 
 def video_index_aggregate_temporal(results: list[dict]) -> float:
+    """Accuracy in percent over the temporal items."""
     return _accuracy(results, "temporal")
 
 
 def video_index_aggregate_spatial(results: list[dict]) -> float:
+    """Accuracy in percent over the spatial / physical items."""
     return _accuracy(results, "spatial_physical")
 
 
 def video_index_aggregate_reasoning(results: list[dict]) -> float:
+    """Accuracy in percent over the reasoning / knowledge items."""
     return _accuracy(results, "reasoning_knowledge")
