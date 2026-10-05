@@ -1,0 +1,12 @@
+# Video-Index, frame protocol of the paper: one frame per second of the timeline, at most
+# 8 frames (uniform thinning beyond), short side 224 pixels; frames are passed as images.
+task: video_index_8frame
+include: _default_template_yaml
+doc_to_visual: !function utils.video_index_doc_to_visual_frames
+doc_to_text: !function utils.video_index_doc_to_text_frames
+lmms_eval_specific_kwargs:
+  default:
+    intro: "You are given {n} frame(s) sampled from a video. Answer the question based on these frames."
+    fps: 1.0
+    max_frames: 8
+    short_side: 224

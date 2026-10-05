@@ -1,0 +1,9 @@
+# Video-Index, video protocol: the model wrapper receives the video file and applies its own
+# frame sampling.
+task: video_index
+include: _default_template_yaml
+doc_to_visual: !function utils.video_index_doc_to_visual
+doc_to_text: !function utils.video_index_doc_to_text
+lmms_eval_specific_kwargs:
+  default:
+    intro: "You are given a video. Answer the question based on this video."

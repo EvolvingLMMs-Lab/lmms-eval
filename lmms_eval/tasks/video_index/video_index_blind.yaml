@@ -1,0 +1,10 @@
+# Video-Index, blind protocol: question and options only, four option permutations per item.
+# The blind score is the mean over the permutations; gain = video accuracy - blind accuracy.
+task: video_index_blind
+include: _default_template_yaml
+process_docs: !function utils.video_index_blind_process_docs
+doc_to_visual: !function utils.video_index_doc_to_visual_empty
+doc_to_text: !function utils.video_index_doc_to_text
+lmms_eval_specific_kwargs:
+  default:
+    intro: "You are given NO frames from the video. Answer the question from the text alone."
