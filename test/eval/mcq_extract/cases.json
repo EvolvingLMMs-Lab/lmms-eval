@@ -2735,6 +2735,1308 @@
       ],
       "expected": "",
       "rationale": "Two different bare selections in one answer scope are ambiguous, not an explanation."
+    },
+    {
+      "id": "hack_mmmu_bracket_over_final",
+      "category": "hack_mmmu",
+      "response": "The diagram labels an earlier candidate (A). The answer is B.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "An incidental parenthesized candidate must not override a later explicit answer.",
+      "benchmark_context": {
+        "parser": "mmmu",
+        "mechanism": "bracket_priority",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_invalid_final",
+      "category": "hack_mmmu",
+      "response": "B was an earlier candidate. The answer is Z.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The final selection is unoffered; do not revive the earlier B.",
+      "benchmark_context": {
+        "parser": "mmmu",
+        "mechanism": "fallback_after_invalid_final",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_bracket_over_container",
+      "category": "hack_mmmu",
+      "response": "The draft mentions (D). <answer>c</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "The answer container scopes the selection to lowercase c.",
+      "benchmark_context": {
+        "parser": "mmmu",
+        "mechanism": "bracket_priority",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_option_echo",
+      "category": "hack_mmmu",
+      "response": "(A) red\n(B) blue\n(C) green\n(D) yellow",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Repeating all options does not select the final listed one.",
+      "benchmark_context": {
+        "parser": "mmmu",
+        "mechanism": "last_candidate_from_option_echo",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_lowercase_random_fallback",
+      "category": "hack_mmmu",
+      "response": "the answer is c because the shapes match exactly",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "A lowercase explicit answer is deterministic, not a reason to guess.",
+      "benchmark_context": {
+        "parser": "mmmu",
+        "mechanism": "case_sensitive_random_fallback",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_refusal_random_fallback",
+      "category": "hack_mmmu",
+      "response": "I cannot determine which option matches the image.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A refusal offers no selection and must not receive a random letter.",
+      "benchmark_context": {
+        "parser": "mmmu",
+        "mechanism": "random_fallback",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_acronym_suffix",
+      "category": "hack_mmmu",
+      "response": "The diagram uses DNA labels throughout, without selecting anything.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The A inside DNA is not a standalone answer.",
+      "benchmark_context": {
+        "parser": "mmmu",
+        "mechanism": "missing_left_boundary",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_word_before_period",
+      "category": "hack_mmmu",
+      "response": "The note says LOGIC. No selection was made.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The C before the period is part of LOGIC.",
+      "benchmark_context": {
+        "parser": "mmmu",
+        "mechanism": "missing_left_boundary",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_negated_option_text",
+      "category": "hack_mmmu",
+      "response": "I cannot decide; the object is not yellow at all.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Negating an option's text does not select its label.",
+      "benchmark_context": {
+        "parser": "mmmu",
+        "mechanism": "unscoped_option_text",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_quoted_bracket",
+      "category": "hack_mmmu",
+      "response": "The question mentions (C). Answer: A",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "A",
+      "rationale": "A quoted candidate is incidental to the explicit final A.",
+      "benchmark_context": {
+        "parser": "mmmu",
+        "mechanism": "bracket_priority",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_two_alternatives",
+      "category": "hack_mmmu",
+      "response": "A or D",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A single-choice extractor must abstain from two alternatives.",
+      "benchmark_context": {
+        "parser": "mmmu",
+        "mechanism": "last_candidate_from_alternatives",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_eight_choice_container",
+      "category": "hack_mmmu",
+      "response": "The draft references (A). <answer>h</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H"
+      ],
+      "expected": "H",
+      "rationale": "Eight-choice tasks still use the scoped final answer.",
+      "benchmark_context": {
+        "parser": "mmmu",
+        "mechanism": "bracket_priority",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow",
+          "E": "shape 5",
+          "F": "shape 6",
+          "G": "shape 7",
+          "H": "shape 8"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_pro_embedded_j",
+      "category": "hack_mmmu_pro",
+      "response": "Answer: JUNK",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J"
+      ],
+      "expected": "",
+      "rationale": "J embedded in JUNK is not a bounded choice token.",
+      "benchmark_context": {
+        "parser": "mmmu_pro",
+        "mechanism": "unbounded_answer_substring",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow",
+          "E": "shape 5",
+          "F": "shape 6",
+          "G": "shape 7",
+          "H": "shape 8",
+          "I": "shape 9",
+          "J": "shape 10"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_pro_embedded_g",
+      "category": "hack_mmmu_pro",
+      "response": "Answer: GYM",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J"
+      ],
+      "expected": "",
+      "rationale": "A letter in a word after Answer: is not a selection.",
+      "benchmark_context": {
+        "parser": "mmmu_pro",
+        "mechanism": "unbounded_answer_substring",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow",
+          "E": "shape 5",
+          "F": "shape 6",
+          "G": "shape 7",
+          "H": "shape 8",
+          "I": "shape 9",
+          "J": "shape 10"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_pro_invalid_final",
+      "category": "hack_mmmu_pro",
+      "response": "(B) is an earlier candidate. Answer: Z",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J"
+      ],
+      "expected": "",
+      "rationale": "The last explicit answer is invalid, so the earlier B is masked.",
+      "benchmark_context": {
+        "parser": "mmmu_pro",
+        "mechanism": "fallback_after_invalid_final",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow",
+          "E": "shape 5",
+          "F": "shape 6",
+          "G": "shape 7",
+          "H": "shape 8",
+          "I": "shape 9",
+          "J": "shape 10"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_pro_invalid_container",
+      "category": "hack_mmmu_pro",
+      "response": "(B) is an earlier candidate. Answer: <answer>Z</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J"
+      ],
+      "expected": "",
+      "rationale": "An invalid scoped final answer must not revive a bracketed distractor.",
+      "benchmark_context": {
+        "parser": "mmmu_pro",
+        "mechanism": "fallback_after_invalid_container",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow",
+          "E": "shape 5",
+          "F": "shape 6",
+          "G": "shape 7",
+          "H": "shape 8",
+          "I": "shape 9",
+          "J": "shape 10"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_pro_lowercase_with_identifier",
+      "category": "hack_mmmu_pro",
+      "response": "(A) is in the prompt. Answer: c because an ID_B marker appears.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J"
+      ],
+      "expected": "C",
+      "rationale": "The adjacent lowercase c selects C; identifier letters are incidental.",
+      "benchmark_context": {
+        "parser": "mmmu_pro",
+        "mechanism": "case_sensitive_unbounded_scan",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow",
+          "E": "shape 5",
+          "F": "shape 6",
+          "G": "shape 7",
+          "H": "shape 8",
+          "I": "shape 9",
+          "J": "shape 10"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_pro_ten_choice_alternatives",
+      "category": "hack_mmmu_pro",
+      "response": "Answer: B or J",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J"
+      ],
+      "expected": "",
+      "rationale": "Two offered choices in one answer are ambiguous.",
+      "benchmark_context": {
+        "parser": "mmmu_pro",
+        "mechanism": "fallback_after_multiple_selections",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow",
+          "E": "shape 5",
+          "F": "shape 6",
+          "G": "shape 7",
+          "H": "shape 8",
+          "I": "shape 9",
+          "J": "shape 10"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_pro_lowercase_correction",
+      "category": "hack_mmmu_pro",
+      "response": "Answer: C\nActually, the answer is j.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J"
+      ],
+      "expected": "J",
+      "rationale": "The later explicit lowercase correction selects J.",
+      "benchmark_context": {
+        "parser": "mmmu_pro",
+        "mechanism": "uppercase_scan_masks_correction",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow",
+          "E": "shape 5",
+          "F": "shape 6",
+          "G": "shape 7",
+          "H": "shape 8",
+          "I": "shape 9",
+          "J": "shape 10"
+        }
+      }
+    },
+    {
+      "id": "hack_mmmu_pro_scoped_lowercase_j",
+      "category": "hack_mmmu_pro",
+      "response": "(D) was a draft. Answer: <answer>j</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J"
+      ],
+      "expected": "J",
+      "rationale": "A valid lowercase scoped answer should not trigger heuristic fallback.",
+      "benchmark_context": {
+        "parser": "mmmu_pro",
+        "mechanism": "bracket_priority_after_anchor_failure",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow",
+          "E": "shape 5",
+          "F": "shape 6",
+          "G": "shape 7",
+          "H": "shape 8",
+          "I": "shape 9",
+          "J": "shape 10"
+        }
+      }
+    },
+    {
+      "id": "hack_videommmu_period_over_final",
+      "category": "hack_videommmu",
+      "response": "A. Previous draft.\nAnswer: D",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "The explicit final D overrides an earlier punctuated label.",
+      "benchmark_context": {
+        "parser": "videommmu",
+        "mechanism": "period_priority",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_videommmu_colon_over_final",
+      "category": "hack_videommmu",
+      "response": "(D) was a draft.\nB: tentative.\nThe answer is C",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "A colon label cannot override the final explicit C.",
+      "benchmark_context": {
+        "parser": "videommmu",
+        "mechanism": "colon_priority",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_videommmu_acronym_period",
+      "category": "hack_videommmu",
+      "response": "The notice reads DNA. It does not select an option.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The A at the end of DNA is not a label.",
+      "benchmark_context": {
+        "parser": "videommmu",
+        "mechanism": "missing_left_boundary",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_videommmu_option_echo",
+      "category": "hack_videommmu",
+      "response": "A. red\nB. blue\nC. green\nD. yellow",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An option list alone does not select D.",
+      "benchmark_context": {
+        "parser": "videommmu",
+        "mechanism": "last_candidate_from_option_echo",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_videommmu_invalid_final",
+      "category": "hack_videommmu",
+      "response": "C: earlier draft.\nAnswer: Z",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An unoffered final choice masks earlier formatting evidence.",
+      "benchmark_context": {
+        "parser": "videommmu",
+        "mechanism": "fallback_after_invalid_final",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_videommmu_bracket_over_container",
+      "category": "hack_videommmu",
+      "response": "(A) is a previous candidate.\n<answer>d</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "The scoped lowercase final answer wins.",
+      "benchmark_context": {
+        "parser": "videommmu",
+        "mechanism": "bracket_priority",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_videommmu_alternatives_after_colon",
+      "category": "hack_videommmu",
+      "response": "A: earlier draft.\nAnswer: B/C",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The final alternatives must not fall back to an earlier colon label.",
+      "benchmark_context": {
+        "parser": "videommmu",
+        "mechanism": "fallback_after_multiple_selections",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_videommmu_five_choice_container",
+      "category": "hack_videommmu",
+      "response": "(E) was a previous candidate. <answer>a</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "expected": "A",
+      "rationale": "A five-choice task still honors the answer container.",
+      "benchmark_context": {
+        "parser": "videommmu",
+        "mechanism": "bracket_priority",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow",
+          "E": "shape 5"
+        }
+      }
+    },
+    {
+      "id": "hack_mmbench_unoffered_e",
+      "category": "hack_mmbench",
+      "response": "E",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "With four offered choices, the prefetch rejection label E is not a valid answer.",
+      "benchmark_context": {
+        "parser": "mmbench",
+        "mechanism": "hardcoded_five_choice_prefetch",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmbench_short_article",
+      "category": "hack_mmbench",
+      "response": "A cat",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A is an English article before a noun, not a selection.",
+      "benchmark_context": {
+        "parser": "mmbench",
+        "mechanism": "short_article_as_label",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmbench_mixed_punctuation_alternatives",
+      "category": "hack_mmbench",
+      "response": "B or C.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Punctuation on one alternative cannot make the other unambiguous.",
+      "benchmark_context": {
+        "parser": "mmbench",
+        "mechanism": "format_bucket_hides_alternative",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmbench_bracket_over_lowercase",
+      "category": "hack_mmbench",
+      "response": "(D) was a previous candidate. Answer: b",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "A lowercase final answer overrides a bracketed distractor.",
+      "benchmark_context": {
+        "parser": "mmbench",
+        "mechanism": "case_sensitive_prefetch",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmbench_negated_option_text",
+      "category": "hack_mmbench",
+      "response": "I am not choosing the blue object at all.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Mentioning blue under negation does not select B.",
+      "benchmark_context": {
+        "parser": "mmbench",
+        "mechanism": "unscoped_option_text",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmbench_invalid_final",
+      "category": "hack_mmbench",
+      "response": "B was a previous candidate. Answer: Z",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An invalid final selection must not preserve an earlier uppercase candidate.",
+      "benchmark_context": {
+        "parser": "mmbench",
+        "mechanism": "prefetch_masks_invalid_final",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmbench_ambiguous_container",
+      "category": "hack_mmbench",
+      "response": "(C) was a previous candidate. <answer>A and D</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The scoped answer offers two labels and requires abstention.",
+      "benchmark_context": {
+        "parser": "mmbench",
+        "mechanism": "prefetch_masks_ambiguous_container",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_mmbench_option_text_over_lowercase",
+      "category": "hack_mmbench",
+      "response": "The label ID_C is incidental. Answer: b because the object is red",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "The adjacent b wins over a differently labeled option's text.",
+      "benchmark_context": {
+        "parser": "mmbench",
+        "mechanism": "option_text_masks_explicit_answer",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_seedbench_concatenated_alphabet",
+      "category": "hack_seedbench",
+      "response": "ABCD",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Concatenating all choices is not a bounded answer token.",
+      "benchmark_context": {
+        "parser": "seedbench",
+        "mechanism": "first_character_only",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_seedbench_negated_leading_choice",
+      "category": "hack_seedbench",
+      "response": "B is not my selection.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A leading letter under explicit negation does not assert correctness.",
+      "benchmark_context": {
+        "parser": "seedbench",
+        "mechanism": "first_character_only",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_seedbench_later_correction",
+      "category": "hack_seedbench",
+      "response": "C was rejected. The answer is A.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "A",
+      "rationale": "The final explicit A overrides the initial rejected candidate.",
+      "benchmark_context": {
+        "parser": "seedbench",
+        "mechanism": "first_character_masks_correction",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_seedbench_article",
+      "category": "hack_seedbench",
+      "response": "A close-up view of a triangle.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A introduces ordinary noun prose.",
+      "benchmark_context": {
+        "parser": "seedbench",
+        "mechanism": "first_character_only",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_seedbench_uppercase_word",
+      "category": "hack_seedbench",
+      "response": "Doubt remains; no option is selected.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The D in Doubt is embedded in a word.",
+      "benchmark_context": {
+        "parser": "seedbench",
+        "mechanism": "first_character_only",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_seedbench_lowercase_word",
+      "category": "hack_seedbench",
+      "response": "cubic structures are visible.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The c in cubic is not a lowercase answer.",
+      "benchmark_context": {
+        "parser": "seedbench",
+        "mechanism": "first_character_only",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_seedbench_slash_alternatives",
+      "category": "hack_seedbench",
+      "response": "\n B/C \n",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Trimming whitespace cannot make two alternatives into one choice.",
+      "benchmark_context": {
+        "parser": "seedbench",
+        "mechanism": "first_character_only",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_seedbench_scoped_correction",
+      "category": "hack_seedbench",
+      "response": "\tA: rejected draft.\n<answer>D</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "The answer container overrides the earlier draft label.",
+      "benchmark_context": {
+        "parser": "seedbench",
+        "mechanism": "first_character_masks_container",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_ai2d_leading_over_final",
+      "category": "hack_ai2d",
+      "response": "A. Earlier draft.\nThe answer is D.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "An explicit final D overrides the first punctuated label.",
+      "benchmark_context": {
+        "parser": "ai2d",
+        "mechanism": "leading_label_only",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_ai2d_option_echo",
+      "category": "hack_ai2d",
+      "response": "B. blue\nC. green\nD. yellow",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Listing multiple options does not select the first one.",
+      "benchmark_context": {
+        "parser": "ai2d",
+        "mechanism": "leading_label_only",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_ai2d_invalid_final",
+      "category": "hack_ai2d",
+      "response": "C. Earlier draft.\nAnswer: Z",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The unoffered final choice masks C.",
+      "benchmark_context": {
+        "parser": "ai2d",
+        "mechanism": "leading_label_masks_invalid_final",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_ai2d_ambiguous_container",
+      "category": "hack_ai2d",
+      "response": "D. Earlier draft.\n<answer>A or B</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A final scoped pair of alternatives requires abstention.",
+      "benchmark_context": {
+        "parser": "ai2d",
+        "mechanism": "leading_label_masks_ambiguous_container",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_ai2d_scoped_lowercase",
+      "category": "hack_ai2d",
+      "response": "B. Earlier draft.\n<answer>c</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "The final lowercase scoped selection is C.",
+      "benchmark_context": {
+        "parser": "ai2d",
+        "mechanism": "leading_label_masks_container",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_ai2d_final_alternatives",
+      "category": "hack_ai2d",
+      "response": "A. Earlier draft.\nAnswer: D or B",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The final declaration is ambiguous.",
+      "benchmark_context": {
+        "parser": "ai2d",
+        "mechanism": "leading_label_masks_alternatives",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_ai2d_unoffered_leading_label",
+      "category": "hack_ai2d",
+      "response": "E. A label absent from the offered options.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A syntactically formatted but unoffered letter is invalid.",
+      "benchmark_context": {
+        "parser": "ai2d",
+        "mechanism": "missing_choice_validation",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
+    },
+    {
+      "id": "hack_ai2d_invalid_container",
+      "category": "hack_ai2d",
+      "response": "C. Earlier draft.\n<answer>Z</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An invalid final container masks the earlier C.",
+      "benchmark_context": {
+        "parser": "ai2d",
+        "mechanism": "leading_label_masks_invalid_container",
+        "options": {
+          "A": "red",
+          "B": "blue",
+          "C": "green",
+          "D": "yellow"
+        }
+      }
     }
   ]
 }
