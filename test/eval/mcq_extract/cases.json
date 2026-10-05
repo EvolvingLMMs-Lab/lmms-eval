@@ -1,0 +1,2740 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "regression_lowercase_explanation_dog",
+      "category": "regression",
+      "response": "The answer is b because the image shows a dog.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "base_expected": "D",
+      "rationale": "The explicit answer is b; letters in the explanation are not selections."
+    },
+    {
+      "id": "regression_lowercase_because",
+      "category": "regression",
+      "response": "the answer is b because it is correct",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "base_expected": "A",
+      "rationale": "The adjacent standalone b is the answer, not the a in because."
+    },
+    {
+      "id": "regression_closed_lowercase_tag",
+      "category": "regression",
+      "response": "<answer>b</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "base_expected": "A",
+      "rationale": "Only tag content is an answer; closing markup is excluded."
+    },
+    {
+      "id": "regression_cubic_period",
+      "category": "regression",
+      "response": "The shape is cubic. I think so.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "base_expected": "C",
+      "rationale": "The c is embedded in cubic, not an option token."
+    },
+    {
+      "id": "regression_data_period",
+      "category": "regression",
+      "response": "I need more data. Please clarify.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "base_expected": "A",
+      "rationale": "The final a of data is part of a word."
+    },
+    {
+      "id": "regression_a_explanation",
+      "category": "regression",
+      "response": "A because it is the only valid option",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "A",
+      "base_expected": "",
+      "rationale": "Because introduces a justification for the leading answer A, not an English article."
+    },
+    {
+      "id": "legacy_bare_upper",
+      "category": "legacy",
+      "response": "B",
+      "choices": null,
+      "expected": "B",
+      "rationale": "Preserve the existing uppercase bare answer."
+    },
+    {
+      "id": "legacy_correct_parenthesized",
+      "category": "legacy",
+      "response": "The correct answer is (B).",
+      "choices": null,
+      "expected": "B",
+      "rationale": "The correct-answer phrase selects the parenthesized letter."
+    },
+    {
+      "id": "legacy_answer_colon",
+      "category": "legacy",
+      "response": "Answer: A",
+      "choices": null,
+      "expected": "A",
+      "rationale": "A is adjacent to an explicit answer marker."
+    },
+    {
+      "id": "legacy_pick_explanation",
+      "category": "legacy",
+      "response": "I pick C and stop",
+      "choices": null,
+      "expected": "C",
+      "rationale": "The phrase chooses C; and stop is prose, not another selection."
+    },
+    {
+      "id": "legacy_best_option",
+      "category": "legacy",
+      "response": "The best option is B)",
+      "choices": null,
+      "expected": "B",
+      "rationale": "The best-option declaration selects the adjacent letter with a closing parenthesis."
+    },
+    {
+      "id": "legacy_option_correct",
+      "category": "legacy",
+      "response": "Option A is correct",
+      "choices": null,
+      "expected": "A",
+      "rationale": "Option A is directly asserted to be correct."
+    },
+    {
+      "id": "legacy_lower_phrase_b",
+      "category": "legacy",
+      "response": "the answer is b",
+      "choices": null,
+      "expected": "B",
+      "rationale": "Explicit lowercase letters normalize to uppercase."
+    },
+    {
+      "id": "legacy_lower_parenthesized",
+      "category": "legacy",
+      "response": "(b) the nucleus",
+      "choices": null,
+      "expected": "B",
+      "rationale": "A leading wrapped lowercase label identifies the choice."
+    },
+    {
+      "id": "legacy_lower_period",
+      "category": "legacy",
+      "response": "b. the nucleus",
+      "choices": null,
+      "expected": "B",
+      "rationale": "A leading punctuated lowercase label identifies the choice."
+    },
+    {
+      "id": "legacy_lower_phrase_a",
+      "category": "legacy",
+      "response": "the answer is a",
+      "choices": null,
+      "expected": "A",
+      "rationale": "An explicit answer marker disambiguates a from an article."
+    },
+    {
+      "id": "legacy_lower_assertion",
+      "category": "legacy",
+      "response": "b is correct",
+      "choices": null,
+      "expected": "B",
+      "rationale": "A direct correctness assertion selects lowercase b."
+    },
+    {
+      "id": "legacy_bare_lower_b",
+      "category": "legacy",
+      "response": "b",
+      "choices": null,
+      "expected": "B",
+      "rationale": "A response consisting only of a lowercase letter is a selection."
+    },
+    {
+      "id": "legacy_bare_lower_a",
+      "category": "legacy",
+      "response": "a",
+      "choices": null,
+      "expected": "A",
+      "rationale": "A bare lowercase a is an answer despite its article use in prose."
+    },
+    {
+      "id": "legacy_open_answer_tag",
+      "category": "legacy",
+      "response": "<answer> c",
+      "choices": null,
+      "expected": "C",
+      "rationale": "Preserve the legacy unclosed answer marker with adjacent c."
+    },
+    {
+      "id": "legacy_open_answer_marker",
+      "category": "legacy",
+      "response": "answer> d",
+      "choices": null,
+      "expected": "D",
+      "rationale": "Preserve the legacy answer marker missing its opening angle bracket."
+    },
+    {
+      "id": "legacy_article_triangle",
+      "category": "legacy",
+      "response": "A triangle has three sides.",
+      "choices": null,
+      "expected": "",
+      "rationale": "The initial A is an article introducing a noun."
+    },
+    {
+      "id": "legacy_acronym_dna",
+      "category": "legacy",
+      "response": "The DNA helix unwinds during replication.",
+      "choices": null,
+      "expected": "",
+      "rationale": "Letters inside DNA are not selections."
+    },
+    {
+      "id": "legacy_article_movie",
+      "category": "legacy",
+      "response": "I saw a movie",
+      "choices": null,
+      "expected": "",
+      "rationale": "The internal lowercase a is an English article."
+    },
+    {
+      "id": "legacy_article_unit",
+      "category": "legacy",
+      "response": "It costs 5 a unit",
+      "choices": null,
+      "expected": "",
+      "rationale": "The lowercase a is part of ordinary prose about units."
+    },
+    {
+      "id": "legacy_variable_lower_c",
+      "category": "legacy",
+      "response": "the value of c",
+      "choices": null,
+      "expected": "",
+      "rationale": "A variable mentioned in prose is not an answer."
+    },
+    {
+      "id": "legacy_plan_lower_b",
+      "category": "legacy",
+      "response": "I'll go with plan b",
+      "choices": null,
+      "expected": "",
+      "rationale": "Plan b is ordinary prose without an adjacent choice token at a selection marker."
+    },
+    {
+      "id": "legacy_no_letters",
+      "category": "legacy",
+      "response": "no letters here",
+      "choices": null,
+      "expected": "",
+      "rationale": "There is no answer evidence."
+    },
+    {
+      "id": "legacy_empty",
+      "category": "legacy",
+      "response": "",
+      "choices": null,
+      "expected": "",
+      "rationale": "Empty text cannot select an answer."
+    },
+    {
+      "id": "legacy_spaces",
+      "category": "legacy",
+      "response": "   ",
+      "choices": null,
+      "expected": "",
+      "rationale": "Whitespace-only text cannot select an answer."
+    },
+    {
+      "id": "legacy_a_period_explanation",
+      "category": "legacy",
+      "response": "A. because it handles text better",
+      "choices": [
+        "A",
+        "B"
+      ],
+      "expected": "A",
+      "rationale": "Preserve the existing leading A label with a justification."
+    },
+    {
+      "id": "legacy_a_parenthesized_explanation",
+      "category": "legacy",
+      "response": "(A) because it handles text better",
+      "choices": [
+        "A",
+        "B"
+      ],
+      "expected": "A",
+      "rationale": "Preserve the existing wrapped A label with a justification."
+    },
+    {
+      "id": "input_null",
+      "category": "input",
+      "response": null,
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Missing text returns the empty answer."
+    },
+    {
+      "id": "input_tabs_newlines",
+      "category": "input",
+      "response": "\t\n\r\n",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Line separators without content are empty input."
+    },
+    {
+      "id": "input_unicode_whitespace",
+      "category": "input",
+      "response": "  \n",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Unicode whitespace without content is empty input."
+    },
+    {
+      "id": "input_punctuation",
+      "category": "input",
+      "response": "...",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Punctuation by itself carries no choice."
+    },
+    {
+      "id": "input_refusal",
+      "category": "input",
+      "response": "I cannot determine the answer from the image.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A refusal with no adjacent letter must abstain."
+    },
+    {
+      "id": "input_number",
+      "category": "input",
+      "response": "2",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A number is not one of the ASCII letter choices."
+    },
+    {
+      "id": "input_empty_choices_default",
+      "category": "input",
+      "response": "h",
+      "choices": [],
+      "expected": "H",
+      "rationale": "An empty choices list preserves the default A-H alphabet."
+    },
+    {
+      "id": "bare_outer_whitespace",
+      "category": "bare",
+      "response": "\n\t C \t\n",
+      "choices": null,
+      "expected": "C",
+      "rationale": "Surrounding whitespace does not change a bare choice."
+    },
+    {
+      "id": "bare_default_upper_h",
+      "category": "bare",
+      "response": "H",
+      "choices": null,
+      "expected": "H",
+      "rationale": "The default alphabet includes H."
+    },
+    {
+      "id": "bare_default_lower_h",
+      "category": "bare",
+      "response": "h",
+      "choices": null,
+      "expected": "H",
+      "rationale": "Case normalization also applies at the end of the default alphabet."
+    },
+    {
+      "id": "bare_default_invalid_i",
+      "category": "bare",
+      "response": "I",
+      "choices": null,
+      "expected": "",
+      "rationale": "I lies outside the default A-H alphabet."
+    },
+    {
+      "id": "bare_default_invalid_z",
+      "category": "bare",
+      "response": "z",
+      "choices": null,
+      "expected": "",
+      "rationale": "A bare letter outside the default choices is rejected."
+    },
+    {
+      "id": "bare_period",
+      "category": "bare",
+      "response": "C.",
+      "choices": null,
+      "expected": "C",
+      "rationale": "A bare choice followed by a label period remains a selection."
+    },
+    {
+      "id": "bare_colon",
+      "category": "bare",
+      "response": "d:",
+      "choices": null,
+      "expected": "D",
+      "rationale": "A bare lowercase label with a colon remains a selection."
+    },
+    {
+      "id": "bare_right_paren",
+      "category": "bare",
+      "response": "b)",
+      "choices": null,
+      "expected": "B",
+      "rationale": "The closing parenthesis is accepted as a choice label marker."
+    },
+    {
+      "id": "label_uppercase_period",
+      "category": "label",
+      "response": "B. a yellow bus",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "One leading period label selects B."
+    },
+    {
+      "id": "label_lowercase_colon",
+      "category": "label",
+      "response": "c: the object on the left",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "One leading lowercase colon label selects C."
+    },
+    {
+      "id": "label_uppercase_right_paren",
+      "category": "label",
+      "response": "D) three objects",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "One leading closing-parenthesis label selects D."
+    },
+    {
+      "id": "label_lowercase_parentheses",
+      "category": "label",
+      "response": "(a) a blue sphere",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "A",
+      "rationale": "Parentheses make lowercase a an explicit label rather than an article."
+    },
+    {
+      "id": "label_lowercase_period_a",
+      "category": "label",
+      "response": "a. a dog lying on the floor",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "A",
+      "rationale": "The period disambiguates the leading a label from prose."
+    },
+    {
+      "id": "label_uppercase_colon_a",
+      "category": "label",
+      "response": "A: a triangle",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "A",
+      "rationale": "The colon disambiguates the leading A label from an article."
+    },
+    {
+      "id": "label_leading_line_whitespace",
+      "category": "label",
+      "response": "\n  (D) Four wheels are visible.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "Leading line whitespace does not change a single choice label."
+    },
+    {
+      "id": "label_standalone_wrapped_in_prose",
+      "category": "label",
+      "response": "The visible count matches (C).",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "One standalone parenthesized letter is accepted without unrestricted prose scanning."
+    },
+    {
+      "id": "label_trailing_separate_line",
+      "category": "label",
+      "response": "The red object is above the table.\nB",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "A final standalone uppercase letter line is an unambiguous trailing choice."
+    },
+    {
+      "id": "label_trailing_comma",
+      "category": "label",
+      "response": "After checking the diagram, C.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "A comma separates the final uppercase answer from prose."
+    },
+    {
+      "id": "label_trailing_semicolon",
+      "category": "label",
+      "response": "The wheel count is four; D",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "A semicolon separates the final uppercase answer from prose."
+    },
+    {
+      "id": "label_same_wrapped_repetition",
+      "category": "label",
+      "response": "(B) is my selection.\n(B)",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "Repeated implicit evidence for the same choice is unambiguous."
+    },
+    {
+      "id": "markdown_bold_bare",
+      "category": "markdown",
+      "response": "**B**",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "Bold styling does not alter a bare answer."
+    },
+    {
+      "id": "markdown_italic_bare",
+      "category": "markdown",
+      "response": "*c*",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "Italic styling does not alter a bare lowercase answer."
+    },
+    {
+      "id": "markdown_code_bare",
+      "category": "markdown",
+      "response": "`d`",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "Inline code styling does not alter a bare answer."
+    },
+    {
+      "id": "markdown_bold_declaration",
+      "category": "markdown",
+      "response": "The answer is **b** because two cars are visible.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "The letter adjacent to the declaration may be bold."
+    },
+    {
+      "id": "markdown_code_declaration",
+      "category": "markdown",
+      "response": "Answer: `C`",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "The letter adjacent to the answer marker may be in inline code."
+    },
+    {
+      "id": "markdown_italic_declaration",
+      "category": "markdown",
+      "response": "I choose *A* because it is symmetric.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "A",
+      "rationale": "Italic styling does not displace the explicitly selected A."
+    },
+    {
+      "id": "markdown_bold_parenthesized",
+      "category": "markdown",
+      "response": "**(D)**",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "Bold formatting preserves a wrapped choice."
+    },
+    {
+      "id": "markdown_bold_leading_label",
+      "category": "markdown",
+      "response": "**B.** The object is a bus.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "Bold formatting around a single leading label preserves its answer."
+    },
+    {
+      "id": "container_tag_upper",
+      "category": "container",
+      "response": "<answer>C</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "The answer tag scopes extraction to C."
+    },
+    {
+      "id": "container_tag_whitespace",
+      "category": "container",
+      "response": "<answer>\n  d \n</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "Whitespace inside the answer tag is ignored."
+    },
+    {
+      "id": "container_tag_case",
+      "category": "container",
+      "response": "<ANSWER>b</ANSWER>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "Answer container tags are case insensitive."
+    },
+    {
+      "id": "container_tag_distractors",
+      "category": "container",
+      "response": "A could work. <answer>B</answer> The diagram also contains C labels.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "The scoped container overrides surrounding incidental letters."
+    },
+    {
+      "id": "container_tag_phrase",
+      "category": "container",
+      "response": "<answer>The answer is c.</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "The container may contain a complete explicit declaration."
+    },
+    {
+      "id": "container_tag_invalid_final",
+      "category": "container",
+      "response": "<answer>B</answer>\n<answer>Z</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The final container is invalid and must not fall back to B."
+    },
+    {
+      "id": "container_tag_empty_final",
+      "category": "container",
+      "response": "<answer>B</answer>\n<answer></answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An empty final answer container explicitly supplies no valid choice."
+    },
+    {
+      "id": "container_tag_prose_only",
+      "category": "container",
+      "response": "<answer>because the shape is cubic.</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Letters embedded in words inside a tag are not answers."
+    },
+    {
+      "id": "container_tag_alternatives",
+      "category": "container",
+      "response": "<answer>A or B</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An answer container selecting alternatives is ambiguous."
+    },
+    {
+      "id": "container_tag_last_wins",
+      "category": "container",
+      "response": "<answer>A</answer>\n<answer>d</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "The last answer container replaces the earlier one."
+    },
+    {
+      "id": "container_boxed_upper",
+      "category": "container",
+      "response": "\\boxed{D}",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "A boxed bare uppercase choice is explicit scoped evidence."
+    },
+    {
+      "id": "container_boxed_lower",
+      "category": "container",
+      "response": "The two panels differ. \\boxed{b}",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "A boxed lowercase choice normalizes to uppercase."
+    },
+    {
+      "id": "container_boxed_wrapped",
+      "category": "container",
+      "response": "\\boxed{(C)}",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "Parentheses inside the box still identify C."
+    },
+    {
+      "id": "container_boxed_invalid_final",
+      "category": "container",
+      "response": "\\boxed{A} then \\boxed{E}",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A final box outside A-D cannot fall back to A."
+    },
+    {
+      "id": "container_mixed_tag_then_box",
+      "category": "container",
+      "response": "<answer>A</answer>\n\\boxed{C}",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "The last container wins across container types."
+    },
+    {
+      "id": "container_mixed_box_then_tag",
+      "category": "container",
+      "response": "\\boxed{D}\n<answer>b</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "The last container wins across container types in either order."
+    },
+    {
+      "id": "container_container_over_later_declaration",
+      "category": "container",
+      "response": "<answer>B</answer>\nAnswer: C",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "Answer-container evidence has precedence over uncontained declarations."
+    },
+    {
+      "id": "container_container_invalid_over_valid_phrase",
+      "category": "container",
+      "response": "The answer is A. <answer>none</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An invalid scoped container suppresses an earlier valid uncontained declaration."
+    },
+    {
+      "id": "phrase_answer_equals_case",
+      "category": "phrase",
+      "response": "THE ANSWER IS d.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "Explicit answer phrases are case insensitive."
+    },
+    {
+      "id": "phrase_final_answer_colon",
+      "category": "phrase",
+      "response": "Final answer: B",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "A final answer marker selects the adjacent letter."
+    },
+    {
+      "id": "phrase_answer_newline",
+      "category": "phrase",
+      "response": "Answer:\nC",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "A newline between the marker and letter does not change explicit evidence."
+    },
+    {
+      "id": "phrase_answer_nbsp",
+      "category": "phrase",
+      "response": "The answer is b",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "Unicode spacing between an explicit marker and token is accepted."
+    },
+    {
+      "id": "phrase_correct_answer",
+      "category": "phrase",
+      "response": "The correct answer is D because four edges are visible.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "The declaration selects D independently of letters in its justification."
+    },
+    {
+      "id": "phrase_choose_lower",
+      "category": "phrase",
+      "response": "I choose c because the arrow points left.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "A selection verb selects the adjacent lowercase token."
+    },
+    {
+      "id": "phrase_pick_lower",
+      "category": "phrase",
+      "response": "I pick b and stop.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "Ordinary and stop prose does not mean two choices were selected."
+    },
+    {
+      "id": "phrase_select_upper",
+      "category": "phrase",
+      "response": "I select D.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "A direct selection declaration identifies D."
+    },
+    {
+      "id": "phrase_option_lower_correct",
+      "category": "phrase",
+      "response": "Option b is correct.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "A lowercase option token in a correctness assertion selects B."
+    },
+    {
+      "id": "phrase_option_a_explanation",
+      "category": "phrase",
+      "response": "Option A is correct because the count is two.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "A",
+      "rationale": "An option assertion disambiguates A and its explanation."
+    },
+    {
+      "id": "phrase_best_option_lower",
+      "category": "phrase",
+      "response": "The best option is c)",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "The existing best-option phrase accepts lowercase adjacent letters."
+    },
+    {
+      "id": "phrase_answer_parenthesized",
+      "category": "phrase",
+      "response": "Answer: (d)",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "An explicit answer declaration accepts parenthesized lowercase letters."
+    },
+    {
+      "id": "phrase_invalid_answer_word",
+      "category": "phrase",
+      "response": "Answer: dog",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A declaration containing a word beginning with d is not D."
+    },
+    {
+      "id": "phrase_invalid_answer_acronym",
+      "category": "phrase",
+      "response": "The answer is DNA.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The explicit declaration cannot select a letter from an acronym."
+    },
+    {
+      "id": "phrase_nonadjacent_letter",
+      "category": "phrase",
+      "response": "The answer is probably B.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The parser must not scan arbitrary prose after a marker to find a letter."
+    },
+    {
+      "id": "phrase_choose_plan_b",
+      "category": "phrase",
+      "response": "I choose plan B.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Plan is adjacent to choose, so the later B is not an adjacent choice token."
+    },
+    {
+      "id": "phrase_out_of_alphabet",
+      "category": "phrase",
+      "response": "The answer is E because five edges are visible.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An explicit choice outside the offered alphabet is rejected."
+    },
+    {
+      "id": "multilingual_chinese_is",
+      "category": "multilingual",
+      "response": "答案是B。",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "The Chinese answer-is marker selects adjacent B."
+    },
+    {
+      "id": "multilingual_chinese_lower",
+      "category": "multilingual",
+      "response": "答案是 b，因为图中有两只猫。",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "The Chinese explicit marker disambiguates lowercase b from the explanation."
+    },
+    {
+      "id": "multilingual_chinese_be",
+      "category": "multilingual",
+      "response": "答案为：C",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "The Chinese answer marker accepts punctuation before the choice."
+    },
+    {
+      "id": "multilingual_chinese_choose",
+      "category": "multilingual",
+      "response": "选D，因为它与图片一致。",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "The legacy Chinese selection marker selects adjacent D."
+    },
+    {
+      "id": "multilingual_chinese_wrapped",
+      "category": "multilingual",
+      "response": "答案是（B）",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "Fullwidth parentheses around an explicit Chinese choice are formatting."
+    },
+    {
+      "id": "multilingual_korean_option",
+      "category": "multilingual",
+      "response": "옵션 C",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "The legacy Korean option marker selects adjacent C."
+    },
+    {
+      "id": "multilingual_korean_correct",
+      "category": "multilingual",
+      "response": "정답은 b입니다.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "The Korean correct-answer marker selects the adjacent choice before the conventional Korean suffix."
+    },
+    {
+      "id": "multilingual_korean_answer",
+      "category": "multilingual",
+      "response": "답은 D",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "The Korean answer marker selects adjacent D."
+    },
+    {
+      "id": "multilingual_korean_colon",
+      "category": "multilingual",
+      "response": "답: a",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "A",
+      "rationale": "The Korean colon marker explicitly selects lowercase a."
+    },
+    {
+      "id": "multilingual_korean_colon_punctuation",
+      "category": "multilingual",
+      "response": "정답은: C",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "Punctuation after a Korean declaration does not change its adjacent choice."
+    },
+    {
+      "id": "multilingual_japanese_answer",
+      "category": "multilingual",
+      "response": "答えはBです。",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "The Japanese marker selects adjacent B before the conventional Japanese answer suffix."
+    },
+    {
+      "id": "multilingual_japanese_lower",
+      "category": "multilingual",
+      "response": "答えは c",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "The Japanese answer marker accepts lowercase adjacent choice tokens."
+    },
+    {
+      "id": "multilingual_japanese_colon",
+      "category": "multilingual",
+      "response": "答えは：D",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "A fullwidth colon separates the Japanese marker and token."
+    },
+    {
+      "id": "multilingual_chinese_invalid",
+      "category": "multilingual",
+      "response": "答案是E",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Multilingual declarations still enforce the allowed alphabet."
+    },
+    {
+      "id": "multilingual_japanese_invalid_word",
+      "category": "multilingual",
+      "response": "答えはCatです。",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A letter embedded in a word following a multilingual marker is not a choice."
+    },
+    {
+      "id": "correction_later_answer",
+      "category": "correction",
+      "response": "I choose A. Actually, the answer is B.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "A later explicit declaration corrects the earlier selection."
+    },
+    {
+      "id": "correction_lower_to_upper",
+      "category": "correction",
+      "response": "The answer is b. After checking, the answer is D.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "The last explicit answer wins regardless of letter case."
+    },
+    {
+      "id": "correction_upper_to_lower",
+      "category": "correction",
+      "response": "Answer: D\nFinal answer: a",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "A",
+      "rationale": "A lowercase final declaration corrects an uppercase initial answer."
+    },
+    {
+      "id": "correction_implicit_to_explicit",
+      "category": "correction",
+      "response": "A. Initial guess.\nThe answer is C.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "An explicit answer declaration overrides a leading implicit label."
+    },
+    {
+      "id": "correction_explicit_before_implicit",
+      "category": "correction",
+      "response": "The answer is B.\n(D)",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "A later implicit parenthesized letter does not override explicit evidence."
+    },
+    {
+      "id": "correction_last_invalid",
+      "category": "correction",
+      "response": "I pick B. Final answer: E",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The invalid last explicit declaration suppresses the valid earlier one."
+    },
+    {
+      "id": "correction_last_no_token",
+      "category": "correction",
+      "response": "Answer: C\nFinal answer: unknown",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The final declaration contains no choice and must not reuse an earlier guess."
+    },
+    {
+      "id": "correction_last_ambiguous",
+      "category": "correction",
+      "response": "I choose D. Final answer: A or B",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An ambiguous final explicit declaration suppresses an earlier clear choice."
+    },
+    {
+      "id": "correction_alternatives_then_correction",
+      "category": "correction",
+      "response": "Answer: A or B. Actually, I choose C.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "A later explicit correction resolves the earlier alternative selection."
+    },
+    {
+      "id": "correction_option_assertion_later",
+      "category": "correction",
+      "response": "The answer is D. Option B is correct.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "A later correctness assertion is also an explicit declaration."
+    },
+    {
+      "id": "correction_different_language",
+      "category": "correction",
+      "response": "The answer is A. 答案为：d",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "Ordering of explicit declarations is independent of language."
+    },
+    {
+      "id": "correction_irrelevant_upper_explanation",
+      "category": "correction",
+      "response": "The answer is c because DNA contains a double helix.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "Acronyms in the explanation never replace the adjacent selected token."
+    },
+    {
+      "id": "correction_invalid_then_valid",
+      "category": "correction",
+      "response": "Answer: Z. I choose B.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "A later valid explicit selection replaces an earlier invalid declaration."
+    },
+    {
+      "id": "ambiguous_bare_or",
+      "category": "ambiguous",
+      "response": "A or B",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Two bare alternative choices do not select one answer."
+    },
+    {
+      "id": "ambiguous_bare_and",
+      "category": "ambiguous",
+      "response": "B and C",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Two bare conjunctive choices are not a single selection."
+    },
+    {
+      "id": "ambiguous_bare_slash",
+      "category": "ambiguous",
+      "response": "A/B",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A slash-separated choice pair is ambiguous."
+    },
+    {
+      "id": "ambiguous_phrase_or",
+      "category": "ambiguous",
+      "response": "The answer is A or B.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An explicit declaration still rejects alternative selections."
+    },
+    {
+      "id": "ambiguous_phrase_and",
+      "category": "ambiguous",
+      "response": "Answer: B and C",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An explicit declaration selecting two choices is ambiguous."
+    },
+    {
+      "id": "ambiguous_phrase_slash",
+      "category": "ambiguous",
+      "response": "I choose C/D",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An explicit declaration with slash-separated choices is ambiguous."
+    },
+    {
+      "id": "ambiguous_phrase_comma",
+      "category": "ambiguous",
+      "response": "Answer: A, B",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A comma-separated list selects multiple choices."
+    },
+    {
+      "id": "ambiguous_boxed_and",
+      "category": "ambiguous",
+      "response": "\\boxed{B and C}",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A box does not resolve a multiple-selection answer."
+    },
+    {
+      "id": "ambiguous_parenthesized_pair",
+      "category": "ambiguous",
+      "response": "(A) or (D)",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Two distinct wrapped alternatives are ambiguous."
+    },
+    {
+      "id": "ambiguous_two_labels",
+      "category": "ambiguous",
+      "response": "A. A dog\nB. A cat",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Multiple distinct implicit labels cannot be treated as one selection."
+    },
+    {
+      "id": "ambiguous_full_option_list",
+      "category": "ambiguous",
+      "response": "A. Red\nB. Green\nC. Blue\nD. Yellow",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A complete copied option list is not an answer."
+    },
+    {
+      "id": "ambiguous_list_with_final_answer",
+      "category": "ambiguous",
+      "response": "A. Red\nB. Green\nC. Blue\nD. Yellow\nAnswer: C",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "An explicit final declaration selects one option from an otherwise ambiguous list."
+    },
+    {
+      "id": "ambiguous_reasoning_multiple_mentions",
+      "category": "ambiguous",
+      "response": "I compared A and B; neither can be ruled out.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Mentioning and comparing alternatives does not select one."
+    },
+    {
+      "id": "ambiguous_two_trailing_lines",
+      "category": "ambiguous",
+      "response": "There are two possibilities.\nB\nD",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Two distinct standalone letter lines leave the answer ambiguous."
+    },
+    {
+      "id": "boundary_word_colon",
+      "category": "boundary",
+      "response": "This is a banana: the fruit is yellow.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The a before a colon remains part of banana."
+    },
+    {
+      "id": "boundary_word_right_paren",
+      "category": "boundary",
+      "response": "The label says cubic) in the caption.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A word ending before a closing parenthesis is not a choice token."
+    },
+    {
+      "id": "boundary_uppercase_acronym_period",
+      "category": "boundary",
+      "response": "The file format is PDF. It stores documents.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Uppercase letters inside PDF are not answer labels."
+    },
+    {
+      "id": "boundary_underscore_identifier",
+      "category": "boundary",
+      "response": "field_B is missing.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An underscore-bound identifier is not a standalone choice."
+    },
+    {
+      "id": "boundary_digit_identifier",
+      "category": "boundary",
+      "response": "The camera model is B2.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A letter adjacent to a digit belongs to an identifier."
+    },
+    {
+      "id": "boundary_identifier_before_period",
+      "category": "boundary",
+      "response": "ID_B. See the appendix.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Identifier punctuation must not turn its final B into an answer."
+    },
+    {
+      "id": "boundary_decimal_version",
+      "category": "boundary",
+      "response": "Version 1.b is installed.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A letter in a dotted version token is not a leading label."
+    },
+    {
+      "id": "boundary_url_path",
+      "category": "boundary",
+      "response": "See https://example.org/B.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A URL path segment is not an answer."
+    },
+    {
+      "id": "boundary_url_host",
+      "category": "boundary",
+      "response": "See https://b.example.org for details.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A hostname component is not an option token."
+    },
+    {
+      "id": "boundary_email",
+      "category": "boundary",
+      "response": "Contact b@example.org.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An email local part is not an answer."
+    },
+    {
+      "id": "boundary_chinese_embedded",
+      "category": "boundary",
+      "response": "图B显示了结果。",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A letter embedded in ordinary Chinese text is not a standalone choice."
+    },
+    {
+      "id": "boundary_accented_left",
+      "category": "boundary",
+      "response": "éB.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An ASCII choice attached to a Unicode letter is part of a word."
+    },
+    {
+      "id": "boundary_accented_right",
+      "category": "boundary",
+      "response": "Bé.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An ASCII choice preceding a Unicode letter is part of a word."
+    },
+    {
+      "id": "boundary_greek_embedded",
+      "category": "boundary",
+      "response": "αBβ",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Unicode letters on either side prevent token isolation."
+    },
+    {
+      "id": "boundary_uppercase_variable_end",
+      "category": "boundary",
+      "response": "the value of C",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An arbitrary prose-final uppercase variable is not structurally marked answer evidence."
+    },
+    {
+      "id": "boundary_vitamin_end",
+      "category": "boundary",
+      "response": "Vitamin B",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An arbitrary prose-final uppercase letter in a name is not a trailing answer label."
+    },
+    {
+      "id": "boundary_single_uppercase_middle",
+      "category": "boundary",
+      "response": "The diagram labels B near the axis.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "One uppercase letter merely mentioned in prose is not a selection."
+    },
+    {
+      "id": "boundary_fullwidth_choice",
+      "category": "boundary",
+      "response": "Ｂ",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Choices are ASCII letters; a visually similar fullwidth letter is not a token."
+    },
+    {
+      "id": "custom_extended_i",
+      "category": "custom",
+      "response": "I",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N"
+      ],
+      "expected": "I",
+      "rationale": "The default restriction on I disappears when I is offered."
+    },
+    {
+      "id": "custom_extended_n",
+      "category": "custom",
+      "response": "Answer: n",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N"
+      ],
+      "expected": "N",
+      "rationale": "The A-N alphabet includes lowercase n after normalization."
+    },
+    {
+      "id": "custom_extended_k_box",
+      "category": "custom",
+      "response": "\\boxed{k}",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N"
+      ],
+      "expected": "K",
+      "rationale": "Containers enforce the supplied A-N alphabet rather than A-H."
+    },
+    {
+      "id": "custom_extended_invalid_o",
+      "category": "custom",
+      "response": "Final answer: O",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N"
+      ],
+      "expected": "",
+      "rationale": "O remains invalid when only A-N are supplied."
+    },
+    {
+      "id": "custom_lowercase_choices",
+      "category": "custom",
+      "response": "Answer: B",
+      "choices": [
+        "a",
+        "b",
+        "c"
+      ],
+      "expected": "B",
+      "rationale": "Lowercase configured choices accept uppercase model answers."
+    },
+    {
+      "id": "custom_lowercase_response",
+      "category": "custom",
+      "response": "c",
+      "choices": [
+        "a",
+        "b",
+        "c"
+      ],
+      "expected": "C",
+      "rationale": "Both model output and configured choices normalize to uppercase."
+    },
+    {
+      "id": "custom_lowercase_reject_d",
+      "category": "custom",
+      "response": "The answer is d",
+      "choices": [
+        "a",
+        "b",
+        "c"
+      ],
+      "expected": "",
+      "rationale": "Case normalization does not add unoffered choices."
+    },
+    {
+      "id": "custom_sparse_z",
+      "category": "custom",
+      "response": "I choose z.",
+      "choices": [
+        "X",
+        "Z"
+      ],
+      "expected": "Z",
+      "rationale": "An explicitly supplied sparse alphabet is supported."
+    },
+    {
+      "id": "custom_sparse_default_rejected",
+      "category": "custom",
+      "response": "Answer: B",
+      "choices": [
+        "X",
+        "Z"
+      ],
+      "expected": "",
+      "rationale": "Default letters are not valid in a custom X/Z alphabet."
+    },
+    {
+      "id": "custom_sparse_invalid_final",
+      "category": "custom",
+      "response": "Answer: X. Final answer: A",
+      "choices": [
+        "X",
+        "Z"
+      ],
+      "expected": "",
+      "rationale": "An unoffered final choice must not fall back to a valid custom earlier answer."
+    },
+    {
+      "id": "custom_singleton",
+      "category": "custom",
+      "response": "a",
+      "choices": [
+        "A"
+      ],
+      "expected": "A",
+      "rationale": "A singleton supplied alphabet still accepts a bare lowercase token."
+    },
+    {
+      "id": "article_lower_noun",
+      "category": "article",
+      "response": "a dog is visible near the fence.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A leading lowercase article before a noun is not an answer."
+    },
+    {
+      "id": "article_uppercase_noun",
+      "category": "article",
+      "response": "A bus is parked beside the road.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Capitalization at the beginning of prose does not make the article A an answer."
+    },
+    {
+      "id": "article_a_is_correct",
+      "category": "article",
+      "response": "A is correct because the diagram has three sides.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "A",
+      "rationale": "The correctness assertion disambiguates leading A."
+    },
+    {
+      "id": "article_a_seems_correct",
+      "category": "article",
+      "response": "A seems correct given the reflection.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "A",
+      "rationale": "The written contract accepts a leading tentative answer assertion."
+    },
+    {
+      "id": "article_lower_a_because",
+      "category": "article",
+      "response": "a because two circles are shown.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "A",
+      "rationale": "A leading a followed by because supplies an answer justification."
+    },
+    {
+      "id": "article_lower_a_is_correct",
+      "category": "article",
+      "response": "a is correct.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "A",
+      "rationale": "A direct lowercase correctness assertion disambiguates a from the article."
+    },
+    {
+      "id": "article_a_noun_with_is",
+      "category": "article",
+      "response": "A cat is sitting on the table.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An is later in noun prose does not turn the article into an answer."
+    },
+    {
+      "id": "article_punctuated_article_text",
+      "category": "article",
+      "response": "A. A cat is sitting on the table.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "A",
+      "rationale": "A leading period label is an answer even when its description starts with an article."
+    },
+    {
+      "id": "model_reply_count_cars",
+      "category": "model_reply",
+      "response": "There are two vehicles visible: one sedan and one truck. The answer is b because the count is two.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "The final explicit lowercase selection is adjacent; narrative count reasoning contributes no labels."
+    },
+    {
+      "id": "model_reply_spatial_choice",
+      "category": "model_reply",
+      "response": "The lamp is behind the sofa, so I choose C. The letters A and D printed in the figure are annotations.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "An explicit selection wins over incidental uppercase annotation letters later in prose."
+    },
+    {
+      "id": "model_reply_refuse_after_distractors",
+      "category": "model_reply",
+      "response": "The figure contains labels A and C, but the image is too blurred to identify the correct option.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Mentioning diagram labels during a refusal is not a selection."
+    },
+    {
+      "id": "model_reply_option_restatement",
+      "category": "model_reply",
+      "response": "A. Two birds\nB. Three birds\nC. Four birds\nD. Five birds\nI count four birds. Final answer: C.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "An explicit final answer resolves a copied option list."
+    },
+    {
+      "id": "model_reply_box_after_reasoning",
+      "category": "model_reply",
+      "response": "The left column has three filled squares and the right has one. Therefore the difference is two. \\boxed{b}",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "The answer is the boxed letter, not letters in the arithmetic explanation."
+    },
+    {
+      "id": "model_reply_corrected_count",
+      "category": "model_reply",
+      "response": "I initially thought the answer is A. Looking closer, a fourth wheel is visible. The answer is D.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "A later direct declaration records the corrected visual count."
+    },
+    {
+      "id": "model_reply_no_choice_after_answer",
+      "category": "model_reply",
+      "response": "A might fit the first panel. Final answer: I cannot tell.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A final declaration without a valid token records abstention rather than reusing a guess."
+    },
+    {
+      "id": "model_reply_tag_then_explanation",
+      "category": "model_reply",
+      "response": "<answer>c</answer>\nThe object has a cubic outline and a blue surface.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "The scoped letter remains authoritative through a word-heavy explanation."
+    },
+    {
+      "id": "custom_five_options_e",
+      "category": "custom",
+      "response": "The answer is e because the sequence alternates.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "expected": "E",
+      "rationale": "Five-choice questions accept E after case normalization."
+    },
+    {
+      "id": "custom_five_options_f_rejected",
+      "category": "custom",
+      "response": "Answer: F",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "expected": "",
+      "rationale": "F is outside the five-option alphabet even though it belongs to the default A-H alphabet."
+    },
+    {
+      "id": "custom_five_options_alternative",
+      "category": "custom",
+      "response": "Answer: C or E",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "expected": "",
+      "rationale": "Alternative selections remain ambiguous in a five-option question."
+    },
+    {
+      "id": "custom_extended_i_declaration",
+      "category": "custom",
+      "response": "The answer is I.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N"
+      ],
+      "expected": "I",
+      "rationale": "An explicit declaration disambiguates the offered I from its pronoun use."
+    },
+    {
+      "id": "custom_extended_i_pronoun",
+      "category": "custom",
+      "response": "I think the image is too blurry to judge.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N"
+      ],
+      "expected": "",
+      "rationale": "When I is offered, the English pronoun in ordinary prose still must not become an answer."
+    },
+    {
+      "id": "multilingual_korean_arbitrary_suffix",
+      "category": "multilingual",
+      "response": "정답은 b고양이.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An arbitrary Korean word suffix is not the recognized grammatical 입니다 suffix."
+    },
+    {
+      "id": "multilingual_japanese_arbitrary_suffix",
+      "category": "multilingual",
+      "response": "答えはB猫。",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An arbitrary Japanese word attached to B is not the recognized です answer suffix."
+    },
+    {
+      "id": "multilingual_chinese_arbitrary_suffix",
+      "category": "multilingual",
+      "response": "答案是B中文",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The answer marker does not permit an ASCII letter embedded in an arbitrary Unicode word."
+    },
+    {
+      "id": "model_reply_spanish_container",
+      "category": "model_reply",
+      "response": "Se ven tres ruedas en la imagen. <answer>c</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "expected": "C",
+      "rationale": "A scoped ASCII letter works independently of the language of surrounding prose."
+    },
+    {
+      "id": "model_reply_arabic_container",
+      "category": "model_reply",
+      "response": "توجد أربع زوايا في الشكل. \\boxed{d}",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "A boxed ASCII selection works independently of surrounding right-to-left prose."
+    },
+    {
+      "id": "custom_noncontiguous_f",
+      "category": "custom",
+      "response": "I choose f.",
+      "choices": [
+        "A",
+        "C",
+        "F"
+      ],
+      "expected": "F",
+      "rationale": "A noncontiguous alphabet accepts the actual offered F rather than rebuilding letters from the option count."
+    },
+    {
+      "id": "container_unfinished_box",
+      "category": "container",
+      "response": "\\boxed{B",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A box with no closing brace is malformed rather than an answer container."
+    },
+    {
+      "id": "container_empty_last_box",
+      "category": "container",
+      "response": "\\boxed{A} then \\boxed{}",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "The final empty box suppresses the earlier valid scoped answer."
+    },
+    {
+      "id": "container_nested_distinct_tags",
+      "category": "container",
+      "response": "<answer><answer>A</answer>B</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Nested answer markup is malformed; the letters inside must not be guessed."
+    },
+    {
+      "id": "container_nested_same_tags",
+      "category": "container",
+      "response": "<answer><answer>B</answer></answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Nested answer markup remains malformed even when all nested letters happen to agree."
+    },
+    {
+      "id": "container_mismatched_tag",
+      "category": "container",
+      "response": "<answer>B</wrong>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A mismatched closing tag is malformed and differs from the supported unclosed legacy marker."
+    },
+    {
+      "id": "container_boxed_text",
+      "category": "container",
+      "response": "\\boxed{\\text{B}}",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "A conventional nested LaTeX text wrapper formats one explicit boxed choice."
+    },
+    {
+      "id": "container_boxed_text_invalid",
+      "category": "container",
+      "response": "\\boxed{\\text{Z}}",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "LaTeX text formatting does not make an unoffered choice valid."
+    },
+    {
+      "id": "markdown_single_quotes",
+      "category": "markdown",
+      "response": "'B'",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "Paired quotes around a bare letter are formatting."
+    },
+    {
+      "id": "markdown_double_quotes",
+      "category": "markdown",
+      "response": "\"c\"",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "Paired double quotes around a bare lowercase letter are formatting."
+    },
+    {
+      "id": "markdown_curly_quotes",
+      "category": "markdown",
+      "response": "“d”",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "D",
+      "rationale": "Recognizable paired Unicode quotes around an ASCII letter are formatting."
+    },
+    {
+      "id": "markdown_underscore",
+      "category": "markdown",
+      "response": "_B_",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "Paired underscore emphasis around a bare answer is formatting."
+    },
+    {
+      "id": "markdown_double_underscore",
+      "category": "markdown",
+      "response": "__c__",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "Paired double underscore emphasis around a bare lowercase answer is formatting."
+    },
+    {
+      "id": "boundary_unpaired_underscore",
+      "category": "boundary",
+      "response": "_B",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "An unpaired underscore is an identifier boundary rather than emphasis formatting."
+    },
+    {
+      "id": "boundary_identifier_suffix",
+      "category": "boundary",
+      "response": "B_name",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A choice letter attached to an underscore identifier suffix is not a selection."
+    },
+    {
+      "id": "boundary_parenthesized_url",
+      "category": "boundary",
+      "response": "See https://example.org/(B)",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A parenthesized URL path segment is not a standalone choice token."
+    },
+    {
+      "id": "container_stray_closing_tag",
+      "category": "container",
+      "response": "The answer is B.</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A stray closing answer tag makes the response malformed rather than a valid declaration."
+    },
+    {
+      "id": "container_nested_conflicting_boxes",
+      "category": "container",
+      "response": "\\boxed{B \\boxed{C}}",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Nested answer containers are malformed and conflicting nested letters must not be guessed."
+    },
+    {
+      "id": "ambiguous_comma_option_list",
+      "category": "ambiguous",
+      "response": "Options A, B, C, D",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A comma-separated enumeration of offered options is not a selection; the last item must not win."
+    },
+    {
+      "id": "container_multiline_choices",
+      "category": "container",
+      "response": "<answer>B\nD</answer>",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Two different bare selections in one answer scope are ambiguous, not an explanation."
+    }
+  ]
+}
