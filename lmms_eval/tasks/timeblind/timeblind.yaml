@@ -1,0 +1,30 @@
+dataset_path: BaiqiL/TimeBlind-lmms-eval
+dataset_kwargs:
+  data_files:
+    train: data.jsonl
+  video: True
+  cache_dir: timeblind
+task: timeblind
+test_split: train
+output_type: generate_until
+doc_to_visual: !function utils.timeblind_doc_to_visual
+doc_to_text: !function utils.timeblind_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 16
+process_results: !function utils.timeblind_process_results
+metric_list:
+  - metric: timeblind_I_Acc
+    aggregation: !function utils.timeblind_aggregate_results_I_Acc
+    higher_is_better: true
+  - metric: timeblind_Q_Acc
+    aggregation: !function utils.timeblind_aggregate_results_Q_Acc
+    higher_is_better: true
+  - metric: timeblind_V_Acc
+    aggregation: !function utils.timeblind_aggregate_results_V_Acc
+    higher_is_better: true
+  - metric: timeblind_Acc
+    aggregation: !function utils.timeblind_aggregate_results_Acc
+    higher_is_better: true
+metadata:
+  - version: 1.0
