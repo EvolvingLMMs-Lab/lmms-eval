@@ -1,0 +1,1155 @@
+{
+  "source_revision": "00a12d40aff8ded19c37fbcf8e7d273034f63f81",
+  "corpus_sha256": "653b66d3b1eb40fbbcdb47b4d7381c5f6a79d636d83e198ecdb30da48cc02922",
+  "python": "3.12.13 (main, Jul 18 2026, 17:02:19) [Clang 22.1.3 ]",
+  "versions": {
+    "numpy": "2.5.3",
+    "pandas": "3.0.6"
+  },
+  "scope": "Synthetic outputs and option text; parser/prefetch observations, not dataset accuracy or judge API results.",
+  "total": 52,
+  "shared_passed": 52,
+  "native_disagreement_cases": 50,
+  "cases": [
+    {
+      "id": "hack_mmmu_bracket_over_final",
+      "category": "hack_mmmu",
+      "expected": "B",
+      "shared": "B",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_invalid_final",
+      "category": "hack_mmmu",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_bracket_over_container",
+      "category": "hack_mmmu",
+      "expected": "C",
+      "shared": "C",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_option_echo",
+      "category": "hack_mmmu",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_lowercase_random_fallback",
+      "category": "hack_mmmu",
+      "expected": "C",
+      "shared": "C",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": true
+        },
+        {
+          "seed": 42,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_refusal_random_fallback",
+      "category": "hack_mmmu",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_acronym_suffix",
+      "category": "hack_mmmu",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_word_before_period",
+      "category": "hack_mmmu",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_negated_option_text",
+      "category": "hack_mmmu",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_quoted_bracket",
+      "category": "hack_mmmu",
+      "expected": "A",
+      "shared": "A",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_two_alternatives",
+      "category": "hack_mmmu",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_eight_choice_container",
+      "category": "hack_mmmu",
+      "expected": "H",
+      "shared": "H",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_pro_embedded_j",
+      "category": "hack_mmmu_pro",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "J",
+          "selected": "J",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "J",
+          "selected": "J",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "J",
+          "selected": "J",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "J",
+          "selected": "J",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_pro_embedded_g",
+      "category": "hack_mmmu_pro",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "G",
+          "selected": "G",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "G",
+          "selected": "G",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "G",
+          "selected": "G",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "G",
+          "selected": "G",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_pro_invalid_final",
+      "category": "hack_mmmu_pro",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_pro_invalid_container",
+      "category": "hack_mmmu_pro",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_pro_lowercase_with_identifier",
+      "category": "hack_mmmu_pro",
+      "expected": "C",
+      "shared": "C",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_pro_ten_choice_alternatives",
+      "category": "hack_mmmu_pro",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "J",
+          "selected": "J",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "J",
+          "selected": "J",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "J",
+          "selected": "J",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "J",
+          "selected": "J",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_pro_lowercase_correction",
+      "category": "hack_mmmu_pro",
+      "expected": "J",
+      "shared": "J",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "G",
+          "selected": "G",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "F",
+          "selected": "F",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmmu_pro_scoped_lowercase_j",
+      "category": "hack_mmmu_pro",
+      "expected": "J",
+      "shared": "J",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": 0,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 1,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 7,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        },
+        {
+          "seed": 42,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_videommmu_period_over_final",
+      "category": "hack_videommmu",
+      "expected": "D",
+      "shared": "D",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_videommmu_colon_over_final",
+      "category": "hack_videommmu",
+      "expected": "C",
+      "shared": "C",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_videommmu_acronym_period",
+      "category": "hack_videommmu",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_videommmu_option_echo",
+      "category": "hack_videommmu",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_videommmu_invalid_final",
+      "category": "hack_videommmu",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_videommmu_bracket_over_container",
+      "category": "hack_videommmu",
+      "expected": "D",
+      "shared": "D",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_videommmu_alternatives_after_colon",
+      "category": "hack_videommmu",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_videommmu_five_choice_container",
+      "category": "hack_videommmu",
+      "expected": "A",
+      "shared": "A",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "E",
+          "selected": "E",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmbench_unoffered_e",
+      "category": "hack_mmbench",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "E",
+          "selected": "",
+          "matches_contract": true
+        }
+      ]
+    },
+    {
+      "id": "hack_mmbench_short_article",
+      "category": "hack_mmbench",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmbench_mixed_punctuation_alternatives",
+      "category": "hack_mmbench",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmbench_bracket_over_lowercase",
+      "category": "hack_mmbench",
+      "expected": "B",
+      "shared": "B",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmbench_negated_option_text",
+      "category": "hack_mmbench",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmbench_invalid_final",
+      "category": "hack_mmbench",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmbench_ambiguous_container",
+      "category": "hack_mmbench",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_mmbench_option_text_over_lowercase",
+      "category": "hack_mmbench",
+      "expected": "B",
+      "shared": "B",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_seedbench_concatenated_alphabet",
+      "category": "hack_seedbench",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_seedbench_negated_leading_choice",
+      "category": "hack_seedbench",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_seedbench_later_correction",
+      "category": "hack_seedbench",
+      "expected": "A",
+      "shared": "A",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_seedbench_article",
+      "category": "hack_seedbench",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_seedbench_uppercase_word",
+      "category": "hack_seedbench",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_seedbench_lowercase_word",
+      "category": "hack_seedbench",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "c",
+          "selected": "C",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_seedbench_slash_alternatives",
+      "category": "hack_seedbench",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_seedbench_scoped_correction",
+      "category": "hack_seedbench",
+      "expected": "D",
+      "shared": "D",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_ai2d_leading_over_final",
+      "category": "hack_ai2d",
+      "expected": "D",
+      "shared": "D",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_ai2d_option_echo",
+      "category": "hack_ai2d",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_ai2d_invalid_final",
+      "category": "hack_ai2d",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_ai2d_ambiguous_container",
+      "category": "hack_ai2d",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "D",
+          "selected": "D",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_ai2d_scoped_lowercase",
+      "category": "hack_ai2d",
+      "expected": "C",
+      "shared": "C",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "B",
+          "selected": "B",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_ai2d_final_alternatives",
+      "category": "hack_ai2d",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "A",
+          "selected": "A",
+          "matches_contract": false
+        }
+      ]
+    },
+    {
+      "id": "hack_ai2d_unoffered_leading_label",
+      "category": "hack_ai2d",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "E",
+          "selected": "",
+          "matches_contract": true
+        }
+      ]
+    },
+    {
+      "id": "hack_ai2d_invalid_container",
+      "category": "hack_ai2d",
+      "expected": "",
+      "shared": "",
+      "shared_pass": true,
+      "native": [
+        {
+          "seed": null,
+          "raw": "C",
+          "selected": "C",
+          "matches_contract": false
+        }
+      ]
+    }
+  ]
+}

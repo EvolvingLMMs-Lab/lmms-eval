@@ -88,6 +88,13 @@ case has these required fields:
 Optional `base_expected` records an observed output at the reproduction base;
 it is evidence, not the desired answer. Do not invent historical outputs.
 
+Benchmark-inspired adversarial cases use `category: hack_<benchmark>`, with
+stable IDs prefixed the same way. Their optional `benchmark_context` provides
+the parser name, attack mechanism, and exact synthetic option text used for
+native-parser replay. The option keys must match `choices`. `expected` still
+specifies this shared extractor's contract, independently of what the native
+benchmark heuristic returns.
+
 Coverage includes the six #1554 review examples; all existing positive and
 negative tests; structured formats; case/whitespace/Markdown variants;
 multilingual phrases; explicit corrections and precedence; alternatives and
@@ -100,6 +107,57 @@ tests exercise consumer scoring, constructor/per-call choice overrides, and
 letter substitution across a small documented grammar. These are CPU tests
 without model downloads. They establish the extraction contract, not model
 E2E validation.
+
+## Benchmark attack fixtures
+
+There are 52 additional adversarial fixtures across six benchmark categories:
+
+| Category | Cases | Native parsing path | Mechanisms |
+| --- | ---: | --- | --- |
+| `hack_mmmu` | 12 | `_task_utils/mmmu_mcq_utils.py:parse_mmmu_multi_choice_response` | Bracket priority, echoed options, missing token boundaries, option-text matching, random fallback |
+| `hack_mmmu_pro` | 8 | `_task_utils/mmmu_mcq_utils.py:parse_mmmu_pro_multi_choice_response` | Unbounded `Answer:` substrings, lowercase corrections, invalid-answer fallback, ten-choice alternatives |
+| `hack_videommmu` | 8 | `_task_utils/mmmu_mcq_utils.py:parse_videommmu_multi_choice_response` | Period/colon priority, acronym suffixes, echoed options, conflicting containers |
+| `hack_mmbench` | 8 | `mmbench/mmbench_evals.py:MMBench_Evaluator.can_infer` | Prefetch punctuation buckets, short articles, unoffered E, negated option text |
+| `hack_seedbench` | 8 | `seedbench/utils.py:seed_process_result` | First-character truncation, words/articles, alternatives, later corrections |
+| `hack_ai2d` | 8 | `ai2d/utils.py:MultiChoiceRegexFilter.apply` | First punctuated label, echoed options, unoffered labels, invalid/ambiguous final answers |
+
+The fixtures are fabricated output strings with explicit synthetic option
+context. They do not contain held-out answers or model-generated evidence, and
+they are not a benchmark accuracy experiment. They include abstention cases
+such as `Answer: JUNK`, as well as positive controls where a later explicit
+answer or container must override a distracting label. Uppercase/lowercase,
+two or more conflicting labels, and four/five/eight/ten choices are covered.
+
+Run the actual local native parsing paths and the shared extractor:
+
+```bash
+env HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
+  WANDB_MODE=disabled \
+  ./.venv/bin/python test/eval/mcq_extract/probe_benchmarks.py \
+  --output /tmp/mcq-hack-benchmark-observations.json
+./.venv/bin/python -m pytest -q test/eval/test_mcq_extract.py -k hack_
+```
+
+The probe preserves raw outputs and runs the randomized MMMU-family paths
+with seeds 0, 1, 7, and 42. It records MMBench's actual prefetch result, which
+runs before static or API judging; it does not call the judge API. For AI2D it
+records the actual configured filter output, before exact-match scoring. Raw
+non-label strings and `False` remain visible, and are treated as no selected
+choice only when summarizing agreement. SEEDBench's case-insensitive scoring
+means a returned lowercase letter is summarized as its uppercase choice.
+The two unoffered-E fixtures are boundary controls: a returned E cannot earn
+credit against an A-D target, so these are not score-inflation demonstrations.
+
+Native observations are diagnostic evidence, not assertions that preserve
+undesired behavior. Future native-parser fixes may change those observations;
+the shared utility and verifier must continue satisfying the reviewed fixture
+expectations. No benchmark scorer is changed by adding these test data.
+
+The original `validation.json` and `validation.md` retain the historical
+219-case before/after evidence and four-sample real model smoke test from
+#1564. The benchmark attack fixtures expand the current corpus to 271 cases;
+their observations and validation are recorded separately in
+`benchmark_validation.json` and `benchmark_validation.md`.
 
 ## Reproduction and verification
 
@@ -127,10 +185,12 @@ validation must additionally exercise a consumer such as plain `mmstar`;
 
 The repository already depends on [Math-Verify](https://github.com/huggingface/Math-Verify).
 Its `StringExtractionConfig` supports configured choice strings and anchored
-answer extraction. On this corpus, installed version 0.9.0 matched 104/219
+answer extraction. On the original 219-case corpus, installed version 0.9.0 matched 104/219
 cases with uppercase strings, 135/219 with both cases configured, and 113/219
 with both cases and unanchored extraction disabled. This compares agreement
 with this contract; it is not a claim about either parser's general accuracy.
+Rerunning the comparison now includes the added fixtures, so its denominator
+will be 271 rather than the historical 219.
 
 The differences include closed answer tags, alternatives (`A or B`), and
 invalid final declarations that must mask earlier valid answers. Those are

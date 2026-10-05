@@ -33,9 +33,18 @@ def test_corpus_structure() -> None:
         assert case["expected"] == "" or case["expected"] in allowed, case
         if "base_expected" in case:
             assert isinstance(case["base_expected"], str), case
+        if case["category"].startswith("hack_"):
+            context = case["benchmark_context"]
+            assert case["category"] == f"hack_{context['parser']}", case
+            assert isinstance(context["mechanism"], str) and context["mechanism"].strip(), case
+            assert choices, case
+            assert isinstance(context["options"], dict), case
+            assert set(context["options"]) == set(choices), case
+            assert all(isinstance(text, str) and text.strip() for text in context["options"].values()), case
     assert {case["category"] for case in _CASES} >= {"regression", "legacy", "container", "phrase", "multilingual", "correction", "ambiguous", "boundary", "custom", "article", "model_reply"}
     assert sum(case["category"] == "regression" for case in _CASES) == 6
     assert sum(case["category"] == "legacy" for case in _CASES) == 26
+    assert {case["category"] for case in _CASES} >= {"hack_mmmu", "hack_mmmu_pro", "hack_videommmu", "hack_mmbench", "hack_seedbench", "hack_ai2d"}
     alphabet_sizes = {len(case["choices"] or list("ABCDEFGH")) for case in _CASES}
     assert alphabet_sizes >= {2, 3, 4, 5, 8, 14}
 
