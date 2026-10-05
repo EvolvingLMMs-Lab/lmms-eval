@@ -123,6 +123,57 @@ def test_messages_task_agentic_constructs_chat_multi_step_layout():
     assert request.args[6] == "validation"
 
 
+def _likelihood_task(task_class, output_type):
+    task = object.__new__(task_class)
+    task.OUTPUT_TYPE = output_type
+    task._config = TaskConfig(
+        task="mmlu-contract",
+        output_type=output_type,
+        doc_to_text="question",
+        doc_to_target="answer",
+        doc_to_choice=["A", "B", "C", "D"],
+        doc_to_visual=lambda doc: [],
+    )
+    task.lmms_eval_specific_kwargs = None
+    task.model_specific_target_kwargs = None
+    task.multiple_input = False
+    task.multiple_target = False
+    task._metric_fn_list = {"acc": None}
+    task.dataset = {"test": [{"question": "Current question", "answer": 1}]}
+    task.features = {"question": None, "answer": None}
+    return task
+
+
+@pytest.mark.parametrize("output_type", ["loglikelihood", "multiple_choice"])
+def test_messages_likelihood_requests_preserve_simple_scoring_protocol(output_type):
+    tasks = [_likelihood_task(cls, output_type) for cls in (ConfigurableTask, ConfigurableMessagesTask)]
+    metadata = {"task": "mmlu-contract", "doc_id": 0, "split": "test", "repeats": 1}
+    context = "Description\nFive-shot examples\nCurrent question\nAnswer:"
+    requests = [task.construct_requests(0, context, metadata=metadata) for task in tasks]
+    lists = [items if isinstance(items, list) else [items] for items in requests]
+    assert len(lists[0]) == len(lists[1]) == (4 if output_type == "multiple_choice" else 1)
+    for simple, chat in zip(*lists):
+        assert simple.request_type == chat.request_type == "loglikelihood"
+        assert simple.idx == chat.idx
+        assert simple.args[0] == chat.args[0] == context
+        assert simple.args[3:] == chat.args[3:] == (0, "mmlu-contract", "test")
+        assert chat.args[2](tasks[1].dataset["test"][0]) == []
+        if output_type == "multiple_choice":
+            assert simple.args[1] == chat.args[1] == " " + "ABCD"[simple.idx]
+        else:
+            assert chat.args[1](tasks[1].dataset["test"][0]) == 1
+    if output_type == "multiple_choice":
+        assert tasks[1].process_results(tasks[1].dataset["test"][0], [(4.0, False), (0.5, True), (2.0, False), (3.0, False)]) == {"acc": 1.0}
+
+
+@pytest.mark.parametrize("output_type", ["loglikelihood", "multiple_choice"])
+def test_messages_likelihood_rejects_custom_messages_instead_of_dropping_them(output_type):
+    task = _likelihood_task(ConfigurableMessagesTask, output_type)
+    task.config.doc_to_messages = lambda doc: [{"role": "user", "content": [{"type": "image", "url": "image.png"}]}]
+    with pytest.raises(NotImplementedError, match="doc_to_messages"):
+        task.construct_requests(0, "context", metadata={"task": "mmlu-contract", "doc_id": 0, "split": "test", "repeats": 1})
+
+
 def _cached_task(task_class=ConfigurableTask, output_type="generate_until"):
     task = object.__new__(task_class)
     task.OUTPUT_TYPE = output_type
@@ -134,7 +185,7 @@ def _cached_task(task_class=ConfigurableTask, output_type="generate_until"):
         doc_to_text=_doc_to_text,
         doc_to_visual=lambda doc: [doc["media"]],
         doc_to_target=lambda doc: doc["answer"],
-        doc_to_messages=lambda doc: [{"role": "user", "content": [{"type": "text", "text": doc["question"]}]}],
+        doc_to_messages=None if output_type == "loglikelihood" else lambda doc: [{"role": "user", "content": [{"type": "text", "text": doc["question"]}]}],
         generation_kwargs={"temperature": 0},
     )
     task.lmms_eval_specific_kwargs = None
@@ -153,6 +204,7 @@ def _cached_task(task_class=ConfigurableTask, output_type="generate_until"):
         (ConfigurableTask, "generate_until_multi_round"),
         (ConfigurableTask, "generate_until_agentic"),
         (ConfigurableMessagesTask, "generate_until"),
+        (ConfigurableMessagesTask, "loglikelihood"),
         (ConfigurableMessagesTask, "generate_until_multi_round"),
         (ConfigurableMessagesTask, "generate_until_agentic"),
     ],

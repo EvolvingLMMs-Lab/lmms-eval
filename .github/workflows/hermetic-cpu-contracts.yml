@@ -40,6 +40,7 @@ jobs:
           uv run --no-sync python -m pytest -q -m "not gpu and not api"
           test/cli/test_cli_dispatch_parametrized.py
           test/models/test_model_registry_v2.py
+          test/models/test_qwen3_vl_likelihood.py
           test/eval/test_protocol.py
           test/eval/test_request_construction_contract.py
           test/eval/test_metbench.py

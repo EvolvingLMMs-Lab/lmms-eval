@@ -1,0 +1,153 @@
+{
+  "base_revision": "e49214b08e77834c19ba0a53ee093979c6ffbe2c",
+  "model": "Qwen/Qwen3-VL-2B-Instruct",
+  "model_revision": "89644892e4d85e24eaac8bacfd4f463576704203",
+  "model_sha256": "7de1838c87a5349b016c26a1c3f7d2bc400a3d485f95ef39a7059ffd734977a0",
+  "dataset": "hails/mmlu_no_train",
+  "dataset_revision": "b2e1ec9aa795adafe68e8e983248dbd4b52a1c60",
+  "dataset_config": "abstract_algebra",
+  "dataset_split": "test",
+  "document_indices": [
+    0,
+    1
+  ],
+  "num_fewshot": 5,
+  "versions": {
+    "torch": "2.13.0",
+    "transformers": "5.17.0",
+    "datasets": "5.0.1",
+    "accelerate": "1.15.0",
+    "huggingface-hub": "1.32.0",
+    "tokenizers": "0.23.2",
+    "qwen-vl-utils": "0.0.14",
+    "pytest": "9.1.1"
+  },
+  "cpu_tests": {
+    "before": "25 failed, 25 passed in 48.11s",
+    "after": "248 passed, 17 subtests passed in 57.95s",
+    "evaluator_before_fix": "2 failed, 8 passed in 66.95s"
+  },
+  "date": "2026-10-05",
+  "source_sha256": {
+    "lmms_eval/api/task.py": "e36735cda21af5327bd426a688f3d6316cd50d2ae6ea8ad1166bd156885c4259",
+    "lmms_eval/evaluator.py": "c2004b7cb12a82d06938b2810a80230d4fd5827337dc5102e33b899c1e5409a8",
+    "lmms_eval/models/simple/qwen3_vl.py": "738c6cdcceab0337ab209ce40b8da95a980ae2d25a8009c65de00fd462e478a5"
+  },
+  "hardware": {
+    "gpu": "NVIDIA H800",
+    "gpu_memory_mib": 81559,
+    "driver": "595.71.05",
+    "cuda": "13.0",
+    "dtype": "bfloat16",
+    "attention": "eager",
+    "gpu_count": 1
+  },
+  "static_checks": {
+    "pre_commit": "ruff check Passed; ruff format Passed",
+    "git_diff_check": "exit 0"
+  },
+  "cli_before": {
+    "exit_code": 1,
+    "error": "AssertionError: Currently messages is used for generation only",
+    "log": "before.log"
+  },
+  "cli_initial_patch": {
+    "exit_code": 1,
+    "completed_choice_scores": 8,
+    "error": "ValueError: too many values to unpack (expected 2); wrapped by tenacity.RetryError",
+    "log": "after-initial.log"
+  },
+  "cli_chat_after": {
+    "exit_code": 0,
+    "model_backend": "lmms_eval.models.chat.qwen3_vl.Qwen3_VL (chat)",
+    "effective_samples": 2,
+    "num_fewshot": 5,
+    "metric": {
+      "alias": "abstract_algebra",
+      "acc,none": 0.0,
+      "acc_stderr,none": 0.0,
+      "acc_stderr_clt,none": 0.0,
+      "acc_stderr_clustered,none": "N/A"
+    },
+    "generation_kwargs": {
+      "max_new_tokens": 64,
+      "temperature": 1.0,
+      "top_p": 1.0,
+      "top_k": 40,
+      "repetition_penalty": 1.0
+    },
+    "scoring_requests": 8,
+    "log": "chat-after.log",
+    "samples": [
+      {
+        "doc_id": 0,
+        "target_index": 1,
+        "target_label": "B",
+        "summed_nll": {
+          "A": 23.234174728393555,
+          "B": 25.734174728393555,
+          "C": 25.359174728393555,
+          "D": 21.046674728393555
+        },
+        "is_greedy": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "selected_label_from_argmin": "D",
+        "acc": 0.0,
+        "input": "The following are multiple choice questions (with answers) about abstract algebra.\nFind all c in Z_3 such that Z_3[x]/(x^2 + c) is a field.\nA. 0\nB. 1\nC. 2\nD. 3\nAnswer: B\n\nStatement 1 | If aH is an element of a factor group, then |aH| divides |a|. Statement 2 | If H and K are subgroups of G then HK is a subgroup of G.\nA. True, True\nB. False, False\nC. True, False\nD. False, True\nAnswer: B\n\nStatement 1 | Every element of a group generates a cyclic subgroup of the group. Statement 2 | The symmetric group S_10 has 10 elements.\nA. True, True\nB. False, False\nC. True, False\nD. False, True\nAnswer: C\n\nStatement 1| Every function from a finite set onto itself must be one to one. Statement 2 | Every subgroup of an abelian group is abelian.\nA. True, True\nB. False, False\nC. True, False\nD. False, True\nAnswer: A\n\nFind the characteristic of the ring 2Z.\nA. 0\nB. 3\nC. 12\nD. 30\nAnswer: A\n\nFind the degree for the given field extension Q(sqrt(2), sqrt(3), sqrt(18)) over Q.\nA. 0\nB. 4\nC. 2\nD. 6\nAnswer:",
+        "token_counts": [
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "doc_id": 1,
+        "target_index": 2,
+        "target_label": "C",
+        "summed_nll": {
+          "A": 21.91903305053711,
+          "B": 28.48153305053711,
+          "C": 26.82528305053711,
+          "D": 26.41903305053711
+        },
+        "is_greedy": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "selected_label_from_argmin": "A",
+        "acc": 0.0,
+        "input": "The following are multiple choice questions (with answers) about abstract algebra.\nFind all c in Z_3 such that Z_3[x]/(x^2 + c) is a field.\nA. 0\nB. 1\nC. 2\nD. 3\nAnswer: B\n\nStatement 1 | If aH is an element of a factor group, then |aH| divides |a|. Statement 2 | If H and K are subgroups of G then HK is a subgroup of G.\nA. True, True\nB. False, False\nC. True, False\nD. False, True\nAnswer: B\n\nStatement 1 | Every element of a group generates a cyclic subgroup of the group. Statement 2 | The symmetric group S_10 has 10 elements.\nA. True, True\nB. False, False\nC. True, False\nD. False, True\nAnswer: C\n\nStatement 1| Every function from a finite set onto itself must be one to one. Statement 2 | Every subgroup of an abelian group is abelian.\nA. True, True\nB. False, False\nC. True, False\nD. False, True\nAnswer: A\n\nFind the characteristic of the ring 2Z.\nA. 0\nB. 3\nC. 12\nD. 30\nAnswer: A\n\nLet p = (1, 2, 5, 4)(2, 3) in S_5 . Find the index of <p> in S_5.\nA. 8\nB. 2\nC. 24\nD. 120\nAnswer:",
+        "token_counts": [
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    ]
+  },
+  "sample_serialization_note": "The existing EvaluationTracker serializes numeric scores and booleans as strings in samples JSONL. This report converts those strings back to float/bool; selected labels are derived with numeric argmin, not generated text.",
+  "cli_simple_after": {
+    "exit_code": 0,
+    "model_backend": "lmms_eval.models.simple.qwen3_vl.Qwen3_VL (simple)",
+    "effective_samples": 2,
+    "num_fewshot": 5,
+    "metric": {
+      "alias": "abstract_algebra",
+      "acc,none": 0.0,
+      "acc_stderr,none": 0.0,
+      "acc_stderr_clt,none": 0.0,
+      "acc_stderr_clustered,none": "N/A"
+    },
+    "scoring_requests": 8,
+    "log": "simple-after.log",
+    "all_eight_scores_equal_to_chat": true
+  }
+}

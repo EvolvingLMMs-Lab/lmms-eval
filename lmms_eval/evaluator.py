@@ -1231,8 +1231,13 @@ def evaluate(
             resps = getattr(lm, reqtype)(cloned_reqs)
 
         for x, req in zip(resps, cloned_reqs):
-            text, tc = unwrap_generation_output(x)
-            req.resps.append(text)
+            if reqtype == "loglikelihood":
+                # Keep numeric (loss, is_greedy) pairs, including JSON lists
+                # from the response cache, for the task's choice scorer.
+                response, tc = x, None
+            else:
+                response, tc = unwrap_generation_output(x)
+            req.resps.append(response)
             req.token_counts.append(tc)
 
         if is_budget_exceeded():

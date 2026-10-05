@@ -1,0 +1,98 @@
+2026-10-05 21:36:33 | INFO     | lmms_eval.__main__:cli_evaluate:516 - Verbosity set to DEBUG
+2026-10-05 21:36:34 | DEBUG    | lmms_eval.tasks:_get_task_and_group:457 - `group` and `group_alias` keys in tasks' configs will no longer be used in the next release of lmms-eval. `tag` will be used to allow to call a collection of tasks just like `group`. `group` will be removed in order to not cause confusion with the new ConfigurableGroup which will be the offical way to create groups with addition of group-wide configuations.
+2026-10-05 21:36:34 | DEBUG    | lmms_eval.tasks:_get_task_and_group:483 - File _hd_epic_base.yaml in /mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/tasks/hd_epic could not be loaded as a task or group
+2026-10-05 21:36:34 | DEBUG    | lmms_eval.tasks:_get_task_and_group:483 - File illusionvqa.yaml in /mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/tasks/illusionvqa could not be loaded as a task or group
+2026-10-05 21:36:37 | DEBUG    | lmms_eval.tasks:_get_task_and_group:483 - File _default_template_mmsearch_plus.yaml in /mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/tasks/mmsearch_plus could not be loaded as a task or group
+2026-10-05 21:36:38 | DEBUG    | lmms_eval.tasks:_get_task_and_group:483 - File _default_template.yaml in /mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/tasks/realunify could not be loaded as a task or group
+2026-10-05 21:36:38 | DEBUG    | lmms_eval.tasks:_get_task_and_group:483 - File _default_template.yaml in /mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/tasks/robo_spatial could not be loaded as a task or group
+2026-10-05 21:36:38 | DEBUG    | lmms_eval.tasks:_get_task_and_group:483 - File _default_template.yaml in /mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/tasks/uni_mmmu could not be loaded as a task or group
+2026-10-05 21:36:39 | DEBUG    | lmms_eval.tasks:_get_task_and_group:483 - File _default_template.yaml in /mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/tasks/video-tt could not be loaded as a task or group
+2026-10-05 21:36:39 | DEBUG    | lmms_eval.tasks:_get_task_and_group:483 - File _binary.yaml in /mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/tasks/videonet could not be loaded as a task or group
+2026-10-05 21:36:39 | DEBUG    | lmms_eval.tasks:_get_task_and_group:483 - File _default.yaml in /mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/tasks/videonet could not be loaded as a task or group
+2026-10-05 21:36:39 | DEBUG    | lmms_eval.tasks:_get_task_and_group:483 - File _mcq.yaml in /mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/tasks/videonet could not be loaded as a task or group
+2026-10-05 21:36:40 | INFO     | lmms_eval.__main__:cli_evaluate_single:653 - Evaluation tracker args: {'output_path': '/tmp/issue1563-after'}
+2026-10-05 21:36:40 | WARNING  | lmms_eval.__main__:cli_evaluate_single:683 -  --limit SHOULD ONLY BE USED FOR TESTING.REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.
+2026-10-05 21:36:40 | INFO     | lmms_eval.__main__:cli_evaluate_single:737 - Selected Tasks: ['mmlu_abstract_algebra']
+2026-10-05 21:36:40 | INFO     | lmms_eval.evaluator:simple_evaluate:486 - Setting random seed to 42 | Setting numpy seed to 42 | Setting torch manual seed to 42
+2026-10-05 21:36:40 | WARNING  | lmms_eval.evaluator:simple_evaluate:498 - generation_kwargs specified through cli, these settings will be used over set parameters in yaml tasks.
+Loading weights: 100%|██████████| 625/625 [00:09<00:00, 64.46it/s]
+2026-10-05 21:36:52 | DEBUG    | lmms_eval.caching.fs_detect:detect_fs_type:168 - fs_detect: /mnt/umm/users/pufanyi/.cache/huggingface/datasets -> LOCAL (fs=fuse.quarkfs_client, mount=/mnt/umm)
+`trust_remote_code` is not supported anymore.
+Please check that the Hugging Face dataset 'hails/mmlu_no_train' isn't based on a loading script and remove `trust_remote_code`.
+If the dataset is based on a loading script, please ask the dataset author to remove it and convert it to a standard format like Parquet.
+Using the latest cached version of the dataset since hails/mmlu_no_train couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'abstract_algebra' at /mnt/umm/users/pufanyi/.cache/huggingface/datasets/hails___mmlu_no_train/abstract_algebra/0.0.0/b2e1ec9aa795adafe68e8e983248dbd4b52a1c60 (last modified on Mon Oct  5 21:15:59 2026).
+2026-10-05 21:36:52 | WARNING  | lmms_eval.evaluator:_adjust_config:594 - Overwriting default num_fewshot of mmlu_abstract_algebra from None to 5
+2026-10-05 21:36:52 | INFO     | lmms_eval.evaluator:evaluate:1047 - Running on rank 0 (local rank 0)
+2026-10-05 21:36:52 | INFO     | lmms_eval.api.task:build_all_requests:483 - Building contexts for mmlu_abstract_algebra on rank 0...
+  0%|          | 0/2 [00:00<?, ?it/s]
+100%|██████████| 2/2 [00:00<00:00, 128.21it/s]
+2026-10-05 21:36:52 | DEBUG    | lmms_eval.evaluator:evaluate:1143 - Task: mmlu_abstract_algebra; number of requests on this rank: 8
+2026-10-05 21:36:52 | INFO     | lmms_eval.evaluator:evaluate:1202 - Running loglikelihood requests
+Model Scoring: 100%|██████████| 8/8 [00:03<00:00,  2.62it/s]
+Postprocessing:   0%|          | 0/2 [00:00<?, ?it/s]Traceback (most recent call last):
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/api/task.py", line 1606, in process_results
+    lls, is_greedy = zip(*results)
+    ^^^^^^^^^^^^^^
+ValueError: too many values to unpack (expected 2)
+The above exception was the direct cause of the following exception:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/__main__.py", line 8, in <module>
+    main()
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/cli/dispatch.py", line 146, in main
+    cli_evaluate()
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/__main__.py", line 612, in cli_evaluate
+    raise e
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/__main__.py", line 584, in cli_evaluate
+    results, samples = cli_evaluate_single(args)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/__main__.py", line 741, in cli_evaluate_single
+    results = evaluator.simple_evaluate(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/utils.py", line 737, in _wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/evaluator.py", line 653, in simple_evaluate
+    results = evaluate(
+              ^^^^^^^^^
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/utils.py", line 737, in _wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/evaluator.py", line 1381, in evaluate
+    processed_documents = _thread_map_ordered(
+                          ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/evaluator.py", line 289, in _thread_map_ordered
+    completed.append((index, future.result()))
+                             ^^^^^^^^^^^^^^^
+  File "/mnt/umm/users/pufanyi/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/mnt/umm/users/pufanyi/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/mnt/umm/users/pufanyi/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/evaluator.py", line 1373, in process_document
+    return _process_document_results(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/lmms_eval/evaluator.py", line 312, in _process_document_results
+    metrics = task.process_results(doc, [req.filtered_resps[filter_key] for req in requests])
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 331, in wrapped_f
+    return copy(f, *args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 371, in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/mnt/umm/users/pufanyi/projects/lmms-eval/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 414, in exc_check
+    raise retry_exc from fut.exception()
+tenacity.RetryError: RetryError[<Future at 0x7f0b782ebe90 state=finished raised ValueError>]
+Postprocessing:   0%|          | 0/2 [00:08<?, ?it/s]

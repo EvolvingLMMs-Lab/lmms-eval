@@ -108,13 +108,33 @@ Scoring for multiple-choice tasks. The model computes the log-probability of a t
 | Element | Type | Description |
 |---------|------|-------------|
 | `contexts` | `str` | Formatted question text |
-| `doc_to_target` | `Callable` | Function that extracts the answer continuation from the doc |
+| `doc_to_target` | `str` or `Callable` | Choice continuation, or function that extracts it from the doc |
 | `doc_to_visual` | `Callable` | Function that returns media |
 | `doc_id` | `int` | Index into the dataset split |
 | `task` | `str` | Task name |
 | `split` | `str` | Dataset split name |
 
 Returns `list[tuple[float, bool]]` - `(log_prob, is_greedy)` per request, where `is_greedy` is `True` if the target would be produced by greedy decoding.
+
+The Qwen3-VL backend, including its chat adapter, supports text-only likelihood
+tasks such as `mmlu`. It returns summed negative log-likelihood for each choice,
+matching the current multiple-choice scorer's `argmin` convention. It scores
+continuation tokens without adding an assistant end-of-turn token. Chat
+likelihood requests reuse the standard six-element layout and the full
+few-shot context; generation requests retain the messages layout. Image/video
+likelihood and likelihood tasks with custom `doc_to_messages` are not supported.
+
+For example, run a small five-shot MMLU smoke test with:
+
+```bash
+uv run python -m lmms_eval eval \
+    --model qwen3_vl \
+    --model_args pretrained=Qwen/Qwen3-VL-2B-Instruct,attn_implementation=eager,device_map=auto \
+    --tasks mmlu_abstract_algebra --num_fewshot 5 --limit 2 \
+    --batch_size 1 --log_samples --output_path ./mmlu-smoke
+```
+
+Generation settings such as `max_new_tokens` do not affect likelihood scoring.
 
 ## Registration
 
