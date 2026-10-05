@@ -51,8 +51,8 @@ class RegexExtractor(Extractor):
 class MCQExtractor(Extractor):
     """Extract a multiple-choice answer letter (A/B/C/…).
 
-    Delegates to the shared ``extract_mcq_answer`` utility which handles
-    10+ common answer formats with priority ranking.
+    Delegates to the shared ``extract_mcq_answer`` utility, which prefers scoped
+    and explicit answers and abstains on invalid or ambiguous selections.
     """
 
     def __init__(self, choices: Optional[List[str]] = None):

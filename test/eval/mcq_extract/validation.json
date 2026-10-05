@@ -1,0 +1,1673 @@
+{
+  "base_revision": "bc27dfacaa2d23f3203544e1c0cc3141964167e3",
+  "source_sha256": "c38447cf7927bc9e9498692a544d98bf50a3cdd4c7d09adca5793eb748a9739d",
+  "environment": {
+    "python": "3.12.13",
+    "torch": "2.13.0",
+    "torchvision": "0.28.0",
+    "transformers": "5.17.0",
+    "datasets": "5.0.1",
+    "accelerate": "1.15.0",
+    "pytest": "9.1.1",
+    "qwen-vl-utils": "0.0.14",
+    "pre-commit": "4.6.2",
+    "ruff": "0.16.8",
+    "huggingface-hub": "1.32.0"
+  },
+  "corpus": {
+    "total": 219,
+    "before_passed": 122,
+    "before_failed": 97,
+    "after_passed": 219,
+    "after_failed": 0
+  },
+  "cases": [
+    {
+      "id": "regression_lowercase_explanation_dog",
+      "category": "regression",
+      "before": "D",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "regression_lowercase_because",
+      "category": "regression",
+      "before": "A",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "regression_closed_lowercase_tag",
+      "category": "regression",
+      "before": "A",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "regression_cubic_period",
+      "category": "regression",
+      "before": "C",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "regression_data_period",
+      "category": "regression",
+      "before": "A",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "regression_a_explanation",
+      "category": "regression",
+      "before": "",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "legacy_bare_upper",
+      "category": "legacy",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "legacy_correct_parenthesized",
+      "category": "legacy",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "legacy_answer_colon",
+      "category": "legacy",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "legacy_pick_explanation",
+      "category": "legacy",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "legacy_best_option",
+      "category": "legacy",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "legacy_option_correct",
+      "category": "legacy",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "legacy_lower_phrase_b",
+      "category": "legacy",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "legacy_lower_parenthesized",
+      "category": "legacy",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "legacy_lower_period",
+      "category": "legacy",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "legacy_lower_phrase_a",
+      "category": "legacy",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "legacy_lower_assertion",
+      "category": "legacy",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "legacy_bare_lower_b",
+      "category": "legacy",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "legacy_bare_lower_a",
+      "category": "legacy",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "legacy_open_answer_tag",
+      "category": "legacy",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "legacy_open_answer_marker",
+      "category": "legacy",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "legacy_article_triangle",
+      "category": "legacy",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "legacy_acronym_dna",
+      "category": "legacy",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "legacy_article_movie",
+      "category": "legacy",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "legacy_article_unit",
+      "category": "legacy",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "legacy_variable_lower_c",
+      "category": "legacy",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "legacy_plan_lower_b",
+      "category": "legacy",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "legacy_no_letters",
+      "category": "legacy",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "legacy_empty",
+      "category": "legacy",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "legacy_spaces",
+      "category": "legacy",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "legacy_a_period_explanation",
+      "category": "legacy",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "legacy_a_parenthesized_explanation",
+      "category": "legacy",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "input_null",
+      "category": "input",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "input_tabs_newlines",
+      "category": "input",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "input_unicode_whitespace",
+      "category": "input",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "input_punctuation",
+      "category": "input",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "input_refusal",
+      "category": "input",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "input_number",
+      "category": "input",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "input_empty_choices_default",
+      "category": "input",
+      "before": "H",
+      "after": "H",
+      "expected": "H"
+    },
+    {
+      "id": "bare_outer_whitespace",
+      "category": "bare",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "bare_default_upper_h",
+      "category": "bare",
+      "before": "H",
+      "after": "H",
+      "expected": "H"
+    },
+    {
+      "id": "bare_default_lower_h",
+      "category": "bare",
+      "before": "H",
+      "after": "H",
+      "expected": "H"
+    },
+    {
+      "id": "bare_default_invalid_i",
+      "category": "bare",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "bare_default_invalid_z",
+      "category": "bare",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "bare_period",
+      "category": "bare",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "bare_colon",
+      "category": "bare",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "bare_right_paren",
+      "category": "bare",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "label_uppercase_period",
+      "category": "label",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "label_lowercase_colon",
+      "category": "label",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "label_uppercase_right_paren",
+      "category": "label",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "label_lowercase_parentheses",
+      "category": "label",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "label_lowercase_period_a",
+      "category": "label",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "label_uppercase_colon_a",
+      "category": "label",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "label_leading_line_whitespace",
+      "category": "label",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "label_standalone_wrapped_in_prose",
+      "category": "label",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "label_trailing_separate_line",
+      "category": "label",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "label_trailing_comma",
+      "category": "label",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "label_trailing_semicolon",
+      "category": "label",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "label_same_wrapped_repetition",
+      "category": "label",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "markdown_bold_bare",
+      "category": "markdown",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "markdown_italic_bare",
+      "category": "markdown",
+      "before": "",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "markdown_code_bare",
+      "category": "markdown",
+      "before": "",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "markdown_bold_declaration",
+      "category": "markdown",
+      "before": "A",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "markdown_code_declaration",
+      "category": "markdown",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "markdown_italic_declaration",
+      "category": "markdown",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "markdown_bold_parenthesized",
+      "category": "markdown",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "markdown_bold_leading_label",
+      "category": "markdown",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "container_tag_upper",
+      "category": "container",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "container_tag_whitespace",
+      "category": "container",
+      "before": "A",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "container_tag_case",
+      "category": "container",
+      "before": "A",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "container_tag_distractors",
+      "category": "container",
+      "before": "C",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "container_tag_phrase",
+      "category": "container",
+      "before": "A",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "container_tag_invalid_final",
+      "category": "container",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "container_tag_empty_final",
+      "category": "container",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "container_tag_prose_only",
+      "category": "container",
+      "before": "A",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "container_tag_alternatives",
+      "category": "container",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "container_tag_last_wins",
+      "category": "container",
+      "before": "A",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "container_boxed_upper",
+      "category": "container",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "container_boxed_lower",
+      "category": "container",
+      "before": "",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "container_boxed_wrapped",
+      "category": "container",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "container_boxed_invalid_final",
+      "category": "container",
+      "before": "A",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "container_mixed_tag_then_box",
+      "category": "container",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "container_mixed_box_then_tag",
+      "category": "container",
+      "before": "A",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "container_container_over_later_declaration",
+      "category": "container",
+      "before": "C",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "container_container_invalid_over_valid_phrase",
+      "category": "container",
+      "before": "A",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "phrase_answer_equals_case",
+      "category": "phrase",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "phrase_final_answer_colon",
+      "category": "phrase",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "phrase_answer_newline",
+      "category": "phrase",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "phrase_answer_nbsp",
+      "category": "phrase",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "phrase_correct_answer",
+      "category": "phrase",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "phrase_choose_lower",
+      "category": "phrase",
+      "before": "A",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "phrase_pick_lower",
+      "category": "phrase",
+      "before": "D",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "phrase_select_upper",
+      "category": "phrase",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "phrase_option_lower_correct",
+      "category": "phrase",
+      "before": "",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "phrase_option_a_explanation",
+      "category": "phrase",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "phrase_best_option_lower",
+      "category": "phrase",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "phrase_answer_parenthesized",
+      "category": "phrase",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "phrase_invalid_answer_word",
+      "category": "phrase",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "phrase_invalid_answer_acronym",
+      "category": "phrase",
+      "before": "A",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "phrase_nonadjacent_letter",
+      "category": "phrase",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "phrase_choose_plan_b",
+      "category": "phrase",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "phrase_out_of_alphabet",
+      "category": "phrase",
+      "before": "D",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "multilingual_chinese_is",
+      "category": "multilingual",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "multilingual_chinese_lower",
+      "category": "multilingual",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "multilingual_chinese_be",
+      "category": "multilingual",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "multilingual_chinese_choose",
+      "category": "multilingual",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "multilingual_chinese_wrapped",
+      "category": "multilingual",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "multilingual_korean_option",
+      "category": "multilingual",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "multilingual_korean_correct",
+      "category": "multilingual",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "multilingual_korean_answer",
+      "category": "multilingual",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "multilingual_korean_colon",
+      "category": "multilingual",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "multilingual_korean_colon_punctuation",
+      "category": "multilingual",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "multilingual_japanese_answer",
+      "category": "multilingual",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "multilingual_japanese_lower",
+      "category": "multilingual",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "multilingual_japanese_colon",
+      "category": "multilingual",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "multilingual_chinese_invalid",
+      "category": "multilingual",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "multilingual_japanese_invalid_word",
+      "category": "multilingual",
+      "before": "C",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "correction_later_answer",
+      "category": "correction",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "correction_lower_to_upper",
+      "category": "correction",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "correction_upper_to_lower",
+      "category": "correction",
+      "before": "D",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "correction_implicit_to_explicit",
+      "category": "correction",
+      "before": "A",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "correction_explicit_before_implicit",
+      "category": "correction",
+      "before": "D",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "correction_last_invalid",
+      "category": "correction",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "correction_last_no_token",
+      "category": "correction",
+      "before": "C",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "correction_last_ambiguous",
+      "category": "correction",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "correction_alternatives_then_correction",
+      "category": "correction",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "correction_option_assertion_later",
+      "category": "correction",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "correction_different_language",
+      "category": "correction",
+      "before": "A",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "correction_irrelevant_upper_explanation",
+      "category": "correction",
+      "before": "A",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "correction_invalid_then_valid",
+      "category": "correction",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "ambiguous_bare_or",
+      "category": "ambiguous",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "ambiguous_bare_and",
+      "category": "ambiguous",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "ambiguous_bare_slash",
+      "category": "ambiguous",
+      "before": "A",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "ambiguous_phrase_or",
+      "category": "ambiguous",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "ambiguous_phrase_and",
+      "category": "ambiguous",
+      "before": "C",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "ambiguous_phrase_slash",
+      "category": "ambiguous",
+      "before": "D",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "ambiguous_phrase_comma",
+      "category": "ambiguous",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "ambiguous_boxed_and",
+      "category": "ambiguous",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "ambiguous_parenthesized_pair",
+      "category": "ambiguous",
+      "before": "D",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "ambiguous_two_labels",
+      "category": "ambiguous",
+      "before": "A",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "ambiguous_full_option_list",
+      "category": "ambiguous",
+      "before": "A",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "ambiguous_list_with_final_answer",
+      "category": "ambiguous",
+      "before": "A",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "ambiguous_reasoning_multiple_mentions",
+      "category": "ambiguous",
+      "before": "A",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "ambiguous_two_trailing_lines",
+      "category": "ambiguous",
+      "before": "D",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_word_colon",
+      "category": "boundary",
+      "before": "A",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_word_right_paren",
+      "category": "boundary",
+      "before": "C",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_uppercase_acronym_period",
+      "category": "boundary",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_underscore_identifier",
+      "category": "boundary",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_digit_identifier",
+      "category": "boundary",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_identifier_before_period",
+      "category": "boundary",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_decimal_version",
+      "category": "boundary",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_url_path",
+      "category": "boundary",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_url_host",
+      "category": "boundary",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_email",
+      "category": "boundary",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_chinese_embedded",
+      "category": "boundary",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_accented_left",
+      "category": "boundary",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_accented_right",
+      "category": "boundary",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_greek_embedded",
+      "category": "boundary",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_uppercase_variable_end",
+      "category": "boundary",
+      "before": "C",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_vitamin_end",
+      "category": "boundary",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_single_uppercase_middle",
+      "category": "boundary",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_fullwidth_choice",
+      "category": "boundary",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "custom_extended_i",
+      "category": "custom",
+      "before": "I",
+      "after": "I",
+      "expected": "I"
+    },
+    {
+      "id": "custom_extended_n",
+      "category": "custom",
+      "before": "",
+      "after": "N",
+      "expected": "N"
+    },
+    {
+      "id": "custom_extended_k_box",
+      "category": "custom",
+      "before": "",
+      "after": "K",
+      "expected": "K"
+    },
+    {
+      "id": "custom_extended_invalid_o",
+      "category": "custom",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "custom_lowercase_choices",
+      "category": "custom",
+      "before": "",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "custom_lowercase_response",
+      "category": "custom",
+      "before": "c",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "custom_lowercase_reject_d",
+      "category": "custom",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "custom_sparse_z",
+      "category": "custom",
+      "before": "Z",
+      "after": "Z",
+      "expected": "Z"
+    },
+    {
+      "id": "custom_sparse_default_rejected",
+      "category": "custom",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "custom_sparse_invalid_final",
+      "category": "custom",
+      "before": "X",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "custom_singleton",
+      "category": "custom",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "article_lower_noun",
+      "category": "article",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "article_uppercase_noun",
+      "category": "article",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "article_a_is_correct",
+      "category": "article",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "article_a_seems_correct",
+      "category": "article",
+      "before": "",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "article_lower_a_because",
+      "category": "article",
+      "before": "",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "article_lower_a_is_correct",
+      "category": "article",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "article_a_noun_with_is",
+      "category": "article",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "article_punctuated_article_text",
+      "category": "article",
+      "before": "A",
+      "after": "A",
+      "expected": "A"
+    },
+    {
+      "id": "model_reply_count_cars",
+      "category": "model_reply",
+      "before": "A",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "model_reply_spatial_choice",
+      "category": "model_reply",
+      "before": "D",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "model_reply_refuse_after_distractors",
+      "category": "model_reply",
+      "before": "A",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "model_reply_option_restatement",
+      "category": "model_reply",
+      "before": "A",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "model_reply_box_after_reasoning",
+      "category": "model_reply",
+      "before": "",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "model_reply_corrected_count",
+      "category": "model_reply",
+      "before": "D",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "model_reply_no_choice_after_answer",
+      "category": "model_reply",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "model_reply_tag_then_explanation",
+      "category": "model_reply",
+      "before": "D",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "custom_five_options_e",
+      "category": "custom",
+      "before": "A",
+      "after": "E",
+      "expected": "E"
+    },
+    {
+      "id": "custom_five_options_f_rejected",
+      "category": "custom",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "custom_five_options_alternative",
+      "category": "custom",
+      "before": "E",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "custom_extended_i_declaration",
+      "category": "custom",
+      "before": "I",
+      "after": "I",
+      "expected": "I"
+    },
+    {
+      "id": "custom_extended_i_pronoun",
+      "category": "custom",
+      "before": "I",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "multilingual_korean_arbitrary_suffix",
+      "category": "multilingual",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "multilingual_japanese_arbitrary_suffix",
+      "category": "multilingual",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "multilingual_chinese_arbitrary_suffix",
+      "category": "multilingual",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "model_reply_spanish_container",
+      "category": "model_reply",
+      "before": "E",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "model_reply_arabic_container",
+      "category": "model_reply",
+      "before": "",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "custom_noncontiguous_f",
+      "category": "custom",
+      "before": "F",
+      "after": "F",
+      "expected": "F"
+    },
+    {
+      "id": "container_unfinished_box",
+      "category": "container",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "container_empty_last_box",
+      "category": "container",
+      "before": "A",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "container_nested_distinct_tags",
+      "category": "container",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "container_nested_same_tags",
+      "category": "container",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "container_mismatched_tag",
+      "category": "container",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "container_boxed_text",
+      "category": "container",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "container_boxed_text_invalid",
+      "category": "container",
+      "before": "",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "markdown_single_quotes",
+      "category": "markdown",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "markdown_double_quotes",
+      "category": "markdown",
+      "before": "C",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "markdown_curly_quotes",
+      "category": "markdown",
+      "before": "",
+      "after": "D",
+      "expected": "D"
+    },
+    {
+      "id": "markdown_underscore",
+      "category": "markdown",
+      "before": "B",
+      "after": "B",
+      "expected": "B"
+    },
+    {
+      "id": "markdown_double_underscore",
+      "category": "markdown",
+      "before": "",
+      "after": "C",
+      "expected": "C"
+    },
+    {
+      "id": "boundary_unpaired_underscore",
+      "category": "boundary",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_identifier_suffix",
+      "category": "boundary",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "boundary_parenthesized_url",
+      "category": "boundary",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "container_stray_closing_tag",
+      "category": "container",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "container_nested_conflicting_boxes",
+      "category": "container",
+      "before": "B",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "ambiguous_comma_option_list",
+      "category": "ambiguous",
+      "before": "D",
+      "after": "",
+      "expected": ""
+    },
+    {
+      "id": "container_multiline_choices",
+      "category": "container",
+      "before": "D",
+      "after": "",
+      "expected": ""
+    }
+  ],
+  "e2e": {
+    "status": "PASS",
+    "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "model_revision": "66285546d2b821cf421d4f5eb2576359d3770cd3",
+    "backend": "qwen2_5_vl",
+    "dataset": "Lin-Chen/MMStar",
+    "dataset_revision": "bc98d668301da7b14f648724866e57302778ab27",
+    "split": "val",
+    "sample_count": 4,
+    "hardware": "NVIDIA H800 81,559 MiB; torch CUDA 13.0",
+    "generation": {
+      "max_new_tokens": 64,
+      "do_sample": false,
+      "batch_size": 1,
+      "seed": 42,
+      "attention": "sdpa",
+      "dtype": "bfloat16"
+    },
+    "after_command": "env WANDB_MODE=disabled HF_HUB_DISABLE_XET=1 ./.venv/bin/python -m lmms_eval eval --model qwen2_5_vl --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct,attn_implementation=sdpa,device_map=cuda:0 --tasks mmstar --batch_size 1 --limit 4 --gen_kwargs max_new_tokens=64,do_sample=False --output_path /tmp/mcq-e2e-after --log_samples --seed 42",
+    "runs": {
+      "before": {
+        "exit_code": 0,
+        "nonempty_predictions": 4,
+        "metric": "average,none",
+        "value": 0.0,
+        "source_samples_artifact": "/tmp/mcq-e2e-before/Qwen__Qwen2.5-VL-3B-Instruct/20261005_171452_samples_mmstar.jsonl",
+        "source_results_artifact": "/tmp/mcq-e2e-before/Qwen__Qwen2.5-VL-3B-Instruct/20261005_171452_results.json",
+        "predictions": [
+          {
+            "doc_id": 0,
+            "target": "A",
+            "prediction": "D",
+            "input_media": [
+              "images/0.jpg"
+            ],
+            "score": 0.0
+          },
+          {
+            "doc_id": 1,
+            "target": "B",
+            "prediction": "C",
+            "input_media": [
+              "images/1.jpg"
+            ],
+            "score": 0.0
+          },
+          {
+            "doc_id": 2,
+            "target": "D",
+            "prediction": "B",
+            "input_media": [
+              "images/2.jpg"
+            ],
+            "score": 0.0
+          },
+          {
+            "doc_id": 3,
+            "target": "C",
+            "prediction": "B",
+            "input_media": [
+              "images/3.jpg"
+            ],
+            "score": 0.0
+          }
+        ]
+      },
+      "after": {
+        "exit_code": 0,
+        "nonempty_predictions": 4,
+        "metric": "average,none",
+        "value": 0.0,
+        "source_samples_artifact": "/tmp/mcq-e2e-after/Qwen__Qwen2.5-VL-3B-Instruct/20261005_173242_samples_mmstar.jsonl",
+        "source_results_artifact": "/tmp/mcq-e2e-after/Qwen__Qwen2.5-VL-3B-Instruct/20261005_173242_results.json",
+        "predictions": [
+          {
+            "doc_id": 0,
+            "target": "A",
+            "prediction": "D",
+            "input_media": [
+              "images/0.jpg"
+            ],
+            "score": 0.0
+          },
+          {
+            "doc_id": 1,
+            "target": "B",
+            "prediction": "C",
+            "input_media": [
+              "images/1.jpg"
+            ],
+            "score": 0.0
+          },
+          {
+            "doc_id": 2,
+            "target": "D",
+            "prediction": "B",
+            "input_media": [
+              "images/2.jpg"
+            ],
+            "score": 0.0
+          },
+          {
+            "doc_id": 3,
+            "target": "C",
+            "prediction": "B",
+            "input_media": [
+              "images/3.jpg"
+            ],
+            "score": 0.0
+          }
+        ]
+      }
+    }
+  }
+}
