@@ -43,6 +43,7 @@ jobs:
           test/eval/test_protocol.py
           test/eval/test_request_construction_contract.py
           test/eval/test_metbench.py
+          test/eval/test_mcq_extract.py
           test/eval/test_task_pipeline.py
           test/eval/test_evaluator.py
           test/eval/test_evaluator_sample_limits.py
