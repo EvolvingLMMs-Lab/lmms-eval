@@ -48,7 +48,13 @@ flat or subcommand CLI
 
 The HTTP server and MCP surface use a sequential scheduler. The scheduler builds an argument vector, creates one subprocess per job, waits for it, then scans model directories and selects the latest timestamp. The TUI has a separate execution path.[1][4]
 
-### Current facts verified at the RFC baseline
+### Implementation status
+
+The hermetic CPU contracts (#1440), per-task sample-limit correction (#1441), TUI security changes (#1445), and production request-layout test cleanup (#1451) have landed. The request-cache repair is tracked separately in #1514. These changes establish the correctness baseline for the remaining registry and performance stacks; they do not implement the persistent lifecycle described here.
+
+The source facts below describe the original RFC baseline. A defect listed there may already have been repaired by these focused changes. The baseline remains historical evidence for the design and is not a statement that every defect is present on current `main`.
+
+### Facts verified at the RFC baseline
 
 Source facts below were verified against commit `c58c56f5` on 2026-08-22.
 
