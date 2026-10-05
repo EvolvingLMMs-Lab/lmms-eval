@@ -473,6 +473,7 @@ python -m lmms_eval --tasks list_with_num
 
 ## 5. Document Understanding Tasks
 
+- [DocAtlas-Bench](https://github.com/ahmedheakl/DocAtlas) (docatlas_bench)
 - [DOCVQA](https://github.com/anisha2102/docvqa) (docvqa)
   - DOCVQA Validation (docvqa_val)
   - DOCVQA Test (docvqa_test)

@@ -1,0 +1,32 @@
+dataset_path: ahmedheakl/DocAtlas-Bench
+task: docatlas_bench
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.docatlas_doc_to_visual
+doc_to_text: !function utils.docatlas_doc_to_text
+doc_to_target: markdown
+generation_kwargs:
+  max_new_tokens: 8192
+  temperature: 0
+  do_sample: false
+  until: []
+process_results: !function utils.docatlas_process_results
+metric_list:
+  - metric: docatlas_overall
+    aggregation: !function utils.docatlas_aggregate_overall
+    higher_is_better: true
+  - metric: docatlas_text_edit
+    aggregation: !function utils.docatlas_aggregate_text_edit
+    higher_is_better: false
+  - metric: docatlas_table_teds
+    aggregation: !function utils.docatlas_aggregate_table_teds
+    higher_is_better: true
+  - metric: docatlas_reading_order_edit
+    aggregation: !function utils.docatlas_aggregate_reading_order_edit
+    higher_is_better: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 1.0
