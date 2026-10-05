@@ -1,0 +1,5 @@
+include: ../../../lmms_eval/tasks/ai2d/ai2d.yaml
+task: request_cache_ai2d_e2e
+dataset_kwargs:
+  token: false
+  revision: c83a9b9692933aff8349157c88a413df9d02c4e5
