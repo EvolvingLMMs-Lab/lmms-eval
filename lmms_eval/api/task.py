@@ -1840,6 +1840,13 @@ class ConfigurableMessagesTask(ConfigurableTask):
         return self.config.doc_to_messages
 
     def construct_requests(self, doc_id: int, ctx: str, **kwargs) -> Union[List[Instance], Instance]:
+        if self.OUTPUT_TYPE in {"loglikelihood", "multiple_choice"}:
+            if self.config.doc_to_messages is not None:
+                raise NotImplementedError("Likelihood requests use doc_to_text/doc_to_visual; custom doc_to_messages is not supported. Use a generative task for custom message inputs.")
+            # Likelihood has a shared protocol for simple and chat backends:
+            # ctx, continuation/target callback, visual callback, doc/task/split.
+            # Reuse the complete few-shot ctx and the existing choice expansion.
+            return super().construct_requests(doc_id, ctx, **kwargs)
         split = kwargs.get("metadata").get("split")
         assert self.OUTPUT_TYPE in [
             "generate_until",

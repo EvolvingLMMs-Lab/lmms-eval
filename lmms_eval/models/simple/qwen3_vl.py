@@ -202,7 +202,72 @@ class Qwen3_VL(lmms):
         return self._world_size
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        raise NotImplementedError("Loglikelihood is not implemented for Qwen3 VL models")
+        """Score text continuations with summed NLL, matching task argmin scoring.
+
+        The chat adapter inherits the same likelihood request protocol. Only
+        continuation tokens are scored: no prompt loss or assistant EOS token.
+        Joint tokenization includes any token that crosses the prompt boundary.
+        Media likelihood is intentionally unsupported rather than ignored.
+        """
+        results = []
+        if not requests:
+            return results
+        for request in tqdm(requests, disable=self.rank != 0, desc="Model Scoring"):
+            if len(request.args) == 2:
+                context, continuation = request.args
+            elif len(request.args) == 6:
+                context, continuation, doc_to_visual, doc_id, task, split = request.args
+                doc = self.task_dict[task][split][doc_id]
+                if doc_to_visual is not None and doc_to_visual(doc):
+                    raise NotImplementedError("Qwen3-VL loglikelihood currently supports text-only requests. Use a generative task for image or video inputs.")
+                if callable(continuation):
+                    continuation = continuation(doc)
+            else:
+                raise ValueError(f"Expected two or six likelihood arguments, got {len(request.args)}")
+            if not isinstance(context, str) or not isinstance(continuation, str):
+                raise TypeError("Likelihood context and continuation must be strings")
+            if continuation == "":
+                results.append((0.0, True))
+                continue
+
+            messages = []
+            if self.system_prompt:
+                messages.append({"role": "system", "content": self.system_prompt})
+            messages.append({"role": "user", "content": [{"type": "text", "text": context}]})
+            prompt = self._apply_chat_template([messages])[0]
+            prompt_tokens = self.tokenizer.encode(prompt, add_special_tokens=False)
+            full_tokens = self.tokenizer.encode(prompt + continuation, add_special_tokens=False)
+
+            # A BPE token can change when the continuation is appended. Keep
+            # the shared prefix, and include the overlapping token in scoring.
+            prefix_length = 0
+            for prompt_token, full_token in zip(prompt_tokens, full_tokens):
+                if prompt_token != full_token:
+                    break
+                prefix_length += 1
+            if prefix_length == 0:
+                raise ValueError("Likelihood scoring requires a nonempty tokenized prompt prefix")
+            continuation_length = len(full_tokens) - prefix_length
+            if continuation_length == 0:
+                results.append((0.0, True))
+                continue
+            input_ids = torch.tensor([full_tokens], dtype=torch.long, device=self.device)
+            with torch.inference_mode():
+                output = self.model(
+                    input_ids=input_ids,
+                    attention_mask=torch.ones_like(input_ids),
+                    use_cache=False,
+                    logits_to_keep=continuation_length + 1,
+                )
+                # Position P-1 predicts the first continuation token at P.
+                logits = output.logits[:, :-1, :].float()
+                targets = input_ids[:, prefix_length:]
+                loss = torch.nn.functional.cross_entropy(logits.reshape(-1, logits.shape[-1]), targets.reshape(-1), reduction="sum")
+                greedy = bool((logits.argmax(dim=-1) == targets).all().item())
+            result = (float(loss.item()), greedy)
+            results.append(result)
+            self.cache_hook.add_partial("loglikelihood", (context, continuation), result)
+        return results
 
     def flatten(self, input):  # noqa: A002 - Preserve the existing keyword argument name.
         new_list = []
