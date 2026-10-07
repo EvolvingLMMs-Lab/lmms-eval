@@ -55,7 +55,7 @@ Other:
 
 We recommend to browse existing tasks in the `lmms_eval/tasks` folder to get a sense of the different options available. 
 
-Here we will provide some explainations on the existing tasks and how to define new tasks. Here we use MME as an example.
+Here we will provide some explanations on the existing tasks and how to define new tasks. Here we use MME as an example.
 
 ```yaml
 dataset_path: lmms-lab/MME # The name of the dataset as listed by HF in the datasets Hub.
@@ -302,7 +302,7 @@ Also, the `lmms_eval_specific_kwargs` field is used to define model-specific pro
 
 **Generation-based Tasks (GPT-Eval)**
 
-You can check the following tasks to see how we incoporate GPT4 as judge model into our evaluation pipeline.
+You can check the following tasks to see how we incorporate GPT4 as judge model into our evaluation pipeline.
 
 - LLaVA-In-The-Wild (https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/lmms_eval/tasks/llava-in-the-wild/llava-in-the-wild.yaml)
 
@@ -338,7 +338,7 @@ dataset_kwargs:
   token: False
 task: "mmsearch_end2end"
 test_split: end2end
-output_type: generate_until_multi_round # Note that here we use the new output_type here for multi-round generation. It basicly follows generate_until but incorporate multi-round inference
+output_type: generate_until_multi_round # Note that here we use the new output_type here for multi-round generation. It basically follows generate_until but incorporate multi-round inference
 doc_to_visual: !function lmms_eval_utils.mmsearch_end2end_doc_to_visual
 doc_to_text: !function lmms_eval_utils.mmsearch_end2end_doc_to_text
 doc_to_target: "answer"

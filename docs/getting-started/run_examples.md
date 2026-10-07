@@ -1,5 +1,5 @@
 # User Guide
-This document details the running examples for different models in `lmms_eval`. We include commandas on how to prepare environments for different model and some commands to run these models
+This document details the running examples for different models in `lmms_eval`. We include commands on how to prepare environments for different model and some commands to run these models
 
 ## Environmental Variables
 
@@ -21,9 +21,9 @@ Sometimes you might encounter some common issues for example error related to `h
 ```bash
 python3 -m pip install httpx==0.23.3;
 python3 -m pip install protobuf==3.20;
-# If you are using numpy==2.x, sometimes may causing errors
+# If you are using numpy==2.x, sometimes may cause errors
 python3 -m pip install numpy==1.26;
-# Someties sentencepiece are required for tokenizer to work
+# Sometimes sentencepiece is required for tokenizer to work
 python3 -m pip install sentencepiece;
 ```
 
@@ -144,7 +144,7 @@ accelerate launch --num_processes 8 --main_process_port 12345 -m lmms_eval \
 
 ### Xcomposer-4KHD and Xcomposer-2d5
 
-Both of these two models does not require external repo
+Both of these two models do not require external repo
 
 ```bash
 cd /path/to/lmms-eval
@@ -209,7 +209,7 @@ accelerate launch --num_processes 8 --main_process_port 12345 -m lmms_eval \
 
 ### SRT API MODEL
 To enable faster testing speed for larger llava model, you can use this srt api model to enable testing through sglang.
-You will need to first glone sglang from "https://github.com/sgl-project/sglang". Current version is tested on the commit #1222 of sglang
+You will need to first clone sglang from "https://github.com/sgl-project/sglang". Current version is tested on the commit #1222 of sglang
 
 Here are the scripts if you want to test the result in one script.
 ```bash

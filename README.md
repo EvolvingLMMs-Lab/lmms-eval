@@ -238,9 +238,9 @@ Sometimes you might encounter some common issues for example error related to ht
 ```bash
 python3 -m pip install httpx==0.23.3;
 python3 -m pip install protobuf==3.20;
-# If you are using numpy==2.x, sometimes may causing errors
+# If you are using numpy==2.x, sometimes may cause errors
 python3 -m pip install numpy==1.26;
-# Someties sentencepiece are required for tokenizer to work
+# Sometimes sentencepiece is required for tokenizer to work
 python3 -m pip install sentencepiece;
 ```
 
@@ -591,7 +591,7 @@ lmms_eval is a fork of [lm-eval-harness](https://github.com/EleutherAI/lm-evalua
 Below are the changes we made to the original API:
 - Build context now only pass in idx and process image and doc during the model responding phase. This is due to the fact that dataset now contains lots of images and we can't store them in the doc like the original lm-eval-harness otherwise the cpu memory would explode.
 - Instance.args (lmms_eval/api/instance.py) now contains a list of images to be inputted to lmms.
-- lm-eval-harness supports all HF language models as single model class. Currently this is not possible of lmms because the input/output format of lmms in HF are not yet unified. Therefore, we have to create a new class for each lmms model. This is not ideal and we will try to unify them in the future.
+- lm-eval-harness supports all HF language models as single model class. Currently this is not possible for lmms because the input/output format of lmms in HF are not yet unified. Therefore, we have to create a new class for each lmms model. This is not ideal and we will try to unify them in the future.
 
 ---
 
@@ -609,7 +609,7 @@ Below are the changes we made to the original API:
 }
 
 @misc{lmms_eval2024,
-    title={LMMs-Eval: Accelerating the Development of Large Multimoal Models},
+    title={LMMs-Eval: Accelerating the Development of Large Multimodal Models},
     url={https://github.com/EvolvingLMMs-Lab/lmms-eval},
     author={Bo Li*, Peiyuan Zhang*, Kaichen Zhang*, Fanyi Pu*, Xinrun Du, Yuhao Dong, Haotian Liu, Yuanhan Zhang, Ge Zhang, Chunyuan Li and Ziwei Liu},
     publisher    = {Zenodo},

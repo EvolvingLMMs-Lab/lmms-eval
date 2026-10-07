@@ -238,7 +238,7 @@ As shown in the above results, the batch inference (BS=4) can significantly save
 4. **Regression Test**
     1. [Feat] add regression test and change saving logic related to `output_path` by [@Luodian](https://github.com/Luodian) in [#259](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/259)
 5. **Speed-Up by loading required tasks and models.**
-    1. [feat] remove registeration logic and adding language evaluation tasks. by [@Luodian](https://github.com/Luodian) in [#218](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/218)
+    1. [feat] remove registration logic and adding language evaluation tasks. by [@Luodian](https://github.com/Luodian) in [#218](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/218)
 6. **LMMs-Eval Analysis Tool**
     1. Lite/Core-set Selection by Kaichen Zhang
         
