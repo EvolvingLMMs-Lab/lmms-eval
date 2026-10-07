@@ -180,7 +180,7 @@ lmms_eval là một nhánh của [lm-eval-harness](https://github.com/EleutherAI
 }
 
 @misc{lmms_eval2024,
-    title={LMMs-Eval: Accelerating the Development of Large Multimoal Models},
+    title={LMMs-Eval: Accelerating the Development of Large Multimodal Models},
     url={https://github.com/EvolvingLMMs-Lab/lmms-eval},
     author={Bo Li*, Peiyuan Zhang*, Kaichen Zhang*, Fanyi Pu*, Xinrun Du, Yuhao Dong, Haotian Liu, Yuanhan Zhang, Ge Zhang, Chunyuan Li and Ziwei Liu},
     publisher    = {Zenodo},

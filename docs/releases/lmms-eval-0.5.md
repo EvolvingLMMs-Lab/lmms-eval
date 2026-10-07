@@ -76,7 +76,7 @@ Fine-grained paralinguistic feature evaluation:
 - **Acoustic Features**: pitch, rhythm, speed, voice_tone, voice_styles
 - **Speaker Attributes**: age, gender, emotions
 - **Environmental**: scene, event, vocalsound
-- Sematic Match metrics
+- Semantic Match metrics
 
 ```bash
 python -m lmms_eval \

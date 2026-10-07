@@ -184,9 +184,9 @@ Parfois, vous pourriez rencontrer des problèmes courants, par exemple des erreu
 ```bash
 python3 -m pip install httpx==0.23.3;
 python3 -m pip install protobuf==3.20;
-# If you are using numpy==2.x, sometimes may causing errors
+# If you are using numpy==2.x, sometimes may cause errors
 python3 -m pip install numpy==1.26;
-# Someties sentencepiece are required for tokenizer to work
+# Sometimes sentencepiece is required for tokenizer to work
 python3 -m pip install sentencepiece;
 ```
 
@@ -212,7 +212,7 @@ lmms_eval est un fork de [lm-eval-harness](https://github.com/EleutherAI/lm-eval
 }
 
 @misc{lmms_eval2024,
-    title={LMMs-Eval: Accelerating the Development of Large Multimoal Models},
+    title={LMMs-Eval: Accelerating the Development of Large Multimodal Models},
     url={https://github.com/EvolvingLMMs-Lab/lmms-eval},
     author={Bo Li*, Peiyuan Zhang*, Kaichen Zhang*, Fanyi Pu*, Xinrun Du, Yuhao Dong, Haotian Liu, Yuanhan Zhang, Ge Zhang, Chunyuan Li and Ziwei Liu},
     publisher    = {Zenodo},
