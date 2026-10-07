@@ -13,7 +13,7 @@ generation_kwargs:
   do_sample: false
 # The return value of process_results will be used by metrics
 process_results: !function mcq_utils.xlrs_process_results
-# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+# Note that the metric name can be either a registered metric function (such as the case for GQA) or a key name returned by process_results
 metric_list:
   - metric: xlrs_micro_score
     aggregation: !function mcq_utils.xlrs_aggregate_results

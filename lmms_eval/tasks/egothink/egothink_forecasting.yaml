@@ -9,7 +9,7 @@ generation_kwargs:
   temperature: 0.2
   num_beams: 1
   do_sample: True
-# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+# Note that the metric name can be either a registered metric function (such as the case for GQA) or a key name returned by process_results
 metric_list:
   - metric: gpt_eval_score
     aggregation: !function utils.egothink_aggregate_results
