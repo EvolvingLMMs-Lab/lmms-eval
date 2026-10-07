@@ -276,8 +276,8 @@ class LongVA(lmms):
 
             if image is not None and len(image) != 0 and DEFAULT_IMAGE_TOKEN not in prompts_input:
                 """
-                Three senarios:
-                1. No image, and there for, no image token should be added.
+                Three scenarios:
+                1. No image, and therefore, no image token should be added.
                 2. image token is already specified in the context, so we don't need to add it.
                 3. image token is not specified in the context and there is image inputs, so we need to add it. In this case, we add the image token at the beginning of the context and add a new line.
                 """
@@ -421,8 +421,8 @@ class LongVA(lmms):
 
                 if image_tensor is not None and len(image_tensor) != 0 and DEFAULT_IMAGE_TOKEN not in context:
                     """
-                    Three senarios:
-                    1. No image, and there for, no image token should be added.
+                    Three scenarios:
+                    1. No image, and therefore, no image token should be added.
                     2. image token is already specified in the context, so we don't need to add it.
                     3. image token is not specified in the context and there is image inputs, so we need to add it. In this case, we add the image token at the beginning of the context and add a new line.
                     4. For video tasks, we could add a <image> token or multiple <image> tokens for each frame in the context. This depends on the training strategy and should balance in test to decide which is better

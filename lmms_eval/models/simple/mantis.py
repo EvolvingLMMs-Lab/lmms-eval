@@ -51,7 +51,7 @@ DEFAULT_IMAGE_TOKEN = "<image>"
 class Mantis(lmms):
     """
     Mantis Model
-    This implementation is adpated from the Llava model from llava.py and the Idefics model from idefics.py
+    This implementation is adapted from the Llava model from llava.py and the Idefics model from idefics.py
     """
 
     def __init__(

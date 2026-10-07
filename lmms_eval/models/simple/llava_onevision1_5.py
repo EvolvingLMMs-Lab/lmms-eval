@@ -49,7 +49,7 @@ class Llava_OneVision1_5(lmms):
 
         # Extract revision from kwargs
         # Allows for specifying a particular model revision from Hugging Face Hub
-        # when the official repo havent updated to be compatible with the latest transformers.
+        # when the official repo haven't updated to be compatible with the latest transformers.
         # e.g. revision='6b3d97091777ae511438186d60270089515adc0d' to be used with transformers==4.57.6
         revision = kwargs.pop("revision", None)
 

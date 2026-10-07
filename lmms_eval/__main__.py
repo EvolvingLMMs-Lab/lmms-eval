@@ -302,7 +302,7 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         "--show_config",
         action="store_true",
         default=False,
-        help="If True, shows the the full config of all tasks at the end of the evaluation.",
+        help="If True, shows the full config of all tasks at the end of the evaluation.",
     )
     parser.add_argument(
         "--include_path",
