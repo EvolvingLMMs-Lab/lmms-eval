@@ -1,0 +1,66 @@
+dataset_path: alithema/spatial-scene-bench
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.ssb_doc_to_visual
+doc_to_text: !function utils.ssb_doc_to_text
+doc_to_messages: !function utils.ssb_doc_to_messages
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.ssb_process_results
+metric_list:
+  - metric: ssb_overall
+    aggregation: !function utils.ssb_aggregate_overall
+    higher_is_better: true
+  - metric: ssb_image_overall
+    aggregation: !function utils.ssb_aggregate_image_overall
+    higher_is_better: true
+  - metric: ssb_video_overall
+    aggregation: !function utils.ssb_aggregate_video_overall
+    higher_is_better: true
+  - metric: ssb_count_mra
+    aggregation: !function utils.ssb_aggregate_count_mra
+    higher_is_better: true
+  - metric: count_accuracy
+    aggregation: !function utils.ssb_aggregate_count
+    higher_is_better: true
+  - metric: count_relation_accuracy
+    aggregation: !function utils.ssb_aggregate_count_relation
+    higher_is_better: true
+  - metric: relation_accuracy
+    aggregation: !function utils.ssb_aggregate_relation
+    higher_is_better: true
+  - metric: compare_count_accuracy
+    aggregation: !function utils.ssb_aggregate_compare_count
+    higher_is_better: true
+  - metric: closest_accuracy
+    aggregation: !function utils.ssb_aggregate_closest
+    higher_is_better: true
+  - metric: distance_accuracy
+    aggregation: !function utils.ssb_aggregate_distance
+    higher_is_better: true
+  - metric: ego_direction_accuracy
+    aggregation: !function utils.ssb_aggregate_ego_direction
+    higher_is_better: true
+  - metric: video_count_accuracy
+    aggregation: !function utils.ssb_aggregate_video_count
+    higher_is_better: true
+  - metric: video_closest_accuracy
+    aggregation: !function utils.ssb_aggregate_video_closest
+    higher_is_better: true
+  - metric: video_distance_accuracy
+    aggregation: !function utils.ssb_aggregate_video_distance
+    higher_is_better: true
+  - metric: video_ego_direction_accuracy
+    aggregation: !function utils.ssb_aggregate_video_ego_direction
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 0.0

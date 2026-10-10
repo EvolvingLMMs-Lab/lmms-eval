@@ -576,6 +576,7 @@ python -m lmms_eval --tasks list_with_num
 - [Point-Bench](https://pointarena.github.io/) (pointbench)
 - [Where2Place](https://where2place.github.io/) (where2place)
 - [MultihopSpatial](https://huggingface.co/datasets/etri-vilab/MultihopSpatial) (multihopspatial)
+- [Spatial Scene Bench](https://github.com/selfishout/spatial-scene-bench) (spatial_scene_bench)
 
 ---
 
