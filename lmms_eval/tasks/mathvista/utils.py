@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
+from lmms_eval.tasks._task_utils.image_utils import to_rgb
 from lmms_eval.tasks.mathvista.mathvista_evals import MathVistaEvaluator
 
 with open(Path(__file__).parent / "mathvista.yaml", "r") as f:
@@ -20,7 +21,7 @@ mathvista_evaluator = MathVistaEvaluator()
 
 
 def mathvista_doc_to_visual(doc):
-    return [doc["decoded_image"].convert("RGB")]
+    return [to_rgb(doc["decoded_image"])]
 
 
 def mathvista_doc_to_text(doc, lmms_eval_specific_kwargs=None):
