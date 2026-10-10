@@ -76,7 +76,7 @@ generation_kwargs: # Auxiliary arguments for the `generate` function from HF tra
   do_sample: false
 # The return value of process_results will be used by metrics
 process_results: !function utils.mme_process_results
-# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+# Note that the metric name can be either a registered metric function (such as the case for GQA) or a key name returned by process_results
 # e.g. Following metrics `mme_perception_score` is custom defined. 
 # So `mme_process_results` function should return the dict `{"mme_perception_score": {sub_k:sub_v, ..., } }`
 # And the `mme_aggregate_results` function could get the dict `{sub_k:sub_v, ..., }`, and use the information to gather the final accuracy.
@@ -233,7 +233,7 @@ generation_kwargs:
   do_sample: false
 # The return value of process_results will be used by metrics
 process_results: !function utils.mme_process_results
-# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+# Note that the metric name can be either a registered metric function (such as the case for GQA) or a key name returned by process_results
 # e.g. Following metrics `mme_perception_score` is custom defined. 
 # So `mme_process_results` function should return the dict `{"mme_perception_score": {sub_k:sub_v, ..., } }`
 # And the `mme_aggregate_results` function could get the dict `{sub_k:sub_v, ..., }`, and use the information to gather the final accuracy.
@@ -320,7 +320,7 @@ doc_to_visual: !function utils.seed_doc_to_visual
 doc_to_text: !function utils.seed_doc_to_text_mc
 doc_to_choice : !function utils.seed_doc_to_choice
 doc_to_target: !function utils.seed_doc_to_mc_target
-# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+# Note that the metric name can be either a registered metric function (such as the case for GQA) or a key name returned by process_results
 metric_list:
   - metric: acc
 metadata:
