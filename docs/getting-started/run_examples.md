@@ -272,6 +272,26 @@ accelerate launch --num_processes 8 --main_process_port 30000 -m lmms_eval \
 
 ```
 
+### OpenAI-compatible server with server-side video decoding
+
+With `pass_video_url=True`, the `openai` model sends videos as URLs (local paths become `file://`) and lets the server decode them. By default it asks for `num_frames=max_frames_num` in `media_io_kwargs`. Some server-side loaders sample by frame rate and ignore `num_frames`, for example vLLM's MiniMax-M3 and Qwen3-VL loaders. For those, two options control the frame count:
+
+- `video_target_frames=N`: sends `num_frames=N` and `fps=N / clip duration` in place of `max_frames_num`, so loaders that sample by count and loaders that sample by rate both take N frames. Loaders may still return fewer: vLLM's MiniMax-M3 loader rounds its sampling grid (more so at large N), and vLLM's Qwen loaders clamp fps to 30 and the frame count to 4-768. The duration is read from the local file with PyAV, so the server must see the same file.
+- `video_max_frames=N`: sends `max_frames=N`, an upper bound for loaders that read it (e.g. vLLM's Qwen2-VL and Qwen3-VL loaders); loaders that don't read it, such as vLLM's default count-based loader, ignore it. `num_frames=max_frames_num` is still sent, so a vLLM server drops the `fps` from its own `--media-io-kwargs` and the loader samples at its default rate, capped at N.
+
+Both require `pass_video_url=True`. `media_io_kwargs` holds one setting per modality, so `video_target_frames` supports one video per request. A request with several videos, a remote or `data:` URL, or a file whose duration cannot be read stops the run with an error that names the doc, rather than silently sending a different frame count. `video_fps` has no effect with `pass_video_url=True`.
+
+```bash
+python3 -m lmms_eval \
+    --model openai \
+    --model_args model=<served-model>,base_url=http://localhost:8000/v1,api_key=EMPTY,pass_video_url=True,video_target_frames=32 \
+    --tasks video_mmmu \
+    --batch_size 1 \
+    --output_path ./logs/
+```
+
+Servers that reject per-request `media_io_kwargs` (vLLM does unless started with `--trust-request-mm-kwargs`) reject every `pass_video_url=True` request, with or without these options.
+
 # Audio Models
 
 ### Qwen2-Audio
