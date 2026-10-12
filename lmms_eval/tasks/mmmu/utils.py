@@ -10,6 +10,7 @@ import yaml
 from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from lmms_eval.tasks._task_utils.image_utils import to_rgb
 from lmms_eval.tasks._task_utils.mmmu_mcq_utils import (
     get_multi_choice_info as shared_get_multi_choice_info,
 )
@@ -174,7 +175,7 @@ def mmmu_doc_to_visual(doc):
     image_tokens = re.findall(r"<image \d+>", prompt)
     # Remove <> and  swap space as _
     image_tokens = sorted(list(set([image_token.strip("<>").replace(" ", "_") for image_token in image_tokens])))
-    visual = [doc[image_token].convert("RGB") for image_token in image_tokens]
+    visual = [to_rgb(doc[image_token]) for image_token in image_tokens]
     return visual
 
 
