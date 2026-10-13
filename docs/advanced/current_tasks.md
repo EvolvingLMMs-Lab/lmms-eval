@@ -577,6 +577,8 @@ python -m lmms_eval --tasks list_with_num
 - [Where2Place](https://where2place.github.io/) (where2place)
 - [MultihopSpatial](https://huggingface.co/datasets/etri-vilab/MultihopSpatial) (multihopspatial)
 - [Spatial Scene Bench](https://github.com/selfishout/spatial-scene-bench) (spatial_scene_bench)
+- [SPaRC](https://sparc.gipplab.org/) (sparc_visual)
+  - SPaRC Hard, level 5 only (sparc_visual_hard)
 
 ---
 

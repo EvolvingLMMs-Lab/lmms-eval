@@ -1,0 +1,23 @@
+dataset_path: lkaesberg/SPaRC
+dataset_name: all
+dataset_kwargs:
+  revision: e2d908363190e9a244f931df2654a501facc90a7
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.sparc_visual_doc_to_visual
+doc_to_text: !function utils.sparc_visual_doc_to_text
+doc_to_messages: !function utils.sparc_visual_doc_to_messages
+doc_to_target: !function utils.sparc_visual_doc_to_target
+generation_kwargs:
+  max_new_tokens: 32768
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+  until: []
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  version: 1.0
