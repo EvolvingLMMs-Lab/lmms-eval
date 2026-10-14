@@ -1,0 +1,11 @@
+task: sparc_visual_hard
+include: _default_template_yaml
+process_docs: !function utils.sparc_visual_process_hard
+process_results: !function utils.sparc_visual_process_results
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+  - metric: invalid_path
+    aggregation: mean
+    higher_is_better: false
