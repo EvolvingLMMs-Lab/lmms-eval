@@ -1,5 +1,4 @@
 import copy
-import importlib
 import re
 from typing import Any, List, Optional, Sequence, Tuple, Union
 
@@ -111,19 +110,13 @@ def _audio_prompt(audio: dict, prompt_text: str) -> dict:
 
 
 def _optional_whisper_llm():
-    """WhisperLLM if vLLM #58274 is present; otherwise stock LLM."""
-    for mod_name in (
-        "vllm.entrypoints.speech_to_text.whisper",
-        "vllm.entrypoints.whisper",
-    ):
-        try:
-            mod = importlib.import_module(mod_name)
-            cls = getattr(mod, "WhisperLLM", None)
-            if cls is not None:
-                return cls, mod
-        except ImportError:
-            continue
-    return LLM, None
+    """WhisperLLM from vllm.entrypoints.speech_to_text (vLLM #58274); else stock LLM."""
+    try:
+        from vllm.entrypoints.speech_to_text import whisper as mod
+
+        return mod.WhisperLLM, mod
+    except ImportError:
+        return LLM, None
 
 
 def _generate_with_fallback(llm, prompts, sampling_params, whisper_mod=None, use_tqdm: bool = False):
