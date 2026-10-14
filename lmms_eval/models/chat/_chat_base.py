@@ -79,6 +79,7 @@ class ChatMixin:
             task_name = task[0]
             split_name = split[0]
             gen_kwargs = dict(all_gen_kwargs[0])
+            raise_on_error = gen_kwargs.pop("raise_on_error", False)
 
             doc = self.task_dict[task_name][split_name][doc_id[0]]
             raw_messages = doc_to_messages[0](doc)
@@ -87,6 +88,8 @@ class ChatMixin:
             try:
                 answer = self._infer_one(chat_messages, gen_kwargs)
             except Exception as e:
+                if raise_on_error:
+                    raise
                 eval_logger.error(f"Error in generating: {e}\n{traceback.format_exc()}")
                 answer = ""
 

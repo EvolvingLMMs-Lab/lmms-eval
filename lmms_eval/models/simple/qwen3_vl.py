@@ -91,6 +91,8 @@ class Qwen3_VL(lmms):
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
         enable_thinking: Optional[bool] = None,
+        context_length: Optional[int] = None,
+        return_response_json: bool = False,
         reasoning_prompt: Optional[str] = None,
         **kwargs,
     ) -> None:
@@ -128,6 +130,10 @@ class Qwen3_VL(lmms):
         self.max_num_frames = max_num_frames
         self.fps = fps
         self.enable_thinking = enable_thinking
+        self.context_length = int(context_length) if context_length is not None else None
+        if self.context_length is not None and self.context_length <= 0:
+            raise ValueError("context_length must be positive")
+        self.return_response_json = return_response_json
 
         if reasoning_prompt:
             self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
@@ -337,6 +343,37 @@ class Qwen3_VL(lmms):
             return remaining.strip()
         return answer
 
+    def _check_context(self, inputs, max_new_tokens):
+        config = self.model.config
+        text_config = getattr(config, "text_config", config)
+        limits = [
+            getattr(text_config, "max_position_embeddings", None),
+            getattr(self, "context_length", None),
+        ]
+        limits = [int(limit) for limit in limits if limit is not None and int(limit) > 0]
+        input_tokens = int(inputs["input_ids"].shape[-1])
+        if limits and input_tokens + max_new_tokens > min(limits):
+            raise ValueError(f"Context capacity exceeded: {input_tokens} input + {max_new_tokens} output > {min(limits)} total tokens. Increase the supported context capacity; frames and output budget have not been reduced.")
+
+    def _format_response(self, raw, input_tokens, output_tokens, max_new_tokens):
+        final = self._strip_thinking(raw)
+        if not getattr(self, "return_response_json", False):
+            return final
+        import json
+
+        return json.dumps(
+            {
+                "api_response": {
+                    "status_code": 200,
+                    "body": {
+                        "choices": [{"message": {"content": final, "raw_generation": raw}, "finish_reason": "length" if output_tokens >= max_new_tokens else "stop"}],
+                        "usage": {"prompt_tokens": input_tokens, "completion_tokens": output_tokens},
+                    },
+                }
+            },
+            ensure_ascii=False,
+        )
+
     def _preprocess_chunk(self, chunk):
         """Preprocess a batch chunk on CPU: message building, video decoding, tokenization.
 
@@ -493,6 +530,7 @@ class Qwen3_VL(lmms):
                     inputs = inputs.to(self.device)
 
                 generate_kwargs = self._build_generate_kwargs(gen_kwargs)
+                self._check_context(inputs, generate_kwargs["max_new_tokens"])
                 cont = self.model.generate(**inputs, **generate_kwargs)
 
                 generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
@@ -507,8 +545,13 @@ class Qwen3_VL(lmms):
                             ans = ans.split(term)[0]
                     answers[i] = ans
 
-                for ans, context in zip(answers, contexts):
-                    ans = self._strip_thinking(ans)
+                for i, (ans, context) in enumerate(zip(answers, contexts)):
+                    ans = self._format_response(
+                        ans,
+                        int(inputs["input_ids"].shape[-1]),
+                        len(generated_ids_trimmed[i]),
+                        generate_kwargs["max_new_tokens"],
+                    )
                     res.append(ans)
                     self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
                     pbar.update(1)

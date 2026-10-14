@@ -62,6 +62,7 @@ dependencies = [
     "transformers-stream-generator",
     "zstandard",
     "pillow",
+    "portalocker>=2.8",
     "pyyaml",
     "sympy",
     "latex2sympy2-extended[antlr4_13_2]>=1.11.0,<1.12.0",

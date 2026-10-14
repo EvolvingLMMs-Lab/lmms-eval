@@ -59,7 +59,8 @@ class Qwen3_VL(Qwen3_VLSimple):
             gen_kwargs = all_gen_kwargs[0]
 
             video_kwargs = self._build_video_kwargs()
-            batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs) for chat_message in chat_messages]
+            image_kwargs = {"min_pixels": self.min_pixels, "max_pixels": self.max_pixels}
+            batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs, image_kwargs=image_kwargs) for chat_message in chat_messages]
 
             texts = self._apply_chat_template(batched_messages)
 
@@ -105,6 +106,7 @@ class Qwen3_VL(Qwen3_VLSimple):
                 inputs = inputs.to(self.device)
 
             generate_kwargs = self._build_generate_kwargs(gen_kwargs)
+            self._check_context(inputs, generate_kwargs["max_new_tokens"])
 
             start_time = time.time()
             cont = self.model.generate(**inputs, **generate_kwargs)
@@ -121,8 +123,10 @@ class Qwen3_VL(Qwen3_VLSimple):
             total_tokens += sum(len(ids) for ids in generated_ids_trimmed)
 
             for i, (ans, context) in enumerate(zip(answers, texts)):
-                ans = self._strip_thinking(ans)
-                res.append(GenerationResult(text=ans, token_counts=TokenCounts(output_tokens=len(generated_ids_trimmed[i]))))
+                input_tokens = int(inputs["input_ids"].shape[-1])
+                output_tokens = len(generated_ids_trimmed[i])
+                ans = self._format_response(ans, input_tokens, output_tokens, generate_kwargs["max_new_tokens"])
+                res.append(GenerationResult(text=ans, token_counts=TokenCounts(input_tokens=input_tokens, output_tokens=output_tokens)))
                 self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
 
                 eval_logger.debug(f"Question: {context}")

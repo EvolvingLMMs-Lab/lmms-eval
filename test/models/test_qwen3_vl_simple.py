@@ -50,6 +50,8 @@ class _FakeProcessor:
 
 
 class _FakeModel:
+    config = types.SimpleNamespace(max_position_embeddings=65536)
+
     def generate(self, **kwargs):
         return torch.tensor([[10, 11, 12]])
 

@@ -518,6 +518,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
     args_list = []
     results_list = []
+    evaluation_failed = False
     if args.config:
         if not os.path.exists(args.config):
             raise ValueError(f"Config file does not exist: {args.config}")
@@ -614,6 +615,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                     traceback.print_exc()
                     eval_logger.error(f"Error during evaluation: {e}. Please set `--verbosity=DEBUG` to get more information.")
                     results_list.append(None)
+                    evaluation_failed = True
 
         for args, results in zip(args_list, results_list):
             # cli_evaluate will return none if the process is not the main process (rank 0)
@@ -634,6 +636,8 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
             accelerator.state.destroy_process_group()
         elif torch.distributed.is_available() and torch.distributed.is_initialized():
             torch.distributed.destroy_process_group()
+    if evaluation_failed:
+        raise SystemExit(1)
 
 
 def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:

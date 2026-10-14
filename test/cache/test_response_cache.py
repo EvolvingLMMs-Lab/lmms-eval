@@ -602,6 +602,31 @@ class TestCreateAndFinalize(_CacheTestBase):
         self.assertIn("rank_1.db", rc._remote_rank_db)
         rc.close()
 
+    def test_different_cache_roots_do_not_share_scratch_database(self):
+        import hashlib
+
+        scratch_root = os.path.join(self.tmpdir, "scratch")
+        os.makedirs(scratch_root, exist_ok=True)
+        caches = []
+        try:
+            with (
+                patch.dict(os.environ, {"LMMS_CACHE_RUN_ID": "same-job"}, clear=False),
+                self._mock_utils(),
+                patch("lmms_eval.utils.hash_string", side_effect=lambda s: hashlib.sha256(s.encode()).hexdigest()),
+                patch("lmms_eval.caching.response_cache.detect_fs_type", return_value=FsType.REMOTE),
+                patch("lmms_eval.caching.response_cache.find_local_scratch", return_value=scratch_root),
+            ):
+                for name in ("thinking-on", "thinking-off"):
+                    caches.append(ResponseCache.create(os.path.join(self.tmpdir, name), model="m", world_size=2, global_rank=0))
+            self.assertNotEqual(caches[0].db_path, caches[1].db_path)
+            request = _gen_request("prompt", doc_id=7)
+            caches[0].execute(_mock_model(["answer"]), "generate_until", [request])
+            model = _mock_model(["other"])
+            self.assertEqual(caches[1].execute(model, "generate_until", [request]), ["other"])
+        finally:
+            for cache in caches:
+                cache.close()
+
     def test_finalize_merges_rank_dbs_into_root(self):
         cache_root = os.path.join(self.tmpdir, "finalize_test")
         run_dir = os.path.join(cache_root, "runs", "job-merge")
