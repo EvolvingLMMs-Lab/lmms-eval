@@ -14,7 +14,7 @@ generation_kwargs:
   max_new_tokens: 16
 # The return value of process_results will be used by metrics
 process_results: !function utils.lvbench_process_results
-# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+# Note that the metric name can be either a registered metric function (such as the case for GQA) or a key name returned by process_results
 metric_list:
   - metric: lvbench_score
     aggregation: mean
