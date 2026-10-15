@@ -198,7 +198,7 @@ class Qwen2_VL(lmms):
             if v is None:
                 return []
             if isinstance(v, list):
-                # incase [[img]]
+                # in case [[img]]
                 if len(v) == 1 and isinstance(v[0], list):
                     return v[0]
                 return v
