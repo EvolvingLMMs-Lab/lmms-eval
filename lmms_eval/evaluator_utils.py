@@ -459,6 +459,122 @@ def consolidate_results(
     return results, samples, configs, versions, num_fewshot, higher_is_better
 
 
+def _resolve_group_postprocess_callable(raw):
+    """Resolve group postprocess_results value to a callable.
+
+    Supports a callable directly (from YAML !function) or a string import path
+    such as "lmms_eval.tasks.sitebench.utils.sitebench_merge_results".
+    """
+    if raw is None:
+        return None
+    if callable(raw):
+        return raw
+    if isinstance(raw, str):
+        import importlib
+
+        try:
+            module_name, func_name = raw.rsplit(".", 1)
+            mod = importlib.import_module(module_name)
+            fn = getattr(mod, func_name)
+            if callable(fn):
+                return fn
+            eval_logger.warning(f"Group postprocess_results '{raw}' resolved to non-callable {fn}")
+            return None
+        except Exception as e:
+            eval_logger.warning(f"Failed to resolve group postprocess_results '{raw}': {e}")
+            return None
+    eval_logger.warning(f"Unsupported postprocess_results type {type(raw)}: {raw}")
+    return None
+
+
+def _invoke_group_postprocess(
+    hook,
+    *,
+    group_name,
+    subtask_names,
+    results,
+    samples=None,
+    configs=None,
+    versions=None,
+    output_dir=None,
+    model_output_dir=None,
+    sample_files=None,
+    group_config=None,
+    group_metadata=None,
+):
+    """Invoke group postprocess hook with flexible signature support.
+
+    The hook may declare any subset of the available context. We inspect its
+    signature and only pass arguments it accepts (plus **kwargs passthrough).
+    """
+    if hook is None:
+        return None
+    # Build full context
+    context = {
+        "group_name": group_name,
+        "group": group_name,
+        "subtask_names": subtask_names,
+        "subtasks": subtask_names,
+        "task_names": subtask_names,
+        "results": results,
+        "samples": samples,
+        "configs": configs,
+        "versions": versions,
+        "output_dir": output_dir,
+        "output_path": output_dir,
+        "model_output_dir": model_output_dir,
+        "model_result_dir": model_output_dir,
+        "sample_files": sample_files,
+        "sample_paths": sample_files,
+        "group_config": group_config,
+        "config": group_config,
+        "group_metadata": group_metadata,
+        "metadata": group_metadata,
+    }
+    # Also include mapping for sample JSONL paths alias
+    try:
+        sig = inspect.signature(hook)
+    except (ValueError, TypeError):
+        # fallback: try calling with minimal args
+        try:
+            return hook(group_name, subtask_names, results)
+        except Exception as e:
+            eval_logger.warning(f"Group postprocess hook '{group_name}' failed with fallback call: {e}")
+            return None
+
+    # Check if hook accepts **kwargs
+    has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
+    # Filter context to params that hook accepts if it doesn't have **kwargs
+    if has_var_kw:
+        filtered = context
+    else:
+        filtered = {k: v for k, v in context.items() if k in sig.parameters}
+
+    # Special handling: if hook expects exactly 3 positional args (group_name, subtasks, results)
+    # and filtered lost some required params, try to call with positional
+    try:
+        # Try keyword call first
+        return hook(**filtered)
+    except TypeError as e:
+        # Try positional fallback: (group_name, subtask_names, results) + kwargs
+        eval_logger.debug(f"Group postprocess hook '{group_name}' keyword call failed ({e}), trying positional fallback")
+        try:
+            # Determine if hook wants positional args
+            params = list(sig.parameters.values())
+            # If first 3 params are positional-like, try
+            if len(params) >= 3:
+                # Try calling with first 3 as positional and rest as kwargs
+                kwargs_rest = {k: v for k, v in filtered.items() if k not in [p.name for p in params[:3]]}
+                return hook(group_name, subtask_names, results, **kwargs_rest)
+            return hook(group_name, subtask_names, results)
+        except Exception as e2:
+            eval_logger.warning(f"Group postprocess hook '{group_name}' failed: {e2}")
+            return None
+    except Exception as e:
+        eval_logger.warning(f"Group postprocess hook '{group_name}' failed: {e}")
+        return None
+
+
 def consolidate_group_results(
     results,
     versions,
@@ -466,6 +582,11 @@ def consolidate_group_results(
     task_root=None,
     show_group_table=False,
     task_aggregation_list=None,
+    samples=None,
+    configs=None,
+    output_dir=None,
+    model_output_dir=None,
+    sample_files=None,
 ) -> Tuple[dict, dict, bool, Union[None, dict]]:
     """
     (Recursively) calculates groups' aggregated metrics and updates the results and versions dictionaries with this info.
@@ -491,7 +612,10 @@ def consolidate_group_results(
     for group_or_task, group_or_task_info in task_dict.items():
         # Convert to string
         if isinstance(group_or_task, ConfigurableGroup):
-            group_config = group_or_task.config
+            try:
+                group_config = group_or_task._config.to_dict(keep_callable=True)
+            except Exception:
+                group_config = group_or_task.config
             group_or_task = group_or_task.group_name
         else:
             group_config = None
@@ -512,61 +636,130 @@ def consolidate_group_results(
                 group_or_task,
                 show_group_table,
                 task_aggregation_list,
+                samples=samples,
+                configs=configs,
+                output_dir=output_dir,
+                model_output_dir=model_output_dir,
+                sample_files=sample_files,
             )
             if task_root:
                 task_aggregation_list.setdefault(task_root, []).extend(task_aggregation_list.get(group_or_task, []))
 
-            if (group_config is None) or (group_config["aggregate_metric_list"] is None):
-                results[group_or_task][" "] = " "
-                continue
+            # Ensure group entry exists
+            if group_or_task not in results:
+                results[group_or_task] = {}
+            # Track whether this group should appear in group table
+            has_agg_list = bool(group_config and group_config.get("aggregate_metric_list"))
+            has_hook = bool(group_config and group_config.get("postprocess_results"))
 
-            if "aggregate_metric_list" in group_config:
+            if not has_agg_list and not has_hook:
+                if " " not in results[group_or_task]:
+                    results[group_or_task][" "] = " "
+            else:
+                # Remove placeholder if present
+                if " " in results[group_or_task] and (has_agg_list or has_hook):
+                    # keep placeholder removal? placeholder indicates no aggregation; but hook will provide metrics
+                    # we remove it when we have real metrics
+                    pass
+
+            if has_agg_list:
                 agg_metric_list = group_config["aggregate_metric_list"]
+                show_group_table = show_group_table | bool(agg_metric_list)
+                task_list = _task_aggregation_list.get(group_or_task, [])
+                if task_list:
+                    metric_list = list({key for task in task_list for key in results[task].keys() if "_stderr" not in key and key not in ["task", "alias", "samples"]})
+                    for metric in metric_list:
+                        stderr = "_stderr,".join(metric.split(","))
 
-            show_group_table = show_group_table | bool(group_config["aggregate_metric_list"])
+                        # gather metrics, sizes, and stderrs from subtasks
+                        metrics = [results[task][metric] for task in task_list if metric in results[task]]  # TODO: copy?
+                        stderrs = [results[task][stderr] for task in task_list if stderr in results[task]]
+                        sizes = [results[task]["samples"] for task in task_list if metric in results[task]]
 
-            task_list = _task_aggregation_list[group_or_task]
+                        for metric_config in agg_metric_list:
+                            for filter_name in metric_config["filter_list"]:
+                                if metric_config["metric"] not in metric:
+                                    continue
 
-            metric_list = list({key for task in task_list for key in results[task].keys() if "_stderr" not in key and key not in ["task", "alias", "samples"]})
-            for metric in metric_list:
-                stderr = "_stderr,".join(metric.split(","))
+                                # compute group's pooled metric and stderr
+                                if metric_config["aggregation"] == "mean":
+                                    aggregate_fn = aggregate_subtask_metrics
+                                elif callable(metric_config["aggregation"]):
+                                    aggregate_fn = metric_config["aggregation"]
+                                else:
+                                    raise ValueError(f"Currently, only 'mean' is supported for automatically aggregating scores across groups' subtasks. Got '{metric_config['aggregation']}' for group '{group_or_task}'")
 
-                # gather metrics, sizes, and stderrs from subtasks
-                metrics = [results[task][metric] for task in task_list if metric in results[task]]  # TODO: copy?
-                stderrs = [results[task][stderr] for task in task_list if stderr in results[task]]
-                sizes = [results[task]["samples"] for task in task_list if metric in results[task]]
+                                results[group_or_task][metric] = aggregate_fn(
+                                    metrics,
+                                    sizes,
+                                    metric_config["weight_by_size"],
+                                )
+                                if "N/A" in stderrs:
+                                    results[group_or_task][stderr] = "N/A"
+                                else:
+                                    results[group_or_task][stderr] = pooled_sample_stderr(stderrs, sizes)
 
-                for metric_config in agg_metric_list:
-                    for filter_name in metric_config["filter_list"]:
-                        # if metric != ",".join([metric_config["metric"], filter_name]):
-                        #     continue
-                        if metric_config["metric"] not in metric:
-                            continue
+                    # compute samples and clean placeholder
+                    if task_list:
+                        try:
+                            sizes_all = [results[task].get("samples", 0) for task in task_list if "samples" in results[task]]
+                            if sizes_all:
+                                results[group_or_task]["samples"] = sum(sizes_all)
+                        except Exception:
+                            pass
+                    if " " in results[group_or_task]:
+                        results[group_or_task].pop(" ", None)
 
-                        # compute group's pooled metric and stderr
-                        if metric_config["aggregation"] == "mean":
-                            aggregate_fn = aggregate_subtask_metrics
-                        elif callable(metric_config["aggregation"]):
-                            aggregate_fn = metric_config["aggregation"]
-                        else:
-                            raise ValueError(f"Currently, only 'mean' is supported for automatically aggregating scores across groups' subtasks. Got '{metric_config['aggregation']}' for group '{group_or_task}'")
+                group_metadata_tmp = group_config.get("metadata", None) if group_config else None
+                if group_metadata_tmp is not None:
+                    versions[group_or_task] = group_metadata_tmp.get("version", None)
 
-                        results[group_or_task][metric] = aggregate_fn(
-                            metrics,
-                            sizes,
-                            metric_config["weight_by_size"],
-                        )
-                        # TODO: calculate groups' metrics using arbitrary agg fns
-                        if "N/A" in stderrs:
-                            results[group_or_task][stderr] = "N/A"
-                        else:
-                            # NOTE: this assumes we are using the mean to aggregate. There are warnings about this elsewhere
-                            results[group_or_task][stderr] = pooled_sample_stderr(stderrs, sizes)
-
-                results[group_or_task]["samples"] = sum(sizes)
-                group_metadata = group_config.get("metadata", None)
-                if group_metadata is not None:
-                    versions[group_or_task] = group_metadata.get("version", None)
+            # Group-level postprocess_results hook (runs after aggregate_metric_list)
+            if has_hook:
+                raw_hook = group_config.get("postprocess_results")
+                hook_fn = _resolve_group_postprocess_callable(raw_hook)
+                if hook_fn is not None:
+                    task_list = _task_aggregation_list.get(group_or_task, [])
+                    # Ensure group entry has at least alias
+                    if "alias" not in results[group_or_task]:
+                        results[group_or_task]["alias"] = group_or_task
+                    hook_result = _invoke_group_postprocess(
+                        hook_fn,
+                        group_name=group_or_task,
+                        subtask_names=list(task_list),
+                        results=results,
+                        samples=samples,
+                        configs=configs,
+                        versions=versions,
+                        output_dir=output_dir,
+                        model_output_dir=model_output_dir,
+                        sample_files=sample_files,
+                        group_config=group_config,
+                        group_metadata=group_config.get("metadata") if group_config else None,
+                    )
+                    if isinstance(hook_result, dict) and hook_result:
+                        for k, v in hook_result.items():
+                            results[group_or_task][k] = v
+                        if " " in results[group_or_task]:
+                            results[group_or_task].pop(" ", None)
+                        show_group_table = True
+                    elif hook_result is not None and not isinstance(hook_result, dict):
+                        eval_logger.warning(f"Group postprocess hook '{group_or_task}' returned non-dict {type(hook_result)}, ignoring")
+                # ensure versions metadata handled even when only hook
+                if not has_agg_list:
+                    group_metadata_tmp = group_config.get("metadata", None) if group_config else None
+                    if group_metadata_tmp is not None and group_or_task not in versions:
+                        versions[group_or_task] = group_metadata_tmp.get("version", None)
+                    # ensure samples aggregated if not already
+                    if "samples" not in results[group_or_task]:
+                        task_list = _task_aggregation_list.get(group_or_task, [])
+                        if task_list:
+                            try:
+                                sizes_all = [results[task].get("samples", 0) for task in task_list if "samples" in results[task]]
+                                if sizes_all:
+                                    results[group_or_task]["samples"] = sum(sizes_all)
+                            except Exception:
+                                pass
     # print(results)
     return results, versions, show_group_table, task_aggregation_list
 
