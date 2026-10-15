@@ -36,7 +36,7 @@ def _get_client():
 
 
 def charxiv_reasoning_doc_to_text_cot(doc, lmms_eval_specific_kwargs=None):
-    inst_category = doc["reasoning_q_source"]
+    inst_category = doc["reasoning_a_type"]
     if inst_category in [1, 2, 3]:
         question = REASONING_RESP_INST[inst_category].format(doc["reasoning_q"])
     # 4: number-in-general -> need to specify the number of decimal places
@@ -124,7 +124,7 @@ def charxiv_descriptive_aggregate_results(results):
 
 def charxiv_reasoning_process_results(doc, results):
     figure_id = doc["figure_path"]
-    inst_category = doc["reasoning_q_source"]
+    inst_category = doc["reasoning_a_type"]
     response = results[0].strip()
     answer = doc["reasoning_a"]
     data = {}
