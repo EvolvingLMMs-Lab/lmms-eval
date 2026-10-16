@@ -139,7 +139,7 @@ def mmmu_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     # If you use doc to messages, the interleaved format is always used
     config["metadata"]["interleaved_format"] = True
     question = mmmu_doc_to_text(doc, lmms_eval_specific_kwargs)
-    visuals = mmmu_doc_to_visual(doc)
+    visuals = mmmu_doc_to_visual(doc, interleaved=True)
 
     # Duplicate the single image when NUM_IMAGE=2
     num_image = int(os.environ.get("NUM_IMAGE", "1"))
@@ -170,11 +170,14 @@ def mmmu_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     return messages
 
 
-def mmmu_doc_to_visual(doc):
+def mmmu_doc_to_visual(doc, *, interleaved: bool = False):
+    """Keep every image reference for interleaving, or unique images in numbered order."""
     prompt = construct_prompt(doc)
     image_tokens = re.findall(r"<image \d+>", prompt)
     # Remove <> and  swap space as _
-    image_tokens = sorted(list(set([image_token.strip("<>").replace(" ", "_") for image_token in image_tokens])))
+    image_tokens = [image_token.strip("<>").replace(" ", "_") for image_token in image_tokens]
+    if not interleaved:
+        image_tokens = sorted(set(image_tokens))
     visual = [to_rgb(doc[image_token]) for image_token in image_tokens]
     return visual
 
