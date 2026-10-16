@@ -352,7 +352,7 @@ class TaskManager:
                             **name_or_config,
                         }
                     else:
-                        task_config = name_or_config
+                        task_config = {"task": name, **name_or_config}
                     return _load_task(task_config, task=name)
             else:
                 group_config, update_config = _process_group_config(name_or_config)
