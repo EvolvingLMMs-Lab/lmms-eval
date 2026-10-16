@@ -1,24 +1,53 @@
-"""Pinned Hugging Face metadata and lazy, verified media preparation."""
+"""Pinned release loading, verified media downloads and cache identity."""
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
+import platform
 import re
 import shutil
 import tarfile
 import tempfile
-from pathlib import Path
+from importlib import metadata
+from pathlib import Path, PurePosixPath
+from typing import Any
 
 import portalocker
 from huggingface_hub import HfApi, hf_hub_download
 from huggingface_hub.constants import HF_HOME
 
-from .release_tools import rows, safe, sha
+
+def rows(path):
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+def sha(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(8 * 1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def safe(root, name):
+    relative = PurePosixPath(name)
+    if relative.is_absolute() or ".." in relative.parts or str(relative) != name:
+        raise ValueError(f"Unsafe path: {name}")
+    path = root.joinpath(*relative.parts)
+    if not path.resolve().is_relative_to(root.resolve()) or path.is_symlink():
+        raise ValueError(f"Unsafe destination: {name}")
+    return path
+
 
 REPO_ID = "VCLab-PolyU/OmniCompass"
+
+
 DEFAULT_REVISION = "2b82d4e8a2b57c14bd887e06d96a5bb5534e7b7a"
+
+
 METADATA = (
     "videos.jsonl",
     "questions.jsonl",
@@ -27,6 +56,8 @@ METADATA = (
     "archives.json",
     "media_manifest.jsonl",
 )
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -177,3 +208,50 @@ class DatasetStore:
                         temporary.unlink(missing_ok=True)
         if seen != expected_names or len(seen) != info["files"]:
             raise ValueError("Incomplete archive member list")
+
+
+def runtime_identity() -> dict[str, Any]:
+    """Record dependency versions that can affect model inputs and outputs."""
+    packages = (
+        "torch",
+        "transformers",
+        "accelerate",
+        "qwen-vl-utils",
+        "qwen-omni-utils",
+        "flash-attn",
+        "vllm",
+        "lmdeploy",
+        "av",
+        "Pillow",
+        "openai",
+        "requests",
+    )
+    versions = {}
+    for name in packages:
+        try:
+            versions[name] = metadata.version(name)
+        except metadata.PackageNotFoundError:
+            versions[name] = None
+    return {"python": platform.python_version(), "packages": versions}
+
+
+def model_identity(model_path: str | os.PathLike | None = None, revision: str | None = None) -> dict[str, Any]:
+    """Hash local artifacts once at run entry; remote revisions are declarations."""
+    result = {"declared_revision": revision or os.getenv("OMNICOMPASS_MODEL_REVISION") or None}
+    if not isinstance(model_path, (str, os.PathLike)):
+        return result
+    root = Path(model_path).expanduser()
+    if not root.exists():
+        return result
+    candidates = [root] if root.is_file() else sorted(root.rglob("*"))
+    suffixes = {".safetensors", ".bin", ".pt", ".pth", ".gguf", ".json", ".model", ".jinja"}
+    tokenizer_files = {"merges.txt", "vocab.txt", "tokenizer.tiktoken"}
+    artifacts = {}
+    for path in candidates:
+        if not path.is_file() or (path.suffix not in suffixes and path.name not in tokenizer_files):
+            continue
+        artifacts[path.name if root.is_file() else str(path.relative_to(root))] = sha(path)
+    if not artifacts:
+        raise ValueError("Local model path contains no recognized model/tokenizer artifacts")
+    result["local_artifacts_sha256"] = artifacts
+    return result

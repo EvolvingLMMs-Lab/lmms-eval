@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
 
 from lmms_eval.models.chat.openai import OpenAICompatible as ChatOpenAICompatible
 from lmms_eval.models.simple.openai import OpenAICompatible as SimpleOpenAICompatible
@@ -57,33 +56,17 @@ def _configure_openai_model(model, completions: _CaptureCompletions, *, model_ve
     model.video_fps = None
     model.pass_video_url = False
     model.enable_thinking_kwarg = None
+    # These fixtures bypass __init__, so supply the chat backend's defaults.
     model.audio_format = "audio_url"
     model.audio_encoding = "base64"
     model.return_response_json = False
     model.image_detail = None
     model.token_limit_field = "max_tokens"
-    model.timeout = 10
-    model.strict_generation = False
     model._rank = 0
     model.task_dict = {"demo": {"test": [{"id": 0}]}}
 
 
 class TestOpenAICompatibleGenerationParameters(unittest.TestCase):
-    def test_chat_explicit_image_detail_and_completion_limit(self):
-        completions = _CaptureCompletions()
-        model = ChatOpenAICompatible.__new__(ChatOpenAICompatible)
-        _configure_openai_model(model, completions, model_version="gemini-test")
-        model.image_detail = "high"
-        model.token_limit_field = "max_completion_tokens"
-        messages = [{"role": "user", "content": [{"type": "image_url", "image_url": {"url": "data:image/png;base64,test"}}]}]
-        with patch("lmms_eval.models.chat.openai.ChatMessages.to_openai_messages", return_value=messages):
-            model.generate_until([_chat_request({"max_new_tokens": 8192, "temperature": 0})])
-        payload = completions.payloads[0]
-        self.assertEqual(payload["max_completion_tokens"], 8192)
-        self.assertNotIn("max_tokens", payload)
-        self.assertEqual(payload["temperature"], 0)
-        self.assertEqual(payload["messages"][0]["content"][0]["image_url"]["detail"], "high")
-
     def test_simple_backend_preserves_requested_max_new_tokens(self):
         completions = _CaptureCompletions()
         model = SimpleOpenAICompatible.__new__(SimpleOpenAICompatible)

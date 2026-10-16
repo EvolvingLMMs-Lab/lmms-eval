@@ -434,7 +434,7 @@ class ResponseCache:
         model_fp = f"{model}|{model_args_fp}"
         omnicompass = any(name.startswith("omnicompass_") for name in task_fingerprints)
         if omnicompass:
-            from lmms_eval.tasks.omnicompass._core.run_identity import model_identity, runtime_identity
+            from lmms_eval.tasks.omnicompass.data import model_identity, runtime_identity
 
             options = model_args if isinstance(model_args, dict) else simple_parse_args_string(model_args)
             evidence = {
@@ -814,7 +814,7 @@ class ResponseCache:
                     return False
                 if not 200 <= status < 300:
                     body = record.get("body")
-                    from lmms_eval.tasks.omnicompass._core.print_frame_eval_results import is_content_policy_error
+                    from lmms_eval.tasks.omnicompass.metrics import is_content_policy_error
 
                     return isinstance(body, dict) and is_content_policy_error(json.dumps(body.get("error", body)))
         return True

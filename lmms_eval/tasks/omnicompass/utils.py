@@ -6,8 +6,8 @@ import json
 import os
 from functools import lru_cache
 
-from lmms_eval.tasks.omnicompass._core.bridge import Protocol, evaluate
-from lmms_eval.tasks.omnicompass._core.omnicompass_public_adapter import render_prompt
+from lmms_eval.tasks.omnicompass.prompts import render_prompt
+from lmms_eval.tasks.omnicompass.protocol import Protocol, evaluate
 
 
 @lru_cache(maxsize=1)

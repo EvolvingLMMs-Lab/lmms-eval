@@ -1,14 +1,20 @@
-"""Canonical model-visible Prompt contract for OmniCompass VL frame input."""
+"""Official paired text and image prompts for VL and AV."""
 
 from __future__ import annotations
 
 from typing import Any, Mapping
 
-from .omnicompass_release import ANSWER_LETTERS, format_number
+from .metrics import ANSWER_LETTERS, format_number, make_request
 
 FRAME_PROMPT_REVISION = "paper-frame-visible-timestamp-hybrid-xyxy-ltrb-v1"
+
+
 FRAME_PROMPT_REVISION_NO_TIMESTAMP = "paper-frame-no-visible-timestamp-hybrid-xyxy-ltrb-v1"
+
+
 FRAME_INPUT_PROTOCOL = "uniform_sampled_frames_duration_in_prefix_reference_last_visible_timestamp_text_hybrid_xyxy_ltrb_v1"
+
+
 FRAME_INPUT_PROTOCOL_NO_TIMESTAMP = "uniform_sampled_frames_duration_in_prefix_reference_last_no_visible_timestamp_text_hybrid_xyxy_ltrb_v1"
 
 
@@ -93,4 +99,94 @@ def build_frame_prompt(
         )
         + "\n\n"
         + body
+    )
+
+
+AV_FRAME_PROMPT_REVISION = "paper-av-frame-audio-visible-timestamp-hybrid-xyxy-ltrb-v1"
+
+
+AV_FRAME_PROMPT_REVISION_NO_TIMESTAMP = "paper-av-frame-audio-no-visible-timestamp-hybrid-xyxy-ltrb-v1"
+
+
+AV_FRAME_INPUT_PROTOCOL = "uniform_sampled_frames_audio_duration_in_prefix_reference_last_visible_timestamp_text_hybrid_xyxy_ltrb_v1"
+
+
+AV_FRAME_INPUT_PROTOCOL_NO_TIMESTAMP = "uniform_sampled_frames_audio_duration_in_prefix_reference_last_no_visible_timestamp_text_hybrid_xyxy_ltrb_v1"
+
+
+def audio_input_prefix(
+    target_specification: str,
+    duration: str,
+    *,
+    visible_frame_timestamps: bool = True,
+) -> str:
+    if target_specification == "reference_image":
+        prefix = f"You are given a sequence of frames uniformly sampled across a {duration}-second video and the corresponding audio, followed by a reference image. "
+        if visible_frame_timestamps:
+            prefix += "Each frame is preceded by its timestamp in seconds. "
+        return prefix + "Complete the task using the video frames, audio, and reference image."
+    if target_specification == "text_target":
+        prefix = f"You are given a sequence of frames uniformly sampled across a {duration}-second video and the corresponding audio. "
+        if visible_frame_timestamps:
+            prefix += "Each frame is preceded by its timestamp in seconds. "
+        return prefix + "Complete the task using the video frames and audio."
+    raise ValueError(f"unsupported target specification: {target_specification!r}")
+
+
+def build_av_frame_prompt(
+    *,
+    task: str,
+    target_specification: str,
+    question: str,
+    ground_truth: Mapping[str, Any],
+    video_manifest: Mapping[str, Any],
+    visible_frame_timestamps: bool = True,
+) -> str:
+    if task == "TG":
+        body = temporal_body(question)
+    elif task == "SG":
+        body = spatial_body(question, ground_truth)
+    elif task == "QA":
+        body = qa_body(question, ground_truth)
+    else:
+        raise ValueError(f"unsupported task: {task!r}")
+    return (
+        audio_input_prefix(
+            target_specification,
+            duration_text(video_manifest),
+            visible_frame_timestamps=visible_frame_timestamps,
+        )
+        + "\n\n"
+        + body
+    )
+
+
+SETTINGS = {"text": "text_target", "text_image": "reference_image"}
+
+
+def uses_audio(track: str, mode: str = "auto") -> bool:
+    if track not in {"VL", "AV"} or mode not in {"auto", "on", "off"}:
+        raise ValueError("Invalid track or audio mode")
+    return track == "AV" if mode == "auto" else mode == "on"
+
+
+def render_prompt(
+    question: Mapping[str, Any],
+    setting: str,
+    duration_seconds: float,
+    use_audio: bool | None = None,
+) -> str:
+    request = make_request(question, setting)
+    gt = dict(request["ground_truth"])
+    if question["task"] == "QA":
+        gt["options"] = question["options"]
+    if use_audio is None:
+        use_audio = uses_audio(question["track"])
+    builder = build_av_frame_prompt if use_audio else build_frame_prompt
+    return builder(
+        task=question["task"],
+        target_specification=request["target_specification"],
+        question=question["question"][setting],
+        ground_truth=gt,
+        video_manifest={"duration_sec": duration_seconds},
     )

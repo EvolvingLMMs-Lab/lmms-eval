@@ -1,23 +1,26 @@
-#!/usr/bin/env python3
-"""Sample full videos at a fixed frame budget or cadence; cache JPEGs and PTS."""
+"""Canonical frame sampling and complete audio extraction for OmniCompass."""
 
-import argparse
+from __future__ import annotations
+
 import hashlib
 import json
 import math
+import os
 import shutil
-import sys
+import subprocess
 import tempfile
 from contextlib import contextmanager
 from fractions import Fraction
 from pathlib import Path
 
-from .release_tools import safe, selected_videos, sha
+from .data import safe, sha
 
 PROTOCOL = "omnicompass-uniform-time-pts-v1"
-# Try nearby times in order; sparse retries can jump past a dense sample's bounds.
+
+
 OFFSETS = (0,) + tuple(offset for step in range(1, 21) for offset in (-step / 4, step / 4))
-# Frozen MP4s with misaligned sample offsets. Never apply recovery to other files.
+
+
 OFFSET_RECOVERY_SOURCES = frozenset(
     {
         "e848275da68b4e0c80565d8ae4538ffb8bf92b3d63bdd68e21236a2f5c20288c",
@@ -41,20 +44,6 @@ def valid_avcc_packet(data):
             return False
         position += size
     return position == len(data) and bool(data)
-
-
-def positive_int(value):
-    number = int(value)
-    if number <= 0:
-        raise argparse.ArgumentTypeError("Must be a positive integer")
-    return number
-
-
-def positive_float(value):
-    number = float(value)
-    if not math.isfinite(number) or number <= 0:
-        raise argparse.ArgumentTypeError("Must be finite and positive")
-    return number
 
 
 def targets(duration, nframe=None, fps=None, max_frames=10000):
@@ -422,69 +411,126 @@ def extract_video(video, cache_dir, *, nframe=None, fps=None, max_side=640, jpeg
         reader.close()
 
 
-def parser():
-    cli = argparse.ArgumentParser(description=__doc__)
-    source = cli.add_mutually_exclusive_group(required=True)
-    source.add_argument("--video", type=Path, help="Single video file")
-    source.add_argument("--data", type=Path, help="Extracted dataset with videos.jsonl")
-    cli.add_argument("--video-id", action="append", help="Repeat to select dataset videos")
-    cli.add_argument("--track", choices=["VL", "AV"], help="Filter dataset videos")
-    mode = cli.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--nframe", type=positive_int)
-    mode.add_argument("--fps", type=positive_float, help="Local sampling cadence, not native-video FPS")
-    cli.add_argument("--cache-dir", type=Path, required=True)
-    cli.add_argument("--max-side", type=int, default=640, help="JPEG longest edge; 0 keeps original size")
-    cli.add_argument("--jpeg-quality", type=int, default=95)
-    cli.add_argument("--on-decode-error", choices=["nearest", "fail"], default="nearest")
-    cli.add_argument("--max-frames", type=positive_int, default=10000)
-    return cli
+AUDIO_PROTOCOL = "omnicompass-full-audio-container-clock-v1"
 
 
-def main(argv=None):
-    cli = parser()
-    args = cli.parse_args(argv)
-    if args.video and (args.video_id or args.track):
-        cli.error("--video-id and --track require --data")
-    if args.max_side < 0 or not 1 <= args.jpeg_quality <= 100:
-        cli.error("--max-side must be >= 0; --jpeg-quality must be 1..100")
-    try:
-        decoder_versions()
-        if args.video:
-            jobs = [(None, args.video)]
-        else:
-            videos = selected_videos(args.data, args.video_id)
-            jobs = [(v["video_id"], safe(args.data, v["video_path"])) for v in videos if not args.track or args.track in v["tracks"]]
-        if not jobs:
-            raise ValueError("No videos selected")
-        failures = 0
-        for video_id, video in jobs:
+ENCODING = {"format": "mp3", "sample_rate": 16000, "channels": 1, "bitrate": 32000}
+
+
+def command(args):
+    result = subprocess.run(args, capture_output=True, text=True, timeout=1800)
+    if result.returncode:
+        raise ValueError(f"{Path(args[0]).name} failed: {result.stderr[-2000:]}")
+    return result.stdout
+
+
+def probe(path):
+    import av
+
+    with av.open(str(path)) as container:
+        streams = [
+            {
+                "index": s.index,
+                "codec_name": s.codec_context.name,
+                "sample_rate": s.codec_context.sample_rate,
+                "channels": s.codec_context.channels,
+                "start_time": float(s.start_time * s.time_base) if s.start_time is not None else None,
+            }
+            for s in container.streams.audio
+        ]
+        return {
+            "streams": streams,
+            "origin": float(container.start_time / av.time_base) if container.start_time is not None else 0,
+            "duration": float(container.duration / av.time_base) if container.duration is not None else None,
+        }
+
+
+def extract_audio(video, cache_dir):
+    ffmpeg = shutil.which(os.environ.get("FFMPEG_BINARY", "ffmpeg"))
+    if not ffmpeg:
+        raise ValueError("Audio extraction requires ffmpeg on PATH or FFMPEG_BINARY")
+    video = Path(video).resolve(strict=True)
+    stat = video.stat()
+    identity = {
+        "protocol": AUDIO_PROTOCOL,
+        "source_sha256": sha(video),
+        "extractor_sha256": sha(Path(__file__)),
+        "encoding": ENCODING,
+        "ffmpeg_version": command([ffmpeg, "-version"]),
+    }
+    key = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+    root = Path(cache_dir).resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    destination = root / key
+    with cache_lock(root, key):
+        if destination.exists():
             try:
-                directory, manifest, reused = extract_video(video, args.cache_dir, nframe=args.nframe, fps=args.fps, max_side=args.max_side, jpeg_quality=args.jpeg_quality, on_error=args.on_decode_error, max_frames=args.max_frames)
-                print(
-                    json.dumps(
-                        {
-                            "status": "ok",
-                            "video_id": video_id,
-                            "video": str(video),
-                            "manifest": str(directory / "sampling.json"),
-                            "cache_hit": reused,
-                            "frames": len(manifest["frames"]),
-                            "fallback_frames": manifest["fallback_frames"],
-                            "duplicate_frames": manifest["duplicate_frames"],
-                            "decode_recovery_frames": manifest.get("decode_recovery", {}).get("affected_output_frames", 0),
-                        }
-                    ),
-                    flush=True,
-                )
-            except Exception as exc:
-                failures += 1
-                print(json.dumps({"status": "error", "video_id": video_id, "video": str(video), "error": str(exc)}), flush=True)
-        return 1 if failures else 0
-    except ImportError as exc:
-        cli.exit(1, f"Missing dependency: {exc}. Install requirements-frames.txt.\n")
-    except (ValueError, OSError) as exc:
-        cli.exit(1, f"{exc}\n")
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+                manifest = json.loads((destination / "audio.json").read_text())
+                audio = destination / "audio.mp3"
+                if destination.is_symlink() or audio.is_symlink() or manifest["identity"] != identity or not audio.is_file() or sha(audio) != manifest["sha256"]:
+                    raise ValueError("Audio cache identity/content mismatch")
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                raise ValueError(f"Invalid audio cache {destination}: {exc}. Use a new cache directory or remove only this entry.") from exc
+            return audio, manifest, True
+        source = probe(video)
+        streams = source["streams"]
+        if not streams:
+            raise ValueError(f"No audio stream in {video.name}; select --audio off for a vision-only run, or select videos with audio.")
+        origin = source["origin"]
+        if not math.isfinite(origin):
+            raise ValueError("Invalid source timeline origin")
+        stage = Path(tempfile.mkdtemp(prefix=f".{key}.", dir=root))
+        try:
+            audio = stage / "audio.mp3"
+            # Keep audio on the same container-relative clock as sampled frames.
+            # Leading silence represents a delayed real stream, not missing audio.
+            command(
+                [
+                    ffmpeg,
+                    "-nostdin",
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-copyts",
+                    "-start_at_zero",
+                    "-i",
+                    str(video),
+                    "-map",
+                    "0:a:0",
+                    "-vn",
+                    "-af",
+                    "aresample=async=1:first_pts=0",
+                    "-ac",
+                    "1",
+                    "-ar",
+                    "16000",
+                    "-c:a",
+                    "libmp3lame",
+                    "-b:a",
+                    "32k",
+                    str(audio),
+                ]
+            )
+            output = probe(audio)
+            stream = output["streams"][0]
+            duration = output["duration"]
+            if not audio.stat().st_size or not math.isfinite(duration) or duration <= 0 or stream["codec_name"] not in {"mp3", "mp3float"} or int(stream["sample_rate"]) != 16000 or stream["channels"] != 1:
+                raise ValueError("Invalid extracted audio")
+            current = video.stat()
+            if (stat.st_size, stat.st_mtime_ns, stat.st_ino) != (current.st_size, current.st_mtime_ns, current.st_ino):
+                raise ValueError("Source video changed during audio extraction")
+            manifest = {
+                "identity": identity,
+                "sha256": sha(audio),
+                "bytes": audio.stat().st_size,
+                "duration_seconds": duration,
+                "source_audio_stream": streams[0]["index"],
+                "timeline_origin_seconds": origin,
+                "source_audio_start_seconds": streams[0]["start_time"],
+            }
+            (stage / "audio.json").write_text(json.dumps(manifest, indent=2) + "\n")
+            stage.rename(destination)
+        finally:
+            if stage.exists():
+                shutil.rmtree(stage)
+    return destination / "audio.mp3", manifest, False

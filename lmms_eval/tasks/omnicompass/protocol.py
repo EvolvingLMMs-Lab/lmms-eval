@@ -1,8 +1,7 @@
-"""Shared OmniCompass input and scoring protocol."""
+"""Build native OmniCompass documents, model inputs and paired results."""
 
 from __future__ import annotations
 
-import ast
 import hashlib
 import json
 import math
@@ -12,33 +11,12 @@ from pathlib import Path
 
 import portalocker
 
-from .extract_audio import extract_audio
-from .extract_frames import decoder_versions, extract_video
-from .hf_data import DatasetStore, default_cache
-from .omnicompass_public_adapter import evaluate_public_predictions, render_prompt
-from .omnicompass_release import format_number
-from .print_frame_eval_results import is_content_policy_error
-from .release_tools import rows, safe
-from .review_run import record
+from .data import DatasetStore, default_cache, rows, safe, sha
+from .media import decoder_versions, extract_audio, extract_video
+from .metrics import evaluate_public_predictions, format_number, is_content_policy_error
+from .prompts import render_prompt
 
 SETTINGS = ("text", "text_image")
-
-
-def source_digest(path):
-    """Relative packaging imports must not change the evaluation identity."""
-    if path.suffix != ".py":
-        return hashlib.sha256(path.read_bytes()).hexdigest()
-    tree = ast.parse(path.read_text())
-
-    class NormalizeImports(ast.NodeTransformer):
-        def visit_ImportFrom(self, node):
-            if node.level == 1 and node.module is None:
-                return ast.Import(names=node.names)
-            if node.level == 1:
-                node.level = 0
-            return node
-
-    return hashlib.sha256(ast.dump(NormalizeImports().visit(tree)).encode()).hexdigest()
 
 
 class Protocol:
@@ -57,31 +35,17 @@ class Protocol:
         self.nframe, self.fps, self.max_side = nframe, fps, max_side
         self.questions = list(rows(self.root / "questions.jsonl"))
         self.videos = {v["video_id"]: v for v in rows(self.root / "videos.jsonl")}
-        from . import omnicompass_public_adapter
-
-        code_root = Path(omnicompass_public_adapter.__file__).parent
+        code_root = Path(__file__).parent
         sources = [self.root / name for name in ("questions.jsonl", "videos.jsonl", "media_manifest.jsonl")]
-        sources.append(Path(__file__))
-        sources += [
-            code_root / (name + ".py")
-            for name in (
-                "extract_frames",
-                "extract_audio",
-                "omnicompass_public_adapter",
-                "omnicompass_release",
-                "omnicompass_frame_prompt",
-                "omnicompass_av_frame_prompt",
-                "omnicompass_scoring",
-                "print_frame_eval_results",
-                "print_modality_gain_results",
-            )
-        ]
+        sources += sorted(code_root.glob("*.py"))
+        sources += sorted(code_root.glob("*.yaml"))
+        sources.append(code_root / "_default_template_yaml")
         fingerprint = {
             "nframe": nframe,
             "fps": fps,
             "max_side": max_side,
             "decoder_versions": decoder_versions(),
-            "source_hashes": {str(p.name): source_digest(p) for p in sources},
+            "source_hashes": {str(p.name): sha(p) for p in sources},
         }
         self.protocol_id = hashlib.sha256(json.dumps(fingerprint, sort_keys=True).encode()).hexdigest()
 
@@ -113,7 +77,6 @@ class Protocol:
             for q in selected
             for setting in settings
         ]
-        record(documents)
         return documents
 
     def content(self, doc):
@@ -251,25 +214,4 @@ def evaluate(docs, outputs, settings=SETTINGS):
     # Framework tables must not present an incomplete transport run as final scores.
     if any(not item["complete"] for item in report["tracks"].values()):
         raise ValueError("Incomplete transport results; retry before publishing metrics")
-    record(docs, report)
     return report
-
-
-def viewer_question(row):
-    """Losslessly restore a canonical question from an existing HF Viewer row."""
-    question = {
-        "question_id": row["question_id"],
-        "video_id": row["video_id"],
-        "track": row["track"],
-        "task": row["task"],
-        "question": {"text": row["question_text"], "text_image": row["question_text_image"]},
-        "reference_image": row["reference_image_path"],
-        "ground_truth": json.loads(row["ground_truth"]),
-    }
-    if row.get("given_interval") is not None:
-        question["given_interval"] = row["given_interval"]
-    if row.get("options") is not None:
-        question["options"] = json.loads(row["options"])
-    if row.get("qa_type") is not None:
-        question["qa_type"] = row["qa_type"]
-    return question

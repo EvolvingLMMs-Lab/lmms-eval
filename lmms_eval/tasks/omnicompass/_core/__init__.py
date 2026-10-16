@@ -1,1 +1,0 @@
-"""Canonical OmniCompass protocol helpers."""

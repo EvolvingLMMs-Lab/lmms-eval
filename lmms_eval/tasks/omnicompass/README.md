@@ -51,7 +51,7 @@ verified and extracted to the local cache. A single video can require a
 multi-gigabyte TAR download; a full run needs substantial disk space for both
 archives and extracted files. Existing verified files are reused.
 
-The default dataset revision is pinned in `_core/hf_data.py`. No Hugging Face
+The default dataset revision is pinned in `data.py`. No Hugging Face
 token is required for the public release. To use an existing full or partial
 download, set `OMNICOMPASS_DATA` to the directory containing `release.json`,
 the six metadata files, and the selected `videos/` and `references/` files.
@@ -199,23 +199,13 @@ benchmarked. Do not substitute timestamp-only hashes when files can change in pl
 
 ## Implementation and tests
 
-`_core/` contains the OmniCompass reference prompts, sampler, parsers and scorer,
-plus download and cache-identity helpers. It keeps evaluation independent of
-another source checkout. Changes to this code must preserve the reference
-protocol and have regression coverage.
+The task keeps its reference implementation in five modules:
+`data.py` loads and verifies the release and defines cache identities;
+`media.py` samples frames and extracts complete audio;
+`prompts.py` renders the paired specifications;
+`metrics.py` parses answers and computes task and consistency scores;
+`protocol.py` connects these components to native task documents and results.
+Evaluation does not require another source checkout.
 
-```bash
-PYTHONPATH=. uv run pytest -q \
-  test/tasks/test_omnicompass_download.py \
-  test/tasks/test_omnicompass_protocol.py \
-  test/tasks/test_omnicompass_selection_cache.py \
-  test/tasks/test_omnicompass_frames.py \
-  test/cache/test_omnicompass_durability.py \
-  test/cache/test_response_cache.py \
-  test/models/test_openai.py \
-  test/models/test_qwen3_vl_simple.py \
-  test/models/test_omnicompass_generation.py
-```
-
-Unit tests use fixtures. Real-model validation is reported separately in the PR,
-including the exact command, selected IDs, backend, hardware and emitted scores.
+The PR reports local regression checks and real-model validation separately,
+including exact CLI commands, selected IDs, backend, hardware and emitted scores.
