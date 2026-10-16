@@ -54,8 +54,9 @@ def test_raw_thinking_and_finish_reason_retained(thinking: bool, raw: str, final
 
 
 @pytest.mark.parametrize("encoding", ["base64", "data-uri"])
-def test_local_mp3_is_encoded_and_message_order_preserved(tmp_path: Path, encoding: str) -> None:
-    audio = tmp_path / "audio.mp3"
+@pytest.mark.parametrize(("extension", "mime"), [("mp3", "audio/mpeg"), ("wav", "audio/wav")])
+def test_local_mp3_is_encoded_and_message_order_preserved(tmp_path: Path, encoding: str, extension: str, mime: str) -> None:
+    audio = tmp_path / f"audio.{extension}"
     audio.write_bytes(b"fake-mp3")
     messages = ChatMessages(
         messages=[
@@ -72,13 +73,14 @@ def test_local_mp3_is_encoded_and_message_order_preserved(tmp_path: Path, encodi
     content = messages.to_openai_messages(audio_format="input_audio", audio_encoding=encoding)[0]["content"]
     assert [item["type"] for item in content] == ["text", "input_audio", "text"]
     encoded = base64.b64encode(b"fake-mp3").decode("ascii")
-    assert content[1]["input_audio"] == {"data": ("data:;base64," if encoding == "data-uri" else "") + encoded, "format": "mp3"}
+    assert content[1]["input_audio"] == {"data": (f"data:{mime};base64," if encoding == "data-uri" else "") + encoded, "format": extension}
 
 
-def test_native_cli_returns_nonzero_on_evaluation_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("task", ["omnicompass_vl", "mme"])
+def test_native_cli_returns_nonzero_on_evaluation_failure(monkeypatch: pytest.MonkeyPatch, task: str) -> None:
     accelerator = Mock()
     accelerator.is_main_process = True
-    monkeypatch.setattr("sys.argv", ["lmms_eval", "--model", "openai", "--tasks", "omnicompass_vl"])
+    monkeypatch.setattr("sys.argv", ["lmms_eval", "--model", "openai", "--tasks", task])
     with patch.object(cli, "Accelerator", return_value=accelerator), patch.object(cli, "cli_evaluate_single", side_effect=ValueError("test context overflow")):
         with pytest.raises(SystemExit) as error:
             cli.cli_evaluate()

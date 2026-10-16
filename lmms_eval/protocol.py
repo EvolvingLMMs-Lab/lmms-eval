@@ -152,7 +152,8 @@ class ChatMessages(BaseModel):
                             raise ValueError("input_audio requires a local MP3 or WAV file")
                         encoded = base64.b64encode(path.read_bytes()).decode("ascii")
                         if audio_encoding == "data-uri":
-                            encoded = "data:;base64," + encoded
+                            audio_mime = "audio/mpeg" if extension == "mp3" else "audio/wav"
+                            encoded = f"data:{audio_mime};base64," + encoded
                         openai_message["content"].append(
                             {
                                 "type": "input_audio",

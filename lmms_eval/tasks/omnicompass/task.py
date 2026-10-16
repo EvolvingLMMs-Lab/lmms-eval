@@ -1,5 +1,7 @@
 """Native task loading; no generated task files or separate preparation command."""
 
+import hashlib
+import json
 import os
 
 from datasets import Dataset, DatasetDict
@@ -33,4 +35,6 @@ class OmniCompassTask(ConfigurableMessagesTask):
             **(self.config.metadata or {}),
             "protocol_id": adapter.protocol_id,
             "dataset_revision": adapter.store.revision if not adapter.store.local else "local-verified",
+            # doc_id is positional: bind cache fingerprints to the ordered selection.
+            "selection_sha256": hashlib.sha256(json.dumps([(doc["question_id"], doc["setting"]) for doc in docs], separators=(",", ":")).encode()).hexdigest(),
         }

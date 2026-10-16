@@ -163,6 +163,26 @@ responses are not reused. Changing sampling, task configuration, model arguments
 or recorded runtime versions creates a different cache identity. Use separate
 result directories for distinct experiments.
 
+The ordered `(question_id, setting)` selection is part of the task fingerprint.
+Reusing a response-cache directory with different `OMNICOMPASS_VIDEO_IDS` is safe:
+changed selections miss, and returning to the same selection can reuse its answers.
+Overlapping subsets do not share answers. Caches created before this selection
+fingerprint was added are not reused. This is conservative isolation, not
+cross-subset deduplication.
+
+Managed media-cache files that fail checksum verification are atomically replaced
+from the verified archive under the download lock, subject to the download budget.
+Files under explicit `OMNICOMPASS_DATA` remain read-only and fail on corruption.
+Provider policy refusals use the same marker rules for caching and scoring;
+transport failures remain retryable. Data-URI audio includes `audio/mpeg` or
+`audio/wav`; live API compatibility has only been tested on the DashScope-compatible
+deployment described in the PR.
+
+Local model directories are content-hashed at cache initialization, including
+weight shards and tokenizer files. This reads all recognized artifacts and may
+be expensive for large models or multiple ranks; that startup cost has not been
+benchmarked. Do not substitute timestamp-only hashes when files can change in place.
+
 ## Implementation and tests
 
 `_core/` contains the OmniCompass reference prompts, sampler, parsers and scorer,
@@ -174,6 +194,7 @@ protocol and have regression coverage.
 PYTHONPATH=. uv run pytest -q \
   test/tasks/test_omnicompass_download.py \
   test/tasks/test_omnicompass_protocol.py \
+  test/tasks/test_omnicompass_selection_cache.py \
   test/tasks/test_omnicompass_frames.py \
   test/cache/test_omnicompass_durability.py \
   test/cache/test_response_cache.py \

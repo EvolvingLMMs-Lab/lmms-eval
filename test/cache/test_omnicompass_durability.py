@@ -143,6 +143,55 @@ def test_shared_checkpoint_failure_is_fatal(tmp_path):
         instance.close()
 
 
+def test_finalize_failure_releases_writer_lock(tmp_path):
+    instance = cache(tmp_path)
+    with patch.object(instance, "_checkpoint_to_run_dir", side_effect=RuntimeError("checkpoint failed")), patch.object(instance, "_merge_run_to_root") as merge:
+        with pytest.raises(RuntimeError, match="checkpoint failed"):
+            instance.finalize(success=True)
+        merge.assert_not_called()
+    assert instance._writer_lock is None
+    assert instance.db is None
+    retry = cache(tmp_path)
+    retry.close()
+
+
+@pytest.mark.parametrize("code", ["data_inspection_failed", "prompt_blocked", "content_policy_violation", "unavailable"])
+def test_policy_validity_matches_scorer_through_replay_and_merge(tmp_path, code):
+    from lmms_eval.tasks.omnicompass._core.bridge import prediction
+
+    response = json.dumps({"api_response": {"status_code": 400, "body": {"error": {"code": code}}}})
+    policy = prediction({"question_id": "test", "setting": "text"}, response)["error_kind"] == "content_policy"
+
+    class Model:
+        def __init__(self):
+            self.calls = 0
+
+        def generate_until(self, batch):
+            self.calls += len(batch)
+            return [response for _ in batch]
+
+    model = Model()
+    first = cache(tmp_path)
+    assert first.execute(model, "generate_until", requests()[:1]) == [response]
+    first.db.execute("DELETE FROM responses")
+    first.db.commit()
+    first.close()
+    # Audit recovery must apply the same task-specific policy as live writes.
+    recovered = cache(tmp_path)
+    assert recovered.get_stats()["total_cached_entries"] == int(policy)
+    recovered.finalize(success=True)
+    merged = cache(tmp_path)
+    try:
+        assert merged.execute(model, "generate_until", requests()[:1]) == [response]
+        assert merged.get_stats()["hits"] == int(policy)
+        assert model.calls == (1 if policy else 2)
+        # Other benchmarks retain the existing generic policy.
+        if code in {"data_inspection_failed", "prompt_blocked"}:
+            assert not ResponseCache._is_valid_response(response, "generate_until", "mme")
+    finally:
+        merged.close()
+
+
 if __name__ == "__main__":
     root, remote = Path(sys.argv[2]), bool(int(sys.argv[3]))
     # Simulate rescheduling onto a different node with no previous local scratch.

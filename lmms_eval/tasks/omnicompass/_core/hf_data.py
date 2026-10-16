@@ -115,7 +115,11 @@ class DatasetStore:
         # Network filesystems can retain the same timestamps after a write.
         # Verify content even when every stat field matches a previous check.
         if not path.is_file() or stat.st_size != expected["bytes"] or sha(path) != expected["sha256"]:
-            raise ValueError(f"Media checksum mismatch: {name}")
+            if self.local or not path.is_file():
+                raise ValueError(f"Media checksum mismatch: {name}")
+            # Managed cache files can be replaced atomically from a verified archive.
+            # Keep the old file until extraction succeeds; explicit local roots are read-only.
+            return False
         return True
 
     def ensure(self, names):

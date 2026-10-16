@@ -664,9 +664,9 @@ class ResponseCache:
                             continue
                         if not rec.get("deterministic", True) or not rec.get("cache_key"):
                             continue
-                        if self._decode_valid_response(rec["response"], rec["request_type"]) is None:
+                        if self._decode_valid_response(rec["response"], rec["request_type"], rec["task_name"]) is None:
                             continue
-                        cur = self.db.execute("SELECT response, request_type FROM responses WHERE cache_key = ?", (rec["cache_key"],))
+                        cur = self.db.execute("SELECT response, request_type, task_name FROM responses WHERE cache_key = ?", (rec["cache_key"],))
                         existing = cur.fetchone()
                         if existing is None or self._decode_valid_response(*existing) is None:
                             self.db.execute(
@@ -685,7 +685,7 @@ class ResponseCache:
     def _lookup(self, cache_key: str) -> Any:
         """Read valid responses only, including from caches written by older versions."""
         # 1. Check local (writable) DB
-        cur = self.db.execute("SELECT response, request_type FROM responses WHERE cache_key = ?", (cache_key,))
+        cur = self.db.execute("SELECT response, request_type, task_name FROM responses WHERE cache_key = ?", (cache_key,))
         row = cur.fetchone()
         if row is not None:
             response = self._decode_valid_response(*row)
@@ -694,7 +694,7 @@ class ResponseCache:
         # 2. Fall back to shared (read-only) DB
         if self._shared_db is not None:
             try:
-                cur = self._shared_db.execute("SELECT response, request_type FROM responses WHERE cache_key = ?", (cache_key,))
+                cur = self._shared_db.execute("SELECT response, request_type, task_name FROM responses WHERE cache_key = ?", (cache_key,))
                 row = cur.fetchone()
                 if row is not None:
                     response = self._decode_valid_response(*row)
@@ -785,11 +785,11 @@ class ResponseCache:
         return response
 
     @staticmethod
-    def _is_valid_response(response: Any, request_type: str) -> bool:
+    def _is_valid_response(response: Any, request_type: str, task_name: str = "") -> bool:
         if response is None:
             return False
         if isinstance(response, GenerationResult):
-            return ResponseCache._is_valid_response(response.text, request_type)
+            return ResponseCache._is_valid_response(response.text, request_type, task_name)
         if request_type == "loglikelihood":
             return isinstance(response, (list, tuple)) and len(response) == 2
         if isinstance(response, str) and response.strip() == "":
@@ -806,21 +806,27 @@ class ResponseCache:
                 if not isinstance(record, dict):
                     return False
                 status = record.get("status_code")
-                if not isinstance(status, int) or not 200 <= status < 300:
+                if not isinstance(status, int):
+                    return False
+                if not 200 <= status < 300:
                     body = record.get("body")
+                    if task_name.startswith("omnicompass_"):
+                        from lmms_eval.tasks.omnicompass._core.print_frame_eval_results import is_content_policy_error
+
+                        return isinstance(body, dict) and is_content_policy_error(json.dumps(body.get("error", body)))
                     error = body.get("error", {}) if isinstance(body, dict) else {}
                     code = error.get("code") if isinstance(error, dict) else None
                     return status == 400 and code in ("content_policy_violation", "content_filter")
         return True
 
     @classmethod
-    def _decode_valid_response(cls, stored: str, request_type: str) -> Any:
+    def _decode_valid_response(cls, stored: str, request_type: str, task_name: str = "") -> Any:
         """Apply the live-write validity policy to persisted JSON payloads."""
         try:
             response = json.loads(stored)
         except (json.JSONDecodeError, TypeError):
             return None
-        return response if cls._is_valid_response(response, request_type) else None
+        return response if cls._is_valid_response(response, request_type, task_name) else None
 
     def execute(self, lm: Any, reqtype: str, requests: List[Instance]) -> list:
         """Check cache -> run model on misses -> store results -> return merged list.
@@ -883,7 +889,7 @@ class ResponseCache:
                 cacheable = self._extract_cacheable(resp)
                 gen_kwargs = extract_gen_kwargs(req)
                 deterministic = is_deterministic(reqtype, gen_kwargs)
-                valid = self._is_valid_response(cacheable, reqtype)
+                valid = self._is_valid_response(cacheable, reqtype, req.task_name)
                 ch = _extract_content_hash(req)
                 tf = self._task_fingerprints.get(req.task_name, "")
                 cache_key = (
@@ -1023,9 +1029,11 @@ class ResponseCache:
             pass
 
         # 2. Close DB (flushes WAL)
-        if self._strict_checkpoint:
-            self._checkpoint_to_run_dir()
-        self.close()
+        try:
+            if self._strict_checkpoint:
+                self._checkpoint_to_run_dir()
+        finally:
+            self.close()
 
         if not success or self._cache_root is None:
             return
@@ -1165,9 +1173,9 @@ class ResponseCache:
             shard_db = sqlite3.connect(shard_path)
             rows = shard_db.execute("SELECT cache_key, request_type, task_name, doc_id, idx, gen_kwargs, response, created_at FROM responses").fetchall()
             for row in rows:
-                if ResponseCache._decode_valid_response(row[6], row[1]) is None:
+                if ResponseCache._decode_valid_response(row[6], row[1], row[2]) is None:
                     continue
-                existing = out_db.execute("SELECT response, request_type FROM responses WHERE cache_key = ?", (row[0],)).fetchone()
+                existing = out_db.execute("SELECT response, request_type, task_name FROM responses WHERE cache_key = ?", (row[0],)).fetchone()
                 if existing is not None and ResponseCache._decode_valid_response(*existing) is not None:
                     continue
                 try:

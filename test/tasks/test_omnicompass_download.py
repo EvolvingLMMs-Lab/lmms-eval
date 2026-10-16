@@ -133,6 +133,7 @@ def test_existing_media_corruption_is_not_overwritten(repository):
     _, cache, _ = repository
     store = DatasetStore(cache=cache)
     store.ensure(["videos/oc_001.mp4"])
+    store = DatasetStore(root=store.root, cache=cache)
     video = store.root / "videos/oc_001.mp4"
     video.write_bytes(b"broken")
     with pytest.raises(ValueError, match="Media checksum"):
@@ -144,6 +145,7 @@ def test_same_size_corruption_with_restored_mtime(repository):
     _, cache, _ = repository
     store = DatasetStore(cache=cache)
     store.ensure(["videos/oc_001.mp4"])
+    store = DatasetStore(root=store.root, cache=cache)
     video = store.root / "videos/oc_001.mp4"
     stat = video.stat()
     video.write_bytes(b"broken")
@@ -156,6 +158,7 @@ def test_corruption_with_all_stat_fields_unchanged(repository, monkeypatch):
     _, cache, calls = repository
     store = DatasetStore(cache=cache)
     store.ensure(["videos/oc_001.mp4"])
+    store = DatasetStore(root=store.root, cache=cache)
     video = store.root / "videos/oc_001.mp4"
     before = video.stat()
     video.write_bytes(b"broken")
@@ -169,6 +172,38 @@ def test_corruption_with_all_stat_fields_unchanged(repository, monkeypatch):
     with pytest.raises(ValueError, match="Media checksum"):
         store.ensure(["videos/oc_001.mp4"])
     assert not calls
+    assert video.read_bytes() == b"broken"
+
+
+def test_managed_corrupt_media_is_repaired_atomically(repository):
+    _, cache, calls = repository
+    store = DatasetStore(cache=cache)
+    store.ensure(["videos/oc_001.mp4"])
+    video = store.root / "videos/oc_001.mp4"
+    stat = video.stat()
+    video.write_bytes(b"broken")
+    os.utime(video, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+    calls.clear()
+    store.ensure(["videos/oc_001.mp4"])
+    assert calls == ["media/videos-000.tar"]
+    assert video.read_bytes() == b"video1"
+
+
+def test_failed_managed_repair_keeps_old_file_and_honors_budget(repository, monkeypatch):
+    remote, cache, calls = repository
+    store = DatasetStore(cache=cache)
+    store.ensure(["videos/oc_001.mp4"])
+    video = store.root / "videos/oc_001.mp4"
+    video.write_bytes(b"broken")
+    calls.clear()
+    monkeypatch.setenv("OMNICOMPASS_MAX_DOWNLOAD_BYTES", "0")
+    with pytest.raises(ValueError, match="byte limit"):
+        store.ensure(["videos/oc_001.mp4"])
+    assert not calls and video.read_bytes() == b"broken"
+    monkeypatch.delenv("OMNICOMPASS_MAX_DOWNLOAD_BYTES")
+    (remote / "media/videos-000.tar").write_bytes(b"invalid archive")
+    with pytest.raises(ValueError, match="Archive checksum"):
+        store.ensure(["videos/oc_001.mp4"])
     assert video.read_bytes() == b"broken"
 
 
