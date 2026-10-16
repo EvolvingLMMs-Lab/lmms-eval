@@ -20,6 +20,7 @@ def qwen(thinking: bool = True, context_length: int | None = None) -> Qwen3_VL:
     model.enable_thinking = thinking
     model.context_length = context_length
     model.return_response_json = True
+    model.strict_generation = True
     return model
 
 
@@ -80,7 +81,7 @@ def test_local_mp3_is_encoded_and_message_order_preserved(tmp_path: Path, encodi
 def test_native_cli_returns_nonzero_on_evaluation_failure(monkeypatch: pytest.MonkeyPatch, task: str) -> None:
     accelerator = Mock()
     accelerator.is_main_process = True
-    monkeypatch.setattr("sys.argv", ["lmms_eval", "--model", "openai", "--tasks", task])
+    monkeypatch.setattr("sys.argv", ["lmms_eval", "--model", "openai", "--tasks", task, "--fail_on_error"])
     with patch.object(cli, "Accelerator", return_value=accelerator), patch.object(cli, "cli_evaluate_single", side_effect=ValueError("test context overflow")):
         with pytest.raises(SystemExit) as error:
             cli.cli_evaluate()

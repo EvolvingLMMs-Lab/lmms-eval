@@ -3,6 +3,8 @@ from lmms_eval.tasks import TaskManager
 
 def test_python_task_receives_model_name():
     class ModelAwareTask:
+        MODEL_NAME_AWARE = True
+
         def __init__(self, config=None, model_name=None):
             self.model_name = model_name
 

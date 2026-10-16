@@ -72,9 +72,9 @@ export OMNICOMPASS_VIDEO_IDS=oc_004
 
 uv run python -m lmms_eval \
   --model openai \
-  --model_args "model_version=$MODEL_ID,return_response_json=true,image_detail=high,token_limit_field=max_completion_tokens,timeout=180,max_retries=1,num_concurrent=1" \
+  --model_args "model_version=$MODEL_ID,return_response_json=true,strict_generation=true,image_detail=high,token_limit_field=max_completion_tokens,timeout=180,max_retries=1,num_concurrent=1" \
   --tasks omnicompass_vl \
-  --batch_size 1 \
+  --batch_size 1 --fail_on_error \
   --gen_kwargs max_new_tokens=32768,temperature=0,do_sample=False \
   --use_cache outputs/omnicompass-vl/cache \
   --output_path outputs/omnicompass-vl/results \
@@ -86,6 +86,10 @@ specifications. Remove `OMNICOMPASS_VIDEO_IDS` for the full track.
 Use `token_limit_field=max_tokens` if required by the endpoint.
 `return_response_json=true` preserves response status, usage and finish reason
 for the official scorer and failure handling.
+`strict_generation=true` applies the specified request timeout and makes the
+wrapper own retries; permanent 4xx errors stop immediately. Without this option,
+the backend retains its upstream SDK timeout and retry behavior.
+`--fail_on_error` requests a nonzero CLI exit on failure; it is off by default.
 
 For AV, use an endpoint that accepts **images and base64 MP3 input together**:
 
@@ -95,9 +99,9 @@ export OMNICOMPASS_VIDEO_IDS=oc_595
 
 uv run python -m lmms_eval \
   --model openai \
-  --model_args "model_version=$MODEL_ID,audio_format=input_audio,audio_encoding=data-uri,return_response_json=true,image_detail=high,token_limit_field=max_tokens,timeout=180,max_retries=1,num_concurrent=1" \
+  --model_args "model_version=$MODEL_ID,audio_format=input_audio,audio_encoding=data-uri,return_response_json=true,strict_generation=true,image_detail=high,token_limit_field=max_tokens,timeout=180,max_retries=1,num_concurrent=1" \
   --tasks omnicompass_av \
-  --batch_size 1 \
+  --batch_size 1 --fail_on_error \
   --gen_kwargs max_new_tokens=32768,temperature=0,do_sample=False \
   --use_cache outputs/omnicompass-av/cache \
   --output_path outputs/omnicompass-av/results \
@@ -120,9 +124,9 @@ export OMNICOMPASS_VIDEO_IDS=oc_004
 
 uv run python -m lmms_eval \
   --model qwen3_5 \
-  --model_args pretrained=Qwen/Qwen3.5-9B,enable_thinking=True,context_length=65536,return_response_json=True \
+  --model_args pretrained=Qwen/Qwen3.5-9B,enable_thinking=True,context_length=65536,return_response_json=True,strict_generation=True,apply_image_pixel_limits=True \
   --tasks omnicompass_vl \
-  --batch_size 1 \
+  --batch_size 1 --fail_on_error \
   --gen_kwargs max_new_tokens=32768,temperature=0,do_sample=False \
   --use_cache outputs/omnicompass-gpu/cache \
   --output_path outputs/omnicompass-gpu/results \
@@ -131,6 +135,11 @@ uv run python -m lmms_eval \
 
 The context must accommodate both input tokens and the requested output budget.
 `context_length` declares a capacity limit; it does not extend model support.
+An explicit `context_length` or `strict_generation=True` enables the preflight
+capacity check. Without either option, the original backend behavior remains.
+`apply_image_pixel_limits=True` applies the backend's configured
+`min_pixels`/`max_pixels` to chat images. It is off by default so existing
+benchmarks retain their original image preprocessing and token accounting.
 Use `enable_thinking=False` to disable thinking on this backend. API endpoints
 keep their provider default unless configured explicitly. Supported API switches
 are `enable_thinking_kwarg=true` or `false`, with
@@ -177,6 +186,11 @@ Provider policy refusals use the same marker rules for caching and scoring;
 transport failures remain retryable. Data-URI audio includes `audio/mpeg` or
 `audio/wav`; live API compatibility has only been tested on the DashScope-compatible
 deployment described in the PR.
+
+Strict response validation, per-answer checkpointing, stable restart identities
+and writer locks apply to OmniCompass. Unrelated benchmark requests keep the
+upstream cache validity rules and scratch layout. Python tasks receive the model
+name only when their class explicitly declares `MODEL_NAME_AWARE = True`.
 
 Local model directories are content-hashed at cache initialization, including
 weight shards and tokenizer files. This reads all recognized artifacts and may

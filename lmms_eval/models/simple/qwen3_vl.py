@@ -93,6 +93,8 @@ class Qwen3_VL(lmms):
         enable_thinking: Optional[bool] = None,
         context_length: Optional[int] = None,
         return_response_json: bool = False,
+        strict_generation: bool = False,
+        apply_image_pixel_limits: bool = False,
         reasoning_prompt: Optional[str] = None,
         **kwargs,
     ) -> None:
@@ -134,6 +136,8 @@ class Qwen3_VL(lmms):
         if self.context_length is not None and self.context_length <= 0:
             raise ValueError("context_length must be positive")
         self.return_response_json = return_response_json
+        self.strict_generation = str(strict_generation).lower() == "true"
+        self.apply_image_pixel_limits = str(apply_image_pixel_limits).lower() == "true"
 
         if reasoning_prompt:
             self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
@@ -344,6 +348,8 @@ class Qwen3_VL(lmms):
         return answer
 
     def _check_context(self, inputs, max_new_tokens):
+        if not getattr(self, "strict_generation", False) and getattr(self, "context_length", None) is None:
+            return
         config = self.model.config
         text_config = getattr(config, "text_config", config)
         limits = [

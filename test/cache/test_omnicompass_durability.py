@@ -185,9 +185,8 @@ def test_policy_validity_matches_scorer_through_replay_and_merge(tmp_path, code)
         assert merged.execute(model, "generate_until", requests()[:1]) == [response]
         assert merged.get_stats()["hits"] == int(policy)
         assert model.calls == (1 if policy else 2)
-        # Other benchmarks retain the existing generic policy.
-        if code in {"data_inspection_failed", "prompt_blocked"}:
-            assert not ResponseCache._is_valid_response(response, "generate_until", "mme")
+        # Upstream generic caching treats nonempty JSON as ordinary model text.
+        assert ResponseCache._is_valid_response(response, "generate_until", "mme")
     finally:
         merged.close()
 

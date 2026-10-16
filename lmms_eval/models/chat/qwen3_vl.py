@@ -59,7 +59,7 @@ class Qwen3_VL(Qwen3_VLSimple):
             gen_kwargs = all_gen_kwargs[0]
 
             video_kwargs = self._build_video_kwargs()
-            image_kwargs = {"min_pixels": self.min_pixels, "max_pixels": self.max_pixels}
+            image_kwargs = {"min_pixels": self.min_pixels, "max_pixels": self.max_pixels} if getattr(self, "apply_image_pixel_limits", False) else {}
             batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs, image_kwargs=image_kwargs) for chat_message in chat_messages]
 
             texts = self._apply_chat_template(batched_messages)
@@ -126,7 +126,8 @@ class Qwen3_VL(Qwen3_VLSimple):
                 input_tokens = int(inputs["input_ids"].shape[-1])
                 output_tokens = len(generated_ids_trimmed[i])
                 ans = self._format_response(ans, input_tokens, output_tokens, generate_kwargs["max_new_tokens"])
-                res.append(GenerationResult(text=ans, token_counts=TokenCounts(input_tokens=input_tokens, output_tokens=output_tokens)))
+                reported_input_tokens = input_tokens if getattr(self, "return_response_json", False) else None
+                res.append(GenerationResult(text=ans, token_counts=TokenCounts(input_tokens=reported_input_tokens, output_tokens=output_tokens)))
                 self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
 
                 eval_logger.debug(f"Question: {context}")

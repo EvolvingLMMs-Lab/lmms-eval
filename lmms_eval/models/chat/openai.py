@@ -50,6 +50,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
         return_response_json: bool = False,
         image_detail: str | None = None,
         token_limit_field: str = "max_tokens",
+        strict_generation: bool = False,
         **kwargs,
     ):
         if image_detail not in (None, "auto", "low", "high"):
@@ -61,8 +62,10 @@ class OpenAICompatible(OpenAICompatibleSimple):
         if audio_encoding not in ("base64", "data-uri"):
             raise ValueError("audio_encoding must be base64 or data-uri")
         super().__init__(*args, **kwargs)
-        # This backend owns the retry loop; SDK retries would multiply attempts.
-        self.client.max_retries = 0
+        self.strict_generation = str(strict_generation).lower() == "true"
+        if self.strict_generation:
+            # Explicit strict mode gives this wrapper sole ownership of retries.
+            self.client.max_retries = 0
         self.pass_video_url = bool(pass_video_url)
         self.enable_thinking_kwarg = enable_thinking_kwarg
         self.thinking_parameter = thinking_parameter
@@ -126,9 +129,12 @@ class OpenAICompatible(OpenAICompatibleSimple):
             last_response = None
             for attempt in range(self.max_retries):
                 try:
-                    response = self.client.chat.completions.create(**payload, timeout=self.timeout)
+                    request_options = {"timeout": self.timeout} if getattr(self, "strict_generation", False) else {}
+                    response = self.client.chat.completions.create(**payload, **request_options)
                     elapsed = time.time() - started_at
-                    response_text = response.choices[0].message.content or ""
+                    response_text = response.choices[0].message.content
+                    if self.return_response_json:
+                        response_text = response_text or ""
                     input_tokens = 0
                     output_tokens = 0
                     reasoning_tokens = 0
@@ -179,7 +185,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
                     rate_limited = rate_limited or is_rate_limit_error(error_msg)
                     eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
                     status = getattr(exc, "status_code", None)
-                    if status is not None and 400 <= status < 500 and status not in (408, 429):
+                    if getattr(self, "strict_generation", False) and status is not None and 400 <= status < 500 and status not in (408, 429):
                         break
                     if attempt == self.max_retries - 1:
                         eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")

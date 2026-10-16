@@ -473,8 +473,10 @@ class ResponseCache:
         rank_audit_name = f"rank_{global_rank}.audit.jsonl"
 
         if local_scratch is not None:
-            root_hash = hash_string(os.path.realpath(cache_root))[:16]
-            scratch_dir = os.path.join(local_scratch, "lmms_eval_cache", model_hash, root_hash, "runs", run_id)
+            scratch_root = os.path.join(local_scratch, "lmms_eval_cache", model_hash)
+            if omnicompass:
+                scratch_root = os.path.join(scratch_root, hash_string(os.path.realpath(cache_root))[:16])
+            scratch_dir = os.path.join(scratch_root, "runs", run_id)
             os.makedirs(scratch_dir, exist_ok=True)
             write_db = os.path.join(scratch_dir, rank_db_name)
             write_audit = os.path.join(scratch_dir, rank_audit_name)
@@ -563,7 +565,7 @@ class ResponseCache:
         self._checkpoint_interval: int = _CHECKPOINT_INTERVAL
         self._entries_since_checkpoint: int = 0
         self._writer_lock = None
-        self._strict_checkpoint = False
+        self._strict_checkpoint = any(name.startswith("omnicompass_") for name in self._task_fingerprints)
 
         self._open_local_handles()
 
@@ -605,7 +607,7 @@ class ResponseCache:
             self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("eval_version", self._eval_version))
         self.db.commit()
         self._replay_audit_log()
-        if os.path.exists(self.audit_path) and os.path.getsize(self.audit_path):
+        if self._strict_checkpoint and os.path.exists(self.audit_path) and os.path.getsize(self.audit_path):
             with open(self.audit_path, "rb") as source:
                 source.seek(-1, os.SEEK_END)
                 needs_newline = source.read(1) != b"\n"
@@ -789,12 +791,14 @@ class ResponseCache:
         if response is None:
             return False
         if isinstance(response, GenerationResult):
+            if not task_name.startswith("omnicompass_"):
+                return bool(response.text and response.text.strip())
             return ResponseCache._is_valid_response(response.text, request_type, task_name)
         if request_type == "loglikelihood":
             return isinstance(response, (list, tuple)) and len(response) == 2
         if isinstance(response, str) and response.strip() == "":
             return False
-        if isinstance(response, str):
+        if isinstance(response, str) and task_name.startswith("omnicompass_"):
             if response.startswith(("[LMMS_EVAL_REQUEST_FAILED", "[LMMS_EVAL_BUDGET_EXCEEDED]")):
                 return False
             try:
@@ -810,13 +814,9 @@ class ResponseCache:
                     return False
                 if not 200 <= status < 300:
                     body = record.get("body")
-                    if task_name.startswith("omnicompass_"):
-                        from lmms_eval.tasks.omnicompass._core.print_frame_eval_results import is_content_policy_error
+                    from lmms_eval.tasks.omnicompass._core.print_frame_eval_results import is_content_policy_error
 
-                        return isinstance(body, dict) and is_content_policy_error(json.dumps(body.get("error", body)))
-                    error = body.get("error", {}) if isinstance(body, dict) else {}
-                    code = error.get("code") if isinstance(error, dict) else None
-                    return status == 400 and code in ("content_policy_violation", "content_filter")
+                    return isinstance(body, dict) and is_content_policy_error(json.dumps(body.get("error", body)))
         return True
 
     @classmethod
@@ -881,8 +881,11 @@ class ResponseCache:
             eval_logger.info(f"ResponseCache: {n_hit_this_batch}/{len(requests)} cache hits ({self._skipped} non-deterministic skipped)")
 
         if uncached:
-            new_resps = list(getattr(lm, reqtype)(uncached))
-            if len(new_resps) != len(uncached):
+            new_resps = getattr(lm, reqtype)(uncached)
+            strict_responses = all(req.task_name.startswith("omnicompass_") for req in uncached)
+            if strict_responses:
+                new_resps = list(new_resps)
+            if strict_responses and len(new_resps) != len(uncached):
                 raise ValueError("Model returned a different number of responses than requests")
             for idx_pos, req, resp in zip(uncached_indices, uncached, new_resps):
                 results[idx_pos] = resp
@@ -936,6 +939,14 @@ class ResponseCache:
         if not self._use_scratch or not self._remote_rank_db:
             return
         try:
+            if not self._strict_checkpoint:
+                self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                shutil.copy2(self.db_path, self._remote_rank_db)
+                if os.path.exists(self.audit_path):
+                    shutil.copy2(self.audit_path, self._remote_rank_audit)
+                self._entries_since_checkpoint = 0
+                eval_logger.debug(f"ResponseCache: checkpoint to {self._remote_rank_db}")
+                return
             self.db.commit()
             # SQLite backup includes committed WAL entries; atomic rename keeps
             # the previous checkpoint usable if the worker dies during copying.
@@ -950,17 +961,6 @@ class ResponseCache:
             finally:
                 if os.path.exists(temporary):
                     os.unlink(temporary)
-            if not self._strict_checkpoint and self._remote_rank_audit and os.path.exists(self.audit_path):
-                with tempfile.NamedTemporaryFile(dir=self._run_dir, delete=False) as file:
-                    temporary = file.name
-                try:
-                    shutil.copy2(self.audit_path, temporary)
-                    with open(temporary, "rb") as file:
-                        os.fsync(file.fileno())
-                    os.replace(temporary, self._remote_rank_audit)
-                finally:
-                    if os.path.exists(temporary):
-                        os.unlink(temporary)
             self._entries_since_checkpoint = 0
             eval_logger.debug(f"ResponseCache: checkpoint to {self._remote_rank_db}")
         except Exception as e:
@@ -1233,7 +1233,7 @@ class ResponseCache:
 
         written = 0
         with open(output_path, "a", encoding="utf-8") as out:
-            if out.tell():
+            if out.tell() and any(rec.get("task_name", "").startswith("omnicompass_") for rec in entries):
                 out.write("\n")
             for rec in entries:
                 out.write(json.dumps(rec, ensure_ascii=False) + "\n")

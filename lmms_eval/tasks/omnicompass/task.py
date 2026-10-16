@@ -13,6 +13,8 @@ from lmms_eval.tasks.omnicompass.utils import protocol
 class OmniCompassTask(ConfigurableMessagesTask):
     """Load paired text and text-image requests from the pinned release."""
 
+    MODEL_NAME_AWARE = True
+
     def __init__(self, *args, config=None, model_name=None, **kwargs):
         config = dict(config or {})
         config.pop("class", None)

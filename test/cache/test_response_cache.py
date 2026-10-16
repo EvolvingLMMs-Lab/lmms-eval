@@ -604,6 +604,7 @@ class TestCreateAndFinalize(_CacheTestBase):
 
     def test_different_cache_roots_do_not_share_scratch_database(self):
         import hashlib
+        from types import SimpleNamespace
 
         scratch_root = os.path.join(self.tmpdir, "scratch")
         os.makedirs(scratch_root, exist_ok=True)
@@ -616,8 +617,9 @@ class TestCreateAndFinalize(_CacheTestBase):
                 patch("lmms_eval.caching.response_cache.detect_fs_type", return_value=FsType.REMOTE),
                 patch("lmms_eval.caching.response_cache.find_local_scratch", return_value=scratch_root),
             ):
+                task = SimpleNamespace(dump_config=lambda: {"task": "omnicompass_vl_qa"})
                 for name in ("thinking-on", "thinking-off"):
-                    caches.append(ResponseCache.create(os.path.join(self.tmpdir, name), model="m", world_size=2, global_rank=0))
+                    caches.append(ResponseCache.create(os.path.join(self.tmpdir, name), model="m", task_dict={"omnicompass_vl_qa": task}, world_size=2, global_rank=0))
             self.assertNotEqual(caches[0].db_path, caches[1].db_path)
             request = _gen_request("prompt", doc_id=7)
             caches[0].execute(_mock_model(["answer"]), "generate_until", [request])

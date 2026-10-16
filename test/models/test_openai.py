@@ -63,6 +63,7 @@ def _configure_openai_model(model, completions: _CaptureCompletions, *, model_ve
     model.image_detail = None
     model.token_limit_field = "max_tokens"
     model.timeout = 10
+    model.strict_generation = False
     model._rank = 0
     model.task_dict = {"demo": {"test": [{"id": 0}]}}
 
