@@ -728,11 +728,13 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         else:
             task_list = args.tasks.split(",")
             task_names = task_manager.match_tasks(task_list)
+            task_missing = []
             for task in [task for task in task_list if task not in task_names]:
                 if os.path.isfile(task):
                     config = utils.load_yaml_config(task)
                     task_names.append(config)
-            task_missing = [task for task in task_list if task not in task_names and "*" not in task]  # we don't want errors if a wildcard ("*") task name was used
+                elif "*" not in task:  # Unmatched wildcard patterns are allowed.
+                    task_missing.append(task)
 
             if task_missing:
                 missing = ", ".join(task_missing)
