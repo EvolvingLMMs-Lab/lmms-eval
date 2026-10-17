@@ -1,0 +1,14 @@
+include: ai2d.yaml
+task: ai2d_vlmeval
+tag: []
+dataset_path: csv
+dataset_kwargs:
+  data_files:
+    # Byte-identical to VLMEvalKit's AI2D_TEST.tsv (MD5 in README).
+    test: https://huggingface.co/datasets/mm-eval/VLMEvalKit/resolve/772639df87331ba19da76ea9cc5fa77836a15a18/AI2D_TEST.tsv
+  delimiter: "\t"
+  keep_default_na: false
+process_docs: !function utils.ai2d_vlmeval_process_docs
+doc_to_visual: !function utils.ai2d_vlmeval_doc_to_visual
+metadata:
+  version: 1.0
