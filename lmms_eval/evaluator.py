@@ -644,6 +644,7 @@ def simple_evaluate(
             model=model,
             model_args=model_args,
             task_dict=task_dict,
+            model_object=lm,
             world_size=world_size,
             global_rank=global_rank,
         )

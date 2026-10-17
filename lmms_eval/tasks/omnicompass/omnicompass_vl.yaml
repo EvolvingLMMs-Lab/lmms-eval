@@ -1,0 +1,15 @@
+group: omnicompass_vl
+task:
+  - omnicompass_vl_tg
+  - omnicompass_vl_sg
+  - omnicompass_vl_qa
+aggregate_metric_list:
+  - metric: text
+    aggregation: mean
+    weight_by_size: false
+  - metric: text_image
+    aggregation: mean
+    weight_by_size: false
+  - metric: cs
+    aggregation: mean
+    weight_by_size: false

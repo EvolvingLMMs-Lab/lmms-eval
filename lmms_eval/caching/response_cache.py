@@ -33,6 +33,7 @@ import re
 import shutil
 import socket
 import sqlite3
+import tempfile
 import time
 import urllib.parse
 import uuid
@@ -384,6 +385,7 @@ class ResponseCache:
         *,
         model: str = "",
         model_args: Union[str, dict] = "",
+        model_object: Any = None,
         task_dict: Optional[dict] = None,
         world_size: int = 1,
         global_rank: int = 0,
@@ -430,12 +432,33 @@ class ResponseCache:
         else:
             model_args_fp = str(model_args)
         model_fp = f"{model}|{model_args_fp}"
+        omnicompass = any(name.startswith("omnicompass_") for name in task_fingerprints)
+        if omnicompass:
+            from lmms_eval.tasks.omnicompass.data import model_identity, runtime_identity
+
+            options = model_args if isinstance(model_args, dict) else simple_parse_args_string(model_args)
+            evidence = {
+                "model": model_identity(options.get("pretrained"), options.get("revision")),
+                "runtime": runtime_identity(),
+            }
+            values = vars(model_object) if model_object is not None else {}
+            loaded = values.get("_model", values.get("model"))
+            config = getattr(loaded, "config", None)
+            if config is not None:
+                evidence["effective_dtype"] = str(getattr(loaded, "dtype", None))
+                evidence["effective_attention"] = getattr(config, "_attn_implementation", None)
+                evidence["resolved_revision"] = getattr(config, "_commit_hash", None)
+            model_fp += "|" + json.dumps(evidence, sort_keys=True)
         model_hash = hash_string(model_fp)[:16]
         eval_version = get_lmms_eval_cache_version()
 
         # Create directories
         os.makedirs(cache_root, exist_ok=True)
         run_id = _resolve_cache_run_id(world_size)
+        if omnicompass:
+            # A restart must find unfinished rank shards even under a new job ID.
+            identity = json.dumps([model_fp, task_fingerprints, world_size, eval_version], sort_keys=True)
+            run_id = "omnicompass-" + hash_string(identity)[:24]
         run_dir = os.path.join(cache_root, _LAYERED_RUNS_DIRNAME, run_id)
         os.makedirs(run_dir, exist_ok=True)
 
@@ -450,7 +473,10 @@ class ResponseCache:
         rank_audit_name = f"rank_{global_rank}.audit.jsonl"
 
         if local_scratch is not None:
-            scratch_dir = os.path.join(local_scratch, "lmms_eval_cache", model_hash, "runs", run_id)
+            scratch_root = os.path.join(local_scratch, "lmms_eval_cache", model_hash)
+            if omnicompass:
+                scratch_root = os.path.join(scratch_root, hash_string(os.path.realpath(cache_root))[:16])
+            scratch_dir = os.path.join(scratch_root, "runs", run_id)
             os.makedirs(scratch_dir, exist_ok=True)
             write_db = os.path.join(scratch_dir, rank_db_name)
             write_audit = os.path.join(scratch_dir, rank_audit_name)
@@ -462,14 +488,36 @@ class ResponseCache:
 
         eval_logger.info(f"ResponseCache: root={cache_root}, run={run_id}, rank={global_rank}/{world_size}, writes={'scratch' if use_scratch else 'direct'}")
 
-        instance = cls(
-            db_path=write_db,
-            audit_path=write_audit,
-            model_fingerprint=model_fp,
-            task_fingerprints=task_fingerprints,
-            shared_db_path=shared_db_path,
-            eval_version=eval_version,
-        )
+        writer_lock = None
+        if omnicompass:
+            import portalocker
+
+            writer_lock = portalocker.Lock(os.path.join(run_dir, f"rank_{global_rank}.lock"), timeout=1)
+            writer_lock.acquire()
+        try:
+            # Merge shared progress even when returning to an older scratch node.
+            if omnicompass and use_scratch:
+                os.makedirs(os.path.dirname(write_db), exist_ok=True)
+                remote_db = os.path.join(run_dir, rank_db_name)
+                remote_audit = os.path.join(run_dir, rank_audit_name)
+                if os.path.exists(remote_db):
+                    cls.merge_shards([remote_db], write_db)
+                if os.path.exists(remote_audit):
+                    cls.merge_audit_logs([remote_audit], write_audit)
+            instance = cls(
+                db_path=write_db,
+                audit_path=write_audit,
+                model_fingerprint=model_fp,
+                task_fingerprints=task_fingerprints,
+                shared_db_path=shared_db_path,
+                eval_version=eval_version,
+            )
+        except BaseException:
+            if writer_lock is not None:
+                writer_lock.release()
+            raise
+        instance._writer_lock = writer_lock
+        instance._strict_checkpoint = omnicompass
         # Store metadata for finalize()
         instance._cache_root = cache_root
         instance._run_id = run_id
@@ -516,6 +564,8 @@ class ResponseCache:
         self._remote_rank_audit: Optional[str] = None
         self._checkpoint_interval: int = _CHECKPOINT_INTERVAL
         self._entries_since_checkpoint: int = 0
+        self._writer_lock = None
+        self._strict_checkpoint = any(name.startswith("omnicompass_") for name in self._task_fingerprints)
 
         self._open_local_handles()
 
@@ -557,6 +607,13 @@ class ResponseCache:
             self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("eval_version", self._eval_version))
         self.db.commit()
         self._replay_audit_log()
+        if self._strict_checkpoint and os.path.exists(self.audit_path) and os.path.getsize(self.audit_path):
+            with open(self.audit_path, "rb") as source:
+                source.seek(-1, os.SEEK_END)
+                needs_newline = source.read(1) != b"\n"
+            if needs_newline:
+                with open(self.audit_path, "a") as target:
+                    target.write("\n")
         self._audit_file = open(self.audit_path, "a", encoding="utf-8")
 
     def _close_local_handles(self, checkpoint: bool = False) -> None:
@@ -609,9 +666,9 @@ class ResponseCache:
                             continue
                         if not rec.get("deterministic", True) or not rec.get("cache_key"):
                             continue
-                        if self._decode_valid_response(rec["response"], rec["request_type"]) is None:
+                        if self._decode_valid_response(rec["response"], rec["request_type"], rec["task_name"]) is None:
                             continue
-                        cur = self.db.execute("SELECT response, request_type FROM responses WHERE cache_key = ?", (rec["cache_key"],))
+                        cur = self.db.execute("SELECT response, request_type, task_name FROM responses WHERE cache_key = ?", (rec["cache_key"],))
                         existing = cur.fetchone()
                         if existing is None or self._decode_valid_response(*existing) is None:
                             self.db.execute(
@@ -630,7 +687,7 @@ class ResponseCache:
     def _lookup(self, cache_key: str) -> Any:
         """Read valid responses only, including from caches written by older versions."""
         # 1. Check local (writable) DB
-        cur = self.db.execute("SELECT response, request_type FROM responses WHERE cache_key = ?", (cache_key,))
+        cur = self.db.execute("SELECT response, request_type, task_name FROM responses WHERE cache_key = ?", (cache_key,))
         row = cur.fetchone()
         if row is not None:
             response = self._decode_valid_response(*row)
@@ -639,7 +696,7 @@ class ResponseCache:
         # 2. Fall back to shared (read-only) DB
         if self._shared_db is not None:
             try:
-                cur = self._shared_db.execute("SELECT response, request_type FROM responses WHERE cache_key = ?", (cache_key,))
+                cur = self._shared_db.execute("SELECT response, request_type, task_name FROM responses WHERE cache_key = ?", (cache_key,))
                 row = cur.fetchone()
                 if row is not None:
                     response = self._decode_valid_response(*row)
@@ -691,9 +748,20 @@ class ResponseCache:
             record["model_fingerprint_hash"] = model_fingerprint_hash
         if self._eval_version:
             record["eval_version"] = self._eval_version
-        self._audit_file.write(json.dumps(record, ensure_ascii=False) + "\n")
+        line = json.dumps(record, ensure_ascii=False) + "\n"
+        self._audit_file.write(line)
         self._audit_file.flush()
         os.fsync(self._audit_file.fileno())
+        if self._strict_checkpoint and self._use_scratch:
+            try:
+                # An append-only shared journal persists each answer without
+                # copying an ever-growing SQLite DB after every generation.
+                with open(self._remote_rank_audit, "a", encoding="utf-8") as remote:
+                    remote.write("\n" + line)
+                    remote.flush()
+                    os.fsync(remote.fileno())
+            except OSError as exc:
+                raise RuntimeError("Could not persist the OmniCompass response journal") from exc
 
     def _store(self, cache_key: str, request_type: str, task_name: str, doc_id: Union[int, str], idx: int, gen_kwargs: dict, response: Any) -> None:
         """Store a deterministic response in the SQLite cache (JSONL logging is handled separately by ``_log_to_audit``)."""
@@ -719,25 +787,46 @@ class ResponseCache:
         return response
 
     @staticmethod
-    def _is_valid_response(response: Any, request_type: str) -> bool:
+    def _is_valid_response(response: Any, request_type: str, task_name: str = "") -> bool:
         if response is None:
             return False
         if isinstance(response, GenerationResult):
-            return bool(response.text and response.text.strip())
+            if not task_name.startswith("omnicompass_"):
+                return bool(response.text and response.text.strip())
+            return ResponseCache._is_valid_response(response.text, request_type, task_name)
         if request_type == "loglikelihood":
             return isinstance(response, (list, tuple)) and len(response) == 2
         if isinstance(response, str) and response.strip() == "":
             return False
+        if isinstance(response, str) and task_name.startswith("omnicompass_"):
+            if response.startswith(("[LMMS_EVAL_REQUEST_FAILED", "[LMMS_EVAL_BUDGET_EXCEEDED]")):
+                return False
+            try:
+                decoded = json.loads(response)
+            except (ValueError, TypeError):
+                decoded = None
+            if isinstance(decoded, dict) and set(decoded) == {"api_response"}:
+                record = decoded["api_response"]
+                if not isinstance(record, dict):
+                    return False
+                status = record.get("status_code")
+                if not isinstance(status, int):
+                    return False
+                if not 200 <= status < 300:
+                    body = record.get("body")
+                    from lmms_eval.tasks.omnicompass.metrics import is_content_policy_error
+
+                    return isinstance(body, dict) and is_content_policy_error(json.dumps(body.get("error", body)))
         return True
 
     @classmethod
-    def _decode_valid_response(cls, stored: str, request_type: str) -> Any:
+    def _decode_valid_response(cls, stored: str, request_type: str, task_name: str = "") -> Any:
         """Apply the live-write validity policy to persisted JSON payloads."""
         try:
             response = json.loads(stored)
         except (json.JSONDecodeError, TypeError):
             return None
-        return response if cls._is_valid_response(response, request_type) else None
+        return response if cls._is_valid_response(response, request_type, task_name) else None
 
     def execute(self, lm: Any, reqtype: str, requests: List[Instance]) -> list:
         """Check cache -> run model on misses -> store results -> return merged list.
@@ -746,6 +835,11 @@ class ResponseCache:
         """
         if not requests:
             return []
+
+        if all(req.task_name.startswith("omnicompass_") for req in requests):
+            batch_size = _get_env_int("OMNICOMPASS_CHECKPOINT_BATCH_SIZE", 1)
+            if len(requests) > batch_size:
+                return [result for start in range(0, len(requests), batch_size) for result in self.execute(lm, reqtype, requests[start : start + batch_size])]
 
         results: list = [None] * len(requests)
         uncached: List[Instance] = []
@@ -788,12 +882,17 @@ class ResponseCache:
 
         if uncached:
             new_resps = getattr(lm, reqtype)(uncached)
+            strict_responses = all(req.task_name.startswith("omnicompass_") for req in uncached)
+            if strict_responses:
+                new_resps = list(new_resps)
+            if strict_responses and len(new_resps) != len(uncached):
+                raise ValueError("Model returned a different number of responses than requests")
             for idx_pos, req, resp in zip(uncached_indices, uncached, new_resps):
                 results[idx_pos] = resp
                 cacheable = self._extract_cacheable(resp)
                 gen_kwargs = extract_gen_kwargs(req)
                 deterministic = is_deterministic(reqtype, gen_kwargs)
-                valid = self._is_valid_response(cacheable, reqtype)
+                valid = self._is_valid_response(cacheable, reqtype, req.task_name)
                 ch = _extract_content_hash(req)
                 tf = self._task_fingerprints.get(req.task_name, "")
                 cache_key = (
@@ -840,14 +939,33 @@ class ResponseCache:
         if not self._use_scratch or not self._remote_rank_db:
             return
         try:
-            self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            if not self._strict_checkpoint:
+                self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                shutil.copy2(self.db_path, self._remote_rank_db)
+                if os.path.exists(self.audit_path):
+                    shutil.copy2(self.audit_path, self._remote_rank_audit)
+                self._entries_since_checkpoint = 0
+                eval_logger.debug(f"ResponseCache: checkpoint to {self._remote_rank_db}")
+                return
             self.db.commit()
-            shutil.copy2(self.db_path, self._remote_rank_db)
-            if os.path.exists(self.audit_path):
-                shutil.copy2(self.audit_path, self._remote_rank_audit)
+            # SQLite backup includes committed WAL entries; atomic rename keeps
+            # the previous checkpoint usable if the worker dies during copying.
+            with tempfile.NamedTemporaryFile(dir=self._run_dir, suffix=".db", delete=False) as file:
+                temporary = file.name
+            try:
+                with sqlite3.connect(temporary) as target:
+                    self.db.backup(target)
+                with open(temporary, "rb") as file:
+                    os.fsync(file.fileno())
+                os.replace(temporary, self._remote_rank_db)
+            finally:
+                if os.path.exists(temporary):
+                    os.unlink(temporary)
             self._entries_since_checkpoint = 0
             eval_logger.debug(f"ResponseCache: checkpoint to {self._remote_rank_db}")
         except Exception as e:
+            if self._strict_checkpoint:
+                raise RuntimeError("Could not persist the OmniCompass response checkpoint") from e
             eval_logger.warning(f"ResponseCache: checkpoint failed: {e}")
 
     def get_stats(self) -> Dict[str, Any]:
@@ -869,6 +987,9 @@ class ResponseCache:
 
     def close(self) -> None:
         self._close_local_handles()
+        if self._writer_lock is not None:
+            self._writer_lock.release()
+            self._writer_lock = None
         try:
             if self._shared_db:
                 self._shared_db.close()
@@ -908,13 +1029,17 @@ class ResponseCache:
             pass
 
         # 2. Close DB (flushes WAL)
-        self.close()
+        try:
+            if self._strict_checkpoint:
+                self._checkpoint_to_run_dir()
+        finally:
+            self.close()
 
         if not success or self._cache_root is None:
             return
 
         # 3. Copy scratch to run dir
-        if self._use_scratch and self._remote_rank_db:
+        if self._use_scratch and self._remote_rank_db and not self._strict_checkpoint:
             try:
                 os.makedirs(self._run_dir, exist_ok=True)
                 if os.path.exists(self.db_path):
@@ -1048,9 +1173,9 @@ class ResponseCache:
             shard_db = sqlite3.connect(shard_path)
             rows = shard_db.execute("SELECT cache_key, request_type, task_name, doc_id, idx, gen_kwargs, response, created_at FROM responses").fetchall()
             for row in rows:
-                if ResponseCache._decode_valid_response(row[6], row[1]) is None:
+                if ResponseCache._decode_valid_response(row[6], row[1], row[2]) is None:
                     continue
-                existing = out_db.execute("SELECT response, request_type FROM responses WHERE cache_key = ?", (row[0],)).fetchone()
+                existing = out_db.execute("SELECT response, request_type, task_name FROM responses WHERE cache_key = ?", (row[0],)).fetchone()
                 if existing is not None and ResponseCache._decode_valid_response(*existing) is not None:
                     continue
                 try:
@@ -1108,6 +1233,8 @@ class ResponseCache:
 
         written = 0
         with open(output_path, "a", encoding="utf-8") as out:
+            if out.tell() and any(rec.get("task_name", "").startswith("omnicompass_") for rec in entries):
+                out.write("\n")
             for rec in entries:
                 out.write(json.dumps(rec, ensure_ascii=False) + "\n")
                 written += 1

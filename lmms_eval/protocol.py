@@ -1,4 +1,6 @@
+import base64
 import os
+from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 import numpy as np
@@ -92,7 +94,11 @@ class ChatMessages(BaseModel):
             hf_messages.append(hf_message)
         return hf_messages
 
-    def to_openai_messages(self, video_kwargs: Optional[Dict[str, str]] = None, pass_video_url: bool = False):
+    def to_openai_messages(self, video_kwargs: Optional[Dict[str, str]] = None, pass_video_url: bool = False, audio_format: str = "audio_url", audio_encoding: str = "base64"):
+        if audio_format not in ("audio_url", "input_audio"):
+            raise ValueError("audio_format must be audio_url or input_audio")
+        if audio_encoding not in ("base64", "data-uri"):
+            raise ValueError("audio_encoding must be base64 or data-uri")
         if video_kwargs is None:
             video_kwargs = {}
         openai_messages = []
@@ -138,9 +144,27 @@ class ChatMessages(BaseModel):
                                 "image_url": {"url": f"data:{mime_type};base64,{self.encode_image(image, encode_cache, image_format, quality)}"},
                             }
                         )
-                # TODO, audio hasn't been implemented yet
                 elif content.type == "audio":
-                    openai_message["content"].append({"type": "audio_url", "audio_url": {"url": content.url}})
+                    if audio_format == "input_audio":
+                        path = Path(content.url)
+                        extension = path.suffix.lower().lstrip(".")
+                        if extension not in ("mp3", "wav"):
+                            raise ValueError("input_audio requires a local MP3 or WAV file")
+                        encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+                        if audio_encoding == "data-uri":
+                            audio_mime = "audio/mpeg" if extension == "mp3" else "audio/wav"
+                            encoded = f"data:{audio_mime};base64," + encoded
+                        openai_message["content"].append(
+                            {
+                                "type": "input_audio",
+                                "input_audio": {
+                                    "data": encoded,
+                                    "format": extension,
+                                },
+                            }
+                        )
+                    else:
+                        openai_message["content"].append({"type": "audio_url", "audio_url": {"url": content.url}})
             openai_messages.append(openai_message)
         return openai_messages
 

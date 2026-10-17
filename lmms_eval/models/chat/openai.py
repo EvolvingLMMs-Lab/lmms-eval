@@ -1,3 +1,4 @@
+import json
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from typing import List, Union
@@ -38,10 +39,43 @@ def _validate_single_choice_n(gen_kwargs: dict) -> None:
 class OpenAICompatible(OpenAICompatibleSimple):
     is_simple = False
 
-    def __init__(self, *args, pass_video_url: bool = False, enable_thinking_kwarg: object = None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        pass_video_url: bool = False,
+        enable_thinking_kwarg: object = None,
+        thinking_parameter: str = "chat_template",
+        audio_format: str = "audio_url",
+        audio_encoding: str = "base64",
+        return_response_json: bool = False,
+        image_detail: str | None = None,
+        token_limit_field: str = "max_tokens",
+        strict_generation: bool = False,
+        **kwargs,
+    ):
+        if image_detail not in (None, "auto", "low", "high"):
+            raise ValueError("image_detail must be auto, low, high or None")
+        if token_limit_field not in ("max_tokens", "max_completion_tokens"):
+            raise ValueError("Unsupported token_limit_field")
+        if thinking_parameter not in ("chat_template", "enable_thinking"):
+            raise ValueError("thinking_parameter must be chat_template or enable_thinking")
+        if audio_encoding not in ("base64", "data-uri"):
+            raise ValueError("audio_encoding must be base64 or data-uri")
         super().__init__(*args, **kwargs)
+        self.strict_generation = str(strict_generation).lower() == "true"
+        if self.strict_generation:
+            # Explicit strict mode gives this wrapper sole ownership of retries.
+            self.client.max_retries = 0
         self.pass_video_url = bool(pass_video_url)
         self.enable_thinking_kwarg = enable_thinking_kwarg
+        self.thinking_parameter = thinking_parameter
+        if audio_format not in ("audio_url", "input_audio"):
+            raise ValueError("audio_format must be audio_url or input_audio")
+        self.audio_format = audio_format
+        self.audio_encoding = audio_encoding
+        self.return_response_json = str(return_response_json).lower() == "true"
+        self.image_detail = image_detail
+        self.token_limit_field = token_limit_field
 
     def generate_until(self, requests) -> List[GenerationResult]:
         if not requests:
@@ -92,11 +126,15 @@ class OpenAICompatible(OpenAICompatibleSimple):
             started_at = time.time()
             rate_limited = False
             last_error_msg = "unknown error"
+            last_response = None
             for attempt in range(self.max_retries):
                 try:
-                    response = self.client.chat.completions.create(**payload)
+                    request_options = {"timeout": self.timeout} if getattr(self, "strict_generation", False) else {}
+                    response = self.client.chat.completions.create(**payload, **request_options)
                     elapsed = time.time() - started_at
                     response_text = response.choices[0].message.content
+                    if self.return_response_json:
+                        response_text = response_text or ""
                     input_tokens = 0
                     output_tokens = 0
                     reasoning_tokens = 0
@@ -117,6 +155,15 @@ class OpenAICompatible(OpenAICompatibleSimple):
                         reasoning_tokens=reasoning_tokens,
                         source="model",
                     )
+                    if self.return_response_json:
+                        response_text = json.dumps(
+                            {
+                                "api_response": {
+                                    "status_code": 200,
+                                    "body": response.model_dump(),
+                                }
+                            }
+                        )
                     return (
                         response_text,
                         local_index,
@@ -128,10 +175,18 @@ class OpenAICompatible(OpenAICompatibleSimple):
                         reasoning_tokens,
                     )
                 except Exception as exc:
+                    if getattr(exc, "status_code", None) is not None:
+                        last_response = {
+                            "status_code": exc.status_code,
+                            "body": {"error": getattr(exc, "body", None) or type(exc).__name__},
+                        }
                     error_msg = str(exc)
                     last_error_msg = error_msg
                     rate_limited = rate_limited or is_rate_limit_error(error_msg)
                     eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
+                    status = getattr(exc, "status_code", None)
+                    if getattr(self, "strict_generation", False) and status is not None and 400 <= status < 500 and status not in (408, 429):
+                        break
                     if attempt == self.max_retries - 1:
                         eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
                     else:
@@ -140,6 +195,8 @@ class OpenAICompatible(OpenAICompatibleSimple):
             elapsed = time.time() - started_at
             error_preview = last_error_msg.replace("\n", " ")[:200]
             failure_content = f"[LMMS_EVAL_REQUEST_FAILED after {self.max_retries} retries] {error_preview}"
+            if self.return_response_json and last_response is not None:
+                failure_content = json.dumps({"api_response": last_response})
             return failure_content, local_index, False, rate_limited, elapsed, 0, 0, 0
 
         def maybe_update_concurrency(force: bool = False) -> None:
@@ -197,11 +254,21 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 video_kwargs = {"nframes": self.max_frames_num}
 
             payload = {
-                "messages": chat_messages.to_openai_messages(video_kwargs=video_kwargs, pass_video_url=self.pass_video_url),
+                "messages": chat_messages.to_openai_messages(
+                    video_kwargs=video_kwargs,
+                    pass_video_url=self.pass_video_url,
+                    audio_format=self.audio_format,
+                    audio_encoding=self.audio_encoding,
+                ),
                 "model": self.model_version,
-                "max_tokens": max_new_tokens,
+                self.token_limit_field: max_new_tokens,
                 "temperature": temperature,
             }
+            if self.image_detail is not None:
+                for message in payload["messages"]:
+                    for block in message["content"]:
+                        if block["type"] == "image_url":
+                            block["image_url"]["detail"] = self.image_detail
             for parameter in ("top_p", "seed", "presence_penalty", "frequency_penalty", "n"):
                 value = request_gen_kwargs.get(parameter)
                 if value is not None:
@@ -212,13 +279,16 @@ class OpenAICompatible(OpenAICompatibleSimple):
             if self.enable_thinking_kwarg is not None:
                 ek = self.enable_thinking_kwarg
                 ek_bool = ek.lower() == "true" if isinstance(ek, str) else bool(ek)
-                extra_body["chat_template_kwargs"] = {"enable_thinking": ek_bool}
+                if self.thinking_parameter == "enable_thinking":
+                    extra_body["enable_thinking"] = ek_bool
+                else:
+                    extra_body["chat_template_kwargs"] = {"enable_thinking": ek_bool}
             if extra_body:
                 payload["extra_body"] = extra_body
 
             if "o1" in self.model_version or "o3" in self.model_version or "o4" in self.model_version or "gpt-5" in self.model_version:
                 payload.pop("temperature")
-                payload.pop("max_tokens")
+                payload.pop(self.token_limit_field)
                 payload["response_format"] = {"type": "text"}
                 payload["max_completion_tokens"] = max_new_tokens
 

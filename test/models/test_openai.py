@@ -56,6 +56,12 @@ def _configure_openai_model(model, completions: _CaptureCompletions, *, model_ve
     model.video_fps = None
     model.pass_video_url = False
     model.enable_thinking_kwarg = None
+    # These fixtures bypass __init__, so supply the chat backend's defaults.
+    model.audio_format = "audio_url"
+    model.audio_encoding = "base64"
+    model.return_response_json = False
+    model.image_detail = None
+    model.token_limit_field = "max_tokens"
     model._rank = 0
     model.task_dict = {"demo": {"test": [{"id": 0}]}}
 

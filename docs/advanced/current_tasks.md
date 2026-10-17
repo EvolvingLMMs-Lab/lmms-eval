@@ -345,6 +345,7 @@ python -m lmms_eval --tasks list_with_num
   - NExT-QA Multiple Choice Test (nextqa_mc_test)
   - NExT-QA Open Ended Validation (nextqa_oe_val)
   - NExT-QA Open Ended Test (nextqa_oe_test)
+- [OmniCompass](https://huggingface.co/datasets/VCLab-PolyU/OmniCompass) (omnicompass_vl, omnicompass_av) - Temporal grounding, spatial grounding and video QA with paired Text/Text+Image specifications and visual/audio-visual tracks. [Usage](../../lmms_eval/tasks/omnicompass/README.md)
 - [PerceptionTest](https://github.com/google-deepmind/perception_test) (perceptiontest)
   - PerceptionTest Test
     - perceptiontest_test_mc
