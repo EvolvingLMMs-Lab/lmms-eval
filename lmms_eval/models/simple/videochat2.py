@@ -421,7 +421,7 @@ class VideoChat2(lmms):
                 temperature=temperature,
             )
         output_token = outputs[0]
-        if output_token[0] == 0:  # the model might output a unknow token <unk> at the beginning. remove it
+        if output_token[0] == 0:  # the model might output a unknown token <unk> at the beginning. remove it
             output_token = output_token[1:]
         if output_token[0] == 1:  # some users find that there is a start token <s> at the beginning. remove it
             output_token = output_token[1:]

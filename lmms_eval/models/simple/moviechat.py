@@ -293,7 +293,7 @@ class MovieChat(lmms):
         )
 
         output_token = outputs[0]
-        if output_token[0] == 0:  # the model might output a unknow token
+        if output_token[0] == 0:  # the model might output a unknown token
             output_token = output_token[1:]
         if output_token[0] == 1:  # some users find that there is a start token  at the beginning. remove it
             output_token = output_token[1:]

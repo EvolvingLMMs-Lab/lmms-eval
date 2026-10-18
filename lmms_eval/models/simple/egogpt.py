@@ -279,7 +279,7 @@ class EgoGPT(lmms):
                 uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
                 frame_idx = uniform_sampled_frames.tolist()
         if task_name == "egoplan":
-            # add current ovservation frame
+            # add current observation frame
             frame_idx.append(total_frame_num - 1)
         video = vr.get_batch(frame_idx).asnumpy()
         return video, speech, speech_lengths
