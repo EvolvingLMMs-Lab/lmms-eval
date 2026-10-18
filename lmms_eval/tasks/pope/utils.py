@@ -72,13 +72,10 @@ def pope_aggregate_f1_score(results):
 
 
 def pope_aggregate_yes_ratio(results):
+    """Return the fraction of model responses that are exactly "yes"."""
     yes_count = 0
-    no_count = 0
     for result in results:
-        gt = result["ground_truth"]
-        if gt == "yes":
+        if result["prediction"] == "yes":
             yes_count += 1
-        elif gt == "no":
-            no_count += 1
-    yes_ratio = yes_count / (yes_count + no_count) if (yes_count + no_count) > 0 else 0
+    yes_ratio = yes_count / len(results) if results else 0
     return yes_ratio

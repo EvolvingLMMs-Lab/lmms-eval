@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Bug Fixes
+
+- Fix POPE's yes ratio to count model predictions rather than ground-truth labels, with all responses included in the denominator.
+
 ## v0.7 (2026-02-27)
 
 [Release notes](lmms-eval-0.7.md)
