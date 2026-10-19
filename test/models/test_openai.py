@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import os
 import unittest
 from types import SimpleNamespace
+from unittest import mock
+
+from openai import AzureOpenAI
 
 from lmms_eval.models.chat.openai import OpenAICompatible as ChatOpenAICompatible
 from lmms_eval.models.simple.openai import OpenAICompatible as SimpleOpenAICompatible
@@ -181,6 +185,31 @@ class TestOpenAICompatibleGenerationParameters(unittest.TestCase):
                     model.generate_until([_chat_request({"n": invalid_n})])
 
                 self.assertEqual(completions.payloads, [])
+
+
+class TestOpenAICompatibleClientRetries(unittest.TestCase):
+    # generate_until owns retries, so the SDK client must not retry on its own.
+    def test_simple_backend_disables_sdk_retries(self):
+        model = SimpleOpenAICompatible(model_version="gpt-4o", base_url="http://localhost:1/v1", api_key="test")
+
+        self.assertEqual(model.client.max_retries, 0)
+
+    def test_chat_backend_disables_sdk_retries(self):
+        model = ChatOpenAICompatible(model_version="gpt-4o", base_url="http://localhost:1/v1", api_key="test")
+
+        self.assertEqual(model.client.max_retries, 0)
+
+    def test_azure_backend_disables_sdk_retries(self):
+        azure_env = {
+            "AZURE_OPENAI_API_KEY": "test",
+            "AZURE_OPENAI_API_BASE": "https://example.openai.azure.com",
+            "AZURE_OPENAI_API_VERSION": "2024-06-01",
+        }
+        with mock.patch.dict(os.environ, azure_env):
+            model = SimpleOpenAICompatible(model_version="gpt-4o", azure_openai=True)
+
+        self.assertIsInstance(model.client, AzureOpenAI)
+        self.assertEqual(model.client.max_retries, 0)
 
 
 if __name__ == "__main__":

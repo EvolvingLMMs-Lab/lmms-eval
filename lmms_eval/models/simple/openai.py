@@ -153,14 +153,16 @@ class OpenAICompatible(lmms):
         if base_url and base_url.endswith("/"):
             base_url = base_url.rstrip("/")
 
+        # SDK retries are disabled because generate_until runs its own retry loop.
         self.client = (
-            OpenAI(api_key=api_key, base_url=base_url, http_client=http_client)
+            OpenAI(api_key=api_key, base_url=base_url, http_client=http_client, max_retries=0)
             if not azure_openai
             else AzureOpenAI(
                 api_key=os.getenv("AZURE_OPENAI_API_KEY"),
                 azure_endpoint=os.getenv("AZURE_OPENAI_API_BASE"),
                 api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
                 http_client=http_client,
+                max_retries=0,
             )
         )
 
