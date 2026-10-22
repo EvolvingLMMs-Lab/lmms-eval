@@ -1,9 +1,14 @@
 import json
+import math
 import re
 import time  # 引入time模块
 
 from latex2sympy2_extended import latex2sympy
 from tqdm import tqdm
+
+# The MATH-V reference scorer runs eval() on latex2sympy output with `from math import *`
+# in scope, so expressions such as 2*sqrt(3) or 4*pi need these names to evaluate.
+MATH_NAMES = {name: getattr(math, name) for name in dir(math) if not name.startswith("_")}
 
 
 def timestamp() -> str:
@@ -61,13 +66,13 @@ def eval_tuple(s):
         if s[0] == "(" and s[-1] == ")" and len(sl) > 1:
             # Evaluate each element using latex2sympy and round the result to 2 decimal places
             # Skip evaluation if element is 'infty', 'a', or '-a'
-            s = ",".join([str(round(eval(str(latex2sympy(sub))), 2)) if "infty" not in sub and sub not in ["a", "-a"] else sub for sub in sl])
+            s = ",".join([str(round(eval(str(latex2sympy(sub)), MATH_NAMES), 2)) if "infty" not in sub and sub not in ["a", "-a"] else sub for sub in sl])
             return f"({s})"
 
         # Check if string is a list representation and has more than one element
         elif s[0] == "[" and s[-1] == "]" and len(sl) > 1:
             # Same evaluation process as for tuples
-            s = ",".join([str(round(eval(str(latex2sympy(sub))), 2)) if "infty" not in sub and sub not in ["a", "-a"] else sub for sub in sl])
+            s = ",".join([str(round(eval(str(latex2sympy(sub)), MATH_NAMES), 2)) if "infty" not in sub and sub not in ["a", "-a"] else sub for sub in sl])
             return f"[{s}]"
 
     except Exception:  # Catch any exceptions and return the original string
@@ -117,7 +122,7 @@ def is_equal(asw: str, gt_asw: str) -> bool:
     try:
         # Convert LaTeX format to a sympy expression and evaluate both expressions.
         # If the evaluated results are close enough (up to 2 decimal places), return True.
-        if round(eval(str(latex2sympy(gt_asw))), 2) == round(eval(str(latex2sympy(asw))), 2):
+        if round(eval(str(latex2sympy(gt_asw)), MATH_NAMES), 2) == round(eval(str(latex2sympy(asw)), MATH_NAMES), 2):
             return True
 
         else:
