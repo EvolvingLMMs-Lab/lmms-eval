@@ -8,9 +8,9 @@ The prompt builder and the path validator below are copied from the reference
 implementation, so the task does not depend on the ``sparc-puzzle`` package and
 its command-line dependencies:
 
-* prompt:    https://github.com/lkaesberg/SPaRC/blob/9f2a3d6/sparc/prompts/single_shot_visual.py
-* validator: https://github.com/lkaesberg/SPaRC/blob/9f2a3d6/sparc/validation.py
-* messages:  https://github.com/lkaesberg/SPaRC/blob/9f2a3d6/sparc/process_puzzle.py (``process_puzzle_visual``)
+* prompt:    https://github.com/lkaesberg/SPaRC/blob/v0.7.0/sparc/prompts/single_shot_visual.py
+* validator: https://github.com/lkaesberg/SPaRC/blob/v0.7.0/sparc/validation.py
+* messages:  https://github.com/lkaesberg/SPaRC/blob/v0.7.0/sparc/process_puzzle.py (``process_puzzle_visual``)
 
 The logic is unchanged; only type hints and formatting were adapted to the
 repository's linters. A path counts as correct only if it exactly matches one
@@ -88,7 +88,7 @@ The image shows a Witness puzzle grid of size {grid_size["width"] * 2}x{grid_siz
 - **Colored Stars**: 8-pointed star shapes in their respective color inside cells
 - **Triangles**: Small colored upward-pointing triangles inside cells — the count (1-4 triangles) indicates how many edges of that cell the path must touch
 - **Polyshapes (positive)**: Tetromino-like colored filled block patterns inside cells, showing the shape the region must match
-- **Polyshapes (negative/ylop)**: Same block patterns but drawn as hollow/outlined squares instead of filled — these cancel out positive polyshapes
+- **Polyshapes (negative/ylop)**: Same block patterns but drawn as hollow/outlined squares instead of filled — these subtract area from the positive polyshapes in their region
 
 ## Grid & Coordinate System
 - Nodes are indexed (x, y) where (0,0) is the top-left node
@@ -108,7 +108,7 @@ The image shows a Witness puzzle grid of size {grid_size["width"] * 2}x{grid_siz
    - **Colored stars** (8-pointed stars in cells): Each star must be paired with EXACTLY one other element of the same color in its region. Other colors are ignored.
    - **Triangles** (small triangles in cells): The line must touch EXACTLY the number of edges specified by the count of triangles in that cell (edges are top, right, bottom, left of the cell).
    - **Polyshapes** (filled block patterns in cells): The region containing this symbol must be shaped EXACTLY like the defined polyshape.
-   - **Negative polyshapes** (hollow block patterns in cells): These cancel out regular polyshapes if they overlap.
+   - **Negative polyshapes** (hollow block patterns in cells): These subtract area from the regular polyshapes in the same region. The region must have the area of the regular polyshapes minus the area of the negative ones. Their shapes and colors do not have to match.
 
 {polyshapes_str}
 
