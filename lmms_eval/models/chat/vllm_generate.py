@@ -3,6 +3,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Tuple
 
+import numpy as np
+import torch
 from tqdm import tqdm
 from transformers import AutoProcessor
 
@@ -19,6 +21,27 @@ fetch_video, _ = optional_import("qwen_vl_utils", "fetch_video")
 process_vision_info, _ = optional_import("qwen_vl_utils", "process_vision_info")
 
 WORKERS = int(os.getenv("WORKERS", "32"))
+
+
+def _as_uint8_thwc(frames):
+    """Normalize decoded frames to uint8 (T, H, W, C), the layout vLLM's own decoders emit.
+
+    qwen_vl_utils.fetch_video returns float32 (T, C, H, W). Repro:
+    lmms-lab-encoder/LLaVA-OneVision-2-8B-Instruct on nextqa_mc_test hits
+    Image.fromarray(frame) in vllm's LlavaOnevision2 processor, which requires
+    uint8 channels-last; same underlying mismatch also reproduces on
+    google/gemma-4-12B-it-qat-w4a16-ct.
+    """
+    if isinstance(frames, torch.Tensor):
+        frames = frames.cpu().numpy()
+    frames = np.asarray(frames)
+    if frames.ndim != 4:
+        raise ValueError(f"Expected 4-D video frames (T, C, H, W) or (T, H, W, C), got shape {frames.shape}")
+    if frames.shape[1] in (1, 3, 4) and frames.shape[-1] not in (1, 3, 4):
+        frames = frames.transpose(0, 2, 3, 1)
+    if frames.dtype != np.uint8:
+        frames = np.clip(np.rint(frames), 0, 255).astype(np.uint8)
+    return np.ascontiguousarray(frames)
 
 
 @register_model("vllm_generate")
@@ -119,7 +142,7 @@ class VLLMGenerate(VLLMChat):
             # ignore this; others (e.g. GLM-4.1V) read it from metadata instead
             # and need it here. Processor-name checks are avoided on purpose.
             video_metadata["do_sample_frames"] = False
-            video_inputs.append(frames)
+            video_inputs.append(_as_uint8_thwc(frames))
             video_metadatas.append(video_metadata)
             kwargs["fps"] = fps
             kwargs["do_sample_frames"] = False
