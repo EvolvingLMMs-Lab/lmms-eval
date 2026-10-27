@@ -19,6 +19,10 @@ jobs:
   compare-task-input-boundary:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      # Keep dataset downloads and Arrow caches off the size-limited /tmp tmpfs.
+      # HEAD and BASE must share the same absolute cache directory.
+      HF_HOME: ${{ github.workspace }}/.cache/huggingface
     steps:
       - name: Checkout head
         uses: actions/checkout@v4
@@ -32,6 +36,13 @@ jobs:
 
       - name: Sync dependencies
         run: uv sync
+
+      - name: Prepare dataset cache
+        run: |
+          mkdir -p "$HF_HOME"
+          findmnt -T "$HF_HOME"
+          df -h "$HF_HOME" /tmp
+          df -i "$HF_HOME" /tmp
 
       - name: Resolve BASE revision
         id: base
@@ -77,14 +88,14 @@ jobs:
 
       - name: Capture HEAD snapshot
         run: |
-          HF_HOME=/tmp/hf-cache uv run --no-sync python "${{ steps.checker.outputs.checker_path }}" \
+          uv run --no-sync python "${{ steps.checker.outputs.checker_path }}" \
             --repo-root . \
             --spec "${{ steps.checker.outputs.spec_path }}" \
             --output /tmp/task-input-head.json
 
       - name: Capture BASE snapshot
         run: |
-          HF_HOME=/tmp/hf-cache uv run --no-sync python "${{ steps.checker.outputs.checker_path }}" \
+          uv run --no-sync python "${{ steps.checker.outputs.checker_path }}" \
             --repo-root "${{ steps.base.outputs.base_worktree }}" \
             --spec "${{ steps.checker.outputs.spec_path }}" \
             --output /tmp/task-input-base.json
@@ -111,6 +122,16 @@ jobs:
           path: |
             /tmp/task-input-base.json
             /tmp/task-input-head.json
+
+      - name: Report storage usage
+        if: always()
+        continue-on-error: true
+        run: |
+          df -h "$GITHUB_WORKSPACE" /tmp
+          df -i "$GITHUB_WORKSPACE" /tmp
+          if [ -d "$HF_HOME" ]; then
+            du -h --max-depth=1 "$HF_HOME"
+          fi
 
       - name: Cleanup BASE worktree
         if: always()
