@@ -13,6 +13,8 @@ generation_kwargs:
   top_p: 0.95
   do_sample: true
 process_results: !function utils.mavis_process_results
+# The judge needs the input image and the image documents, so keep images in the docs given to process_results.
+process_results_use_image: true
 # Groundedness = F1 of citation recall/precision; informativeness = F1 of completeness/relevance.
 # Scored by an LLM judge (gpt-4.1 by default); see utils.py for the MAVIS_JUDGE_* variables.
 metric_list:

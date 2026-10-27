@@ -141,7 +141,8 @@ def mavis_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     """Plain-text prompt for models without interleaved inputs; images come first via doc_to_visual."""
     parts = [f"{VANILLA_INSTRUCTION}\n\nQuestion: {doc['Q']}\nDocument:"]
     image_number = 1  # image 1 is the input image
-    for i, (_, kind, content) in enumerate(_documents(doc)):
+    # Uses only text columns, so it also works on docs whose image columns were dropped.
+    for i, (kind, content) in enumerate(zip(doc["documents_type"], doc["documents_text"])):
         if kind == "image":
             image_number += 1
             parts.append(DOC_PREFIX.format(i + 1) + f"<image {image_number}>")
@@ -320,6 +321,8 @@ def score_answer(doc, answer):
 
 
 def mavis_process_results(doc, results):
+    if "image" not in doc or "document_images" not in doc:
+        raise ValueError("MAVIS scoring needs the images in each doc; keep `process_results_use_image: true` in the task config or pass --process_with_media.")
     scores = score_answer(doc, results[0] if results else "")
     return {f"mavis_{name}": scores[name] for name in METRICS}
 

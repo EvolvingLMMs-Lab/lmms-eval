@@ -45,6 +45,20 @@ def test_prompt_interleaves_numbered_documents():
     assert "\n[2]: <image 2>" in utils.mavis_doc_to_text(doc)
 
 
+def test_text_prompt_does_not_need_the_image_columns():
+    doc = _doc()
+    no_media = {k: v for k, v in doc.items() if k not in ("image", "document_images")}
+
+    assert utils.mavis_doc_to_text(no_media) == utils.mavis_doc_to_text(doc)
+
+
+def test_scoring_without_images_fails_loudly():
+    no_media = {k: v for k, v in _doc().items() if k not in ("image", "document_images")}
+
+    with pytest.raises(ValueError, match="process_results_use_image"):
+        utils.mavis_process_results(no_media, ["An answer [1]."])
+
+
 def test_citations_are_parsed_and_moved_back_to_their_sentence():
     pairs = utils.answer_sentences("Hire an arborist [1][2]. Trim small branches. [3] Done [9].", ["1420-0-0", "38250", "1420-1-0"])
 
@@ -98,6 +112,8 @@ def test_mini_subset_is_fixed_and_keeps_the_domain_mix():
     assert counts == {"a": 100, "b": 60, "c": 40, "d": 0}
 
 
-def test_tasks_are_discoverable():
-    tasks = TaskManager().all_tasks
-    assert "mavis_gt" in tasks and "mavis_gt_mini" in tasks
+def test_tasks_are_discoverable_and_keep_images_for_scoring():
+    manager = TaskManager()
+    assert "mavis_gt" in manager.all_tasks and "mavis_gt_mini" in manager.all_tasks
+    for task in ("mavis_gt", "mavis_gt_mini"):
+        assert manager._get_config(task)["process_results_use_image"] is True
