@@ -38,6 +38,8 @@ python -m lmms_eval --model qwen2_5_vl --model_args pretrained=Qwen/Qwen2.5-VL-7
     --tasks mavis_gt --batch_size 1
 ```
 
+The judge sends images with `detail: low`, as the reference code does. The paper also generated GPT-4o answers with `detail: low`; to match it with the OpenAI backend, add `image_detail=low` to `--model_args`.
+
 Judge settings:
 
 | Variable | Default | Meaning |

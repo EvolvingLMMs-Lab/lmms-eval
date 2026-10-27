@@ -73,6 +73,13 @@ def test_empty_answer_scores_zero_without_judge_calls(monkeypatch):
     assert utils.mavis_aggregate([0.5, None, 1.0]) == pytest.approx(75.0)
 
 
+def test_judge_images_use_low_detail_like_the_reference():
+    part = utils._image_part(Image.new("RGB", (1024, 768)))
+
+    assert part["image_url"]["detail"] == "low"
+    assert part["image_url"]["url"].startswith("data:image/jpeg;base64,")
+
+
 def test_label_scoring():
     assert utils._label_score("The claim is backed. Answer: Fully support", "answer:") == 1.0
     assert utils._label_score("Label: Partially relevant", "label:") == 0.5

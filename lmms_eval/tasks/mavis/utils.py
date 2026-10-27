@@ -206,7 +206,8 @@ def _image_part(image):
     image.thumbnail((512, 512))  # the paper downscales every image to <=512 px
     buffer = BytesIO()
     image.save(buffer, format="JPEG")
-    return {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(buffer.getvalue()).decode('utf-8')}"}}
+    # The reference judge sends every image with detail "low".
+    return {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(buffer.getvalue()).decode('utf-8')}", "detail": "low"}}
 
 
 def _label_score(response, marker):
