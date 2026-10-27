@@ -42,14 +42,17 @@ pip install "sparc-visualization==0.2.2"
 ## Prompt and scoring
 
 `utils.py` holds copies of the reference prompt
-([`sparc/prompts/single_shot_visual.py`](https://github.com/lkaesberg/SPaRC/blob/9f2a3d6/sparc/prompts/single_shot_visual.py))
-and validator ([`sparc/validation.py`](https://github.com/lkaesberg/SPaRC/blob/9f2a3d6/sparc/validation.py)).
+([`sparc/prompts/single_shot_visual.py`](https://github.com/lkaesberg/SPaRC/blob/v0.7.0/sparc/prompts/single_shot_visual.py))
+and validator ([`sparc/validation.py`](https://github.com/lkaesberg/SPaRC/blob/v0.7.0/sparc/validation.py)).
 The messages follow `process_puzzle_visual` in
-[`sparc/process_puzzle.py`](https://github.com/lkaesberg/SPaRC/blob/9f2a3d6/sparc/process_puzzle.py): a
+[`sparc/process_puzzle.py`](https://github.com/lkaesberg/SPaRC/blob/v0.7.0/sparc/process_puzzle.py): a
 system prompt, then one user turn with the image first and the text second. The model explains its
 reasoning, then writes `####` followed by the coordinate list. The path is read from the text after the
 last `####`. If there is no `####`, the validator reads coordinates from the whole response, as the
 reference code does.
+
+Since task version 2.0, the prompt states the polyshape and negative polyshape rules the way the puzzles were
+built, as in sparc-puzzle 0.7.0. Version 1.0 used the paper's wording, so scores are not directly comparable.
 
 We checked the copies on all 500 test puzzles. The prompts equal the reference prompts, all 3,218 stored
 solutions score 1, and the images are pixel-identical to the images the reference code sends.
