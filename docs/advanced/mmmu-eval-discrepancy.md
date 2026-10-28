@@ -162,7 +162,7 @@ This is where the biggest evaluation difference lives.
 
 ### lmms-eval: `parse_mmmu_multi_choice_response()`
 
-Source: [`lmms_eval/tasks/_task_utils/mmmu_mcq_utils.py`, lines 17-65](../lmms_eval/tasks/_task_utils/mmmu_mcq_utils.py)
+Source: [`lmms_eval/tasks/_task_utils/mmmu_mcq_utils.py`, lines 17-65](../../lmms_eval/tasks/_task_utils/mmmu_mcq_utils.py)
 
 ```python
 def parse_mmmu_multi_choice_response(response, all_choices, index2ans):
@@ -291,7 +291,7 @@ The divergence happens in edge cases - short responses, ambiguous formatting, mu
 
 ### lmms-eval: Rule-Based Substring and Numeric Matching
 
-Source: [`lmms_eval/tasks/mmmu/utils.py`, lines 473-542](../lmms_eval/tasks/mmmu/utils.py)
+Source: [`lmms_eval/tasks/mmmu/utils.py`, lines 473-542](../../lmms_eval/tasks/mmmu/utils.py)
 
 The pipeline:
 

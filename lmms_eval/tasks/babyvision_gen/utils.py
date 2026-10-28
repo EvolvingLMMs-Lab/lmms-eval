@@ -6,6 +6,7 @@ Image generation evaluation task using LLM API
 import base64
 import json
 import os
+import re
 from collections import defaultdict
 from io import BytesIO
 from typing import Optional
@@ -56,15 +57,16 @@ def image_to_base64(image) -> Optional[str]:
 
 
 def parse_bool_response(response_text: str) -> Optional[bool]:
-    """Parse boolean response from LLM."""
-    text = response_text.strip().lower()
-    if "true" in text:
-        return True
-    elif "false" in text:
-        return False
-    else:
-        eval_logger.warning(f"Could not parse boolean from response: {response_text[:200]}...")
+    """Parse boolean response from LLM.
+
+    Uses the first standalone "true"/"false", so "False, not true" is False and
+    "untrue" is not read as True.
+    """
+    match = re.search(r"\b(true|false)\b", (response_text or "").lower())
+    if match is None:
+        eval_logger.warning(f"Could not parse boolean from response: {(response_text or '')[:200]}...")
         return None
+    return match.group(1) == "true"
 
 
 def _call_openai_for_evaluation(
@@ -140,20 +142,28 @@ def babyvision_process_results(doc, results, **kwargs):
     subtype = doc["subtype"]
     generation_prompt = doc["generationPrompt"]
 
-    client = _get_openai_client()
-    if client is None:
-        return {"babyvision_overall_accuracy": {"taskId": task_id, "correct": False, "error": "No API client"}}
+    # `correct` is None when the judge could not score the sample, and False
+    # when the model failed to produce something to judge.
+    def result(correct, error=None):
+        entry = {"taskId": task_id, "task_type": task_type, "subtype": subtype, "correct": correct}
+        if error:
+            entry["error"] = error
+        return {"babyvision_overall_accuracy": entry}
 
     pred = results[0] if results else "{}"
     try:
         pred = json.loads(pred)
     except (json.JSONDecodeError, TypeError):
         eval_logger.warning(f"Failed to parse prediction JSON: {pred}")
-        return {"babyvision_overall_accuracy": {"taskId": task_id, "correct": False, "error": "Invalid JSON"}}
+        return result(False, "Invalid JSON")
 
     model_images = pred.get("images", [])
     if not model_images:
-        return {"babyvision_overall_accuracy": {"taskId": task_id, "correct": False, "error": "No generated image"}}
+        return result(False, "No generated image")
+
+    client = _get_openai_client()
+    if client is None:
+        return result(None, "No API client")
 
     input_image_pil = doc["image"].convert("RGB")
     gt_image_pil = doc["answerImage"].convert("RGB")
@@ -163,37 +173,30 @@ def babyvision_process_results(doc, results, **kwargs):
 
     if model_response is None:
         eval_logger.warning(f"Model evaluation failed for taskId {task_id}")
-        return {"babyvision_overall_accuracy": {"taskId": task_id, "correct": False, "error": "Evaluation failed"}}
+        return result(None, "Evaluation failed")
 
     correct = parse_bool_response(model_response)
     if correct is None:
-        return {"babyvision_overall_accuracy": {"taskId": task_id, "correct": False, "error": "Could not parse response"}}
+        return result(None, "Could not parse response")
 
-    return {
-        "babyvision_overall_accuracy": {
-            "taskId": task_id,
-            "task_type": task_type,
-            "subtype": subtype,
-            "correct": correct,
-        }
-    }
+    return result(correct)
 
 
 def babyvision_aggregate_results(results):
-    """Aggregate results across all samples."""
-    if not results:
-        return 0.0
+    """Aggregate results across all samples.
 
-    correct_count = sum(1 for r in results if r["correct"])
-    total_count = len(results)
-
-    accuracy = correct_count / total_count if total_count > 0 else 0.0
+    Samples the judge could not score have `correct` set to None. They are left
+    out of the accuracy rather than counted as wrong, and if none were scored
+    the result is NaN.
+    """
+    judged = [r for r in results if r.get("correct") is not None]
+    unjudged_count = len(results) - len(judged)
+    correct_count = sum(1 for r in judged if r["correct"])
+    accuracy = correct_count / len(judged) if judged else float("nan")
 
     task_type_counts = defaultdict(lambda: {"correct": 0, "total": 0})
-    for r in results:
-        task_type = r["task_type"]
-        subtype = r["subtype"]
-        key = f"{task_type}/{subtype}"
+    for r in judged:
+        key = f"{r.get('task_type', 'unknown')}/{r.get('subtype', 'unknown')}"
         task_type_counts[key]["total"] += 1
         if r["correct"]:
             task_type_counts[key]["correct"] += 1
@@ -202,13 +205,15 @@ def babyvision_aggregate_results(results):
     eval_logger.info("BabyVision Gen Final Results")
     eval_logger.info("=" * 60)
     eval_logger.info(f"Overall Accuracy: {accuracy:.3f}")
-    eval_logger.info(f"Total Samples: {total_count}")
+    eval_logger.info(f"Total Samples: {len(results)}")
     eval_logger.info(f"Correct: {correct_count}")
+    if unjudged_count > 0:
+        eval_logger.warning(f"Judge failed on {unjudged_count}/{len(results)} samples; they are excluded from the accuracy")
     eval_logger.info("-" * 60)
     eval_logger.info("Accuracy by Task Type/Subtype:")
     for key in sorted(task_type_counts.keys()):
         stats = task_type_counts[key]
-        acc = stats["correct"] / stats["total"] if stats["total"] > 0 else 0.0
+        acc = stats["correct"] / stats["total"]
         eval_logger.info(f"  {key}: {acc:.3f} ({stats['correct']}/{stats['total']})")
     eval_logger.info("=" * 60)
 
