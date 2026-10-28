@@ -8,7 +8,7 @@ Given an image, a question about it and a set of text and image documents, the m
 
 | Task | Setting | Samples |
 | --- | --- | --- |
-| `mavis_gt` | GT-RAG: the human-annotated supporting documents (on average 2.8 image and 1.8 text documents) are given in the fixed random order used in the paper | 1,000 |
+| `mavis_gt` | GT-RAG (gold documents) of the reference code: the human-annotated supporting documents (on average 2.8 image and 1.8 text documents) are given in a fixed random order (seed 0 of the reference code) | 1,000 |
 | `mavis_gt_mini` | The same setting on a fixed 200-answer subset with the domain mix of the full set, for cheaper runs | 200 |
 
 The retrieval settings of the paper (Multi-/Text-/Image-RAG over the 2.5M-document corpus) need the full corpus and are not included; use the [reference code](https://github.com/seokwon99/MAVIS) for them.
