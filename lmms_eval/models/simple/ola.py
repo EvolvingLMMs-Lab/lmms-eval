@@ -102,7 +102,7 @@ class Ola(lmms):
             ├── Ola  
             │   ├── ...  
 
-    4. Run the the command to start evaluate the modeL. For example:
+    4. Run the command to start evaluate the modeL. For example:
     ```bash
         python3 -m accelerate.commands.launch \
         --num_processes=8 \

@@ -1,5 +1,5 @@
 # tested with
-# dependenies versions
+# dependencies versions
 # NVIDIA-SMI 550.90.07 | Driver Version: 550.90.07 | CUDA Version: 13.1
 # "transformers" dont set specific version to follow cambrians requirements
 # "accelerate" dont set specific version to follow cambrians requirements
