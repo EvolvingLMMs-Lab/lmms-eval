@@ -409,6 +409,8 @@ python -m lmms_eval --tasks list_with_num
   - tempcompass_yes_no
   - tempcompass_caption_matching
   - tempcompass_captioning
+- [TempCore](https://arxiv.org/abs/2509.01167) (tempcore) - Temporally sensitive subsets of six video QA benchmarks ([data](https://huggingface.co/datasets/HJOK/TempCore), [usage](../../lmms_eval/tasks/tempcore/README.md))
+  - tempcore_mvbench, tempcore_nextqa, tempcore_egoschema, tempcore_mlvu, tempcore_longvideobench, tempcore_videomme
 - [TemporalBench](https://huggingface.co/datasets/microsoft/TemporalBench) (temporalbench)
   - temporalbench_short_qa
   - temporalbench_long_qa

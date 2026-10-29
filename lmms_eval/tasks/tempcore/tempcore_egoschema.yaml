@@ -1,0 +1,3 @@
+include: ../egoschema/egoschema_subset.yaml
+task: tempcore_egoschema
+process_docs: !function utils.egoschema_docs

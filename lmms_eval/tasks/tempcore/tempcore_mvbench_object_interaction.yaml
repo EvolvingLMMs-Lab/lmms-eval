@@ -1,0 +1,3 @@
+include: ../mvbench/mvbench_object_interaction.yaml
+task: tempcore_mvbench_object_interaction
+process_docs: !function utils.mvbench_object_interaction_docs

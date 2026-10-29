@@ -1,0 +1,25 @@
+group: tempcore_mvbench
+task:
+  - tempcore_mvbench_action_antonym
+  - tempcore_mvbench_action_count
+  - tempcore_mvbench_action_localization
+  - tempcore_mvbench_action_prediction
+  - tempcore_mvbench_action_sequence
+  - tempcore_mvbench_character_order
+  - tempcore_mvbench_counterfactual_inference
+  - tempcore_mvbench_egocentric_navigation
+  - tempcore_mvbench_episodic_reasoning
+  - tempcore_mvbench_moving_attribute
+  - tempcore_mvbench_moving_count
+  - tempcore_mvbench_moving_direction
+  - tempcore_mvbench_object_existence
+  - tempcore_mvbench_object_interaction
+  - tempcore_mvbench_object_shuffle
+  - tempcore_mvbench_scene_transition
+  - tempcore_mvbench_state_change
+  - tempcore_mvbench_unexpected_action
+
+aggregate_metric_list:
+  - metric: mvbench_accuracy
+    aggregation: mean
+    weight_by_size: true

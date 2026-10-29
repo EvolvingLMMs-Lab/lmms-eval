@@ -1,0 +1,3 @@
+include: ../mvbench/mvbench_moving_direction.yaml
+task: tempcore_mvbench_moving_direction
+process_docs: !function utils.mvbench_moving_direction_docs
