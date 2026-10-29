@@ -1,0 +1,2 @@
+task: "mavis_gt"
+include: _default_template_yaml

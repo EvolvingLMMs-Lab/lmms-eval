@@ -233,6 +233,7 @@ python -m lmms_eval --tasks list_with_num
   - llava_interleave_bench_in_domain
   - llava_interleave_bench_out_domain
   - llava_interleave_bench_multi_view
+- [MAVIS](https://github.com/seokwon99/MAVIS) (mavis_gt, mavis_gt_mini)
 - [MET-Bench](https://vanyacohen.com/MET-Bench/) (metbench)
   - Minecraft next-state prediction: text (metbench_minecraft_text), image (metbench_minecraft_image)
   - Chess board-state tracking: text (metbench_chess_text), image (metbench_chess_image)
