@@ -53,3 +53,4 @@ jobs:
           test/eval/test_relax_exact_match_mcq.py
           test/entrypoints/test_job_scheduler_subprocess.py
           test/tui/test_server.py
+          test/performance
