@@ -1,5 +1,6 @@
 dataset_path: BAAI/RefSpatial-Bench
 full_docs: true
+process_results_use_image: true
 output_type: generate_until
 doc_to_visual: !function utils.refspatial_doc_to_visual
 doc_to_text: !function utils.refspatial_doc_to_text
