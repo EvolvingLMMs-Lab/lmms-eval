@@ -1,0 +1,1 @@
+"""Private performance-recording implementation."""
