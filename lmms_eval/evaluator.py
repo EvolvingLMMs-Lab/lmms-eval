@@ -817,6 +817,9 @@ def _run_generate_until_agentic(
     responses: list[str] = []
 
     for req in requests:
+        if len(req.args) == 6:
+            responses.append(_run_messages_agentic(lm, req, agentic_trace_mode=agentic_trace_mode, response_cache=response_cache))
+            continue
         (
             current_context,
             generation_kwargs,
@@ -959,6 +962,90 @@ def _run_generate_until_agentic(
         responses.append(final_response)
 
     return responses
+
+
+def _run_messages_agentic(lm, req: Instance, *, agentic_trace_mode: str, response_cache=None) -> str:
+    """Run a task-owned message conversation, closing any live environment.
+
+    A round callback returns ``(messages, terminal, outputs, info)``. ``info``
+    may hold a live environment, but only its JSON-safe ``state`` summary is
+    included in traces. Optional ``close`` and ``finalize`` callbacks release
+    resources and provide metrics when the step budget is exhausted.
+    """
+    if getattr(lm, "is_simple", False):
+        raise ValueError("agentic doc_to_messages requires a chat model backend")
+    context, doc_to_messages, generation_kwargs, doc_id, task_name, split = req.args
+    doc = lm.task_dict[task_name][split][doc_id]
+    generation_kwargs = copy.deepcopy(generation_kwargs)
+    max_steps = int(generation_kwargs.pop("max_agentic_steps", 12))
+    stateful = bool(req.metadata.get("stateful", False))
+    outputs = []
+    info = None
+    trace = []
+    response = ""
+    try:
+        payload = doc_to_messages(doc, round_idx=0, previous_output=outputs, previous_round_info=info)
+        for round_idx in range(max_steps + 1):
+            if not (isinstance(payload, tuple) and len(payload) == 4):
+                raise ValueError("agentic doc_to_messages must return (messages, terminal, outputs, info)")
+            messages, terminal, updated_outputs, info = payload
+            if updated_outputs is not None:
+                outputs = list(updated_outputs)
+                if outputs:
+                    response = outputs[-1]
+            if terminal:
+                break
+            if round_idx == max_steps:
+                finalize = info.get("finalize") if isinstance(info, dict) else None
+                if callable(finalize):
+                    response = finalize()
+                else:
+                    response = json.dumps({"success": False, "error": "max_agentic_steps_reached", "trace": outputs}, ensure_ascii=False)
+                break
+            if not isinstance(messages, list):
+                raise TypeError("agentic doc_to_messages must supply a message list before generation")
+
+            def current_messages(_doc, _messages=messages):
+                return _messages
+
+            single_req = Instance(
+                request_type="generate_until",
+                arguments=(context, current_messages, copy.deepcopy(generation_kwargs), doc_id, task_name, split),
+                idx=0,
+                metadata=req.metadata,
+            )
+            if response_cache is not None and not stateful:
+                raw = response_cache.execute(lm, "generate_until", [single_req])[0]
+            else:
+                raw = lm.generate_until([single_req])[0]
+            response, _ = unwrap_generation_output(raw)
+            outputs.append(response)
+            payload = doc_to_messages(doc, round_idx=round_idx + 1, previous_output=outputs, previous_round_info=info)
+            if agentic_trace_mode == "full":
+                next_info = payload[3] if isinstance(payload, tuple) and len(payload) == 4 else None
+                state = next_info.get("state") if isinstance(next_info, dict) else None
+                trace.append({"round_idx": round_idx + 1, "model_output": response, "state": state})
+    except Exception as exc:
+        if not stateful:
+            raise
+        eval_logger.warning(f"Agentic episode failed ({task_name}, doc {doc_id}): {exc!r}")
+        response = json.dumps({"success": False, "error": repr(exc), "metrics": {"env_error": 1.0}, "trace": outputs}, ensure_ascii=False)
+    finally:
+        close = info.get("close") if isinstance(info, dict) else None
+        if callable(close):
+            try:
+                close()
+            except Exception as exc:
+                eval_logger.warning(f"Could not close agentic environment ({task_name}, doc {doc_id}): {exc!r}")
+    if agentic_trace_mode == "full":
+        try:
+            payload = json.loads(response)
+        except (TypeError, json.JSONDecodeError):
+            payload = None
+        if isinstance(payload, dict):
+            payload.update(agentic_trace_mode="full", agentic_rounds=trace)
+            response = json.dumps(payload, ensure_ascii=False)
+    return response
 
 
 @positional_deprecated

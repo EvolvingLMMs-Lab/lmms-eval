@@ -1,0 +1,36 @@
+dataset_path: pufanyi/ViZDoom
+dataset_name: default
+task: vizdoom
+test_split: test
+output_type: generate_until_agentic
+stateful: true
+reasoning_tags: none
+doc_to_text: !function utils.vizdoom_doc_to_text
+doc_to_messages: !function utils.vizdoom_doc_to_messages
+doc_to_target: !function utils.vizdoom_doc_to_target
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  max_agentic_steps: 64
+process_results: !function utils.vizdoom_process_results
+metric_list:
+  - metric: vizdoom_success
+    aggregation: !function utils.vizdoom_aggregate_mean
+    higher_is_better: true
+  - metric: vizdoom_steps
+    aggregation: !function utils.vizdoom_aggregate_mean
+    higher_is_better: false
+  - metric: vizdoom_invalid_actions
+    aggregation: !function utils.vizdoom_aggregate_mean
+    higher_is_better: false
+  - metric: vizdoom_env_error
+    aggregation: !function utils.vizdoom_aggregate_mean
+    higher_is_better: false
+lmms_eval_specific_kwargs:
+  default:
+    tics_per_action: 5
+    frame_history: 5
+metadata:
+  version: 0.3
+  description: ViZDoom through the standard agentic loop, with five-tic frame history
