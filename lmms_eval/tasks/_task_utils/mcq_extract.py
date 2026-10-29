@@ -21,7 +21,8 @@ _DECLARATION = re.compile(
     r"(?P<prefix>"
     r"(?<!\w)(?:(?:the|my)\s+)?(?:(?:correct|best|final)\s+)?(?:answer|option|choice)\s*(?:is\b|[:：=])"
     r"|(?<!\w)i\s+(?:choose|select|pick)\b"
-    r"|答案是|答案为|选|옵션|정답은|답은|답\s*[:：]|答えは"
+    # ``选项`` must precede ``选``; otherwise ``选项B`` is read as the non-choice ``项``.
+    r"|(?:最终)?答案\s*(?:是|为|[:：])|答\s*[:：]|选项|选|옵션|정답은|답은|답\s*[:：]|答えは"
     r")"
     r"|(?P<postfix>(?<!\w)option\s+(?P<option>[a-z])(?!\w)\s+is\s+(?:the\s+)?(?:correct|right|best)\b)",
     re.IGNORECASE,
@@ -37,6 +38,8 @@ _URL = re.compile(r"(?<!\w)(?:[a-z][a-z0-9+.-]*://|www\.)\S*", re.IGNORECASE)
 _TRAILING_SEGMENT = re.compile(r"(?:^|[\n,;，；])\s*([^\n,;，；]+)\s*$")
 _WRAPPERS = (("**", "**"), ("__", "__"), ("`", "`"), ("*", "*"), ("_", "_"), ('"', '"'), ("'", "'"), ("“", "”"), ("‘", "’"), ("(", ")"), ("（", "）"), ("[", "]"), ("{", "}"), ("$", "$"))
 _PUNCTUATION = " \t\r\n.!?,;:。！？，；："
+# Only these closers may span option text. Quotes and brackets stay paired tightly.
+_EMPHASIS_CLOSERS = ("**", "__", "*", "_", "`")
 
 
 class _Choice(NamedTuple):
@@ -49,6 +52,15 @@ class _Choice(NamedTuple):
 def _word_character(character: str) -> bool:
     """Include Unicode combining marks and joins in word/identifier boundaries."""
     return character.isalnum() or character == "_" or unicodedata.category(character) in {"Mn", "Mc", "Me", "Cf"}
+
+
+def _starts_with_alternative(text: str) -> bool:
+    """Return whether ``text`` opens with a connector to another choice."""
+    body = text.lstrip(" \t")
+    connector = _ALTERNATIVE.match(body)
+    if connector is None:
+        return False
+    return body.startswith("/") or _read_choice(body[connector.end() :]) is not None
 
 
 def _read_choice(fragment: str, grammatical_suffix: str = "") -> Optional[_Choice]:
@@ -83,16 +95,31 @@ def _read_choice(fragment: str, grammatical_suffix: str = "") -> Optional[_Choic
     if tail and _word_character(tail[0]) and not (closers and tail.startswith(closers[-1])):
         return None
     punctuation = ""
+    labelled = False
     for closer in reversed(closers):
+        separated = bool(tail[:1].isspace())
         tail = tail.lstrip()
         # Punctuation may be inside a presentation wrapper: ``**B.**``.
         inner_punctuation = ".:：!?。！？" + (")" if closer != ")" else "")
         punctuation_end = len(tail) - len(tail.lstrip(inner_punctuation))
         punctuation += tail[:punctuation_end]
-        tail = tail[punctuation_end:].lstrip()
+        labelled = labelled or any(mark in tail[:punctuation_end] for mark in ".:：)")
+        remainder = tail[punctuation_end:]
+        separated = separated or bool(remainder[:1].isspace())
+        tail = remainder.lstrip()
         if not tail.startswith(closer):
-            return None
+            # Emphasis may wrap a punctuated label with its option text:
+            # ``**B. dog**``, ``**(C) Red**``. Whitespace is required, so
+            # ``**B.dog**`` stays a non-label. An alternative glued to the
+            # label (``**B. or C**``, ``**(A) or (B)**``) still abstains.
+            line, separator, rest = tail.partition("\n")
+            closer_at = line.find(closer)
+            skipped = line[:closer_at]
+            if closer not in _EMPHASIS_CLOSERS or not labelled or not separated or closer_at <= 0 or _starts_with_alternative(skipped):
+                return None
+            tail = line[closer_at:] + separator + rest
         tail = tail[len(closer) :]
+        labelled = labelled or closer == ")"
     tail = punctuation + tail
     if tail and _word_character(tail[0]):
         return None
@@ -239,8 +266,9 @@ def extract_mcq_answer(response: str, choices: Optional[List[str]] = None) -> st
     standalone parenthesized choices and uppercase final lines/comma-separated
     conclusions. Conflicting implicit labels abstain. Ordinary prose and
     embedded letters are not searched for fallback candidates. Markdown and
-    paired presentation wrappers preserve choices; lowercase choices require
-    an answer format rather than a mention in prose.
+    paired presentation wrappers preserve choices, including a punctuated
+    label wrapped with its option text (``**B. dog**``, ``**(C) Red**``).
+    Lowercase choices require an answer format rather than a mention in prose.
 
     This deliberately conservative format policy cannot resolve arbitrary
     author intent. Callers must strip reasoning blocks before extraction and
