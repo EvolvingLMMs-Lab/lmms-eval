@@ -558,6 +558,7 @@ python -m lmms_eval --tasks list_with_num
 
 ### Referring Expression Comprehension
 - [Ferret](https://github.com/apple/ml-ferret) (ferret)
+- [HumanRef](https://huggingface.co/datasets/IDEA-Research/HumanRef) (humanref)
 - [OSWorld-Verified (OSWorld-G)](https://xlang.ai/blog/osworld-verified) (osworld_g)
 - [RefCOCO](https://github.com/lichengunc/refer) (refcoco)
   - refcoco_seg_test, refcoco_seg_val
