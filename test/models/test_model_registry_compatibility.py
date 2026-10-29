@@ -134,9 +134,9 @@ def test_builtin_manifests_preserve_all_model_resolutions():
     ]
     payload = json.dumps(rows, sort_keys=True, separators=(",", ":"))
 
-    assert len(registry.list_canonical_model_ids()) == 117
-    assert len(registry.list_model_names()) == 127
-    assert hashlib.sha256(payload.encode()).hexdigest() == "45bb84f87177d5489d702387fb917f8942507d2cc75bc686334aa864893157a5"
+    assert len(registry.list_canonical_model_ids()) == 123
+    assert len(registry.list_model_names()) == 139
+    assert hashlib.sha256(payload.encode()).hexdigest() == "541953ea0748d493d45f3d27bb8df20e0c105ab67397bd98964069c142c1cb31"
 
 
 def _registry_with_projection_fixtures():
