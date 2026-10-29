@@ -48,6 +48,7 @@ python -m lmms_eval --tasks list_with_num
     - COCO 2017 Caption MiniTest (coco2017_cap_test)
 - [ConBench](https://github.com/foundation-multimodal-models/ConBench) (conbench)
 - [CountBench](https://huggingface.co/datasets/vikhyatk/CountBenchQA) (countbench)
+- [CountQA](https://huggingface.co/datasets/Jayant-Sravan/CountQA) (countqa): counting in cluttered real-world photos; exact-match and off-by-one accuracy
 - [CV-Bench](https://github.com/nyu-visionx/CV-Bench) (cv_bench)
 - [C4 Bench](https://arxiv.org/abs/2608.06501) (c4_bench)
   - Image-only identification (c4_bench_h0)
