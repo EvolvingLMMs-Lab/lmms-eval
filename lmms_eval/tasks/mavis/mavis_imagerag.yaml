@@ -1,0 +1,3 @@
+task: "mavis_imagerag"
+dataset_name: image_rag
+include: _default_template_yaml

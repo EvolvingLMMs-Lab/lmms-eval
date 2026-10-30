@@ -114,6 +114,11 @@ def test_mini_subset_is_fixed_and_keeps_the_domain_mix():
 
 def test_tasks_are_discoverable_and_keep_images_for_scoring():
     manager = TaskManager()
-    assert "mavis_gt" in manager.all_tasks and "mavis_gt_mini" in manager.all_tasks
-    for task in ("mavis_gt", "mavis_gt_mini"):
-        assert manager._get_config(task)["process_results_use_image"] is True
+    configs = {"gt": "gt_rag", "multirag": "multi_rag", "textrag": "text_rag", "imagerag": "image_rag"}
+    for setting, dataset_name in configs.items():
+        for task in (f"mavis_{setting}", f"mavis_{setting}_mini"):
+            assert task in manager.all_tasks
+            config = manager._get_config(task)
+            assert config["dataset_name"] == dataset_name
+            assert config["process_results_use_image"] is True
+            assert ("process_docs" in config) == task.endswith("_mini")
