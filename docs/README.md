@@ -241,3 +241,5 @@ Each release note documents new tasks, models, architectural changes, and migrat
 - [Test suite documentation](../test/README.md) — 292 tests covering every pipeline layer, with prompt stability snapshots for 8 classic benchmarks.
 - [GitHub repository](https://github.com/EvolvingLMMs-Lab/lmms-eval) — Source code, issue tracker, and contributing guidelines.
 - [Discord community](https://discord.gg/zdkwKUqrPy) — Get help and discuss development.
+
+- [Interactive environment evaluation](advanced/agentic_game_loop.md)

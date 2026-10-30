@@ -126,6 +126,7 @@ class TaskConfig(dict):
     doc_to_target: Union[Callable, str] = None
     doc_to_choice: Union[Callable, str, dict, list] = None
     doc_to_messages: Callable = None
+    stateful: bool = False  # Live environments must not reuse cached model responses.
     process_results: Union[Callable, str] = None
     use_prompt: str = None
     description: str = ""
@@ -1576,6 +1577,8 @@ class ConfigurableTask(Task):
         elif self.OUTPUT_TYPE == "generate_until_multi_round":
             arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, partial(self.config.doc_to_text, lmms_eval_specific_kwargs=self.lmms_eval_specific_kwargs), doc_id, self.config.task, split)
         elif self.OUTPUT_TYPE == "generate_until_agentic":
+            if getattr(self.config, "stateful", False) and callable(getattr(self.config, "doc_to_messages", None)):
+                raise ValueError("stateful doc_to_messages requires a chat model backend")
             arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, partial(self.config.doc_to_text, lmms_eval_specific_kwargs=self.lmms_eval_specific_kwargs), doc_id, self.config.task, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)
 
@@ -1854,7 +1857,10 @@ class ConfigurableMessagesTask(ConfigurableTask):
             "generate_until_multi_round",
         ], "Currently messages is used for generation only"
 
-        if self.OUTPUT_TYPE == "generate_until_agentic":
+        if self.OUTPUT_TYPE == "generate_until_agentic" and callable(getattr(self.config, "doc_to_messages", None)):
+            arguments = (ctx, self.doc_to_messages, copy.deepcopy(self.config.generation_kwargs), doc_id, self.config.task, split)
+            kwargs["metadata"] = {**kwargs["metadata"], "stateful": self.config.stateful}
+        elif self.OUTPUT_TYPE == "generate_until_agentic":
             arguments = (
                 ctx,
                 copy.deepcopy(self.config.generation_kwargs),
