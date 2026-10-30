@@ -11,7 +11,7 @@ Detection strategy:
     Linux   - parse ``/proc/mounts`` for the mount entry covering the path,
               then classify by filesystem type string.
     macOS   - use ``mount`` command output (``/proc/mounts`` not available).
-    Fallback- assume local if detection fails (safe default: no extra complexity).
+    Fallback- return UNKNOWN; response-cache writers require verified local storage.
 """
 
 import os
@@ -178,8 +178,8 @@ def find_local_scratch(min_free_gb: float = 1.0) -> Optional[str]:
         3. ``/scratch`` (another common convention)
         4. ``/tmp`` (always available, but may be tmpfs / size-limited)
 
-    A candidate is accepted only if it is writable and has at least
-    ``min_free_gb`` GB of free space (default 1 GB).
+    A candidate is accepted only if it is on a known local filesystem, writable,
+    and has at least ``min_free_gb`` GB of free space (default 1 GB).
 
     Returns the first usable directory found, or ``None`` if none qualify.
     """
@@ -197,7 +197,7 @@ def find_local_scratch(min_free_gb: float = 1.0) -> Optional[str]:
     candidates.append("/tmp")
 
     for path in candidates:
-        if os.path.isdir(path) and os.access(path, os.W_OK):
+        if os.path.isdir(path) and os.access(path, os.W_OK) and detect_fs_type(path) == FsType.LOCAL:
             try:
                 usage = shutil.disk_usage(path)
                 free_gb = usage.free / (1024**3)
@@ -205,7 +205,7 @@ def find_local_scratch(min_free_gb: float = 1.0) -> Optional[str]:
                     eval_logger.debug(f"fs_detect: skipping {path} (only {free_gb:.1f} GB free, need {min_free_gb} GB)")
                     continue
             except OSError:
-                pass  # If we can't check, accept the candidate anyway
+                continue
             eval_logger.debug(f"fs_detect: local scratch -> {path}")
             return path
 
