@@ -129,14 +129,16 @@ class MyModel(lmms):
         return res
 ```
 
-Register in `lmms_eval/models/__init__.py`:
+For an in-tree model, add a private bootstrap declaration in `lmms_eval/models/__init__.py`:
 
 ```python
-AVAILABLE_SIMPLE_MODELS = {
+_BUILTIN_SIMPLE_MODELS = {
     ...
     "my_model": "MyModel",
 }
 ```
+
+The public `AVAILABLE_SIMPLE_MODELS` mapping is a read-only compatibility view. For an external package, expose a `ModelManifest` through the `lmms_eval.models` entry-point group instead. Install the package before starting `lmms-eval`; registration runs at startup.
 
 Then run: `--tasks unig2u --model my_model`
 

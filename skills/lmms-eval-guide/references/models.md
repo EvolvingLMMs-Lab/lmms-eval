@@ -102,21 +102,44 @@ class MyModel(lmms):
         raise NotImplementedError("generate_until_multi_round not implemented.")
 ```
 
-## Register in `__init__.py`
+## Register the Model
 
-Edit `lmms_eval/models/__init__.py`:
+For an in-tree chat model, add a row to the private bootstrap declaration in `lmms_eval/models/__init__.py`:
 
 ```python
-AVAILABLE_CHAT_TEMPLATE_MODELS = {
+_BUILTIN_CHAT_TEMPLATE_MODELS = {
     # ... existing ...
     "my_model": "MyModel",  # Maps to lmms_eval.models.chat.my_model.MyModel
 }
 
 # Optional: backward-compatible aliases
-MODEL_ALIASES: dict[str, tuple[str, ...]] = {
+_BUILTIN_MODEL_ALIASES: dict[str, tuple[str, ...]] = {
     "my_model": ("my_model_v1", "old_name"),
 }
 ```
+
+Use `_BUILTIN_SIMPLE_MODELS` for an in-tree simple model. The public `AVAILABLE_SIMPLE_MODELS`, `AVAILABLE_CHAT_TEMPLATE_MODELS`, `MODEL_ALIASES`, and `AVAILABLE_MODELS` mappings are read-only views.
+
+For an external package, expose a `ModelManifest` through the `lmms_eval.models` entry-point group:
+
+```toml
+[project.entry-points."lmms_eval.models"]
+my_model = "my_plugin.models:model_manifest"
+```
+
+```python
+from lmms_eval.models.registry_v2 import ModelManifest
+
+
+def model_manifest():
+    return ModelManifest(
+        model_id="my_model",
+        chat_class_path="my_plugin.models.MyModel",
+        aliases=("my_model_v1",),
+    )
+```
+
+Install external plugins before starting `lmms-eval`. Model registration runs at startup.
 
 ## Test
 
@@ -158,7 +181,7 @@ oai_messages = messages.to_openai_messages()          # For OpenAI API (base64 i
 
 ### Model Resolution
 
-When `model_id` exists in both `AVAILABLE_CHAT_TEMPLATE_MODELS` and `AVAILABLE_SIMPLE_MODELS`, the registry creates one `ModelManifest` with both paths. Resolution prefers chat unless `force_simple=True`.
+When `model_id` exists in both `_BUILTIN_CHAT_TEMPLATE_MODELS` and `_BUILTIN_SIMPLE_MODELS`, startup creates one `ModelManifest` with both paths. External entry-point manifests use the same resolution rules. Resolution prefers chat unless `force_simple=True`.
 
 ## Reference Implementations
 

@@ -77,6 +77,7 @@ dependencies = [
     "pre-commit>=4.6.2,<5",
     "pydantic",
     "packaging",
+    "rfc8785==0.1.4",
     "zss",
     "protobuf",
     "sentence_transformers",
