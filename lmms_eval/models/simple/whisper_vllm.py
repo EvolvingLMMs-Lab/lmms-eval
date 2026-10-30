@@ -119,11 +119,22 @@ def _optional_whisper_llm():
         return LLM, None
 
 
-def _generate_with_fallback(llm, prompts, sampling_params, whisper_mod=None, use_tqdm: bool = False):
-    """Pass HF long-form kwargs only when WhisperLLM.generate accepts them."""
+def _generate_with_fallback(
+    llm,
+    prompts,
+    sampling_params,
+    whisper_mod=None,
+    use_tqdm: bool = False,
+    enable_fallback: bool = False,
+):
+    """HF gzip/logprob ladder only when enable_fallback (LibriSpeech) and WhisperLLM is present.
+
+    Other tasks keep the original SamplingParams and a single generate. WhisperLLM
+    with both thresholds omitted is one super().generate() (HF short-form).
+    """
     prompts_list = prompts if isinstance(prompts, (list, tuple)) else [prompts]
     gen_kwargs: dict[str, Any] = dict(use_tqdm=use_tqdm)
-    if whisper_mod is not None:
+    if enable_fallback and whisper_mod is not None:
         gen_kwargs.update(
             temperature=getattr(whisper_mod, "TEMPERATURES", _HF_TEMPERATURES),
             compression_ratio_threshold=getattr(whisper_mod, "COMPRESSION_RATIO_THRESHOLD", _HF_COMPRESSION_RATIO_THRESHOLD),
@@ -139,8 +150,9 @@ def _generate_with_fallback(llm, prompts, sampling_params, whisper_mod=None, use
 class WhisperVllm(lmms):
     """Whisper via vLLM.
 
-    LibriSpeech recovers early-EOT (empty / short / mid-clause prefix). Fleurs
-    and other tasks keep the original one-shot prompts.
+    LibriSpeech recovers early-EOT (empty / short / mid-clause prefix) and may
+    use WhisperLLM gzip/logprob fallback. Fleurs and other tasks keep the
+    original one-shot prompts and sampling parameters.
     """
 
     def __init__(
@@ -208,8 +220,15 @@ class WhisperVllm(lmms):
                 new_list.append(j)
         return new_list
 
-    def _generate(self, prompts, sampling_params):
-        return _generate_with_fallback(self.model, prompts, sampling_params, whisper_mod=self._whisper_mod, use_tqdm=False)
+    def _generate(self, prompts, sampling_params, *, enable_fallback: bool = False):
+        return _generate_with_fallback(
+            self.model,
+            prompts,
+            sampling_params,
+            whisper_mod=self._whisper_mod,
+            use_tqdm=False,
+            enable_fallback=enable_fallback,
+        )
 
     def _recover_unread_tails(
         self,
@@ -241,7 +260,7 @@ class WhisperVllm(lmms):
                 retry_prompts.append(_audio_prompt(tail_audio, _LIBRI_TS_PROMPT))
             if not retry_idx:
                 break
-            tail_out = self._generate(retry_prompts, sampling_params)
+            tail_out = self._generate(retry_prompts, sampling_params, enable_fallback=True)
             for j, i in enumerate(retry_idx):
                 tail_raw = tail_out[j].outputs[0].text
                 tail_txt = _strip_ts(tail_raw)
@@ -284,7 +303,7 @@ class WhisperVllm(lmms):
             groups.setdefault(sp.min_tokens, []).append(j)
         retry_out = [None] * len(retry_idx)
         for js in groups.values():
-            outs = self._generate([retry_prompts[j] for j in js], retry_sp[js[0]])
+            outs = self._generate([retry_prompts[j] for j in js], retry_sp[js[0]], enable_fallback=True)
             for k, j in enumerate(js):
                 retry_out[j] = outs[k]
         for j, i in enumerate(retry_idx):
@@ -340,7 +359,9 @@ class WhisperVllm(lmms):
                 audios.append(audio)
                 recover.append(use_libri_recover)
 
-            outputs = self._generate(batched_prompts, sampling_params)
+            # Gzip/logprob ladder only for LibriSpeech. Other tasks (Fleurs, …)
+            # keep a single generate with the original SamplingParams.
+            outputs = self._generate(batched_prompts, sampling_params, enable_fallback=all(recover))
             transcriptions = [output.outputs[0].text for output in outputs]
             tok = self.model.get_tokenizer()
             transcriptions, covered = self._recover_unread_tails(transcriptions, outputs, durations, audios, recover, sampling_params, tok)
