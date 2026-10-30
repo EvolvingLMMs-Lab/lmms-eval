@@ -32,9 +32,9 @@ uv run python -m lmms_eval \
 - Add your own task list: `--tasks mmmu,mme`
 - Switch model weights via `--model_args`
 - Explore guides:
-  - `docs/task_guide.md`
-  - `docs/model_guide.md`
-  - `CONTRIBUTING.md`
+  - [Task guide](../guides/task_guide.md)
+  - [Model guide](../guides/model_guide.md)
+  - [Contributing guide](../../CONTRIBUTING.md)
 
 ## Need help?
 
