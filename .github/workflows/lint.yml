@@ -21,7 +21,7 @@ jobs:
       - name: Set up uv and Python
         uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.9'
+          python-version: '3.10'
       - name: Run pre-commit (autofix)
         run: uvx pre-commit run --all-files || true
       - name: Commit fixes if any
