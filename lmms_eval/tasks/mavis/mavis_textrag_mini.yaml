@@ -1,0 +1,5 @@
+# 200-answer subset of mavis_textrag (the answers of mavis_gt_mini, see README).
+task: "mavis_textrag_mini"
+dataset_name: text_rag
+process_docs: !function utils.mavis_mini_process_docs
+include: _default_template_yaml

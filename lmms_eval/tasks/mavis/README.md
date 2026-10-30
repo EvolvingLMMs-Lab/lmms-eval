@@ -4,14 +4,17 @@
 
 Given an image, a question about it and a set of text and image documents, the model writes a long-form answer and cites the documents that support each sentence (`[1][2]`). MAVIS has 1,000 human-annotated test answers with atomic facts and supporting documents.
 
-## Task
+## Tasks
 
 | Task | Setting | Samples |
 | --- | --- | --- |
 | `mavis_gt` | GT-RAG (gold documents) of the reference code: the human-annotated supporting documents (on average 2.8 image and 1.8 text documents) are given in a fixed random order (seed 0 of the reference code) | 1,000 |
-| `mavis_gt_mini` | The same setting on a fixed 200-answer subset with the domain mix of the full set, for cheaper runs | 200 |
+| `mavis_multirag` | Multi-RAG: the top-5 text and image documents retrieved from the corpus (on average 3.0 text and 2.0 image documents) | 1,000 |
+| `mavis_textrag` | Text-RAG: the top-5 retrieved text documents | 1,000 |
+| `mavis_imagerag` | Image-RAG: the top-5 retrieved image documents | 1,000 |
+| `mavis_gt_mini`, `mavis_multirag_mini`, `mavis_textrag_mini`, `mavis_imagerag_mini` | The same settings on a fixed 200-answer subset with the domain mix of the full set (the same answers in every setting), for cheaper runs | 200 |
 
-The retrieval settings of the paper (Multi-/Text-/Image-RAG over the 2.5M-document corpus) need the full corpus and are not included; use the [reference code](https://github.com/seokwon99/MAVIS) for them.
+The retrieved documents are the released retrieval results of the reference code (MM-Embed over the 2.5M-document corpus with one GPT-4o query per question, `data/retrieval/results/gpt-4o_1`), in the same fixed random order. They do not match the documents behind the paper's retrieval tables exactly, so these scores are not directly comparable to the paper's.
 
 ## Metrics
 

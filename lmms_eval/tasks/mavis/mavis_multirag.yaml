@@ -1,0 +1,3 @@
+task: "mavis_multirag"
+dataset_name: multi_rag
+include: _default_template_yaml
