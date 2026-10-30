@@ -25,13 +25,14 @@ jobs:
       HF_HOME: ${{ github.workspace }}/.cache/huggingface
     steps:
       - name: Checkout head
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
       - name: Set up uv and Python
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.3.3
         with:
+          version: "latest-known"
           python-version: "3.11"
 
       - name: Sync dependencies
@@ -116,7 +117,7 @@ jobs:
 
       - name: Upload snapshots on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: task-input-snapshots
           path: |
