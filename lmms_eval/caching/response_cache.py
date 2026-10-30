@@ -1,6 +1,8 @@
 """Unified response-level cache for lmms-eval.
 
-SQLite primary store (WAL mode) + JSONL write-ahead audit log.
+Local SQLite writers (WAL mode) + JSONL write-ahead audit log.
+Shared databases are closed snapshots published by atomic replacement; readers
+pin a private local copy before opening it with immutable=1.
 Caches only deterministic requests (temperature=0, do_sample=False).
 Write order: JSONL append+fsync -> SQLite upsert (crash-safe).
 
@@ -174,6 +176,51 @@ def _merge_lock(lock_dir: str, timeout_seconds: int = 60, poll_interval_seconds:
             os.rmdir(lock_dir)
         except OSError:
             pass
+
+
+def _scratch_for(path: str) -> str:
+    """Never create a mutable SQLite database on a network filesystem."""
+    if detect_fs_type(path) == FsType.LOCAL:
+        return os.path.dirname(os.path.abspath(path))
+    scratch = find_local_scratch()
+    if scratch is None:
+        raise RuntimeError("ResponseCache requires local scratch; set LMMS_LOCAL_CACHE to a writable local directory with sufficient space")
+    return scratch
+
+
+def _publish_file(source: str, destination: str) -> None:
+    """Publish closed bytes, never a SQLite connection, on the destination FS."""
+    parent = os.path.dirname(os.path.abspath(destination))
+    os.makedirs(parent, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=".cache-", suffix=".tmp", dir=parent)
+    try:
+        with os.fdopen(fd, "wb") as target, open(source, "rb") as origin:
+            shutil.copyfileobj(origin, target)
+            # Preserve sharing permissions when replacing an existing snapshot.
+            shutil.copymode(destination if os.path.exists(destination) else source, temporary)
+            target.flush()
+            os.fsync(target.fileno())
+        os.replace(temporary, destination)
+        directory_fd = os.open(parent, os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def _copy_closed_database(source: str, destination: str) -> None:
+    """Copy a published snapshot. Legacy WAL files require an offline checkpoint.
+
+    Publishers only replace snapshots, so opening the source pins one complete
+    inode even if another run publishes while the copy is in progress.
+    """
+    for suffix in ("-wal", "-journal"):
+        if os.path.exists(source + suffix):
+            raise RuntimeError(f"Cache database has a journal: {source}. Stop old cache writers and checkpoint it locally before reuse.")
+    shutil.copyfile(source, destination)
 
 
 def canonicalize_gen_kwargs(gen_kwargs: Optional[dict]) -> str:
@@ -369,9 +416,10 @@ class ResponseCache:
 
     Supports an optional **shared read-only DB** for two-tier caching.
     When ``shared_db_path`` is provided, lookups check the local (writable)
-    DB first, then fall back to the shared DB.  All writes go exclusively
-    to the local DB.  This enables a pattern where the shared DB lives on
-    NFS (slow writes, fast reads) while the local DB lives on NVMe.
+    DB first, then fall back to a private local copy of the shared snapshot.
+    All SQLite writes go exclusively to local storage. Shared snapshots may
+    live on NFS; publication atomically replaces files without mutating the
+    database opened by a reader.
 
     Write path: JSONL append+fsync -> SQLite upsert.
     On startup: replays JSONL tail into SQLite to recover incomplete writes.
@@ -467,15 +515,14 @@ class ResponseCache:
         shared_db_path = target_db if os.path.exists(target_db) else None
 
         target_fs = detect_fs_type(cache_root)
-        local_scratch = find_local_scratch() if target_fs == FsType.REMOTE else None
+        local_scratch = _scratch_for(os.path.join(cache_root, "cache.db")) if target_fs != FsType.LOCAL else None
 
         rank_db_name = f"rank_{global_rank}.db"
         rank_audit_name = f"rank_{global_rank}.audit.jsonl"
 
         if local_scratch is not None:
             scratch_root = os.path.join(local_scratch, "lmms_eval_cache", model_hash)
-            if omnicompass:
-                scratch_root = os.path.join(scratch_root, hash_string(os.path.realpath(cache_root))[:16])
+            scratch_root = os.path.join(scratch_root, hash_string(os.path.realpath(cache_root))[:16])
             scratch_dir = os.path.join(scratch_root, "runs", run_id)
             os.makedirs(scratch_dir, exist_ok=True)
             write_db = os.path.join(scratch_dir, rank_db_name)
@@ -496,11 +543,19 @@ class ResponseCache:
             writer_lock.acquire()
         try:
             # Merge shared progress even when returning to an older scratch node.
-            if omnicompass and use_scratch:
+            if use_scratch:
                 os.makedirs(os.path.dirname(write_db), exist_ok=True)
                 remote_db = os.path.join(run_dir, rank_db_name)
                 remote_audit = os.path.join(run_dir, rank_audit_name)
                 if os.path.exists(remote_db):
+                    if os.path.exists(write_db):
+                        # Recover any WAL left by a killed worker on this local
+                        # scratch node before combining it with the checkpoint.
+                        recovered = sqlite3.connect(write_db)
+                        try:
+                            recovered.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                        finally:
+                            recovered.close()
                     cls.merge_shards([remote_db], write_db)
                 if os.path.exists(remote_audit):
                     cls.merge_audit_logs([remote_audit], write_audit)
@@ -572,15 +627,31 @@ class ResponseCache:
         # Optional shared (read-only) DB for two-tier caching.
         self._shared_db: Optional[sqlite3.Connection] = None
         self._shared_db_path = shared_db_path
+        self._reader_scratch = None
         if shared_db_path and os.path.exists(shared_db_path):
             try:
-                encoded_path = urllib.parse.quote(str(shared_db_path), safe="/")
+                self._reader_scratch = tempfile.TemporaryDirectory(prefix="cache-reader-", dir=_scratch_for(self.db_path))
+                pinned_path = os.path.join(self._reader_scratch.name, "snapshot.db")
+                _copy_closed_database(shared_db_path, pinned_path)
+                # A closed legacy WAL-mode database may retain its WAL header.
+                # Normalize only the private local copy before opening immutable.
+                connection = sqlite3.connect(pinned_path)
+                try:
+                    connection.execute("PRAGMA journal_mode=DELETE")
+                finally:
+                    connection.close()
+                encoded_path = urllib.parse.quote(pinned_path, safe="/")
                 self._shared_db = sqlite3.connect(f"file:{encoded_path}?mode=ro&immutable=1", uri=True, timeout=10)
                 shared_count = self._shared_db.execute("SELECT COUNT(*) FROM responses").fetchone()[0]
                 eval_logger.info(f"ResponseCache: shared DB loaded ({shared_count} entries): {shared_db_path}")
             except Exception as e:
                 eval_logger.warning(f"ResponseCache: failed to open shared DB {shared_db_path}: {e}")
+                if self._shared_db is not None:
+                    self._shared_db.close()
                 self._shared_db = None
+                if self._reader_scratch is not None:
+                    self._reader_scratch.cleanup()
+                    self._reader_scratch = None
 
         self._hits = 0
         self._hits_shared = 0
@@ -588,6 +659,8 @@ class ResponseCache:
         self._skipped = 0
 
     def _open_local_handles(self) -> None:
+        if detect_fs_type(self.db_path) != FsType.LOCAL:
+            raise RuntimeError("ResponseCache requires known local storage for SQLite WAL; use ResponseCache.create() with local scratch")
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         os.makedirs(os.path.dirname(self.audit_path), exist_ok=True)
         self.db = sqlite3.connect(self.db_path, timeout=30)
@@ -939,34 +1012,23 @@ class ResponseCache:
         if not self._use_scratch or not self._remote_rank_db:
             return
         try:
-            if not self._strict_checkpoint:
-                self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-                shutil.copy2(self.db_path, self._remote_rank_db)
-                if os.path.exists(self.audit_path):
-                    shutil.copy2(self.audit_path, self._remote_rank_audit)
-                self._entries_since_checkpoint = 0
-                eval_logger.debug(f"ResponseCache: checkpoint to {self._remote_rank_db}")
-                return
             self.db.commit()
-            # SQLite backup includes committed WAL entries; atomic rename keeps
-            # the previous checkpoint usable if the worker dies during copying.
-            with tempfile.NamedTemporaryFile(dir=self._run_dir, suffix=".db", delete=False) as file:
-                temporary = file.name
-            try:
-                with sqlite3.connect(temporary) as target:
+            with tempfile.TemporaryDirectory(prefix="cache-checkpoint-", dir=_scratch_for(self.db_path)) as local:
+                temporary = os.path.join(local, "checkpoint.db")
+                target = sqlite3.connect(temporary)
+                try:
                     self.db.backup(target)
-                with open(temporary, "rb") as file:
-                    os.fsync(file.fileno())
-                os.replace(temporary, self._remote_rank_db)
-            finally:
-                if os.path.exists(temporary):
-                    os.unlink(temporary)
+                    target.execute("PRAGMA journal_mode=DELETE")
+                finally:
+                    target.close()
+                _publish_file(temporary, self._remote_rank_db)
+            if os.path.exists(self.audit_path) and self._remote_rank_audit:
+                self._audit_file.flush()
+                _publish_file(self.audit_path, self._remote_rank_audit)
             self._entries_since_checkpoint = 0
             eval_logger.debug(f"ResponseCache: checkpoint to {self._remote_rank_db}")
         except Exception as e:
-            if self._strict_checkpoint:
-                raise RuntimeError("Could not persist the OmniCompass response checkpoint") from e
-            eval_logger.warning(f"ResponseCache: checkpoint failed: {e}")
+            raise RuntimeError("Could not persist the response cache checkpoint") from e
 
     def get_stats(self) -> Dict[str, Any]:
         total_lookups = self._hits + self._misses
@@ -994,8 +1056,10 @@ class ResponseCache:
             if self._shared_db:
                 self._shared_db.close()
                 self._shared_db = None
-        except Exception:
-            pass
+        finally:
+            if getattr(self, "_reader_scratch", None) is not None:
+                self._reader_scratch.cleanup()
+                self._reader_scratch = None
 
     def __del__(self):
         try:
@@ -1018,7 +1082,7 @@ class ResponseCache:
         - Copying scratch writes to shared run directory
         - Distributed barrier (all ranks must finish before merge)
         - Rank-0 merge of all rank DBs into cache_root/cache.db
-        - Cleanup of the run directory after merge
+        - Marking the run as merged (artifacts remain available for recovery)
         """
         # 1. Log stats
         try:
@@ -1028,31 +1092,19 @@ class ResponseCache:
         except Exception:
             pass
 
-        # 2. Close DB (flushes WAL)
+        # 2. Publish the final scratch checkpoint, then close local handles.
         try:
-            if self._strict_checkpoint:
-                self._checkpoint_to_run_dir()
+            self._checkpoint_to_run_dir()
         finally:
             self.close()
 
         if not success or self._cache_root is None:
             return
 
-        # 3. Copy scratch to run dir
-        if self._use_scratch and self._remote_rank_db and not self._strict_checkpoint:
-            try:
-                os.makedirs(self._run_dir, exist_ok=True)
-                if os.path.exists(self.db_path):
-                    shutil.copy2(self.db_path, self._remote_rank_db)
-                if os.path.exists(self.audit_path) and self._remote_rank_audit:
-                    shutil.copy2(self.audit_path, self._remote_rank_audit)
-            except Exception as e:
-                eval_logger.warning(f"ResponseCache: failed to copy scratch to run dir: {e}")
-
-        # 4. Barrier
+        # 3. Barrier
         self._distributed_barrier(dist_backend, accelerator)
 
-        # 5. Rank 0: merge all rank DBs into root cache.db
+        # 4. Rank 0: merge all rank DBs into root cache.db
         if self._global_rank == 0:
             self._merge_run_to_root()
 
@@ -1100,11 +1152,10 @@ class ResponseCache:
             eval_logger.info("ResponseCache: no rank artifacts to merge")
             return
 
+        # Leave a recoverable ready marker even if the merge lock times out.
+        _touch_text(os.path.join(self._run_dir, _LAYERED_READY_MARKER), f"{time.time():.6f}\n")
         try:
             with _merge_lock(lock_dir, timeout_seconds=60):
-                # Mark current run as ready
-                _touch_text(os.path.join(self._run_dir, _LAYERED_READY_MARKER), f"{time.time():.6f}\n")
-
                 # Merge current run
                 if shard_dbs:
                     merged = ResponseCache.merge_shards(shard_dbs, target_db)
@@ -1162,39 +1213,61 @@ class ResponseCache:
 
         Returns the number of entries inserted.
         """
+        # Callers must serialize publishers (the run merger holds _merge_lock).
+        # Failures before replacement leave the previous snapshot intact.
+        with tempfile.TemporaryDirectory(prefix="cache-merge-", dir=_scratch_for(output_path)) as local:
+            staged = os.path.join(local, "cache.db")
+            if os.path.exists(output_path):
+                _copy_closed_database(output_path, staged)
+            local_shards = []
+            for index, path in enumerate(shard_paths):
+                if os.path.exists(path):
+                    copied = os.path.join(local, f"rank_{index}.db")
+                    _copy_closed_database(path, copied)
+                    local_shards.append(copied)
+            total = ResponseCache._merge_local_shards(local_shards, staged)
+            _publish_file(staged, output_path)
+            return total
+
+    @staticmethod
+    def _merge_local_shards(shard_paths: List[str], output_path: str) -> int:
         out_db = sqlite3.connect(output_path, timeout=30)
-        out_db.execute("PRAGMA journal_mode=WAL")
-        out_db.executescript(_SCHEMA_SQL)
+        try:
+            out_db.execute("PRAGMA journal_mode=DELETE")
+            out_db.executescript(_SCHEMA_SQL)
 
-        total = 0
-        for shard_path in shard_paths:
-            if not os.path.exists(shard_path):
-                continue
-            shard_db = sqlite3.connect(shard_path)
-            rows = shard_db.execute("SELECT cache_key, request_type, task_name, doc_id, idx, gen_kwargs, response, created_at FROM responses").fetchall()
-            for row in rows:
-                if ResponseCache._decode_valid_response(row[6], row[1], row[2]) is None:
+            total = 0
+            for shard_path in shard_paths:
+                if not os.path.exists(shard_path):
                     continue
-                existing = out_db.execute("SELECT response, request_type, task_name FROM responses WHERE cache_key = ?", (row[0],)).fetchone()
-                if existing is not None and ResponseCache._decode_valid_response(*existing) is not None:
-                    continue
+                shard_db = sqlite3.connect(shard_path)
                 try:
-                    out_db.execute(
-                        "INSERT OR REPLACE INTO responses (cache_key, request_type, task_name, doc_id, idx, gen_kwargs, response, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                        row,
-                    )
-                    total += 1
-                except sqlite3.IntegrityError:
-                    pass
-            # Copy meta table entries (model_fingerprint, schema_version, etc.)
-            meta_rows = shard_db.execute("SELECT key, value FROM meta").fetchall()
-            for key, value in meta_rows:
-                out_db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", (key, value))
-            shard_db.close()
+                    rows = shard_db.execute("SELECT cache_key, request_type, task_name, doc_id, idx, gen_kwargs, response, created_at FROM responses").fetchall()
+                    for row in rows:
+                        if ResponseCache._decode_valid_response(row[6], row[1], row[2]) is None:
+                            continue
+                        existing = out_db.execute("SELECT response, request_type, task_name FROM responses WHERE cache_key = ?", (row[0],)).fetchone()
+                        if existing is not None and ResponseCache._decode_valid_response(*existing) is not None:
+                            continue
+                        try:
+                            out_db.execute(
+                                "INSERT OR REPLACE INTO responses (cache_key, request_type, task_name, doc_id, idx, gen_kwargs, response, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                                row,
+                            )
+                            total += 1
+                        except sqlite3.IntegrityError:
+                            pass
+                    # Copy meta table entries (model_fingerprint, schema_version, etc.)
+                    meta_rows = shard_db.execute("SELECT key, value FROM meta").fetchall()
+                    for key, value in meta_rows:
+                        out_db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", (key, value))
+                finally:
+                    shard_db.close()
 
-        out_db.commit()
-        out_db.close()
-        return total
+            out_db.commit()
+            return total
+        finally:
+            out_db.close()
 
     @staticmethod
     def merge_audit_logs(audit_paths: List[str], output_path: str) -> int:

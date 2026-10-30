@@ -34,11 +34,75 @@ eval_cache/
   cache.audit.jsonl
   runs/
     <run_id>/
-      cache.db
-      cache.audit.jsonl
+      rank_0.db
+      rank_0.audit.jsonl
 ```
 
 The root `cache.db` is the shared read cache. Each evaluation run writes to its own UUID-scoped directory and rank 0 merges completed runs back into the root database under an exclusive lock. That gives you cache reuse without asking concurrent jobs to write into the same SQLite file.
+
+### Shared filesystems and snapshots
+
+SQLite WAL writers always use local storage. For NFS and other remote filesystems
+(or an unrecognized filesystem), set `LMMS_LOCAL_CACHE` to a writable local
+scratch directory. The automatic candidates are `/local/scratch`, `/scratch`,
+and `/tmp`; candidates must be on a known local filesystem and have at least
+1 GB free. If none qualify, cache creation fails rather than writing WAL on NFS.
+Provision enough scratch space for rank databases, a full reader snapshot, and
+the existing root database plus shards during a merge.
+
+Rank checkpoints and the root `cache.db` are complete, closed SQLite files.
+Rank 0 holds the merge lock, copies the previous root and shards to local storage,
+merges there, then publishes with a temporary file, fsync, and atomic rename in
+the destination directory. Readers copy one published file into private local
+storage and use `immutable=1` only on that private copy. An existing reader keeps
+its original view; a new run sees the latest publication. This keeps the existing
+`cache.db` layout without accumulating versioned snapshots, at the cost of a full
+copy per reader and merge. The filesystem must support atomic same-directory
+rename and directory creation for the merge lock.
+
+Checkpoint publication failures fail the run instead of marking incomplete data
+ready. A ready run whose publication fails or whose merge lock times out remains
+available for a later successful run to merge. A process killed while holding the
+merge lock can leave `runs/.merge.lock`; inspect its `owner.json` and remove the
+lock only after confirming the owning process is no longer running. Temporary
+`.cache-*.tmp` files left by a killed publisher are not used as snapshots.
+
+When upgrading, stop older cache writers before sharing the directory with this
+implementation. Closed legacy databases remain readable. Databases with a
+`-wal` or `-journal` sidecar are rejected: preserve the database and its sidecars,
+recover/checkpoint them together on local storage while all writers are stopped,
+and publish the closed database before reuse. Do not delete a WAL file to bypass
+this check. `ResponseCache.merge_shards()` also expects closed inputs and a single
+publisher; callers outside the evaluation lifecycle must serialize their merges.
+
+To run the opt-in generation/cache integration test on an actual NFS mount:
+
+```bash
+LMMS_LOCAL_CACHE=/local/scratch \
+LMMS_CACHE_E2E_ROOT=/mnt/nfs/cache-tests \
+LMMS_CACHE_E2E_DEVICE=cuda \
+python -m pytest test/cache/test_response_cache_integration.py -q -s
+```
+
+The test uses a tiny randomly initialized GPT-2, requires no model download, and
+checks GPU generation followed by a run served entirely from the shared cache.
+Use `LMMS_CACHE_E2E_DEVICE=cpu` when no GPU is available. The separate
+`test/cache/test_response_cache_snapshots.py` suite checks concurrent publishers,
+reader isolation, failed publication recovery, and simulated remote storage.
+
+For concurrent publication and recovery on the real mount, also run:
+
+```bash
+LMMS_CACHE_E2E_ROOT=/mnt/nfs/cache-tests \
+python -m pytest test/cache/test_response_cache_nfs.py -q
+```
+
+This suite skips unless filesystem detection identifies remote storage. It runs
+four concurrent publishers with a pinned reader, injects a publication failure,
+and checks recovery from a crashed process using a different local scratch
+directory. It also asserts that every SQLite connection is local and that the
+remote tree contains no SQLite journals. A loopback NFS mount exercises the NFS
+protocol, but does not validate cache coherence between different client hosts.
 
 ### What gets cached
 
