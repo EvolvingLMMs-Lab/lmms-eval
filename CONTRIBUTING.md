@@ -6,7 +6,7 @@ Thanks for your interest in contributing to lmms-eval! This guide covers everyth
 
 ### Prerequisites
 
-- Python >= 3.9
+- Python >= 3.10
 - [uv](https://docs.astral.sh/uv/) (package manager)
 - Git
 
@@ -21,7 +21,7 @@ uv sync
 ### Running a Quick Test
 
 ```bash
-python -m lmms_eval \
+uv run python -m lmms_eval \
     --model qwen2_5_vl \
     --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
     --tasks mme \
