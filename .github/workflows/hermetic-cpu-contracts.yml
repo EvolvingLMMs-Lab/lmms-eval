@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: hermetic-cpu-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   hermetic-cpu-contracts:
     runs-on: ubuntu-latest
@@ -22,13 +26,13 @@ jobs:
       WANDB_MODE: disabled
       OPENAI_API_KEY: lmms-eval-ci-placeholder
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.11"
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
-          version: "0.7.3"
+          version: "latest-known"
       - name: Create Python environment
         run: uv venv --python 3.11
       - name: Sync pinned CPU contract dependencies
