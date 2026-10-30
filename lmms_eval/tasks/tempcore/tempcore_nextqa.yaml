@@ -1,0 +1,3 @@
+include: ../nextqa/nextqa_mc_test.yaml
+task: tempcore_nextqa
+process_docs: !function utils.nextqa_docs

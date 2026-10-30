@@ -1,0 +1,3 @@
+include: ../mvbench/mvbench_action_antonym.yaml
+task: tempcore_mvbench_action_antonym
+process_docs: !function utils.mvbench_action_antonym_docs

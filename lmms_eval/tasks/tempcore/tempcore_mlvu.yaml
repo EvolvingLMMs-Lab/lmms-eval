@@ -1,0 +1,3 @@
+include: ../mlvu/mlvu_dev.yaml
+task: tempcore_mlvu
+process_docs: !function utils.mlvu_docs
