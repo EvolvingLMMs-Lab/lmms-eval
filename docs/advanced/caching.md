@@ -172,6 +172,28 @@ Legacy file mode keeps the older behavior where a direct `.db` target may receiv
 | Change gen_kwargs (e.g. max_new_tokens) | Different `gk` in key |
 | Schema version bump | Different `v` in key |
 
+Adapters can opt in to effective model identity by implementing
+`response_cache_identity()`. A returned `None` uses the legacy key; an exception
+or an invalid non-`None` identity stops cache creation. The cache captures a
+nonempty JSON object once,
+after model loading and before creating cache files. It canonicalizes the object
+with RFC 8785 and adds a versioned suffix to the model fingerprint. Identical
+objects reuse responses even if object key order differs; changed identity
+values miss. Participating adapters cannot read older keys, which remain on
+disk. Adapters using the default hook retain their existing keys.
+
+The Qwen2.5-VL adapter currently includes selected root, text, and vision
+configuration metadata (model type, resolved commit hash, and attention
+implementation) plus the loaded input embedding weight's dtype. That dtype is
+not evidence that every weight uses the same dtype or compute precision. Missing commit
+or attention values are recorded as `null`. For quantized models, the adapter
+warns and returns `None`, so caching falls back to the legacy key.
+This is a partial identity for static weights. It does not identify the full
+weight contents, processor, tokenizer, or local file contents, and it does not
+track weight or adapter mutations after cache creation. Use a new cache or
+disable caching when those inputs can change without a corresponding identity
+change.
+
 To force re-evaluation: delete the `{model_hash}/` directory under your cache path.
 
 ### Crash recovery
