@@ -226,6 +226,41 @@ class Qwen2_5_VL(lmms):
         else:
             return self._model
 
+    def response_cache_identity(self) -> dict:
+        """Describe selected metadata of the already-loaded, static model."""
+        model = self.model
+        config = model.config
+        configs = (config, getattr(config, "text_config", None), getattr(config, "vision_config", None))
+        if getattr(model, "is_quantized", False) or getattr(model, "hf_quantizer", None) is not None or any(part is not None and getattr(part, "quantization_config", None) is not None for part in configs):
+            raise ValueError("Qwen2.5-VL response cache identity does not support quantized models")
+
+        def selected(part):
+            if part is None:
+                return None
+            model_type = getattr(part, "model_type", None)
+            if not isinstance(model_type, str) or not model_type:
+                raise ValueError("Qwen2.5-VL config has an invalid model_type")
+            commit = getattr(part, "_commit_hash", None)
+            attention = getattr(part, "_attn_implementation", None)
+            if commit is not None and (not isinstance(commit, str) or re.fullmatch(r"[0-9a-fA-F]{40}", commit) is None):
+                raise ValueError("Qwen2.5-VL config has an invalid commit hash")
+            if attention is not None and (not isinstance(attention, str) or not attention):
+                raise ValueError("Qwen2.5-VL config has an invalid attention implementation")
+            return {"model_type": model_type, "commit_hash": commit.lower() if commit is not None else None, "attention": attention}
+
+        if config is None:
+            raise ValueError("Qwen2.5-VL model has no root config")
+        embeddings = model.get_input_embeddings()
+        dtype = getattr(getattr(embeddings, "weight", None), "dtype", None)
+        if dtype not in (torch.float16, torch.bfloat16, torch.float32, torch.float64):
+            raise ValueError("Qwen2.5-VL input embedding has no valid weight dtype")
+        return {
+            "root_config": selected(config),
+            "text_config": selected(getattr(config, "text_config", None)),
+            "vision_config": selected(getattr(config, "vision_config", None)),
+            "input_embedding_dtype": str(dtype),
+        }
+
     @property
     def eot_token_id(self):
         return self.tokenizer.eos_token_id

@@ -44,6 +44,7 @@ from functools import partial
 from glob import glob
 from typing import Any, Dict, List, Optional, Union
 
+import rfc8785
 from loguru import logger as eval_logger
 
 from lmms_eval.api.instance import GenerationResult, Instance
@@ -104,6 +105,13 @@ def _short_hash(value: str) -> str:
     if not value:
         return ""
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+
+
+def _snapshot_model_identity(value: dict) -> tuple[dict, str]:
+    if type(value) is not dict or not value:
+        raise ValueError("response cache model identity must be a nonempty dict")
+    canonical = rfc8785.dumps(value).decode("utf-8")
+    return json.loads(canonical), canonical
 
 
 def _sanitize_run_id(run_id: str) -> str:
@@ -480,6 +488,13 @@ class ResponseCache:
         else:
             model_args_fp = str(model_args)
         model_fp = f"{model}|{model_args_fp}"
+        effective_identity = None
+        provider = getattr(type(model_object), "response_cache_identity", None) if model_object is not None else None
+        if provider is not None:
+            supplied = model_object.response_cache_identity()
+            if supplied is not None:
+                effective_identity, canonical_identity = _snapshot_model_identity(supplied)
+                model_fp += "|effective_identity_v1:" + canonical_identity
         omnicompass = any(name.startswith("omnicompass_") for name in task_fingerprints)
         if omnicompass:
             from lmms_eval.tasks.omnicompass.data import model_identity, runtime_identity
@@ -563,6 +578,7 @@ class ResponseCache:
                 db_path=write_db,
                 audit_path=write_audit,
                 model_fingerprint=model_fp,
+                model_identity=effective_identity,
                 task_fingerprints=task_fingerprints,
                 shared_db_path=shared_db_path,
                 eval_version=eval_version,
@@ -598,10 +614,12 @@ class ResponseCache:
         task_fingerprints: Optional[Dict[str, str]] = None,
         shared_db_path: Optional[str] = None,
         eval_version: str = "",
+        model_identity: Optional[dict] = None,
     ):
         self.db_path = db_path
         self.audit_path = audit_path
         self.model_fingerprint = model_fingerprint
+        self.model_identity = _snapshot_model_identity(model_identity)[0] if model_identity is not None else None
         self._model_fingerprint_hash = _short_hash(model_fingerprint)
         self._task_fingerprints: Dict[str, str] = task_fingerprints or {}
         self._eval_version = eval_version
@@ -670,6 +688,8 @@ class ResponseCache:
 
         if self.model_fingerprint:
             self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("model_fingerprint", self.model_fingerprint))
+        # Explicit null clears a preceding participant's identity when shards merge.
+        self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("model_identity", rfc8785.dumps(self.model_identity).decode("utf-8")))
         if self._model_fingerprint_hash:
             self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("model_fingerprint_hash", self._model_fingerprint_hash))
         self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("schema_version", str(_SCHEMA_VERSION)))
@@ -819,6 +839,8 @@ class ResponseCache:
             record["content_hash"] = content_hash
         if model_fingerprint_hash:
             record["model_fingerprint_hash"] = model_fingerprint_hash
+        if self.model_identity is not None:
+            record["model_identity"] = self.model_identity
         if self._eval_version:
             record["eval_version"] = self._eval_version
         line = json.dumps(record, ensure_ascii=False) + "\n"
