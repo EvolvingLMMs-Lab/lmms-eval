@@ -24,7 +24,7 @@
 
 评估多模态模型比看起来要困难。我们有数百个基准测试，但没有运行它们的标准方法。不同实验室之间的结果各不相同，导致对比变得不可靠。我们一直在致力于解决这个问题——不是通过英雄式的个人努力，而是通过系统化的流程。
 
-**2026年1月** - 我们意识到空间推理和组合推理仍然是现有基准测试的盲点。我们添加了 [CaptionQA](https://captionqa.github.io/)、[SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench)、[SiteBench](https://sitebench.github.io/) 和 [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial)。对于运行远程评估流水线的团队，我们引入了 HTTP 评估服务器 (#972)。对于需要统计严密性的用户，我们添加了中心极限定理（CLT）和聚类标准误差估计 (#989)。
+**2026年1月** - 我们意识到空间推理和组合推理仍然是现有基准测试的盲点。我们添加了 [CaptionQA](https://captionqa.github.io/)、[SpatialTreeBench](https://github.com/ByteDance-Seed/SpatialTree)、[SiteBench](https://sitebench.github.io/) 和 [ViewSpatial](https://github.com/ZJU-REAL/ViewSpatial-Bench)。对于运行远程评估流水线的团队，我们引入了 HTTP 评估服务器 (#972)。对于需要统计严密性的用户，我们添加了中心极限定理（CLT）和聚类标准误差估计 (#989)。
 
 **2025年10月 (v0.5)** - 音频评估曾是一个空白。模型可以“听”，但我们没有一致的方法来测试它们。此版本添加了全面的音频评估、响应缓存以提高效率，以及 50 多个涵盖音频、视觉和推理的基准变体。[发布说明](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.5.md)。
 
