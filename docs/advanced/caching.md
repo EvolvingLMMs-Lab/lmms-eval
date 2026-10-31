@@ -186,7 +186,8 @@ The Qwen2.5-VL adapter currently includes selected root, text, and vision
 configuration metadata (model type, resolved commit hash, and attention
 implementation) plus the loaded input embedding weight's dtype. That dtype is
 not evidence that every weight uses the same dtype or compute precision. Missing commit
-or attention values are recorded as `null`; quantized models are rejected.
+or attention values are recorded as `null`. For quantized models, the adapter
+warns and returns `None`, so caching falls back to the legacy key.
 This is a partial identity for static weights. It does not identify the full
 weight contents, processor, tokenizer, or local file contents, and it does not
 track weight or adapter mutations after cache creation. Use a new cache or

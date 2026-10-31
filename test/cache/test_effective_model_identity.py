@@ -242,14 +242,6 @@ def test_qwen_loaded_metadata_wrapper_and_no_dtype_traversal():
     assert identity["root_config"]["commit_hash"] == "a" * 40
     assert identity["text_config"]["attention"] == "eager"
     assert identity["vision_config"]["commit_hash"] is None
-    loaded.is_quantized = True
-    with pytest.raises(ValueError, match="quantized"):
-        adapter.response_cache_identity()
-    loaded.is_quantized = False
-    root.text_config.quantization_config = {"method": "bitsandbytes"}
-    with pytest.raises(ValueError, match="quantized"):
-        adapter.response_cache_identity()
-    root.text_config.quantization_config = None
     loaded.get_input_embeddings = lambda: SimpleNamespace(weight=torch.nn.Parameter(torch.empty(1, dtype=torch.int8), requires_grad=False))
     with pytest.raises(ValueError, match="dtype"):
         adapter.response_cache_identity()
@@ -261,3 +253,39 @@ def test_qwen_loaded_metadata_wrapper_and_no_dtype_traversal():
     root.text_config._attn_implementation = ""
     with pytest.raises(ValueError, match="attention"):
         adapter.response_cache_identity()
+
+
+@pytest.mark.parametrize("quantized_source", ["is_quantized", "hf_quantizer", "root", "text", "vision"])
+def test_quantized_qwen_preserves_legacy_cache_keys(tmp_path, quantized_source):
+    from transformers import Qwen2_5_VLConfig
+
+    from lmms_eval.models.simple import qwen2_5_vl
+
+    root = Qwen2_5_VLConfig()
+    loaded = SimpleNamespace(config=root, is_quantized=False, hf_quantizer=None)
+    loaded.get_input_embeddings = Mock(side_effect=AssertionError("quantized identity must not inspect embeddings"))
+    if quantized_source == "is_quantized":
+        loaded.is_quantized = True
+    elif quantized_source == "hf_quantizer":
+        loaded.hf_quantizer = object()
+    else:
+        part = root if quantized_source == "root" else getattr(root, f"{quantized_source}_config")
+        part.quantization_config = {"method": "bitsandbytes"}
+
+    adapter = qwen2_5_vl.Qwen2_5_VL.__new__(qwen2_5_vl.Qwen2_5_VL)
+    adapter._model = loaded
+    adapter.generate_until = Mock(side_effect=AssertionError("legacy cache should hit"))
+    cache_root = tmp_path / "cache"
+    assert run(cache_root, Legacy("legacy"))[0] == ["legacy"]
+    with patch.object(qwen2_5_vl, "eval_logger") as logger:
+        print("PR1623_QUANTIZED_CACHE_SEAM_READY")
+        result, stats = run(cache_root, adapter)
+    assert result == ["legacy"]
+    assert stats["hits"] == 1
+    adapter.generate_until.assert_not_called()
+    loaded.get_input_embeddings.assert_not_called()
+    logger.warning.assert_called_once()
+    assert "legacy cache key" in logger.warning.call_args.args[0]
+    with sqlite3.connect(cache_root / "cache.db") as db:
+        assert json.loads(db.execute("SELECT value FROM meta WHERE key='model_identity'").fetchone()[0]) is None
+        assert "effective_identity_v1" not in db.execute("SELECT value FROM meta WHERE key='model_fingerprint'").fetchone()[0]

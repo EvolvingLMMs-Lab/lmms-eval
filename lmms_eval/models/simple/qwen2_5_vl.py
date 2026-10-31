@@ -226,13 +226,14 @@ class Qwen2_5_VL(lmms):
         else:
             return self._model
 
-    def response_cache_identity(self) -> dict:
+    def response_cache_identity(self) -> Optional[dict]:
         """Describe selected metadata of the already-loaded, static model."""
         model = self.model
         config = model.config
         configs = (config, getattr(config, "text_config", None), getattr(config, "vision_config", None))
         if getattr(model, "is_quantized", False) or getattr(model, "hf_quantizer", None) is not None or any(part is not None and getattr(part, "quantization_config", None) is not None for part in configs):
-            raise ValueError("Qwen2.5-VL response cache identity does not support quantized models")
+            eval_logger.warning("Qwen2.5-VL effective response cache identity does not support quantized models; using the legacy cache key")
+            return None
 
         def selected(part):
             if part is None:
