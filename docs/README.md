@@ -59,7 +59,7 @@ python -m lmms_eval \
   --limit 8
 ```
 
-The same pattern works for any OpenAI-compatible endpoint (OpenRouter, Azure, local vLLM/SGLang servers). To evaluate across image and video tasks together:
+The same pattern works for any OpenAI-compatible endpoint (OpenRouter, Azure, local vLLM/SGLang/Ollama servers). To evaluate across image and video tasks together:
 
 ```bash
 python -m lmms_eval \
