@@ -1,0 +1,145 @@
+{
+  "status": "PASS",
+  "recorded_at_utc": "2026-11-02T02:04:05.822895+00:00",
+  "source_commit": "9e36327a436647c34d42b0d2f002d06edac18e60",
+  "source_sha256": {
+    "lmms_eval/tasks/roboafford/utils.py": "f2db3d5a95fa6183928663d98aa3c390ace5ea83848db79c9dd6c959210e21a1",
+    "lmms_eval/tasks/roboafford/_default_template_yaml": "227fc7e54e69e949a31da4e6bb277449e41e1aeedfe01d1c4720672dbeafa3a7",
+    "lmms_eval/tasks/roboafford/roboafford.yaml": "a0bab4033839a62e6624ee43dc2fbe833deb6efd25cf4e624d646f723ee567c2"
+  },
+  "command": "source .venv/bin/activate\nHF_HUB_OFFLINE=0 HF_DATASETS_OFFLINE=0 HF_HUB_DISABLE_XET=1 HF_DATASETS_CACHE=/tmp/lmms-roboafford-pr-datasets UV_CACHE_DIR=/tmp/lmms-pr-uv-cache uv run --no-sync python -m lmms_eval eval --model qwen2_5_vl --model_args pretrained=/mnt/umm/shared_model/Qwen2.5-VL-7B-Instruct,attn_implementation=sdpa --tasks roboafford --limit 8 --batch_size 1 --log_samples --output_path .sco-workspace/review/pr-e2e-20261102/results --verbosity WARNING",
+  "setup": "uv sync --locked --dev --python 3.11; existing local copy of Qwen/Qwen2.5-VL-7B-Instruct; host activation selects system NVIDIA libraries over incompatible CUDA compat libraries; standard task YAML, no dataset or inference helper overrides",
+  "model": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "backend": "qwen2_5_vl / sdpa",
+  "dataset": {
+    "repo": "tyb197/RoboAfford-Eval",
+    "split": "test",
+    "available_samples": 338,
+    "evaluated_samples": 8,
+    "category_counts": {
+      "object affordance": 8
+    }
+  },
+  "hardware": "NVIDIA H800, 595.71.05, 81559 MiB",
+  "versions": {
+    "torch": "2.13.0",
+    "torchvision": "0.28.0",
+    "transformers": "5.17.0",
+    "accelerate": "1.15.0",
+    "huggingface-hub": "1.32.0",
+    "datasets": "5.0.1",
+    "lmms_eval": "0.7.4"
+  },
+  "metrics": {
+    "roboafford_accuracy,none": 0.07291666666666666,
+    "object_affordance,none": 0.07291666666666666,
+    "object_reference,none": 0.0,
+    "spatial_affordance,none": 0.0
+  },
+  "unique_sample_count": 8,
+  "samples": [
+    {
+      "doc_id": 0,
+      "input_media": [
+        "00.jpg",
+        "object_affordance_img_00_anno_1.png"
+      ],
+      "prediction": "[(536, 347), (558, 369), (540, 338)]",
+      "point_accuracy": {
+        "accuracy": 0.3333333333333333,
+        "category": "object affordance"
+      }
+    },
+    {
+      "doc_id": 1,
+      "input_media": [
+        "00.jpg",
+        "object_affordance_img_00_anno_2.png"
+      ],
+      "prediction": "[(463, 265), (567, 371), (289, 272), (200, 308)]",
+      "point_accuracy": {
+        "accuracy": 0.25,
+        "category": "object affordance"
+      }
+    },
+    {
+      "doc_id": 2,
+      "input_media": [
+        "01.jpg",
+        "object_affordance_img_01_anno_1.png"
+      ],
+      "prediction": "[(364, 270), (425, 308)]",
+      "point_accuracy": {
+        "accuracy": 0.0,
+        "category": "object affordance"
+      }
+    },
+    {
+      "doc_id": 3,
+      "input_media": [
+        "01.jpg",
+        "object_affordance_img_01_anno_2.png"
+      ],
+      "prediction": "[(483, 279, 526, 340), (361, 269, 427, 320)]",
+      "point_accuracy": {
+        "accuracy": 0.0,
+        "category": "object affordance"
+      }
+    },
+    {
+      "doc_id": 4,
+      "input_media": [
+        "02.jpg",
+        "object_affordance_img_02_anno_1.png"
+      ],
+      "prediction": "[(400, 125), (428, 126)]",
+      "point_accuracy": {
+        "accuracy": 0.0,
+        "category": "object affordance"
+      }
+    },
+    {
+      "doc_id": 5,
+      "input_media": [
+        "02.jpg",
+        "object_affordance_img_02_anno_2.png"
+      ],
+      "prediction": "[(305, 167, 334, 209), (305, 167, 334, 209)]",
+      "point_accuracy": {
+        "accuracy": 0.0,
+        "category": "object affordance"
+      }
+    },
+    {
+      "doc_id": 6,
+      "input_media": [
+        "02.jpg",
+        "object_affordance_img_02_anno_3.png"
+      ],
+      "prediction": "[(487, 323, 520, 366), (490, 323, 519, 365)]",
+      "point_accuracy": {
+        "accuracy": 0.0,
+        "category": "object affordance"
+      }
+    },
+    {
+      "doc_id": 7,
+      "input_media": [
+        "03.jpg",
+        "object_affordance_img_03_anno_1.png"
+      ],
+      "prediction": "[(34, 229, 152, 303), (500, 214, 544, 298)]",
+      "point_accuracy": {
+        "accuracy": 0.0,
+        "category": "object affordance"
+      }
+    }
+  ],
+  "log_excerpt": [
+    "Generating test split: 338 examples",
+    "Model Responding: 100% 8/8",
+    "Postprocessing: 100% 8/8",
+    "roboafford_accuracy: 0.07291666666666666"
+  ],
+  "notes": "Smoke-test scores only. Recognition and spatial categories are absent from these first eight samples; their zero outputs do not represent full-dataset performance."
+}
