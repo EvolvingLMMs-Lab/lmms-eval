@@ -1,0 +1,3 @@
+include: ../mvbench/mvbench_counterfactual_inference.yaml
+task: tempcore_mvbench_counterfactual_inference
+process_docs: !function utils.mvbench_counterfactual_inference_docs

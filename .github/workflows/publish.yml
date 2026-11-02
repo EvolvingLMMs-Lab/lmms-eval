@@ -4,19 +4,29 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     name: Build and publish to PyPI
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment: pypi
     permissions:
+      contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
       - name: Set up uv and Python
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.3.3
         with:
+          version: "latest-known"
           python-version: "3.12"
 
       - name: Set version from tag

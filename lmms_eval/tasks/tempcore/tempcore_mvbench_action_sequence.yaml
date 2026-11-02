@@ -1,0 +1,3 @@
+include: ../mvbench/mvbench_action_sequence.yaml
+task: tempcore_mvbench_action_sequence
+process_docs: !function utils.mvbench_action_sequence_docs

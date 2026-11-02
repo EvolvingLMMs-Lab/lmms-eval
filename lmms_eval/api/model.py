@@ -15,6 +15,14 @@ T = TypeVar("T", bound="lmms")
 class lmms(abc.ABC):
     is_simple: bool = True
 
+    def response_cache_identity(self) -> Optional[dict]:
+        """Return detached, JSON-compatible identity for loaded static weights.
+
+        The default preserves legacy response-cache keys. Adapters may override
+        this to identify effective model state without loading or walking weights.
+        """
+        return None
+
     def __init__(self) -> None:
         """Defines the interface that should be implemented by all lmms subclasses.
         lmmss are assumed to take image-text as input and yield strings as output

@@ -4,10 +4,11 @@ Paper: Song, Park and Kim, "MAVIS: A Benchmark for Multimodal Source Attribution
 Long-form Visual Question Answering", AAAI 2026. https://arxiv.org/abs/2511.12142
 Reference code: https://github.com/seokwon99/MAVIS
 
-This task implements the gold-document (GT-RAG) setting of the reference code: the model
-receives the input image, the question and the human-annotated supporting documents (text
-passages and images, in a fixed random order: seed 0 of the reference code), and writes a
-long-form answer that cites the documents as [1][2]. The answer is scored by an LLM judge
+The model receives the input image, the question and a set of text passages and images (in a
+fixed random order: seed 0 of the reference code), and writes a long-form answer that cites
+the documents as [1][2]. The documents follow the settings of the reference code: the
+human-annotated supporting documents (GT-RAG, `mavis_gt`) or the top-5 documents retrieved from
+the corpus (Multi-, Text- and Image-RAG, `mavis_multirag`, `mavis_textrag`, `mavis_imagerag`). The answer is scored by an LLM judge
 (GPT-4.1 in the paper):
 
 - Groundedness: citation recall and precision of every answer sentence (paper Sec. 4.2).

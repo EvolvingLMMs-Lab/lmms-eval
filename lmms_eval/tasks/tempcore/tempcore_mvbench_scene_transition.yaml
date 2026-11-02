@@ -1,0 +1,3 @@
+include: ../mvbench/mvbench_scene_transition.yaml
+task: tempcore_mvbench_scene_transition
+process_docs: !function utils.mvbench_scene_transition_docs

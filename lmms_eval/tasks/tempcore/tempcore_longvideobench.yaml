@@ -1,0 +1,3 @@
+include: ../longvideobench/longvideobench_val_v.yaml
+task: tempcore_longvideobench
+process_docs: !function utils.longvideobench_docs

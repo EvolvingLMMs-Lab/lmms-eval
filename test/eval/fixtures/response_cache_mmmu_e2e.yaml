@@ -1,0 +1,9 @@
+include: ../../../lmms_eval/tasks/mmmu/mmmu_val.yaml
+task: response_cache_mmmu_e2e
+dataset_kwargs:
+  token: false
+  revision: 364f2e2eb107b36e07ff4c5a15f5947a759cef47
+  # The repository metadata also lists dev/test; this fixture loads validation only.
+  verification_mode: no_checks
+  data_files:
+    validation: data/validation-00000-of-00001.parquet

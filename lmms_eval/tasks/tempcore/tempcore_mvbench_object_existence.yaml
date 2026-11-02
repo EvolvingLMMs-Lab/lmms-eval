@@ -1,0 +1,3 @@
+include: ../mvbench/mvbench_object_existence.yaml
+task: tempcore_mvbench_object_existence
+process_docs: !function utils.mvbench_object_existence_docs

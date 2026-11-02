@@ -1,0 +1,3 @@
+include: ../mvbench/mvbench_object_shuffle.yaml
+task: tempcore_mvbench_object_shuffle
+process_docs: !function utils.mvbench_object_shuffle_docs

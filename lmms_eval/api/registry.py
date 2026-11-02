@@ -26,10 +26,11 @@ def register_model(*names):
 
 
 def get_model(model_name):
-    try:
+    if model_name in MODEL_REGISTRY:
         return MODEL_REGISTRY[model_name]
-    except KeyError:
-        raise ValueError(f"Attempted to load model '{model_name}', but no model for this name found! Supported model names: {', '.join(MODEL_REGISTRY.keys())}")
+    from lmms_eval.models import get_model as get_model_v2
+
+    return get_model_v2(model_name)
 
 
 TASK_REGISTRY = {}  # Key: task name, Value: task ConfigurableTask class

@@ -24,7 +24,7 @@
 
 멀티모달 모델을 평가하는 것은 보기보다 어렵습니다. 수백 개의 벤치마크가 있지만 이를 실행하는 표준화된 방법은 없었습니다. 실험실마다 결과가 다르고 비교의 신뢰도가 떨어집니다. 우리는 영웅적인 노력이 아닌 체계적인 프로세스를 통해 이 문제를 해결하기 위해 노력해 왔습니다.
 
-**2026년 1월** - 기존 벤치마크에서 공간 및 구성적 추론이 여전히 사각지대로 남아있음을 확인했습니다. 이에 [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/), [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial)을 추가했습니다. 원격 평가 파이프라인을 운영하는 팀들을 위해 HTTP 평가 서버(#972)를 도입했습니다. 통계적 엄밀함이 필요한 사용자들을 위해 CLT 및 클러스터링된 표준 오차 추정(#989)을 추가했습니다.
+**2026년 1월** - 기존 벤치마크에서 공간 및 구성적 추론이 여전히 사각지대로 남아있음을 확인했습니다. 이에 [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/ByteDance-Seed/SpatialTree), [SiteBench](https://sitebench.github.io/), [ViewSpatial](https://github.com/ZJU-REAL/ViewSpatial-Bench)을 추가했습니다. 원격 평가 파이프라인을 운영하는 팀들을 위해 HTTP 평가 서버(#972)를 도입했습니다. 통계적 엄밀함이 필요한 사용자들을 위해 CLT 및 클러스터링된 표준 오차 추정(#989)을 추가했습니다.
 
 **2025년 10월 (v0.5)** - 오디오 분야는 그동안 공백이었습니다. 모델은 들을 수 있었지만 이를 테스트할 일관된 방법이 없었습니다. 이번 릴리스에서는 포괄적인 오디오 평가, 효율성을 위한 응답 캐싱, 그리고 오디오, 비전, 추론을 아우르는 50개 이상의 벤치마크 변형을 추가했습니다. [릴리스 노트](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.5.md).
 

@@ -614,6 +614,10 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                         eval_logger.info(f"Logging to SwanLab failed due to {e}")
 
             except Exception as e:
+                # A failed rank must exit nonzero so the launcher can stop peers
+                # that are still waiting in distributed collectives.
+                if int(os.environ.get("WORLD_SIZE", 1)) > 1 or (torch.distributed.is_available() and torch.distributed.is_initialized() and torch.distributed.get_world_size() > 1):
+                    raise
                 if args.verbosity == "DEBUG":
                     raise e
                 else:

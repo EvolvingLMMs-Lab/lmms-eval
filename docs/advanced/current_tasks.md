@@ -48,6 +48,7 @@ python -m lmms_eval --tasks list_with_num
     - COCO 2017 Caption MiniTest (coco2017_cap_test)
 - [ConBench](https://github.com/foundation-multimodal-models/ConBench) (conbench)
 - [CountBench](https://huggingface.co/datasets/vikhyatk/CountBenchQA) (countbench)
+- [CountQA](https://huggingface.co/datasets/Jayant-Sravan/CountQA) (countqa): counting in cluttered real-world photos; exact-match and off-by-one accuracy
 - [CV-Bench](https://github.com/nyu-visionx/CV-Bench) (cv_bench)
 - [C4 Bench](https://arxiv.org/abs/2608.06501) (c4_bench)
   - Image-only identification (c4_bench_h0)
@@ -233,7 +234,7 @@ python -m lmms_eval --tasks list_with_num
   - llava_interleave_bench_in_domain
   - llava_interleave_bench_out_domain
   - llava_interleave_bench_multi_view
-- [MAVIS](https://github.com/seokwon99/MAVIS) (mavis_gt, mavis_gt_mini)
+- [MAVIS](https://github.com/seokwon99/MAVIS) (mavis_gt, mavis_multirag, mavis_textrag, mavis_imagerag and their _mini subsets)
 - [MET-Bench](https://vanyacohen.com/MET-Bench/) (metbench)
   - Minecraft next-state prediction: text (metbench_minecraft_text), image (metbench_minecraft_image)
   - Chess board-state tracking: text (metbench_chess_text), image (metbench_chess_image)
@@ -409,6 +410,8 @@ python -m lmms_eval --tasks list_with_num
   - tempcompass_yes_no
   - tempcompass_caption_matching
   - tempcompass_captioning
+- [TempCore](https://arxiv.org/abs/2509.01167) (tempcore) - Temporally sensitive subsets of six video QA benchmarks ([data](https://huggingface.co/datasets/HJOK/TempCore), [usage](../../lmms_eval/tasks/tempcore/README.md))
+  - tempcore_mvbench, tempcore_nextqa, tempcore_egoschema, tempcore_mlvu, tempcore_longvideobench, tempcore_videomme
 - [TemporalBench](https://huggingface.co/datasets/microsoft/TemporalBench) (temporalbench)
   - temporalbench_short_qa
   - temporalbench_long_qa
@@ -541,6 +544,8 @@ python -m lmms_eval --tasks list_with_num
 - [MathVision](https://huggingface.co/datasets/MathLLMs/MathVision) (mathvision)
   - MathVision TestMini (mathvision_testmini)
   - MathVision Test (mathvision_test)
+  - MathVision Relaxed TestMini (mathvision_relaxed_testmini)
+  - MathVision Relaxed Test (mathvision_relaxed_test)
   - MathVision Reason TestMini (mathvision_reason_testmini)
   - MathVision Reason Test (mathvision_reason_test)
 - [MathVista](https://mathvista.github.io/) (mathvista)
@@ -556,6 +561,7 @@ python -m lmms_eval --tasks list_with_num
 
 ### Referring Expression Comprehension
 - [Ferret](https://github.com/apple/ml-ferret) (ferret)
+- [HumanRef](https://huggingface.co/datasets/IDEA-Research/HumanRef) (humanref)
 - [OSWorld-Verified (OSWorld-G)](https://xlang.ai/blog/osworld-verified) (osworld_g)
 - [RefCOCO](https://github.com/lichengunc/refer) (refcoco)
   - refcoco_seg_test, refcoco_seg_val
