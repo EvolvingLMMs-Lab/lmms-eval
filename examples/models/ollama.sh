@@ -6,6 +6,7 @@ MODEL_VERSION="llava"  # any vision-capable Ollama model, e.g. qwen2.5vl:7b, gem
 ollama pull $MODEL_VERSION
 
 # pip install git+https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+# base_url points to the Ollama server; replace localhost:11434 with your Ollama host and port.
 python3 -m lmms_eval \
     --model openai \
     --model_args model_version=$MODEL_VERSION,base_url=http://localhost:11434/v1,api_key=ollama,num_concurrent=4 \
