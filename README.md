@@ -199,6 +199,12 @@ bash examples/models/sglang_wan22_vbvr.sh
 bash examples/models/openai_compatible.sh
 ```
 
+### Evaluation with Ollama (Local)
+
+```bash
+bash examples/models/ollama.sh
+```
+
 ### Evaluation of Qwen2.5-VL
 
 ```bash
