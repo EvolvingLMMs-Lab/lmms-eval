@@ -272,6 +272,23 @@ accelerate launch --num_processes 8 --main_process_port 30000 -m lmms_eval \
 
 ```
 
+### Ollama
+
+```bash
+export OPENAI_API_KEY=ollama  # any non-empty value
+
+TASK=$1
+MODEL_VERSION=$2   # e.g. qwen2.5vl:7b
+ollama pull $MODEL_VERSION
+
+# base_url points to the Ollama server; replace localhost:11434 with your Ollama host and port.
+python3 -m lmms_eval \
+    --model openai \
+    --model_args model_version=$MODEL_VERSION,base_url=http://localhost:11434/v1 \
+    --tasks $TASK \
+    --batch_size 1
+```
+
 # Audio Models
 
 ### Qwen2-Audio
