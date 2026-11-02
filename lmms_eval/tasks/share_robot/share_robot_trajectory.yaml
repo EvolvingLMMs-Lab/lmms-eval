@@ -1,0 +1,30 @@
+task: share_robot_trajectory
+include: _default_template_yaml
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: https://huggingface.co/datasets/BAAI/ShareRobot-Bench/resolve/main/trajectory/test.json
+process_results: !function utils.trajectory_process_results
+metric_list:
+  - metric: average_discrete_frechet_distance
+    aggregation: mean
+    higher_is_better: false
+  - metric: average_hausdorff_distance
+    aggregation: mean
+    higher_is_better: false
+  - metric: average_root_mean_square_error
+    aggregation: mean
+    higher_is_better: false
+  - metric: parse_valid_items
+    aggregation: !function utils.share_robot_sum
+    higher_is_better: true
+  - metric: parse_valid_rate
+    aggregation: mean
+    higher_is_better: true
+generation_kwargs:
+  max_new_tokens: 1024
+  do_sample: false
+  temperature: 0
+metadata:
+  version: 0.1
+  reference_commit: 24655d281c9d082592942cd18168cca5d0951fdb

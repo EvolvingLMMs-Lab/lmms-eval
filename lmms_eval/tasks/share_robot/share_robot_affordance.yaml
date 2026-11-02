@@ -1,0 +1,36 @@
+task: share_robot_affordance
+include: _default_template_yaml
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: https://huggingface.co/datasets/BAAI/ShareRobot-Bench/resolve/main/affordance/test.json
+process_results: !function utils.affordance_process_results
+metric_list:
+  - metric: average_iou
+    aggregation: !function utils.share_robot_valid_mean
+    higher_is_better: true
+  - metric: average_precision
+    aggregation: !function utils.share_robot_valid_mean
+    higher_is_better: true
+  - metric: iou_at_0_5
+    aggregation: !function utils.share_robot_valid_mean
+    higher_is_better: true
+  - metric: iou_at_0_75
+    aggregation: !function utils.share_robot_valid_mean
+    higher_is_better: true
+  - metric: iou_at_0_9
+    aggregation: !function utils.share_robot_valid_mean
+    higher_is_better: true
+  - metric: valid_items
+    aggregation: !function utils.share_robot_sum
+    higher_is_better: true
+  - metric: valid_rate
+    aggregation: mean
+    higher_is_better: true
+generation_kwargs:
+  max_new_tokens: 256
+  do_sample: false
+  temperature: 0
+metadata:
+  version: 0.1
+  reference_commit: 24655d281c9d082592942cd18168cca5d0951fdb
