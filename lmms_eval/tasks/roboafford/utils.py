@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from functools import lru_cache
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from huggingface_hub import hf_hub_download
@@ -19,11 +19,13 @@ def _asset_path(relative_path: str) -> str:
 
 
 def roboafford_doc_to_visual(doc: Dict[str, Any]) -> List[Image.Image]:
+    """Load the question image as RGB from the official dataset."""
     with Image.open(_asset_path(f"images/{doc['img']}")) as image:
         return [image.convert("RGB")]
 
 
-def roboafford_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs=None) -> str:
+def roboafford_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs: Optional[Dict[str, Any]] = None) -> str:
+    """Return the original question, including its coordinate-format instructions."""
     return str(doc["question"])
 
 
@@ -45,7 +47,8 @@ def _point_accuracy(points: List[tuple[float, float]], mask_path: str) -> float:
     if not points:
         return 0.0
 
-    mask = np.array(Image.open(mask_path)) / 255.0
+    with Image.open(mask_path) as image:
+        mask = np.array(image) / 255.0
     if mask.ndim > 2:
         mask = mask[:, :, 0]
     height, width = mask.shape
@@ -64,6 +67,7 @@ def _point_accuracy(points: List[tuple[float, float]], mask_path: str) -> float:
 
 
 def roboafford_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, Dict[str, Any]]:
+    """Score predicted points against the mask and retain the task category."""
     response = results[0] if results else ""
     item = {
         "accuracy": _point_accuracy(_parse_points(response), _asset_path(f"masks/{doc['mask']}")),
@@ -77,6 +81,7 @@ def _mean(results: List[Dict[str, Any]]) -> float:
 
 
 def roboafford_aggregate_overall(results: List[Dict[str, Any]]) -> float:
+    """Average point accuracy across all questions."""
     return _mean(results)
 
 
@@ -85,12 +90,15 @@ def _aggregate_category(results: List[Dict[str, Any]], category: str) -> float:
 
 
 def roboafford_aggregate_object_affordance(results: List[Dict[str, Any]]) -> float:
+    """Average object affordance prediction accuracy."""
     return _aggregate_category(results, "object affordance")
 
 
 def roboafford_aggregate_object_reference(results: List[Dict[str, Any]]) -> float:
+    """Average object affordance recognition accuracy."""
     return _aggregate_category(results, "object reference")
 
 
 def roboafford_aggregate_spatial_affordance(results: List[Dict[str, Any]]) -> float:
+    """Average spatial affordance localization accuracy."""
     return _aggregate_category(results, "spatial affordance")
