@@ -22,11 +22,13 @@ except ImportError:
     pass
 from .providers import (
     AsyncAzureOpenAIProvider,
+    AsyncJevProvider,
     AsyncMiniMaxProvider,
     AsyncOpenAIProvider,
     AzureOpenAIProvider,
     BedrockProvider,
     DummyProvider,
+    JevProvider,
     LocalProvider,
     MiniMaxProvider,
     OpenAIProvider,
@@ -43,6 +45,10 @@ class ProviderFactory:
         "async_azure": AsyncAzureOpenAIProvider,
         "minimax": MiniMaxProvider,
         "async_minimax": AsyncMiniMaxProvider,
+        "jev": JevProvider,
+        "typesafe": JevProvider,
+        "async_jev": AsyncJevProvider,
+        "async_typesafe": AsyncJevProvider,
         "bedrock": BedrockProvider,
         "local": LocalProvider,
         "dummy": DummyProvider,
@@ -61,7 +67,8 @@ class ProviderFactory:
         Create a judge instance based on API type
 
         Args:
-            api_type: Type of API to use ('openai' or 'azure').
+            api_type: Type of API to use ('openai', 'azure', 'minimax', 'jev',
+                     'typesafe', or their async_* counterparts).
                      If None, will use API_TYPE environment variable
             config: Configuration for the judge
 

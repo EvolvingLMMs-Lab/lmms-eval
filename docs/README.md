@@ -154,7 +154,7 @@ metric_list:
 
 ### Verifying Results
 
-The [Verifiers Guide](guides/verifiers_guide.md) covers `lmms_eval.verifiers`, a pluggable per-sample verification pipeline for scoring predictions in `process_results` - rule-based matching (exact/contains/MCQ/numeric), LLM-as-judge (OpenAI, Gemini), and composite fallback chains, all built from extractors that clean model output before it's judged.
+The [Verifiers Guide](guides/verifiers_guide.md) covers `lmms_eval.verifiers`, a pluggable per-sample verification pipeline for scoring predictions in `process_results` - rule-based matching (exact/contains/MCQ/numeric), LLM-as-judge (OpenAI, Gemini), and composite fallback chains, all built from extractors that clean model output before it's judged. The [LLM Judge guide](guides/llm_judge.md) covers the judge backends those verifiers call, including TypeSafe Jev.
 
 ## Using lmms-eval as a Library
 

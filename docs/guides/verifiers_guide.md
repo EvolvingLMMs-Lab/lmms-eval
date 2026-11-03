@@ -59,7 +59,7 @@ pipeline = build_verification_pipeline({
 | `contains` | `ContainsVerifier` | Ground truth appears as a substring of the prediction |
 | `mcq_match` | `MCQMatchVerifier` | Multiple-choice letter match, tolerant of `(A)` / `A.` / `A)` formatting |
 | `numeric` | `NumericToleranceVerifier` | Numeric comparison within relative/absolute tolerance |
-| `openai` | `OpenAIVerifier` | LLM-as-judge via `lmms_eval.llm_judge`; `judge_type` is `binary` or `comparative`, with score-style output set by `response_format` and custom prompts by `custom_prompt` |
+| `openai` | `OpenAIVerifier` | LLM-as-judge via `lmms_eval.llm_judge`; `judge_type` is `binary` or `comparative`, with score-style output set by `response_format` and custom prompts by `custom_prompt`. `api_type="jev"` (or `API_TYPE=jev`) uses TypeSafe Jev; see the [LLM Judge guide](llm_judge.md). |
 | `gemini` | `GeminiVerifier` | LLM-as-judge via the Gemini SDK, including multimodal (text + image) judging |
 | `composite` | `CompositeVerifier` | Chains verifiers, falling through to the next when one reports low confidence |
 
