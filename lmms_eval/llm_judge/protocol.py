@@ -30,6 +30,8 @@ class ServerConfig:
     judge_type: str = "general"  # 'general', 'binary', 'score', 'comparative'
     output_format: Optional[str] = None  # For binary: '0/1' or 'yes/no'
     score_range: Optional[Tuple[float, float]] = None  # For scoring judges
+    # Jev yes/no cutoff. None uses $JEV_NOUL_THRESHOLD, then 0.5.
+    noul_threshold: Optional[float] = None
     evaluation_criteria: Optional[Dict[str, Any]] = None  # Custom evaluation criteria
 
 
