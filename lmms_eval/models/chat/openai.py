@@ -1,7 +1,8 @@
+import functools
 import json
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from typing import List, Union
+from typing import List, Optional, Union
 
 from dotenv import load_dotenv
 from loguru import logger as eval_logger
@@ -17,6 +18,7 @@ from lmms_eval.models.model_utils.concurrency_control import (
     make_prefix_hash,
 )
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
+from lmms_eval.models.model_utils.load_video import _probe_video_metadata
 from lmms_eval.models.model_utils.usage_metrics import (
     get_running_totals,
     is_budget_exceeded,
@@ -36,6 +38,31 @@ def _validate_single_choice_n(gen_kwargs: dict) -> None:
         raise ValueError("generation parameter n must be the integer 1 because this backend consumes exactly one response choice")
 
 
+def _optional_positive_int(name: str, value: object) -> Optional[int]:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError(f"{name} must be a positive integer, got {value!r}")
+    return value
+
+
+# Per process, keyed by URL: the same clip can appear in several requests (several
+# questions per video, retries), and a probe may decode the whole file when the
+# container header has no frame count.
+@functools.lru_cache(maxsize=None)
+def _local_video_duration_s(url: str) -> float:
+    """Duration of a local video addressed by a file:// URL (as built by ChatMessages)."""
+    if not url.startswith("file://"):
+        raise ValueError(f"video_target_frames needs the clip duration, which is only read from local videos; got {url[:80]!r}. Use a local path or file:// URL, or unset video_target_frames.")
+    try:
+        total_frames, frame_rate = _probe_video_metadata(url[len("file://") :], count_frames=True)
+    except Exception as exc:
+        raise ValueError(f"Cannot read the duration of {url!r} for video_target_frames: {exc}") from exc
+    if total_frames <= 0 or not frame_rate:
+        raise ValueError(f"Cannot read the duration of {url!r} for video_target_frames")
+    return total_frames / frame_rate
+
+
 @register_model("openai")
 class OpenAICompatible(OpenAICompatibleSimple):
     is_simple = False
@@ -44,6 +71,8 @@ class OpenAICompatible(OpenAICompatibleSimple):
         self,
         *args,
         pass_video_url: bool = False,
+        video_target_frames: Optional[int] = None,
+        video_max_frames: Optional[int] = None,
         enable_thinking_kwarg: object = None,
         thinking_parameter: str = "chat_template",
         audio_format: str = "audio_url",
@@ -68,6 +97,10 @@ class OpenAICompatible(OpenAICompatibleSimple):
             # Explicit strict mode gives this wrapper sole ownership of retries.
             self.client.max_retries = 0
         self.pass_video_url = bool(pass_video_url)
+        self.video_target_frames = _optional_positive_int("video_target_frames", video_target_frames)
+        self.video_max_frames = _optional_positive_int("video_max_frames", video_max_frames)
+        if (self.video_target_frames is not None or self.video_max_frames is not None) and not self.pass_video_url:
+            raise ValueError("video_target_frames and video_max_frames are sent to the server in media_io_kwargs and require pass_video_url=True")
         self.enable_thinking_kwarg = enable_thinking_kwarg
         self.thinking_parameter = thinking_parameter
         if audio_format not in ("audio_url", "input_audio"):
@@ -77,6 +110,30 @@ class OpenAICompatible(OpenAICompatibleSimple):
         self.return_response_json = str(return_response_json).lower() == "true"
         self.image_detail = image_detail
         self.token_limit_field = token_limit_field
+
+    def _video_media_io_kwargs(self, messages: list) -> dict:
+        """Server-side sampling options for the videos in one request.
+
+        Some servers sample by frame count and others by rate (e.g. vLLM's
+        MiniMax-M3 and Qwen3-VL loaders ignore num_frames), so a target frame
+        count is sent as both num_frames and fps = frames / clip duration.
+        """
+        video = {"num_frames": int(self.max_frames_num)}
+        if self.video_target_frames is not None:
+            urls = {part["video_url"]["url"] for message in messages for part in message["content"] if part.get("type") == "video_url"}
+            if len(urls) > 1:
+                raise ValueError("video_target_frames sets one fps per request, so it supports one video per request")
+            if urls:
+                duration_s = _local_video_duration_s(urls.pop())
+                # Loaders take floor(duration * fps) or int(...) frames, and
+                # duration * (N / duration) can round to just below N, which
+                # loses a frame (a frame pair on Qwen2-VL). The nudge is far
+                # below one frame, so it never raises that count above N.
+                fps = self.video_target_frames / duration_s * (1 + 1e-6)
+                video = {"num_frames": self.video_target_frames, "fps": fps}
+        if self.video_max_frames is not None:
+            video["max_frames"] = self.video_max_frames
+        return video
 
     def generate_until(self, requests) -> List[GenerationResult]:
         if not requests:
@@ -276,7 +333,13 @@ class OpenAICompatible(OpenAICompatibleSimple):
                     payload[parameter] = value
             extra_body = {}
             if self.pass_video_url:
-                extra_body["media_io_kwargs"] = {"video": {"num_frames": int(self.max_frames_num)}}
+                # Fail fast: sending a default frame count instead would make
+                # this request's results silently incomparable with the rest.
+                try:
+                    video_media_io_kwargs = self._video_media_io_kwargs(payload["messages"])
+                except ValueError as exc:
+                    raise ValueError(f"{task}/{split} doc {doc_id}: {exc}") from exc
+                extra_body["media_io_kwargs"] = {"video": video_media_io_kwargs}
             if self.enable_thinking_kwarg is not None:
                 ek = self.enable_thinking_kwarg
                 ek_bool = ek.lower() == "true" if isinstance(ek, str) else bool(ek)
