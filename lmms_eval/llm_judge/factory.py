@@ -9,7 +9,12 @@ from .protocol import ServerConfig
 try:
     from dotenv import load_dotenv
 
-    for candidate in [Path.cwd() / ".env", Path(__file__).resolve().parents[4] / ".env"]:
+    candidates = [Path.cwd() / ".env"]
+    try:
+        candidates.append(Path(__file__).resolve().parents[4] / ".env")
+    except IndexError:
+        pass
+    for candidate in candidates:
         if candidate.is_file():
             load_dotenv(candidate, override=False)
             break
@@ -17,11 +22,13 @@ except ImportError:
     pass
 from .providers import (
     AsyncAzureOpenAIProvider,
+    AsyncMiniMaxProvider,
     AsyncOpenAIProvider,
     AzureOpenAIProvider,
     BedrockProvider,
     DummyProvider,
     LocalProvider,
+    MiniMaxProvider,
     OpenAIProvider,
 )
 
@@ -34,6 +41,8 @@ class ProviderFactory:
         "azure": AzureOpenAIProvider,
         "async_openai": AsyncOpenAIProvider,
         "async_azure": AsyncAzureOpenAIProvider,
+        "minimax": MiniMaxProvider,
+        "async_minimax": AsyncMiniMaxProvider,
         "bedrock": BedrockProvider,
         "local": LocalProvider,
         "dummy": DummyProvider,
