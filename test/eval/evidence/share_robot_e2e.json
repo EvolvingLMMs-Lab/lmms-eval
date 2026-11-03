@@ -1,17 +1,17 @@
 {
   "status": "PASS",
-  "job_id": "pt-twroags3",
-  "recorded_at_utc": "2026-11-02T03:17:22.343358+00:00",
-  "base_commit": "458d4eb9d27bd4321e9cb8ae27b756f43c4b2a2a",
+  "job_id": "pt-wxinf2b1",
+  "recorded_at_utc": "2026-11-02T05:18:35.285285+00:00",
+  "base_commit": "9c068594102a876001119651d1377398d4ed56d0",
   "runtime_sha256": {
     "lmms_eval/tasks/share_robot/__init__.py": "27dca5981f6546726a46499c535b72634016ee8a154b39b70b6e63350d5d3fce",
     "lmms_eval/tasks/share_robot/_default_template_yaml": "6740a4c0cbd4eff873a04e1762ff2acd44d357a549958e31959aecb55d99f7e9",
     "lmms_eval/tasks/share_robot/share_robot.yaml": "34817ccbf16fd67c5f5fd86540df31db6e24b22d6905b4414bb2bfd4df5afb27",
-    "lmms_eval/tasks/share_robot/share_robot_affordance.yaml": "c942d73e984fd420fd633b43fcfeac46ddbbee92924d89418352b5de05308c9f",
+    "lmms_eval/tasks/share_robot/share_robot_affordance.yaml": "3c053b5099b939004df160345702f68542e5c23c3f2f92fbce517e3cef739f39",
     "lmms_eval/tasks/share_robot/share_robot_trajectory.yaml": "5829de437fb86d5e2995cc1fe7ca976d4cb35efe3884c7ef8079111794f6391c",
-    "lmms_eval/tasks/share_robot/utils.py": "7933da6c9684071cf8d529f550cb42b5f63ea1960d6cd1b1ae4f8816ea996a36"
+    "lmms_eval/tasks/share_robot/utils.py": "383a4d2e87d8585fcee0edf203688a50902e4ca4ea916b9bb360b1157acf08e5"
   },
-  "command": "/mnt/umm/users/qianjianheng/.local/bin/uv run --no-sync accelerate launch --multi_gpu --num_processes 2 --num_machines 1 --mixed_precision no --dynamo_backend no -m lmms_eval eval --model qwen2_5_vl --model_args pretrained=/mnt/umm/shared_model/Qwen2.5-VL-7B-Instruct,attn_implementation=sdpa --tasks share_robot --limit 8 --batch_size 1 --log_samples --output_path /mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/results --verbosity WARNING",
+  "command": "/mnt/umm/users/qianjianheng/.local/bin/uv run --no-sync accelerate launch --multi_gpu --num_processes 2 --num_machines 1 --mixed_precision no --dynamo_backend no -m lmms_eval eval --model qwen2_5_vl --model_args pretrained=/mnt/umm/shared_model/Qwen2.5-VL-7B-Instruct,attn_implementation=sdpa --tasks share_robot --limit 8 --batch_size 1 --log_samples --output_path /mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/130313-sharerobot-explicit-metrics-2gpu/results --verbosity WARNING",
   "setup": {
     "environment": "uv-managed Python 3.11 environment; uv run --no-sync; shared local checkpoint Qwen/Qwen2.5-VL-7B-Instruct; original task configurations with no prompt or annotation-path overrides",
     "hardware": {
@@ -35,25 +35,25 @@
     },
     "launcher_environment": {
       "UV_PROJECT_ENVIRONMENT": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.venv",
-      "UV_CACHE_DIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/uv",
+      "UV_CACHE_DIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/130313-sharerobot-explicit-metrics-2gpu/cache/uv",
       "UV_OFFLINE": "1",
-      "HF_HOME": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/huggingface",
-      "HF_TOKEN_PATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/huggingface/token",
-      "TRITON_CACHE_DIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/triton",
-      "TORCHINDUCTOR_CACHE_DIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/inductor",
-      "TORCH_HOME": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/torch",
-      "CUDA_CACHE_PATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/cuda",
-      "PYTORCH_KERNEL_CACHE_PATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/kernels",
-      "XDG_CACHE_HOME": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/xdg",
-      "MPLCONFIGDIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/matplotlib",
+      "HF_HOME": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/130313-sharerobot-explicit-metrics-2gpu/cache/huggingface",
+      "HF_TOKEN_PATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/130313-sharerobot-explicit-metrics-2gpu/cache/huggingface/token",
+      "TRITON_CACHE_DIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/130313-sharerobot-explicit-metrics-2gpu/cache/triton",
+      "TORCHINDUCTOR_CACHE_DIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/130313-sharerobot-explicit-metrics-2gpu/cache/inductor",
+      "TORCH_HOME": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/130313-sharerobot-explicit-metrics-2gpu/cache/torch",
+      "CUDA_CACHE_PATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/130313-sharerobot-explicit-metrics-2gpu/cache/cuda",
+      "PYTORCH_KERNEL_CACHE_PATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/130313-sharerobot-explicit-metrics-2gpu/cache/kernels",
+      "XDG_CACHE_HOME": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/130313-sharerobot-explicit-metrics-2gpu/cache/xdg",
+      "MPLCONFIGDIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/130313-sharerobot-explicit-metrics-2gpu/cache/matplotlib",
       "HF_HUB_CACHE": "/mnt/umm/shared_model/huggingface/hub",
-      "HF_DATASETS_CACHE": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/datasets",
+      "HF_DATASETS_CACHE": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/130313-sharerobot-explicit-metrics-2gpu/cache/datasets",
       "HF_HUB_OFFLINE": "0",
       "HF_DATASETS_OFFLINE": "0",
       "HF_HUB_DISABLE_XET": "1",
-      "PYTHONPATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/source",
+      "PYTHONPATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/130313-sharerobot-explicit-metrics-2gpu/source",
       "PYTHONUNBUFFERED": "1",
-      "LMMS_RUN_DIRECTORY": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu",
+      "LMMS_RUN_DIRECTORY": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/130313-sharerobot-explicit-metrics-2gpu",
       "LMMS_EXPECTED_GPUS": "2"
     },
     "private_proxy_setup": "Configured proxy loaded from a private JSON file after selecting its owner UID/GID; no credential values are stored here. This wrapper only sets environment and execs the public CLI.",
@@ -73,17 +73,7 @@
   },
   "attempts": [
     {
-      "job": "pt-7t6wso85",
-      "status": "FAILED",
-      "reason": "Non-root worker could not read default /root/.cache/huggingface/token; fixed HF_HOME/HF_TOKEN_PATH"
-    },
-    {
-      "job": "pt-ydjcm50l",
-      "status": "FAILED",
-      "reason": "Non-root worker could not write default /root/.triton; fixed per-run compiler cache paths"
-    },
-    {
-      "job": "pt-twroags3",
+      "job": "pt-wxinf2b1",
       "status": "SUCCEEDED"
     }
   ],
@@ -91,13 +81,51 @@
     "share_robot_affordance": {
       "sample_count": 8,
       "metrics": {
-        "average_iou,none": 0.1638664176360442,
-        "average_precision,none": 0.1638664176360442,
+        "alias": " - share_robot_affordance",
+        "mean_iou,none": 0.1639059254867394,
+        "mean_iou_stderr,none": 0.06654800525816794,
+        "mean_iou_stderr_clt,none": 0.06654800525816795,
+        "mean_iou_stderr_clustered,none": "N/A",
+        "cumulative_iou,none": 0.10100784511182939,
+        "cumulative_iou_stderr,none": "N/A",
+        "cumulative_iou_stderr_clt,none": "N/A",
+        "cumulative_iou_stderr_clustered,none": "N/A",
+        "mean_generalized_iou,none": -0.05898140862705341,
+        "mean_generalized_iou_stderr,none": 0.17550447999133428,
+        "mean_generalized_iou_stderr_clt,none": 0.17550447999133428,
+        "mean_generalized_iou_stderr_clustered,none": "N/A",
+        "precision_at_0_5,none": 0.125,
+        "precision_at_0_5_stderr,none": 0.125,
+        "precision_at_0_5_stderr_clt,none": 0.125,
+        "precision_at_0_5_stderr_clustered,none": "N/A",
+        "average_iou,none": 0.1639059254867394,
+        "average_iou_stderr,none": "N/A",
+        "average_iou_stderr_clt,none": 0.06654800525816795,
+        "average_iou_stderr_clustered,none": "N/A",
+        "average_precision,none": 0.1639059254867394,
+        "average_precision_stderr,none": "N/A",
+        "average_precision_stderr_clt,none": 0.06654800525816795,
+        "average_precision_stderr_clustered,none": "N/A",
         "iou_at_0_5,none": 0.125,
+        "iou_at_0_5_stderr,none": "N/A",
+        "iou_at_0_5_stderr_clt,none": 0.125,
+        "iou_at_0_5_stderr_clustered,none": "N/A",
         "iou_at_0_75,none": 0.0,
+        "iou_at_0_75_stderr,none": "N/A",
+        "iou_at_0_75_stderr_clt,none": 0.0,
+        "iou_at_0_75_stderr_clustered,none": "N/A",
         "iou_at_0_9,none": 0.0,
+        "iou_at_0_9_stderr,none": "N/A",
+        "iou_at_0_9_stderr_clt,none": 0.0,
+        "iou_at_0_9_stderr_clustered,none": "N/A",
         "valid_items,none": 8,
-        "valid_rate,none": 1.0
+        "valid_items_stderr,none": "N/A",
+        "valid_items_stderr_clt,none": 0.0,
+        "valid_items_stderr_clustered,none": "N/A",
+        "valid_rate,none": 1.0,
+        "valid_rate_stderr,none": 0.0,
+        "valid_rate_stderr_clt,none": 0.0,
+        "valid_rate_stderr_clustered,none": "N/A"
       },
       "samples": [
         {
@@ -105,67 +133,91 @@
           "input_media": [
             "images/1982_testset_0000394.jpg"
           ],
-          "prediction": "[230, 346, 257, 372]"
+          "prediction": "[230, 346, 257, 372]",
+          "target": "[161, 256, 183, 281]"
         },
         {
           "doc_id": 2,
           "input_media": [
             "images/6498_thu_cut_fruit_RGB_cut_fruit_cwx_2_22.jpg"
           ],
-          "prediction": "[509, 191, 560, 283]"
+          "prediction": "[509, 191, 560, 283]",
+          "target": "[512, 196, 560, 252]"
         },
         {
           "doc_id": 4,
           "input_media": [
             "images/2420_ego4d_7aca7552-56d2-4ac0-be30-aed9c5dfc8ea_9000.jpg"
           ],
-          "prediction": "[667, 425, 938, 630]"
+          "prediction": "[667, 425, 938, 630]",
+          "target": "[813, 442, 930, 558]"
         },
         {
           "doc_id": 6,
           "input_media": [
             "images/6738_cup_002554.jpg"
           ],
-          "prediction": "[354, 167, 410, 280]"
+          "prediction": "[354, 167, 410, 280]",
+          "target": "[224, 293, 277, 356]"
         },
         {
           "doc_id": 1,
           "input_media": [
             "images/1091_motorcycle_000923.jpg"
           ],
-          "prediction": "[350, 217, 468, 290]"
+          "prediction": "[350, 227, 468, 290]",
+          "target": "[456, 231, 510, 277]"
         },
         {
           "doc_id": 3,
           "input_media": [
             "images/24_6.png"
           ],
-          "prediction": "[576, 248, 1287, 1091]"
+          "prediction": "[576, 248, 1287, 1091]",
+          "target": "[817, 270, 1095, 436]"
         },
         {
           "doc_id": 5,
           "input_media": [
             "images/1045_bench_002635.jpg"
           ],
-          "prediction": "[147, 168, 580, 283]"
+          "prediction": "[147, 168, 580, 283]",
+          "target": "[321, 169, 508, 224]"
         },
         {
           "doc_id": 7,
           "input_media": [
             "images/5909_bicycle_001556.jpg"
           ],
-          "prediction": "[167, 125, 245, 149]"
+          "prediction": "[167, 125, 245, 148]",
+          "target": "[117, 113, 227, 192]"
         }
       ]
     },
     "share_robot_trajectory": {
       "sample_count": 8,
       "metrics": {
-        "average_discrete_frechet_distance,none": 0.5955289381465135,
-        "average_hausdorff_distance,none": 0.5729484729949749,
-        "average_root_mean_square_error,none": 0.4566433452454196,
+        "alias": " - share_robot_trajectory",
+        "average_discrete_frechet_distance,none": 0.5586438421369309,
+        "average_discrete_frechet_distance_stderr,none": 0.0889677747038714,
+        "average_discrete_frechet_distance_stderr_clt,none": 0.0889677747038714,
+        "average_discrete_frechet_distance_stderr_clustered,none": "N/A",
+        "average_hausdorff_distance,none": 0.5331697003378001,
+        "average_hausdorff_distance_stderr,none": 0.08553939538928267,
+        "average_hausdorff_distance_stderr_clt,none": 0.08553939538928267,
+        "average_hausdorff_distance_stderr_clustered,none": "N/A",
+        "average_root_mean_square_error,none": 0.43990049093739103,
+        "average_root_mean_square_error_stderr,none": 0.08585797649578791,
+        "average_root_mean_square_error_stderr_clt,none": 0.0858579764957879,
+        "average_root_mean_square_error_stderr_clustered,none": "N/A",
         "parse_valid_items,none": 7,
-        "parse_valid_rate,none": 0.875
+        "parse_valid_items_stderr,none": "N/A",
+        "parse_valid_items_stderr_clt,none": 0.125,
+        "parse_valid_items_stderr_clustered,none": "N/A",
+        "parse_valid_rate,none": 0.875,
+        "parse_valid_rate_stderr,none": 0.125,
+        "parse_valid_rate_stderr_clt,none": 0.125,
+        "parse_valid_rate_stderr_clustered,none": "N/A"
       },
       "samples": [
         {
@@ -173,59 +225,318 @@
           "input_media": [
             "images/12329935_167.jpg"
           ],
-          "prediction": "To assemble \"one_leg\" using the Franka robot's end effector control, we need to follow a series of precise movements. Here are 10 key trajectory points that can guide the assembly process:\n\n1. [[50, 100], [70, 120]] - Move to the first component.\n2. [[70, 120], [90, 140]] - Move to the second component.\n3. [[90, 140], [110, 160]] - Move to the third component.\n4. [[110, 160], [130, 180]] - Move to the fourth component.\n5. [[130, 180], [150, 200]] - Move to the fifth component.\n6. [[150, 200], [170, 220]] - Move to the sixth component.\n7. [[170, 220], [190, 240]] - Move to the seventh component.\n8. [[190, 240], [210, 260]] - Move to the eighth component.\n9. [[210, 260], [230, 280]] - Move to the ninth component.\n10. [[230, 280], [250, 300]] - Move to the tenth component.\n\nThese points assume that the components are laid out in a specific order on the table. Adjust the coordinates based on the actual positions of the components in your setup."
+          "prediction": "To assemble \"one_leg\" using the Franka robot's end effector control, we need to follow a series of precise movements. Here are 10 key trajectory points that can guide the assembly process:\n\n1. [[50, 100], [70, 120]] - Move to the first component.\n2. [[70, 120], [90, 140]] - Move to the second component.\n3. [[90, 140], [110, 160]] - Move to the third component.\n4. [[110, 160], [130, 180]] - Move to the fourth component.\n5. [[130, 180], [150, 200]] - Move to the fifth component.\n6. [[150, 200], [170, 220]] - Move to the sixth component.\n7. [[170, 220], [190, 240]] - Move to the seventh component.\n8. [[190, 240], [210, 260]] - Move to the eighth component.\n9. [[210, 260], [230, 280]] - Move to the ninth component.\n10. [[230, 280], [250, 300]] - Move to the tenth component.\n\nThese points assume that the components are laid out in a specific order on the table and that the robot starts at a reference point (e.g., the leftmost corner). Adjust the coordinates based on the actual layout and starting position of the components.",
+          "target": "[(170, 47), (176, 77), (180, 84), (183, 90), (172, 84)]"
         },
         {
           "doc_id": 2,
           "input_media": [
             "images/9899466_979.jpg"
           ],
-          "prediction": "To assemble a chair using a Franka robot with an end-effector control, we need to consider the specific parts of the chair and their assembly sequence. However, since the image provided does not show any chair parts or the assembly process, I will assume a generic scenario where the robot is picking up and placing a part of a chair.\n\nHere are 10 key trajectory points for assembling a chair:\n\n1. [[50, 100], [50, 150]] - Pick up the seat cushion.\n2. [[100, 150], [100, 200]] - Place the seat cushion on the chair frame.\n3. [[150, 200], [150, 250]] - Pick up the backrest.\n4. [[200, 250], [200, 300]] - Place the backrest on the chair frame.\n5. [[250, 300], [250, 350]] - Pick up the armrest.\n6. [[300, 350], [300, 400]] - Place the armrest on the chair frame.\n7. [[350, 400], [350, 450]] - Pick up the other armrest.\n8. [[400, 450], [400, 500]] - Place the other armrest on the chair frame.\n9. [[450, 500], [450, 550]] - Pick up the leg.\n10. [[500, 550], [500, 600]] - Place the leg on the chair frame.\n\nThese points are hypothetical and would need to be adjusted based on the actual chair design and the specific parts involved in the assembly process."
+          "prediction": "To assemble a chair using a Franka robot with an end-effector control, we need to consider the specific parts of the chair and their assembly sequence. However, since the image provided does not show any chair parts or the full context of the assembly process, I will assume a simplified scenario where the task involves picking up and placing a single component (e.g., a screw) into a pre-defined position.\n\nHere are 10 key trajectory points for this simplified task:\n\n1. [[50, 100], [50, 150]] - Move to the starting position of the screw.\n2. [[50, 150], [60, 150]] - Pick up the screw.\n3. [[60, 150], [70, 150]] - Move to the target position on the chair part.\n4. [[70, 150], [70, 160]] - Place the screw at the target position.\n5. [[70, 160], [60, 160]] - Move back from the target position.\n6. [[60, 160], [50, 160]] - Move to the starting position of the screw.\n7. [[50, 160], [50, 110]] - Pick up the screw.\n8. [[50, 110], [60, 110]] - Move to the target position on the chair part.\n9. [[60, 110], [70, 110]] - Place the screw at the target position.\n10. [[70, 110], [60, 110]] - Move back from the target position.\n\nThese points are based on a simplified scenario and would need to be adjusted according to the actual chair parts and the specific assembly instructions.",
+          "target": "[(71, 92), (161, 32), (120, 45), (144, 36), (180, 43)]"
         },
         {
           "doc_id": 4,
           "input_media": [
             "images/5933_frame_0.png"
           ],
-          "prediction": "To move towards the banana on the tray, we need to follow these steps:\n\n1. Identify the starting position of the robot.\n2. Determine the direction and distance to the banana.\n3. Move in small increments towards the banana.\n\nAssuming the robot's current position is at the bottom left corner of the image (coordinates: [0, 0]), here are the predicted trajectory points:\n\n```python\n[[0, 0], [50, 0], [100, 0], [150, 0], [200, 0], [250, 0], [300, 0], [350, 0], [400, 0], [450, 0]]\n```\n\nThese points represent the robot moving horizontally from left to right until it reaches the banana. Adjust the coordinates based on the actual starting position and the exact location of the banana in the image."
+          "prediction": "To move towards the banana on the tray, we need to follow these steps:\n\n1. Identify the starting position of the robot.\n2. Determine the direction and distance to the banana.\n3. Move in small increments towards the banana.\n\nAssuming the robot's current position is at the bottom left corner of the image (coordinates: [0, 0]), here are the predicted trajectory points:\n\n```python\n[[0, 0], [50, 0], [100, 0], [150, 0], [200, 0], [250, 0], [300, 0], [350, 0], [400, 0], [450, 0]]\n```\n\nThese points represent the robot moving horizontally from left to right until it reaches the banana. Adjust the coordinates based on the actual starting position and the exact location of the banana in the image.",
+          "target": "[(103, 109), (195, 116), (273, 126), (362, 143)]"
         },
         {
           "doc_id": 6,
           "input_media": [
             "images/1712_frame_0.png"
           ],
-          "prediction": "To predict the trajectory for reaching the fork, we need to consider the current position of the robot's end-effector (the part that interacts with objects) and the position of the fork. Here's a simplified prediction of 10 key trajectory points:\n\n1. [[350, 460], [350, 450]]\n2. [[350, 450], [350, 440]]\n3. [[350, 440], [350, 430]]\n4. [[350, 430], [350, 420]]\n5. [[350, 420], [350, 410]]\n6. [[350, 410], [350, 400]]\n7. [[350, 400], [350, 390]]\n8. [[350, 390], [350, 380]]\n9. [[350, 380], [350, 370]]\n10. [[350, 370], [350, 360]]\n\nThese points assume a linear path from the current position of the robot's end-effector to the fork. In practice, the actual trajectory would depend on the specific design of the robot and its joints, as well as any obstacles in the environment."
+          "prediction": "To predict the trajectory for reaching the fork, we need to consider the current position of the robot's end-effector (the part that interacts with objects) and the position of the fork. Here's a simplified prediction of the trajectory in 10 key points:\n\n1. [[350, 460], [350, 450]]\n2. [[350, 450], [350, 440]]\n3. [[350, 440], [350, 430]]\n4. [[350, 430], [350, 420]]\n5. [[350, 420], [350, 410]]\n6. [[350, 410], [350, 400]]\n7. [[350, 400], [350, 390]]\n8. [[350, 390], [350, 380]]\n9. [[350, 380], [350, 370]]\n10. [[350, 370], [350, 360]]\n\nThese points assume a linear movement towards the fork. In practice, the robot would likely use a more complex path to account for any obstacles or to ensure a smooth transition from its current position to the fork.",
+          "target": "[(282, 21), (273, 96), (273, 204), (280, 316)]"
         },
         {
           "doc_id": 1,
           "input_media": [
             "images/3516_frame_15.png"
           ],
-          "prediction": "To drag the cloth to the left side of the table, we need to follow these steps:\n\n1. Identify the current position of the cloth.\n2. Determine the target position for the cloth on the left side of the table.\n3. Move the cloth in small increments towards the target position.\n\nHere's a list of key trajectory points to achieve this:\n\n```python\n[\n    [250, 260],  # Starting point of the cloth\n    [240, 260],  # Moving slightly left\n    [230, 260],  # Moving further left\n    [220, 260],  # Moving even further left\n    [210, 260],  # Moving closer to the left edge\n    [200, 260],  # Moving very close to the left edge\n    [190, 260],  # Final position before stopping\n    [180, 260]   # Final position after stopping\n]\n```\n\nThis list assumes that the cloth can be moved in small increments (e.g., 10 pixels at a time) and that it will stop once it reaches the left edge of the table. Adjust the coordinates based on the actual size of the cloth and the resolution of the display."
+          "prediction": "To drag the cloth to the left side of the table, we need to follow these steps:\n\n1. Identify the current position of the cloth.\n2. Determine the target position for the cloth on the left side of the table.\n3. Move the cloth in small increments towards the target position.\n\nHere's a list of key trajectory points to achieve this:\n\n```python\n[\n    [250, 260],  # Starting point of the cloth\n    [240, 260],  # Moving slightly left\n    [230, 260],  # Moving further left\n    [220, 260],  # Moving even further left\n    [210, 260],  # Moving closer to the left edge\n    [200, 260],  # Moving very close to the left edge\n    [190, 260],  # Final position before stopping\n    [180, 260]   # Final position after stopping\n]\n```\n\nThis list assumes that the cloth can be moved in small increments (e.g., 10 pixels at a time) and that it will stop once it reaches the left edge of the table. Adjust the coordinates based on the actual size of the cloth and the resolution of the display.",
+          "target": "[(259, 274), (188, 296), (117, 299)]"
         },
         {
           "doc_id": 3,
           "input_media": [
             "images/8287263_0290.jpg"
           ],
-          "prediction": "To pick the wooden cylinder from the image, we need to follow these steps:\n\n1. **Identify the Cylinder**: First, locate the wooden cylinder in the image.\n2. **Move to the Cylinder**: Move the robot's arm towards the cylinder.\n3. **Grasp the Cylinder**: Once the cylinder is within reach, grasp it.\n4. **Lift the Cylinder**: Lift the cylinder off the surface.\n\nGiven the image, here are the predicted key trajectory points for the Franka robot to pick the wooden cylinder:\n\n```python\n[\n    [150, 100],  # Start position\n    [200, 100],  # Move slightly forward\n    [250, 100],  # Move further forward\n    [300, 100],  # Move closer to the cylinder\n    [300, 150],  # Grasp the cylinder\n    [300, 200],  # Lift the cylinder slightly\n    [300, 250],  # Continue lifting\n    [300, 300],  # Fully lift the cylinder\n    [300, 350],  # Move away from the cylinder\n    [300, 400]   # Final position after picking\n]\n```\n\nThis list assumes that the robot starts at a position `[150, 100]` and moves incrementally towards the cylinder, then grasps it and lifts it. Adjust the coordinates based on the actual position of the cylinder in the environment."
+          "prediction": "To pick the wooden cylinder from the image, we need to follow these steps:\n\n1. **Identify the Cylinder**: First, locate the wooden cylinder in the image.\n2. **Move to the Cylinder**: Move the robot arm towards the cylinder.\n3. **Grasp the Cylinder**: Once close enough, grasp the cylinder with the gripper.\n4. **Lift the Cylinder**: Lift the cylinder off the surface.\n\nGiven the image, here are the predicted key trajectory points for the Franka robot to pick the wooden cylinder:\n\n```python\n[\n    [150, 100],  # Start position\n    [200, 100],  # Move slightly forward\n    [250, 100],  # Move further forward\n    [300, 100],  # Move closer to the cylinder\n    [350, 100],  # Move even closer\n    [370, 100],  # Grasp the cylinder\n    [370, 150],  # Lift the cylinder slightly\n    [370, 200],  # Continue lifting\n    [370, 250],  # Final lift position\n    [370, 300]   # Final position after picking\n]\n```\n\nThese points assume that the robot starts at a position `[150, 100]` and moves forward in increments until it reaches the cylinder. The exact coordinates will depend on the actual position of the cylinder in the environment.",
+          "target": "[(181, 21), (179, 22), (181, 24), (181, 22), (181, 22)]"
         },
         {
           "doc_id": 5,
           "input_media": [
             "images/1005_frame_0.png"
           ],
-          "prediction": "To move towards the blue spoon, you can follow these key trajectory points:\n\n1. Start at your current position.\n2. Move slightly upwards and to the right.\n3. Continue moving to the right until you are directly above the blue spoon.\n4. Move slightly downwards to align with the blue spoon.\n\nHere's the list of tuples representing these points:\n\n```python\n[[current_x, current_y], [current_x + 5, current_y + 5], [current_x + 10, current_y + 5], [current_x + 10, current_y]]\n```\n\nNote: Replace `current_x` and `current_y` with the actual coordinates of your starting position."
+          "prediction": "To move towards the blue spoon, you can follow these key trajectory points:\n\n1. Start at your current position.\n2. Move slightly upwards and to the right.\n3. Continue moving right until you are directly above the blue spoon.\n4. Move slightly downwards to align with the blue spoon.\n\nHere's the list of tuples representing these points:\n\n```python\n[[current_x, current_y], [current_x + 5, current_y + 5], [current_x + 10, current_y + 5], [current_x + 10, current_y]]\n```\n\nNote: Replace `current_x` and `current_y` with the actual coordinates of your starting position.",
+          "target": "[(149, 156), (204, 132), (248, 166)]"
         },
         {
           "doc_id": 7,
           "input_media": [
             "images/3539090_0020.jpg"
           ],
-          "prediction": "To pick the bin, we need to follow these steps:\n\n1. Move towards the bin.\n2. Grasp the bin.\n3. Lift the bin.\n\nHere are the predicted key trajectory points for the Franka robot to complete the task:\n\n1. [[100, 150], [150, 200]] - Move towards the bin.\n2. [[150, 200], [180, 220]] - Move closer to the bin.\n3. [[180, 220], [200, 240]] - Grasp the bin.\n4. [[200, 240], [220, 260]] - Lift the bin slightly.\n5. [[220, 260], [240, 280]] - Continue lifting the bin.\n6. [[240, 280], [260, 300]] - Fully lift the bin.\n7. [[260, 300], [280, 320]] - Move away from the bin.\n8. [[280, 320], [300, 340]] - Move further away from the bin.\n9. [[300, 340], [320, 360]] - Move away from the bin.\n10. [[320, 360], [340, 380]] - Move away from the bin.\n\nThese points assume that the robot starts at a position far from the bin and needs to move in a straight line to reach it. Adjustments may be necessary based on the actual starting position and the robot's current orientation."
+          "prediction": "To pick the bin, we need to follow these steps:\n\n1. Move towards the bin.\n2. Grasp the bin.\n3. Lift the bin.\n\nHere are the predicted key trajectory points for the Franka robot to complete the task:\n\n1. [[250, 180], [270, 160]] - Move towards the bin.\n2. [[270, 160], [290, 140]] - Move closer to the bin.\n3. [[290, 140], [310, 120]] - Move even closer to the bin.\n4. [[310, 120], [330, 100]] - Move directly above the bin.\n5. [[330, 100], [350, 80]] - Grasp the bin.\n6. [[350, 80], [370, 60]] - Lift the bin slightly.\n7. [[370, 60], [390, 40]] - Continue lifting the bin.\n8. [[390, 40], [410, 20]] - Fully lift the bin.\n9. [[410, 20], [430, 0]] - Move away from the bin.\n10. [[430, 0], [450, 20]] - Move back to the starting position.\n\nNote: These points are based on a simplified model and may need adjustments depending on the actual size and position of the bin in the environment.",
+          "target": "[(302, 48), (320, 126), (314, 230), (320, 123), (325, 45)]"
         }
       ]
     }
   },
-  "scope": "Eight samples per task, not a full benchmark run. Model quality is separate from validation success."
+  "scope": "Eight samples per task, not a full benchmark run. Model quality is separate from validation success.",
+  "independent_verification": {
+    "passed": true,
+    "sample_count": 8,
+    "independent_metrics": {
+      "mean_iou": 0.1639059254867394,
+      "cumulative_iou": 0.10100784511182939,
+      "mean_generalized_iou": -0.05898140862705341,
+      "precision_at_0_5": 0.125
+    },
+    "source": "check-sharerobot-metrics.py; standard-library scalar geometry, no task scorer imports",
+    "helper_source": "\"\"\"Independent scalar rectangle arithmetic on real saved model predictions.\"\"\"\nimport ast\nimport json\nimport math\nfrom pathlib import Path\n\nrun = Path(Path('/tmp/sharerobot-metrics-run').read_text())\nresult = json.loads(next((run/'results').rglob('*_results.json')).read_text())\nrows = [json.loads(line) for line in next((run/'results').rglob('*_samples_share_robot_affordance.jsonl')).read_text().splitlines()]\nintersections, unions, ious, gious, hits = [], [], [], [], []\nfor row in rows:\n    gt = ast.literal_eval(row['target']) if isinstance(row['target'], str) else row['target']\n    garea = (gt[2]-gt[0])*(gt[3]-gt[1])\n    i, u, iou, giou = 0.0, garea, 0.0, 0.0\n    try:\n        pred = ast.literal_eval(row['filtered_resps']) if isinstance(row['filtered_resps'], str) else row['filtered_resps']\n        if len(pred) != 4 or not all(math.isfinite(x) for x in pred) or pred[2] <= pred[0] or pred[3] <= pred[1]:\n            raise ValueError('invalid prediction')\n        i = max(0,min(pred[2],gt[2])-max(pred[0],gt[0]))*max(0,min(pred[3],gt[3])-max(pred[1],gt[1]))\n        u = (pred[2]-pred[0])*(pred[3]-pred[1])+garea-i\n        c = (max(pred[2],gt[2])-min(pred[0],gt[0]))*(max(pred[3],gt[3])-min(pred[1],gt[1]))\n        if not all(math.isfinite(x) for x in [i,u,c]): raise ValueError('nonfinite geometry')\n        iou=i/u; giou=iou-(c-u)/c\n    except (ValueError,TypeError,SyntaxError,OverflowError):\n        i,u,iou,giou=0.0,garea,0.0,0.0\n    intersections.append(i);unions.append(u);ious.append(iou);gious.append(giou);hits.append(float(iou>=.5))\nexpected={'mean_iou':sum(ious)/len(rows),'cumulative_iou':sum(intersections)/sum(unions),'mean_generalized_iou':sum(gious)/len(rows),'precision_at_0_5':sum(hits)/len(rows)}\nactual=result['results']['share_robot_affordance']\nfor name,value in expected.items():\n    assert math.isclose(actual[name+',none'],value,abs_tol=1e-12), (name,actual[name+',none'],value)\nreport={'passed':True,'sample_count':len(rows),'independent_metrics':expected,'source':'check-sharerobot-metrics.py; standard-library scalar geometry, no task scorer imports'}\n(run/'independent-metrics-check.json').write_text(json.dumps(report,indent=2)+'\\n')\nprint(json.dumps(report,indent=2))\n"
+  },
+  "validation": {
+    "focused_tests": "41 passed",
+    "pre_commit_all_files": "PASS",
+    "git_diff_check": "PASS",
+    "pr_evidence_node_tests": "NOT RUN: node executable unavailable; no CI/evidence-validator code changed"
+  },
+  "previous_runs": [
+    {
+      "status": "PASS",
+      "job_id": "pt-twroags3",
+      "recorded_at_utc": "2026-11-02T03:17:22.343358+00:00",
+      "base_commit": "458d4eb9d27bd4321e9cb8ae27b756f43c4b2a2a",
+      "runtime_sha256": {
+        "lmms_eval/tasks/share_robot/__init__.py": "27dca5981f6546726a46499c535b72634016ee8a154b39b70b6e63350d5d3fce",
+        "lmms_eval/tasks/share_robot/_default_template_yaml": "6740a4c0cbd4eff873a04e1762ff2acd44d357a549958e31959aecb55d99f7e9",
+        "lmms_eval/tasks/share_robot/share_robot.yaml": "34817ccbf16fd67c5f5fd86540df31db6e24b22d6905b4414bb2bfd4df5afb27",
+        "lmms_eval/tasks/share_robot/share_robot_affordance.yaml": "c942d73e984fd420fd633b43fcfeac46ddbbee92924d89418352b5de05308c9f",
+        "lmms_eval/tasks/share_robot/share_robot_trajectory.yaml": "5829de437fb86d5e2995cc1fe7ca976d4cb35efe3884c7ef8079111794f6391c",
+        "lmms_eval/tasks/share_robot/utils.py": "7933da6c9684071cf8d529f550cb42b5f63ea1960d6cd1b1ae4f8816ea996a36"
+      },
+      "command": "/mnt/umm/users/qianjianheng/.local/bin/uv run --no-sync accelerate launch --multi_gpu --num_processes 2 --num_machines 1 --mixed_precision no --dynamo_backend no -m lmms_eval eval --model qwen2_5_vl --model_args pretrained=/mnt/umm/shared_model/Qwen2.5-VL-7B-Instruct,attn_implementation=sdpa --tasks share_robot --limit 8 --batch_size 1 --log_samples --output_path /mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/results --verbosity WARNING",
+      "setup": {
+        "environment": "uv-managed Python 3.11 environment; uv run --no-sync; shared local checkpoint Qwen/Qwen2.5-VL-7B-Instruct; original task configurations with no prompt or annotation-path overrides",
+        "hardware": {
+          "passed": true,
+          "torch": "2.13.0+cu130",
+          "cuda": "13.0",
+          "python": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.venv/bin/python",
+          "gpus": [
+            "NVIDIA H800",
+            "NVIDIA H800"
+          ]
+        },
+        "versions": {
+          "torch": "2.13.0",
+          "torchvision": "0.28.0",
+          "transformers": "5.17.0",
+          "accelerate": "1.15.0",
+          "datasets": "5.0.1",
+          "huggingface-hub": "1.32.0",
+          "lmms_eval": "0.7.4"
+        },
+        "launcher_environment": {
+          "UV_PROJECT_ENVIRONMENT": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.venv",
+          "UV_CACHE_DIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/uv",
+          "UV_OFFLINE": "1",
+          "HF_HOME": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/huggingface",
+          "HF_TOKEN_PATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/huggingface/token",
+          "TRITON_CACHE_DIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/triton",
+          "TORCHINDUCTOR_CACHE_DIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/inductor",
+          "TORCH_HOME": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/torch",
+          "CUDA_CACHE_PATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/cuda",
+          "PYTORCH_KERNEL_CACHE_PATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/kernels",
+          "XDG_CACHE_HOME": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/xdg",
+          "MPLCONFIGDIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/matplotlib",
+          "HF_HUB_CACHE": "/mnt/umm/shared_model/huggingface/hub",
+          "HF_DATASETS_CACHE": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/cache/datasets",
+          "HF_HUB_OFFLINE": "0",
+          "HF_DATASETS_OFFLINE": "0",
+          "HF_HUB_DISABLE_XET": "1",
+          "PYTHONPATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu/source",
+          "PYTHONUNBUFFERED": "1",
+          "LMMS_RUN_DIRECTORY": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-02/110548-sharerobot-8-per-task-2gpu",
+          "LMMS_EXPECTED_GPUS": "2"
+        },
+        "private_proxy_setup": "Configured proxy loaded from a private JSON file after selecting its owner UID/GID; no credential values are stored here. This wrapper only sets environment and execs the public CLI.",
+        "proxy_wrapper_source": "import json,os,sys\nif os.geteuid()==0:\n os.setgroups([]);os.setgid(int(sys.argv[3]));os.setuid(int(sys.argv[2]))\nwith open(sys.argv[1]) as f:settings=json.load(f)\nos.environ.update(settings)\nos.execvpe(sys.argv[4],sys.argv[4:],os.environ)\n"
+      },
+      "reference": {
+        "url": "https://github.com/flageval-baai/FlagEvalMM/pull/84",
+        "commit": "24655d281c9d082592942cd18168cca5d0951fdb",
+        "parity_checks": "50 box pairs, 50 trajectory pairs, and point-format/normalization cases passed; a fixed nontrivial distance fixture is in test_share_robot.py"
+      },
+      "dataset": {
+        "repo": "BAAI/ShareRobot-Bench",
+        "revision": "68e9c15600f85f601b9cf492e4d994b50ed4cd4d",
+        "split": "test",
+        "available_per_task": 200,
+        "evaluated_per_task": 8
+      },
+      "attempts": [
+        {
+          "job": "pt-7t6wso85",
+          "status": "FAILED",
+          "reason": "Non-root worker could not read default /root/.cache/huggingface/token; fixed HF_HOME/HF_TOKEN_PATH"
+        },
+        {
+          "job": "pt-ydjcm50l",
+          "status": "FAILED",
+          "reason": "Non-root worker could not write default /root/.triton; fixed per-run compiler cache paths"
+        },
+        {
+          "job": "pt-twroags3",
+          "status": "SUCCEEDED"
+        }
+      ],
+      "tasks": {
+        "share_robot_affordance": {
+          "sample_count": 8,
+          "metrics": {
+            "average_iou,none": 0.1638664176360442,
+            "average_precision,none": 0.1638664176360442,
+            "iou_at_0_5,none": 0.125,
+            "iou_at_0_75,none": 0.0,
+            "iou_at_0_9,none": 0.0,
+            "valid_items,none": 8,
+            "valid_rate,none": 1.0
+          },
+          "samples": [
+            {
+              "doc_id": 0,
+              "input_media": [
+                "images/1982_testset_0000394.jpg"
+              ],
+              "prediction": "[230, 346, 257, 372]"
+            },
+            {
+              "doc_id": 2,
+              "input_media": [
+                "images/6498_thu_cut_fruit_RGB_cut_fruit_cwx_2_22.jpg"
+              ],
+              "prediction": "[509, 191, 560, 283]"
+            },
+            {
+              "doc_id": 4,
+              "input_media": [
+                "images/2420_ego4d_7aca7552-56d2-4ac0-be30-aed9c5dfc8ea_9000.jpg"
+              ],
+              "prediction": "[667, 425, 938, 630]"
+            },
+            {
+              "doc_id": 6,
+              "input_media": [
+                "images/6738_cup_002554.jpg"
+              ],
+              "prediction": "[354, 167, 410, 280]"
+            },
+            {
+              "doc_id": 1,
+              "input_media": [
+                "images/1091_motorcycle_000923.jpg"
+              ],
+              "prediction": "[350, 217, 468, 290]"
+            },
+            {
+              "doc_id": 3,
+              "input_media": [
+                "images/24_6.png"
+              ],
+              "prediction": "[576, 248, 1287, 1091]"
+            },
+            {
+              "doc_id": 5,
+              "input_media": [
+                "images/1045_bench_002635.jpg"
+              ],
+              "prediction": "[147, 168, 580, 283]"
+            },
+            {
+              "doc_id": 7,
+              "input_media": [
+                "images/5909_bicycle_001556.jpg"
+              ],
+              "prediction": "[167, 125, 245, 149]"
+            }
+          ]
+        },
+        "share_robot_trajectory": {
+          "sample_count": 8,
+          "metrics": {
+            "average_discrete_frechet_distance,none": 0.5955289381465135,
+            "average_hausdorff_distance,none": 0.5729484729949749,
+            "average_root_mean_square_error,none": 0.4566433452454196,
+            "parse_valid_items,none": 7,
+            "parse_valid_rate,none": 0.875
+          },
+          "samples": [
+            {
+              "doc_id": 0,
+              "input_media": [
+                "images/12329935_167.jpg"
+              ],
+              "prediction": "To assemble \"one_leg\" using the Franka robot's end effector control, we need to follow a series of precise movements. Here are 10 key trajectory points that can guide the assembly process:\n\n1. [[50, 100], [70, 120]] - Move to the first component.\n2. [[70, 120], [90, 140]] - Move to the second component.\n3. [[90, 140], [110, 160]] - Move to the third component.\n4. [[110, 160], [130, 180]] - Move to the fourth component.\n5. [[130, 180], [150, 200]] - Move to the fifth component.\n6. [[150, 200], [170, 220]] - Move to the sixth component.\n7. [[170, 220], [190, 240]] - Move to the seventh component.\n8. [[190, 240], [210, 260]] - Move to the eighth component.\n9. [[210, 260], [230, 280]] - Move to the ninth component.\n10. [[230, 280], [250, 300]] - Move to the tenth component.\n\nThese points assume that the components are laid out in a specific order on the table. Adjust the coordinates based on the actual positions of the components in your setup."
+            },
+            {
+              "doc_id": 2,
+              "input_media": [
+                "images/9899466_979.jpg"
+              ],
+              "prediction": "To assemble a chair using a Franka robot with an end-effector control, we need to consider the specific parts of the chair and their assembly sequence. However, since the image provided does not show any chair parts or the assembly process, I will assume a generic scenario where the robot is picking up and placing a part of a chair.\n\nHere are 10 key trajectory points for assembling a chair:\n\n1. [[50, 100], [50, 150]] - Pick up the seat cushion.\n2. [[100, 150], [100, 200]] - Place the seat cushion on the chair frame.\n3. [[150, 200], [150, 250]] - Pick up the backrest.\n4. [[200, 250], [200, 300]] - Place the backrest on the chair frame.\n5. [[250, 300], [250, 350]] - Pick up the armrest.\n6. [[300, 350], [300, 400]] - Place the armrest on the chair frame.\n7. [[350, 400], [350, 450]] - Pick up the other armrest.\n8. [[400, 450], [400, 500]] - Place the other armrest on the chair frame.\n9. [[450, 500], [450, 550]] - Pick up the leg.\n10. [[500, 550], [500, 600]] - Place the leg on the chair frame.\n\nThese points are hypothetical and would need to be adjusted based on the actual chair design and the specific parts involved in the assembly process."
+            },
+            {
+              "doc_id": 4,
+              "input_media": [
+                "images/5933_frame_0.png"
+              ],
+              "prediction": "To move towards the banana on the tray, we need to follow these steps:\n\n1. Identify the starting position of the robot.\n2. Determine the direction and distance to the banana.\n3. Move in small increments towards the banana.\n\nAssuming the robot's current position is at the bottom left corner of the image (coordinates: [0, 0]), here are the predicted trajectory points:\n\n```python\n[[0, 0], [50, 0], [100, 0], [150, 0], [200, 0], [250, 0], [300, 0], [350, 0], [400, 0], [450, 0]]\n```\n\nThese points represent the robot moving horizontally from left to right until it reaches the banana. Adjust the coordinates based on the actual starting position and the exact location of the banana in the image."
+            },
+            {
+              "doc_id": 6,
+              "input_media": [
+                "images/1712_frame_0.png"
+              ],
+              "prediction": "To predict the trajectory for reaching the fork, we need to consider the current position of the robot's end-effector (the part that interacts with objects) and the position of the fork. Here's a simplified prediction of 10 key trajectory points:\n\n1. [[350, 460], [350, 450]]\n2. [[350, 450], [350, 440]]\n3. [[350, 440], [350, 430]]\n4. [[350, 430], [350, 420]]\n5. [[350, 420], [350, 410]]\n6. [[350, 410], [350, 400]]\n7. [[350, 400], [350, 390]]\n8. [[350, 390], [350, 380]]\n9. [[350, 380], [350, 370]]\n10. [[350, 370], [350, 360]]\n\nThese points assume a linear path from the current position of the robot's end-effector to the fork. In practice, the actual trajectory would depend on the specific design of the robot and its joints, as well as any obstacles in the environment."
+            },
+            {
+              "doc_id": 1,
+              "input_media": [
+                "images/3516_frame_15.png"
+              ],
+              "prediction": "To drag the cloth to the left side of the table, we need to follow these steps:\n\n1. Identify the current position of the cloth.\n2. Determine the target position for the cloth on the left side of the table.\n3. Move the cloth in small increments towards the target position.\n\nHere's a list of key trajectory points to achieve this:\n\n```python\n[\n    [250, 260],  # Starting point of the cloth\n    [240, 260],  # Moving slightly left\n    [230, 260],  # Moving further left\n    [220, 260],  # Moving even further left\n    [210, 260],  # Moving closer to the left edge\n    [200, 260],  # Moving very close to the left edge\n    [190, 260],  # Final position before stopping\n    [180, 260]   # Final position after stopping\n]\n```\n\nThis list assumes that the cloth can be moved in small increments (e.g., 10 pixels at a time) and that it will stop once it reaches the left edge of the table. Adjust the coordinates based on the actual size of the cloth and the resolution of the display."
+            },
+            {
+              "doc_id": 3,
+              "input_media": [
+                "images/8287263_0290.jpg"
+              ],
+              "prediction": "To pick the wooden cylinder from the image, we need to follow these steps:\n\n1. **Identify the Cylinder**: First, locate the wooden cylinder in the image.\n2. **Move to the Cylinder**: Move the robot's arm towards the cylinder.\n3. **Grasp the Cylinder**: Once the cylinder is within reach, grasp it.\n4. **Lift the Cylinder**: Lift the cylinder off the surface.\n\nGiven the image, here are the predicted key trajectory points for the Franka robot to pick the wooden cylinder:\n\n```python\n[\n    [150, 100],  # Start position\n    [200, 100],  # Move slightly forward\n    [250, 100],  # Move further forward\n    [300, 100],  # Move closer to the cylinder\n    [300, 150],  # Grasp the cylinder\n    [300, 200],  # Lift the cylinder slightly\n    [300, 250],  # Continue lifting\n    [300, 300],  # Fully lift the cylinder\n    [300, 350],  # Move away from the cylinder\n    [300, 400]   # Final position after picking\n]\n```\n\nThis list assumes that the robot starts at a position `[150, 100]` and moves incrementally towards the cylinder, then grasps it and lifts it. Adjust the coordinates based on the actual position of the cylinder in the environment."
+            },
+            {
+              "doc_id": 5,
+              "input_media": [
+                "images/1005_frame_0.png"
+              ],
+              "prediction": "To move towards the blue spoon, you can follow these key trajectory points:\n\n1. Start at your current position.\n2. Move slightly upwards and to the right.\n3. Continue moving to the right until you are directly above the blue spoon.\n4. Move slightly downwards to align with the blue spoon.\n\nHere's the list of tuples representing these points:\n\n```python\n[[current_x, current_y], [current_x + 5, current_y + 5], [current_x + 10, current_y + 5], [current_x + 10, current_y]]\n```\n\nNote: Replace `current_x` and `current_y` with the actual coordinates of your starting position."
+            },
+            {
+              "doc_id": 7,
+              "input_media": [
+                "images/3539090_0020.jpg"
+              ],
+              "prediction": "To pick the bin, we need to follow these steps:\n\n1. Move towards the bin.\n2. Grasp the bin.\n3. Lift the bin.\n\nHere are the predicted key trajectory points for the Franka robot to complete the task:\n\n1. [[100, 150], [150, 200]] - Move towards the bin.\n2. [[150, 200], [180, 220]] - Move closer to the bin.\n3. [[180, 220], [200, 240]] - Grasp the bin.\n4. [[200, 240], [220, 260]] - Lift the bin slightly.\n5. [[220, 260], [240, 280]] - Continue lifting the bin.\n6. [[240, 280], [260, 300]] - Fully lift the bin.\n7. [[260, 300], [280, 320]] - Move away from the bin.\n8. [[280, 320], [300, 340]] - Move further away from the bin.\n9. [[300, 340], [320, 360]] - Move away from the bin.\n10. [[320, 360], [340, 380]] - Move away from the bin.\n\nThese points assume that the robot starts at a position far from the bin and needs to move in a straight line to reach it. Adjustments may be necessary based on the actual starting position and the robot's current orientation."
+            }
+          ]
+        }
+      },
+      "scope": "Eight samples per task, not a full benchmark run. Model quality is separate from validation success."
+    }
+  ]
 }

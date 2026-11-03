@@ -110,3 +110,84 @@ def test_overflowing_prediction_uses_origin_fallback(media: Path) -> None:
     result = utils.trajectory_process_results(sample(True), ["[[" + "9" * 400 + ", 1]]"])
     assert result["parse_valid_rate"] == 0
     assert np.isfinite(result["average_discrete_frechet_distance"])
+
+
+@pytest.mark.parametrize(
+    "box,iou,giou,pair",
+    [
+        ("[0,0,20,20]", 1, 1, (400, 400)),
+        ("[0,0,10,20]", 0.5, 0.5, (200, 400)),
+        ("[10,10,30,30]", 1 / 7, 1 / 7 - 2 / 9, (100, 700)),
+        ("[20,0,40,20]", 0, 0, (0, 800)),
+        ("[40,0,60,20]", 0, -1 / 3, (0, 800)),
+    ],
+)
+def test_explicit_overlap_geometry(box: str, iou: float, giou: float, pair: tuple[float, float]) -> None:
+    scores = utils.affordance_process_results(sample(), [box])
+    assert scores["mean_iou"] == pytest.approx(iou)
+    assert scores["mean_generalized_iou"] == pytest.approx(giou)
+    assert scores["cumulative_iou"] == pytest.approx(pair)
+    assert scores["precision_at_0_5"] == float(iou >= 0.5)
+    assert scores["mean_generalized_iou"] <= scores["mean_iou"]
+
+
+@pytest.mark.parametrize("answers", [[], [""], ["bad"], ["[1,2]"], ["[0,0,1e309,2]"], ["[4,4,1,1]"], ["[0,0,0,20]"], ["[0,0,1e200,1e200]"]])
+def test_explicit_metrics_count_failures(answers: list[str]) -> None:
+    with np.errstate(over="ignore", invalid="ignore"):
+        scores = utils.affordance_process_results(sample(), answers)
+    assert scores["mean_iou"] == scores["mean_generalized_iou"] == scores["precision_at_0_5"] == 0
+    assert scores["cumulative_iou"] == (0, 400)
+
+
+def test_explicit_aggregation_and_invalid_denominators() -> None:
+    values = [(10.0, 10.0), (0.0, 90.0)]
+    assert np.mean([i / u for i, u in values]) == 0.5
+    assert utils.share_robot_cumulative_iou(values) == pytest.approx(0.1)
+    # Gather worker payloads before taking the ratio, rather than averaging worker ratios.
+    workers = [values[:1], values[1:]]
+    assert utils.share_robot_cumulative_iou([pair for worker in workers for pair in worker]) == pytest.approx(0.1)
+    assert utils.share_robot_cumulative_iou([]) == 0
+    assert utils.share_robot_cumulative_iou([(1e308, 1e308)] * 2) == 1
+    results = [utils.affordance_process_results(sample(), [answer]) for answer in ("[0,0,20,20]", "bad")]
+    assert utils.share_robot_valid_mean([r["average_iou"] for r in results]) == 1
+    assert np.mean([r["mean_iou"] for r in results]) == 0.5
+    assert np.mean([r["precision_at_0_5"] for r in results]) == 0.5
+    assert utils.share_robot_cumulative_iou([r["cumulative_iou"] for r in results]) == 0.5
+
+
+@pytest.mark.parametrize("target", ["bad", "[0,0,0,2]", "[4,4,1,1]", "[0,0,1e309,2]", "[0,0,1e200,1e200]"])
+def test_explicit_invalid_ground_truth(target: str) -> None:
+    doc = sample()
+    doc["conversations"][1]["value"] = target
+    with pytest.raises(ValueError):
+        utils.affordance_process_results(doc, ["[0,0,20,20]"])
+
+
+@pytest.mark.parametrize("limits", [(200704, 1605632), (50176, 200704)])
+@pytest.mark.parametrize("profile", ["qwen2_5_vl_chat", "qwen2_5_vl_simple"])
+@pytest.mark.parametrize("size", [(300, 400), (399, 266), (1920, 1080), (28, 280), (448, 448)])
+def test_qwen_dimensions_match_real_processor(profile: str, size: tuple[int, int], limits: tuple[int, int]) -> None:
+    from qwen_vl_utils.vision_process import fetch_image
+    from transformers.models.qwen2_vl.image_processing_qwen2_vl import Qwen2VLImageProcessor
+
+    min_pixels, max_pixels = limits
+    settings = {} if profile.endswith("chat") else {"min_pixels": min_pixels, "max_pixels": max_pixels}
+    intermediate = fetch_image({"image": Image.new("RGB", size), **settings})
+    processor = Qwen2VLImageProcessor(size={"shortest_edge": min_pixels, "longest_edge": max_pixels})
+    inputs = processor(images=[intermediate], return_tensors="pt")
+    _, h, w = inputs["image_grid_thw"][0].tolist()
+    assert utils._qwen_input_size(*size, profile, min_pixels, max_pixels) == (w * processor.patch_size, h * processor.patch_size)
+
+
+def test_coordinate_scoring_preserves_raw_answer(media: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(utils, "_qwen_input_size", lambda *args: (200, 400))
+    answer = ["[0,0,40,40]"]
+    kwargs = {"share_robot_coordinate_profile": "qwen2_5_vl_chat"}
+    assert utils.affordance_process_results(sample(), answer, generation_kwargs=kwargs)["mean_iou"] == 1
+    assert utils.affordance_process_results(sample(), answer)["mean_iou"] == 0.25
+    assert answer == ["[0,0,40,40]"]
+    assert utils.affordance_process_results(sample(), ["bad"], generation_kwargs=kwargs)["valid_items"] == 0
+    with pytest.raises(ValueError, match="profile"):
+        utils.affordance_process_results(sample(), answer, generation_kwargs={"share_robot_coordinate_profile": "unknown"})
+    with pytest.raises(ValueError, match="limits"):
+        utils.affordance_process_results(sample(), answer, generation_kwargs={**kwargs, "share_robot_min_pixels": -1})

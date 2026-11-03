@@ -1,4 +1,4 @@
-"""ShareRobot-Bench adapters and metrics compatible with FlagEvalMM PR #84."""
+"""ShareRobot-Bench adapters, reference metrics, and explicit overlap metrics."""
 
 import ast
 import re
@@ -84,16 +84,86 @@ def _iou(a: np.ndarray, b: np.ndarray) -> float:
     return intersection / union if union > 0 else 0.0
 
 
-def affordance_process_results(doc: dict[str, Any], results: list[str]) -> dict[str, Any]:
+def _overlap_scores(prediction: str, gt: np.ndarray) -> dict[str, Any]:
+    """Compute all-example overlap scores; invalid predictions are failures."""
+    with np.errstate(over="ignore", invalid="ignore"):
+        gt_area = float(np.prod(gt[2:] - gt[:2]))
+        if not np.isfinite(gt_area) or gt_area <= 0:
+            raise ValueError("Ground-truth box must have finite positive area")
+        scores = {"mean_iou": 0.0, "cumulative_iou": (0.0, gt_area), "mean_generalized_iou": 0.0, "precision_at_0_5": 0.0}
+        try:
+            pred = _box(prediction)
+            if np.any(pred[2:] <= pred[:2]):
+                return scores
+            intersection = float(np.prod(np.maximum(0, np.minimum(pred[2:], gt[2:]) - np.maximum(pred[:2], gt[:2]))))
+            union = float(np.prod(pred[2:] - pred[:2]) + gt_area - intersection)
+            enclosing = float(np.prod(np.maximum(pred[2:], gt[2:]) - np.minimum(pred[:2], gt[:2])))
+            if not np.isfinite([intersection, union, enclosing]).all() or union <= 0 or enclosing <= 0:
+                return scores
+            iou = intersection / union
+            return {"mean_iou": iou, "cumulative_iou": (intersection, union), "mean_generalized_iou": iou - (enclosing - union) / enclosing, "precision_at_0_5": float(iou >= 0.5)}
+        except (ValueError, SyntaxError, TypeError, OverflowError):
+            return scores
+
+
+def share_robot_cumulative_iou(values: list[tuple[float, float]]) -> float:
+    """Pool intersection/union pairs from every worker before dividing."""
+    if not values:
+        return 0.0
+    # Scaling preserves the ratio while avoiding overflow when summing large areas.
+    scale = max(union for _, union in values)
+    if scale <= 0:
+        return 0.0
+    return float(sum(intersection / scale for intersection, _ in values) / sum(union / scale for _, union in values))
+
+
+@lru_cache(maxsize=512)
+def _qwen_input_size(width: int, height: int, profile: str, min_pixels: int, max_pixels: int) -> tuple[int, int]:
+    """Reproduce both resize stages; return final width and height in pixels."""
+    from qwen_vl_utils.vision_process import smart_resize as vision_resize
+    from transformers.models.qwen2_vl.image_processing_qwen2_vl import smart_resize as processor_resize
+
+    initial_kwargs = {} if profile == "qwen2_5_vl_chat" else {"min_pixels": min_pixels, "max_pixels": max_pixels}
+    height, width = vision_resize(height, width, factor=28, **initial_kwargs)
+    height, width = processor_resize(height, width, factor=28, min_pixels=min_pixels, max_pixels=max_pixels)
+    return width, height
+
+
+def _affordance_prediction(doc: dict[str, Any], prediction: Any, generation_kwargs: dict[str, Any]) -> Any:
+    """Convert a Qwen box for scoring while preserving the logged raw response."""
+    profile = generation_kwargs.get("share_robot_coordinate_profile")
+    if profile is None:
+        return prediction
+    if profile not in ("qwen2_5_vl_chat", "qwen2_5_vl_simple"):
+        raise ValueError(f"Unsupported ShareRobot coordinate profile: {profile}")
+    min_pixels = generation_kwargs.get("share_robot_min_pixels", 200704)
+    max_pixels = generation_kwargs.get("share_robot_max_pixels", 1605632)
+    if not isinstance(min_pixels, int) or not isinstance(max_pixels, int) or not 0 < min_pixels <= max_pixels:
+        raise ValueError("ShareRobot pixel limits must be positive integers with min <= max")
+    try:
+        box = _box(prediction)
+    except (ValueError, SyntaxError, TypeError, OverflowError):
+        return prediction
+    with Image.open(_image_path(doc)) as image:
+        width, height = image.size
+    resized_width, resized_height = _qwen_input_size(width, height, profile, min_pixels, max_pixels)
+    with np.errstate(over="ignore", invalid="ignore"):
+        return box * np.array([width / resized_width, height / resized_height] * 2)
+
+
+def affordance_process_results(doc: dict[str, Any], results: list[str], *, generation_kwargs: dict[str, Any] | None = None) -> dict[str, Any]:
     """Score boxes on the reference valid-answer denominator and expose validity."""
     gt = _box(share_robot_doc_to_target(doc))
     if np.any(gt[2:] <= gt[:2]):
         raise ValueError("Ground-truth box must have positive area")
+    prediction = _affordance_prediction(doc, results[0] if results else "", generation_kwargs or {})
+    overlap = _overlap_scores(prediction, gt)
     try:
-        value = _iou(_box(results[0] if results else ""), gt)
+        value = _iou(_box(prediction), gt)
     except (ValueError, SyntaxError, TypeError, OverflowError):
         value = None
     return {
+        **overlap,
         "average_iou": value,
         "average_precision": value,
         "iou_at_0_5": None if value is None else float(value >= 0.5),

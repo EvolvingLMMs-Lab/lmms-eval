@@ -6,6 +6,18 @@ dataset_kwargs:
     test: https://huggingface.co/datasets/BAAI/ShareRobot-Bench/resolve/main/affordance/test.json
 process_results: !function utils.affordance_process_results
 metric_list:
+  - metric: mean_iou
+    aggregation: mean
+    higher_is_better: true
+  - metric: cumulative_iou
+    aggregation: !function utils.share_robot_cumulative_iou
+    higher_is_better: true
+  - metric: mean_generalized_iou
+    aggregation: mean
+    higher_is_better: true
+  - metric: precision_at_0_5
+    aggregation: mean
+    higher_is_better: true
   - metric: average_iou
     aggregation: !function utils.share_robot_valid_mean
     higher_is_better: true
@@ -31,6 +43,15 @@ generation_kwargs:
   max_new_tokens: 256
   do_sample: false
   temperature: 0
+model_specific_generation_kwargs:
+  qwen2_5_vl:
+    share_robot_coordinate_profile: qwen2_5_vl_chat
+    share_robot_min_pixels: 200704
+    share_robot_max_pixels: 1605632
+  qwen2_5_vl_chat:
+    share_robot_coordinate_profile: qwen2_5_vl_chat
+    share_robot_min_pixels: 200704
+    share_robot_max_pixels: 1605632
 metadata:
-  version: 0.1
+  version: 0.4
   reference_commit: 24655d281c9d082592942cd18168cca5d0951fdb
