@@ -1,0 +1,593 @@
+{
+  "status": "PASS",
+  "recorded_at_utc": "2026-11-03T02:28:08.767752+00:00",
+  "job_id": "pt-ur6wl06h",
+  "command": "/mnt/umm/users/qianjianheng/.local/bin/uv run --no-sync accelerate launch --multi_gpu --num_processes 2 --num_machines 1 --mixed_precision no --dynamo_backend no /mnt/umm/users/qianjianheng/workspace/lmms-eval/.venv/bin/lmms-eval eval --model qwen2_5_vl --model_args pretrained=/mnt/umm/shared_model/Qwen2.5-VL-7B-Instruct,attn_implementation=sdpa --tasks share_robot --limit 8 --batch_size 1 --log_samples --output_path /mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-03/102125-sharerobot-pr-cli-evidence-2gpu/results --verbosity WARNING",
+  "runtime_sha256": {
+    "lmms_eval/tasks/share_robot/README.md": "64a674364214ede441f63e664127546d499b70af453c123784c8d5eee1be9bd4",
+    "lmms_eval/tasks/share_robot/__init__.py": "27dca5981f6546726a46499c535b72634016ee8a154b39b70b6e63350d5d3fce",
+    "lmms_eval/tasks/share_robot/_default_template_yaml": "6740a4c0cbd4eff873a04e1762ff2acd44d357a549958e31959aecb55d99f7e9",
+    "lmms_eval/tasks/share_robot/share_robot.yaml": "34817ccbf16fd67c5f5fd86540df31db6e24b22d6905b4414bb2bfd4df5afb27",
+    "lmms_eval/tasks/share_robot/share_robot_affordance.yaml": "591bf79f798e000aee7d55b115d6d0ec5dafd574ad1fed14d960d27a2cfc0343",
+    "lmms_eval/tasks/share_robot/share_robot_trajectory.yaml": "5829de437fb86d5e2995cc1fe7ca976d4cb35efe3884c7ef8079111794f6391c",
+    "lmms_eval/tasks/share_robot/utils.py": "eb69f02df405aa1aa0055000c89af861a18f381ad77c1ea9a9ea019d4dfec262",
+    "lmms_eval/api/task.py": "9a6971d081d22191ae24b20f9b4b51cf85ec63d51d0edccff201a5fa6724976d",
+    "lmms_eval/models/simple/qwen2_5_vl.py": "19f8159c3cfe4b52f6f0a8238ae83a505c62d0164e3046e23151674fb92b29e3",
+    "lmms_eval/models/chat/qwen2_5_vl.py": "7413abd7b6e0aa108cbba545e3f7cd00de97dad500d602cdfba1ec64e8abd1f0"
+  },
+  "setup": {
+    "environment": "uv-managed Python 3.11 environment; uv run --no-sync; shared local checkpoint Qwen/Qwen2.5-VL-7B-Instruct; original task configurations with no prompt or annotation-path overrides",
+    "hardware": {
+      "passed": true,
+      "torch": "2.13.0+cu130",
+      "cuda": "13.0",
+      "python": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.venv/bin/python",
+      "gpus": [
+        "NVIDIA H800",
+        "NVIDIA H800"
+      ]
+    },
+    "versions": {
+      "torch": "2.13.0",
+      "torchvision": "0.28.0",
+      "transformers": "5.17.0",
+      "accelerate": "1.15.0",
+      "datasets": "5.0.1",
+      "huggingface-hub": "1.32.0",
+      "lmms_eval": "0.7.4"
+    },
+    "launcher_environment": {
+      "UV_PROJECT_ENVIRONMENT": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.venv",
+      "UV_CACHE_DIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-03/102125-sharerobot-pr-cli-evidence-2gpu/cache/uv",
+      "UV_OFFLINE": "1",
+      "HF_HOME": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-03/102125-sharerobot-pr-cli-evidence-2gpu/cache/huggingface",
+      "HF_TOKEN_PATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-03/102125-sharerobot-pr-cli-evidence-2gpu/cache/huggingface/token",
+      "TRITON_CACHE_DIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-03/102125-sharerobot-pr-cli-evidence-2gpu/cache/triton",
+      "TORCHINDUCTOR_CACHE_DIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-03/102125-sharerobot-pr-cli-evidence-2gpu/cache/inductor",
+      "TORCH_HOME": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-03/102125-sharerobot-pr-cli-evidence-2gpu/cache/torch",
+      "CUDA_CACHE_PATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-03/102125-sharerobot-pr-cli-evidence-2gpu/cache/cuda",
+      "PYTORCH_KERNEL_CACHE_PATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-03/102125-sharerobot-pr-cli-evidence-2gpu/cache/kernels",
+      "XDG_CACHE_HOME": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-03/102125-sharerobot-pr-cli-evidence-2gpu/cache/xdg",
+      "MPLCONFIGDIR": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-03/102125-sharerobot-pr-cli-evidence-2gpu/cache/matplotlib",
+      "HF_HUB_CACHE": "/mnt/umm/shared_model/huggingface/hub",
+      "HF_DATASETS_CACHE": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-03/102125-sharerobot-pr-cli-evidence-2gpu/cache/datasets",
+      "HF_HUB_OFFLINE": "0",
+      "HF_DATASETS_OFFLINE": "0",
+      "HF_HUB_DISABLE_XET": "1",
+      "PYTHONPATH": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-03/102125-sharerobot-pr-cli-evidence-2gpu/source",
+      "PYTHONUNBUFFERED": "1",
+      "LMMS_RUN_DIRECTORY": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-03/102125-sharerobot-pr-cli-evidence-2gpu",
+      "LMMS_EXPECTED_GPUS": "2"
+    },
+    "private_proxy_setup": "Configured proxy loaded from a private JSON file after selecting its owner UID/GID; no credential values are stored here. This wrapper only sets environment and execs the public CLI.",
+    "proxy_wrapper_source": "import json,os,sys\nif os.geteuid()==0:\n os.setgroups([]);os.setgid(int(sys.argv[3]));os.setuid(int(sys.argv[2]))\nwith open(sys.argv[1]) as f:settings=json.load(f)\nos.environ.update(settings)\nos.execvpe(sys.argv[4],sys.argv[4:],os.environ)\n"
+  },
+  "dataset": {
+    "repo": "BAAI/ShareRobot-Bench",
+    "revision": "68e9c15600f85f601b9cf492e4d994b50ed4cd4d",
+    "split": "test",
+    "available_per_task": 200,
+    "evaluated_per_task": 8
+  },
+  "validation": {
+    "focused_tests": "66 passed",
+    "pre_commit_all_files": "PASS",
+    "pre_commit_changed_and_new_files": "PASS",
+    "git_diff_check": "PASS",
+    "pr_evidence_validator": "34 regression tests passed; PR body passed validateEvidence"
+  },
+  "tasks": {
+    "share_robot_affordance": {
+      "sample_count": 8,
+      "metrics": {
+        "alias": " - share_robot_affordance",
+        "mean_iou,none": 0.23484987942927996,
+        "mean_iou_stderr,none": 0.0819299509105853,
+        "mean_iou_stderr_clt,none": 0.0819299509105853,
+        "mean_iou_stderr_clustered,none": "N/A",
+        "cumulative_iou,none": 0.10018079299140713,
+        "cumulative_iou_stderr,none": "N/A",
+        "cumulative_iou_stderr_clt,none": "N/A",
+        "cumulative_iou_stderr_clustered,none": "N/A",
+        "mean_generalized_iou,none": 0.11634953489913134,
+        "mean_generalized_iou_stderr,none": 0.14447715306185027,
+        "mean_generalized_iou_stderr_clt,none": 0.14447715306185027,
+        "mean_generalized_iou_stderr_clustered,none": "N/A",
+        "precision_at_0_5,none": 0.25,
+        "precision_at_0_5_stderr,none": 0.16366341767699427,
+        "precision_at_0_5_stderr_clt,none": 0.16366341767699427,
+        "precision_at_0_5_stderr_clustered,none": "N/A",
+        "average_iou,none": 0.23484987942927996,
+        "average_iou_stderr,none": "N/A",
+        "average_iou_stderr_clt,none": 0.0819299509105853,
+        "average_iou_stderr_clustered,none": "N/A",
+        "average_precision,none": 0.23484987942927996,
+        "average_precision_stderr,none": "N/A",
+        "average_precision_stderr_clt,none": 0.0819299509105853,
+        "average_precision_stderr_clustered,none": "N/A",
+        "iou_at_0_5,none": 0.25,
+        "iou_at_0_5_stderr,none": "N/A",
+        "iou_at_0_5_stderr_clt,none": 0.16366341767699427,
+        "iou_at_0_5_stderr_clustered,none": "N/A",
+        "iou_at_0_75,none": 0.0,
+        "iou_at_0_75_stderr,none": "N/A",
+        "iou_at_0_75_stderr_clt,none": 0.0,
+        "iou_at_0_75_stderr_clustered,none": "N/A",
+        "iou_at_0_9,none": 0.0,
+        "iou_at_0_9_stderr,none": "N/A",
+        "iou_at_0_9_stderr_clt,none": 0.0,
+        "iou_at_0_9_stderr_clustered,none": "N/A",
+        "valid_items,none": 8,
+        "valid_items_stderr,none": "N/A",
+        "valid_items_stderr_clt,none": 0.0,
+        "valid_items_stderr_clustered,none": "N/A",
+        "valid_rate,none": 1.0,
+        "valid_rate_stderr,none": 0.0,
+        "valid_rate_stderr_clt,none": 0.0,
+        "valid_rate_stderr_clustered,none": "N/A"
+      },
+      "samples": [
+        {
+          "doc_id": 0,
+          "prediction": "[230, 346, 257, 372]",
+          "target": "[161, 256, 183, 281]",
+          "input_media": [
+            "images/1982_testset_0000394.jpg"
+          ]
+        },
+        {
+          "doc_id": 2,
+          "prediction": "[509, 191, 560, 283]",
+          "target": "[512, 196, 560, 252]",
+          "input_media": [
+            "images/6498_thu_cut_fruit_RGB_cut_fruit_cwx_2_22.jpg"
+          ]
+        },
+        {
+          "doc_id": 4,
+          "prediction": "[667, 425, 938, 630]",
+          "target": "[813, 442, 930, 558]",
+          "input_media": [
+            "images/2420_ego4d_7aca7552-56d2-4ac0-be30-aed9c5dfc8ea_9000.jpg"
+          ]
+        },
+        {
+          "doc_id": 6,
+          "prediction": "[354, 167, 410, 280]",
+          "target": "[224, 293, 277, 356]",
+          "input_media": [
+            "images/6738_cup_002554.jpg"
+          ]
+        },
+        {
+          "doc_id": 1,
+          "prediction": "[350, 218, 467, 290]",
+          "target": "[456, 231, 510, 277]",
+          "input_media": [
+            "images/1091_motorcycle_000923.jpg"
+          ]
+        },
+        {
+          "doc_id": 3,
+          "prediction": "[576, 248, 1287, 1091]",
+          "target": "[817, 270, 1095, 436]",
+          "input_media": [
+            "images/24_6.png"
+          ]
+        },
+        {
+          "doc_id": 5,
+          "prediction": "[147, 168, 580, 283]",
+          "target": "[321, 169, 508, 224]",
+          "input_media": [
+            "images/1045_bench_002635.jpg"
+          ]
+        },
+        {
+          "doc_id": 7,
+          "prediction": "[167, 125, 245, 149]",
+          "target": "[117, 113, 227, 192]",
+          "input_media": [
+            "images/5909_bicycle_001556.jpg"
+          ]
+        }
+      ]
+    },
+    "share_robot_trajectory": {
+      "sample_count": 8,
+      "metrics": {
+        "alias": " - share_robot_trajectory",
+        "average_discrete_frechet_distance,none": 0.5984775528443461,
+        "average_discrete_frechet_distance_stderr,none": 0.08048380451461531,
+        "average_discrete_frechet_distance_stderr_clt,none": 0.08048380451461531,
+        "average_discrete_frechet_distance_stderr_clustered,none": "N/A",
+        "average_hausdorff_distance,none": 0.5448632029944733,
+        "average_hausdorff_distance_stderr,none": 0.0929223847831544,
+        "average_hausdorff_distance_stderr_clt,none": 0.0929223847831544,
+        "average_hausdorff_distance_stderr_clustered,none": "N/A",
+        "average_root_mean_square_error,none": 0.43306313964627396,
+        "average_root_mean_square_error_stderr,none": 0.08217120383198301,
+        "average_root_mean_square_error_stderr_clt,none": 0.08217120383198301,
+        "average_root_mean_square_error_stderr_clustered,none": "N/A",
+        "parse_valid_items,none": 7,
+        "parse_valid_items_stderr,none": "N/A",
+        "parse_valid_items_stderr_clt,none": 0.125,
+        "parse_valid_items_stderr_clustered,none": "N/A",
+        "parse_valid_rate,none": 0.875,
+        "parse_valid_rate_stderr,none": 0.125,
+        "parse_valid_rate_stderr_clt,none": 0.125,
+        "parse_valid_rate_stderr_clustered,none": "N/A"
+      },
+      "samples": [
+        {
+          "doc_id": 0,
+          "prediction": "To assemble \"one_leg\" using the Franka robot's end effector control, we need to follow a series of precise movements. Here are 10 key trajectory points that can guide the robot through the assembly process:\n\n1. [[50, 100], [70, 120]] - Move to the first component of \"one_leg\".\n2. [[80, 140], [90, 160]] - Move to the second component.\n3. [[100, 180], [110, 200]] - Move to the third component.\n4. [[120, 220], [130, 240]] - Move to the fourth component.\n5. [[140, 260], [150, 280]] - Move to the fifth component.\n6. [[160, 300], [170, 320]] - Move to the sixth component.\n7. [[180, 340], [190, 360]] - Move to the seventh component.\n8. [[200, 380], [210, 400]] - Move to the eighth component.\n9. [[220, 420], [230, 440]] - Move to the ninth component.\n10. [[240, 460], [250, 480]] - Move to the tenth component.\n\nThese points assume that the components are laid out in a specific order on the table. Adjust the coordinates based on the actual positions of the components in your setup.",
+          "target": "[(170, 47), (176, 77), (180, 84), (183, 90), (172, 84)]",
+          "input_media": [
+            "images/12329935_167.jpg"
+          ]
+        },
+        {
+          "doc_id": 2,
+          "prediction": "To assemble a chair using a Franka robot with an end-effector control, we need to consider the specific parts of the chair and their assembly sequence. However, since the image provided does not show any chair parts or the assembly process, I will assume a generic scenario where the robot is picking up and placing a part of a chair.\n\nHere are 10 key trajectory points for assembling a chair:\n\n1. [[50, 100], [70, 120]] - Pick up the seat cushion.\n2. [[80, 140], [60, 160]] - Place the seat cushion on the chair frame.\n3. [[90, 180], [70, 200]] - Pick up the backrest.\n4. [[80, 220], [60, 240]] - Attach the backrest to the chair frame.\n5. [[50, 260], [70, 280]] - Pick up the armrest.\n6. [[80, 300], [60, 320]] - Attach the armrest to the chair frame.\n7. [[90, 340], [70, 360]] - Pick up another armrest.\n8. [[80, 380], [60, 400]] - Attach the second armrest to the chair frame.\n9. [[50, 420], [70, 440]] - Pick up the leg.\n10. [[80, 460], [60, 480]] - Attach the leg to the chair frame.\n\nThese points are hypothetical and would need to be adjusted based on the actual chair design and the specific parts involved in the assembly process.",
+          "target": "[(71, 92), (161, 32), (120, 45), (144, 36), (180, 43)]",
+          "input_media": [
+            "images/9899466_979.jpg"
+          ]
+        },
+        {
+          "doc_id": 4,
+          "prediction": "To move towards the banana on the tray, we need to follow these steps:\n\n1. Identify the starting position of the robot.\n2. Determine the direction and distance to the banana.\n3. Move in small increments towards the banana.\n\nAssuming the robot's current position is at the bottom left corner of the image (coordinates: [0, 0]), here are the predicted trajectory points:\n\n```python\n[[0, 0], [50, 0], [100, 0], [150, 0], [200, 0], [250, 0], [300, 0], [350, 0], [400, 0], [450, 0]]\n```\n\nThese points represent the robot moving horizontally from left to right until it reaches the banana. Adjust the coordinates based on the actual starting position and the exact location of the banana in the image.",
+          "target": "[(103, 109), (195, 116), (273, 126), (362, 143)]",
+          "input_media": [
+            "images/5933_frame_0.png"
+          ]
+        },
+        {
+          "doc_id": 6,
+          "prediction": "To predict the trajectory for reaching the fork, we need to consider the current position of the robot's end-effector (the part that interacts with objects) and the position of the fork. Here's a simplified prediction of the trajectory in 10 key points:\n\n1. [[350, 460], [350, 450]]\n2. [[350, 450], [350, 440]]\n3. [[350, 440], [350, 430]]\n4. [[350, 430], [350, 420]]\n5. [[350, 420], [350, 410]]\n6. [[350, 410], [350, 400]]\n7. [[350, 400], [350, 390]]\n8. [[350, 390], [350, 380]]\n9. [[350, 380], [350, 370]]\n10. [[350, 370], [350, 360]]\n\nThese points assume a linear path from the current position of the robot's end-effector to the fork. In practice, the actual trajectory would depend on the specific design of the robot and its joints, as well as any obstacles or constraints in the environment.",
+          "target": "[(282, 21), (273, 96), (273, 204), (280, 316)]",
+          "input_media": [
+            "images/1712_frame_0.png"
+          ]
+        },
+        {
+          "doc_id": 1,
+          "prediction": "To drag the cloth to the left side of the table, we need to follow these steps:\n\n1. Identify the current position of the cloth.\n2. Determine the target position for the cloth on the left side of the table.\n3. Move the cloth in small increments towards the target position.\n\nHere's a list of key trajectory points to achieve this:\n\n```python\npoints = [\n    [300, 265],  # Starting point of the cloth\n    [280, 265],  # Moving slightly left\n    [260, 265],  # Moving further left\n    [240, 265],  # Moving even further left\n    [220, 265],  # Moving closer to the left edge\n    [200, 265],  # Moving very close to the left edge\n    [180, 265],  # Final position before stopping\n    [180, 260],  # Slightly moving down to ensure it stays on the table\n    [180, 255],  # Further down\n    [180, 250],  # Final position\n]\n```\n\nThis list of points will guide the cloth from its starting position to the left side of the table. Adjust the coordinates based on the actual size and position of the cloth and the table.",
+          "target": "[(259, 274), (188, 296), (117, 299)]",
+          "input_media": [
+            "images/3516_frame_15.png"
+          ]
+        },
+        {
+          "doc_id": 3,
+          "prediction": "To pick the wooden cylinder from the image, we need to follow these steps:\n\n1. **Identify the Cylinder**: First, locate the wooden cylinder in the image.\n2. **Move to the Cylinder**: Move the robot's arm towards the cylinder.\n3. **Grasp the Cylinder**: Once the cylinder is within reach, grasp it.\n4. **Lift the Cylinder**: Lift the cylinder off the surface.\n\nGiven the image, here are the predicted key trajectory points for the Franka robot to pick the wooden cylinder:\n\n```python\n[\n    [150, 100],  # Start position\n    [200, 100],  # Move slightly forward\n    [250, 100],  # Move further forward\n    [300, 100],  # Move closer to the cylinder\n    [300, 150],  # Grasp the cylinder\n    [300, 200],  # Lift the cylinder slightly\n    [300, 250],  # Continue lifting\n    [300, 300],  # Fully lift the cylinder\n    [300, 350],  # Move away from the cylinder\n    [300, 400]   # Final position after picking\n]\n```\n\nThese points assume that the robot starts at a position `[150, 100]` and moves incrementally towards the cylinder, then grasps it and lifts it. Adjustments may be necessary based on the exact location and size of the cylinder in the image.",
+          "target": "[(181, 21), (179, 22), (181, 24), (181, 22), (181, 22)]",
+          "input_media": [
+            "images/8287263_0290.jpg"
+          ]
+        },
+        {
+          "doc_id": 5,
+          "prediction": "To move towards the blue spoon, you can follow these key trajectory points:\n\n1. Start at your current position.\n2. Move slightly upwards and to the right.\n3. Continue moving right until you are aligned with the wooden surface.\n4. Move slightly downwards to align with the blue spoon.\n5. Stop when you are close enough to interact with the blue spoon.\n\nHere's the list of tuples representing these points:\n\n```python\n[[current_x, current_y], [current_x + 10, current_y + 10], [current_x + 50, current_y], [current_x + 50, current_y - 10]]\n```\n\nNote: Replace `current_x` and `current_y` with the actual coordinates of your starting position.",
+          "target": "[(149, 156), (204, 132), (248, 166)]",
+          "input_media": [
+            "images/1005_frame_0.png"
+          ]
+        },
+        {
+          "doc_id": 7,
+          "prediction": "To pick the bin, we need to follow these steps:\n\n1. Move towards the bin.\n2. Grasp the bin.\n3. Lift the bin.\n\nHere are the predicted key trajectory points for the Franka robot to complete the task:\n\n```python\n[[250, 140], [250, 160], [250, 180], [250, 200], [250, 220], [250, 240], [250, 260], [250, 280], [250, 300], [250, 320]]\n```\n\nThese points represent the robot's arm moving from its initial position to the bin, grasping it, and then lifting it. Adjust the coordinates based on the actual position of the bin in your environment.",
+          "target": "[(302, 48), (320, 126), (314, 230), (320, 123), (325, 45)]",
+          "input_media": [
+            "images/3539090_0020.jpg"
+          ]
+        }
+      ]
+    }
+  },
+  "independent_verification": {
+    "passed": true,
+    "backend": "lmms_eval.models.chat.qwen2_5_vl.Qwen2_5_VL (chat)",
+    "metrics": {
+      "mean_iou": 0.23484987942927996,
+      "mean_generalized_iou": 0.11634953489913138,
+      "cumulative_iou": 0.10018079299140713,
+      "precision_at_0_5": 0.25
+    },
+    "samples": [
+      {
+        "doc_id": 0,
+        "raw_prediction": [
+          230,
+          346,
+          257,
+          372
+        ],
+        "original_size": [
+          300,
+          400
+        ],
+        "processor_size": [
+          420,
+          532
+        ],
+        "converted_prediction": [
+          164.28571428571428,
+          260.1503759398496,
+          183.57142857142858,
+          279.69924812030075
+        ],
+        "target": [
+          161,
+          256,
+          183,
+          281
+        ],
+        "intersection": 365.8431793770146,
+        "union": 561.1707841031152,
+        "iou": 0.6519284142023168,
+        "generalized_iou": 0.6464082847647991
+      },
+      {
+        "doc_id": 2,
+        "raw_prediction": [
+          509,
+          191,
+          560,
+          283
+        ],
+        "original_size": [
+          640,
+          480
+        ],
+        "processor_size": [
+          644,
+          476
+        ],
+        "converted_prediction": [
+          505.83850931677017,
+          192.60504201680672,
+          556.5217391304348,
+          285.3781512605042
+        ],
+        "target": [
+          512,
+          196,
+          560,
+          252
+        ],
+        "intersection": 2493.217391304346,
+        "union": 4896.823425022182,
+        "iou": 0.5091499478139856,
+        "generalized_iou": 0.4836945562437155
+      },
+      {
+        "doc_id": 4,
+        "raw_prediction": [
+          667,
+          425,
+          938,
+          630
+        ],
+        "original_size": [
+          1440,
+          1080
+        ],
+        "processor_size": [
+          1428,
+          1092
+        ],
+        "converted_prediction": [
+          672.6050420168067,
+          420.3296703296703,
+          945.8823529411765,
+          623.0769230769231
+        ],
+        "target": [
+          813,
+          442,
+          930,
+          558
+        ],
+        "intersection": 13572,
+        "union": 55406.224028072786,
+        "iou": 0.24495442954429536,
+        "generalized_iou": 0.24495442954429536
+      },
+      {
+        "doc_id": 6,
+        "raw_prediction": [
+          354,
+          167,
+          410,
+          280
+        ],
+        "original_size": [
+          640,
+          426
+        ],
+        "processor_size": [
+          644,
+          420
+        ],
+        "converted_prediction": [
+          351.80124223602485,
+          169.38571428571427,
+          407.45341614906835,
+          284.0
+        ],
+        "target": [
+          224,
+          293,
+          277,
+          356
+        ],
+        "intersection": 0,
+        "union": 9717.534161490687,
+        "iou": 0.0,
+        "generalized_iou": -0.7161522958288066
+      },
+      {
+        "doc_id": 1,
+        "raw_prediction": [
+          350,
+          218,
+          467,
+          290
+        ],
+        "original_size": [
+          640,
+          480
+        ],
+        "processor_size": [
+          644,
+          476
+        ],
+        "converted_prediction": [
+          347.82608695652175,
+          219.83193277310923,
+          464.0993788819876,
+          292.43697478991595
+        ],
+        "target": [
+          456,
+          231,
+          510,
+          277
+        ],
+        "intersection": 372.5714285714298,
+        "union": 10553.455817109452,
+        "iou": 0.03530326321804563,
+        "generalized_iou": -0.06841010401743952
+      },
+      {
+        "doc_id": 3,
+        "raw_prediction": [
+          576,
+          248,
+          1287,
+          1091
+        ],
+        "original_size": [
+          1262,
+          1124
+        ],
+        "processor_size": [
+          1260,
+          1120
+        ],
+        "converted_prediction": [
+          576.9142857142857,
+          248.88571428571427,
+          1289.0428571428572,
+          1094.8964285714285
+        ],
+        "target": [
+          817,
+          270,
+          1095,
+          436
+        ],
+        "intersection": 46148,
+        "union": 602468.401377551,
+        "iou": 0.07659820812922646,
+        "generalized_iou": 0.07659820812922646
+      },
+      {
+        "doc_id": 5,
+        "raw_prediction": [
+          147,
+          168,
+          580,
+          283
+        ],
+        "original_size": [
+          640,
+          426
+        ],
+        "processor_size": [
+          644,
+          420
+        ],
+        "converted_prediction": [
+          146.08695652173913,
+          170.4,
+          576.3975155279503,
+          287.04285714285714
+        ],
+        "target": [
+          321,
+          169,
+          508,
+          224
+        ],
+        "intersection": 10023.199999999999,
+        "union": 50454.45306122449,
+        "iou": 0.1986583818050161,
+        "generalized_iou": 0.19195232424968797
+      },
+      {
+        "doc_id": 7,
+        "raw_prediction": [
+          167,
+          125,
+          245,
+          149
+        ],
+        "original_size": [
+          640,
+          479
+        ],
+        "processor_size": [
+          644,
+          476
+        ],
+        "converted_prediction": [
+          165.96273291925465,
+          125.78781512605042,
+          243.47826086956522,
+          149.9390756302521
+        ],
+        "target": [
+          117,
+          113,
+          227,
+          192
+        ],
+        "intersection": 1474.1269377316141,
+        "union": 9087.970770917062,
+        "iou": 0.16220639072135362,
+        "generalized_iou": 0.07175087610757282
+      }
+    ]
+  },
+  "independent_helper_source": "\"\"\"Independent E2E verification using real processor grids and scalar geometry.\"\"\"\nimport ast,json,math,sys\nfrom pathlib import Path\nfrom PIL import Image\nfrom qwen_vl_utils.vision_process import fetch_image\nfrom transformers.models.qwen2_vl.image_processing_qwen2_vl import Qwen2VLImageProcessor\n\nr=Path(sys.argv[1]);result=json.loads(next((r/'results').rglob('*_results.json')).read_text());assert '(chat)' in result['config']['model_backend']\nsettings=result['configs']['share_robot_affordance']['generation_kwargs'];assert settings['share_robot_coordinate_profile']=='qwen2_5_vl_chat'\nprocessor=Qwen2VLImageProcessor(size={'shortest_edge':settings['share_robot_min_pixels'],'longest_edge':settings['share_robot_max_pixels']})\nbase=Path('/mnt/umm/shared_model/huggingface/hub/datasets--BAAI--ShareRobot-Bench/snapshots/68e9c15600f85f601b9cf492e4d994b50ed4cd4d/affordance')\nrows=[json.loads(line) for line in next((r/'results').rglob('*_samples_share_robot_affordance.jsonl')).read_text().splitlines()];checked=[]\nfor row in rows:\n raw=ast.literal_eval(row['filtered_resps']);gt=ast.literal_eval(row['target'])\n with Image.open(base/row['input_media'][0]) as im:\n  w,h=im.size;processed=processor(images=[fetch_image({'image':im.convert('RGB')})],return_tensors='pt')\n _,gh,gw=processed['image_grid_thw'][0].tolist();rw,rh=gw*processor.patch_size,gh*processor.patch_size\n box=[raw[0]*w/rw,raw[1]*h/rh,raw[2]*w/rw,raw[3]*h/rh]\n i=max(0,min(box[2],gt[2])-max(box[0],gt[0]))*max(0,min(box[3],gt[3])-max(box[1],gt[1]));u=(box[2]-box[0])*(box[3]-box[1])+(gt[2]-gt[0])*(gt[3]-gt[1])-i;c=(max(box[2],gt[2])-min(box[0],gt[0]))*(max(box[3],gt[3])-min(box[1],gt[1]));iou=i/u;giou=iou-(c-u)/c\n assert math.isclose(iou,row['mean_iou'],abs_tol=1e-12),(row['doc_id'],iou,row['mean_iou'])\n checked.append({'doc_id':row['doc_id'],'raw_prediction':raw,'original_size':[w,h],'processor_size':[rw,rh],'converted_prediction':box,'target':gt,'intersection':i,'union':u,'iou':iou,'generalized_iou':giou})\nscores={'mean_iou':sum(x['iou'] for x in checked)/len(checked),'mean_generalized_iou':sum(x['generalized_iou'] for x in checked)/len(checked),'cumulative_iou':sum(x['intersection'] for x in checked)/sum(x['union'] for x in checked),'precision_at_0_5':sum(x['iou']>=.5 for x in checked)/len(checked)}\nfor name,value in scores.items():assert math.isclose(value,result['results']['share_robot_affordance'][name+',none'],abs_tol=1e-12),name\nassert any(x['converted_prediction']!=x['raw_prediction'] for x in checked)\nreport={'passed':True,'backend':result['config']['model_backend'],'metrics':scores,'samples':checked};(r/'independent-coordinate-check.json').write_text(json.dumps(report,indent=2)+'\\n');print(json.dumps({'passed':True,'metrics':scores},indent=2))\n",
+  "previous_attempts": [
+    {
+      "job_id": "pt-x38hw4nj",
+      "scheduler_state": "SUCCEEDED",
+      "conversion_validated": false,
+      "reason": "Chat adapter bypassed the initial simple-adapter-only conversion."
+    },
+    {
+      "job_id": "pt-91y787xk",
+      "scheduler_state": "SUCCEEDED",
+      "conversion_validated": true,
+      "reason": "Validated -m lmms_eval launcher; repeated with public executable because PR metadata validator recognizes the executable form."
+    }
+  ],
+  "post_hoc_full_rescore": {
+    "source_job": "pt-zg2rskn5",
+    "sample_count": 200,
+    "kind": "Existing predictions rescored with actual CPU processor grids, not fresh full inference",
+    "metrics": {
+      "mean_iou": 0.2269969615333059,
+      "mean_generalized_iou": 0.07706361387589918,
+      "cumulative_iou": 0.19843544547365843,
+      "precision_at_0_5": 0.135
+    }
+  },
+  "attestation": "Fresh inference used the default chat adapter with no model-file changes. Task-local conversion was independently checked against actual processor grids and scalar box geometry. Logged predictions remain raw model outputs.",
+  "source_snapshot_reused_from": "/mnt/umm/users/qianjianheng/workspace/lmms-eval/.sco-workspace/runs/2026-11-03/095139-sharerobot-task-coordinate-hook-2gpu/source"
+}

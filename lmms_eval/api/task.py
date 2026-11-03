@@ -1595,6 +1595,12 @@ class ConfigurableTask(Task):
         if full_docs is not None:
             kwargs["full_docs"] = full_docs
         if callable(self.config.process_results):
+            try:
+                parameter = inspect.signature(self.config.process_results).parameters.get("generation_kwargs")
+            except (TypeError, ValueError):
+                parameter = None
+            if parameter is not None and parameter.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY):
+                kwargs["generation_kwargs"] = copy.deepcopy(self.config.generation_kwargs or {})
             return self.config.process_results(doc, results, **kwargs)
 
         result_dict = {}

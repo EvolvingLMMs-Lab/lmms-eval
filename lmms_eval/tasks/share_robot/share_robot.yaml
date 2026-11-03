@@ -1,0 +1,4 @@
+group: share_robot
+task:
+  - share_robot_affordance
+  - share_robot_trajectory
