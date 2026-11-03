@@ -5,6 +5,7 @@ import pandas as pd
 from openai import OpenAI
 from PIL import Image
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.tasks.plm_videobench.eval_utils import call_judge_with_retry, get_sgqa_judge_prompt, load_defualt_config, load_video_uniform
 
 # Load default config parameters
@@ -49,7 +50,7 @@ def plm_sgqa_process_results(doc, results):
 
     llm_prompt = get_sgqa_judge_prompt(question=doc["question"], pred=pred, target=doc["answer"])
     completion = call_judge_with_retry(client, model_name=llm_judge_name, prompt=llm_prompt)
-    llm_response = completion.choices[0].message.content
+    llm_response = require_chat_message_text(completion)
 
     try:
         judgement = json.loads(llm_response)

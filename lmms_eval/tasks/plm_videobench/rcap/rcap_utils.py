@@ -4,6 +4,7 @@ import os
 import numpy as np
 from openai import OpenAI
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.tasks.plm_videobench.eval_utils import call_judge_with_retry, draw_bounding_boxes, get_caption_judge_prompt, load_defualt_config, load_plm_stc_metadata, load_video
 
 # Load default config parameters
@@ -59,7 +60,7 @@ def plm_rcap_process_results(doc, results):
 
     llm_prompt = get_caption_judge_prompt(gt_caption, pred_caption)
     completion = call_judge_with_retry(client, model_name=llm_judge_name, prompt=llm_prompt)
-    llm_response = completion.choices[0].message.content
+    llm_response = require_chat_message_text(completion)
     try:
         judgement = json.loads(llm_response)
         success = 1

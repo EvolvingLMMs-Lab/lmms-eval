@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from loguru import logger as eval_logger
 from tqdm import tqdm
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.api.instance import GenerationResult, TokenCounts
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.concurrency_control import (
@@ -132,7 +133,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
                     request_options = {"timeout": self.timeout} if getattr(self, "strict_generation", False) else {}
                     response = self.client.chat.completions.create(**payload, **request_options)
                     elapsed = time.time() - started_at
-                    response_text = response.choices[0].message.content
+                    response_text = require_chat_message_text(response)
                     if self.return_response_json:
                         response_text = response_text or ""
                     input_tokens = 0

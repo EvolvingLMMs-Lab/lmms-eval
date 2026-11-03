@@ -11,6 +11,8 @@ import numpy as np
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 random.seed(42)
 
 
@@ -209,7 +211,7 @@ Your extracted letter is:
         "temperature": 0.0,
     }
     response = client.chat.completions.create(**params)
-    response = response.choices[0].message.content
+    response = require_chat_message_text(response)
 
     return response
 

@@ -12,6 +12,7 @@ from accelerate import Accelerator, DistributedType
 from openai import AzureOpenAI, OpenAI
 from tqdm import tqdm
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
@@ -321,7 +322,7 @@ class GPT4OAudio(lmms):
                     if hasattr(response.choices[0].message, "audio") and response.choices[0].message.audio:
                         eval_logger.info(f"Audio response detected: {response.choices[0].message.audio}")
 
-                    response_text = response.choices[0].message.content
+                    response_text = require_chat_message_text(response)
                     # For debugging purposes
                     # eval_logger.info(f"Response text: {response_text}")
                     # if response_text is None:

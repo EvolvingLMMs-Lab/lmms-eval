@@ -9,6 +9,8 @@ import datasets
 import openai
 from openai import OpenAI
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 QUERY_TEMPLATE = "{Question}\n\nA) {choice1}\nB) {choice2}\nC) {choice3}\nD) {choice4}"
 QUERY_TEMPLATE_API = "{Question}\nAnswer Choices:\n(A) {choice1}\n(B) {choice2}\n(C) {choice3}\n(D) {choice4}"
 
@@ -138,7 +140,7 @@ class ChatCompletionSampler:
                     temperature=self.temperature,
                     max_tokens=self.max_tokens,
                 )
-                return response.choices[0].message.content
+                return require_chat_message_text(response)
             # NOTE: BadRequestError is triggered once for MMMU, please uncomment if you are reruning MMMU
             except openai.BadRequestError as e:
                 print("Bad Request Error", e)

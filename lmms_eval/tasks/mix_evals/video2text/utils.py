@@ -12,6 +12,7 @@ from loguru import logger as eval_logger
 from PIL import Image
 
 import lmms_eval.tasks._task_utils.file_utils as file_utils
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.filters import Filter
 from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
 
@@ -109,7 +110,7 @@ def get_eval(question, model_response: str, ground_truth: str, max_tokens: int, 
             # response.raise_for_status()
 
             # content = response_data["choices"][0]["message"]["content"].strip()
-            content = response.choices[0].message.content.strip()
+            content = require_chat_message_text(response).strip()
             if content != "":
                 return content
             break  # If successful, break out of the loop
@@ -379,7 +380,7 @@ class GPTMultiChoiceFilter(Filter):
                     # response.raise_for_status()
 
                     # content =["choices"][0]["message"]["content"].strip()
-                    content = response.choices[0].message.content
+                    content = require_chat_message_text(response)
                     print("content:", content)
                     if content:
                         match = re.search(r"\[\[([A-Z])\]\]", content)

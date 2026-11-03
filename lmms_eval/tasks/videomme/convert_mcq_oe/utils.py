@@ -5,6 +5,8 @@ import logging
 import os
 import re
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 eval_logger = logging.getLogger("lmms-eval")
 
 LLM_MATCH_PROMPT = """Given a model's answer to a video question and the available options, determine which option matches the answer.
@@ -95,7 +97,7 @@ def _llm_match_option(question, model_answer, options):
             temperature=0,
         )
 
-        result = response.choices[0].message.content.strip()
+        result = require_chat_message_text(response).strip()
         return _extract_abcdx(result)
 
     except Exception as e:

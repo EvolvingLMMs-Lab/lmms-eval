@@ -5,6 +5,8 @@ import time
 import requests
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 NUM_SECONDS_TO_SLEEP = 1
 
 GPT_EVAL_MODEL_NAME = os.getenv("GPT_EVAL_MODEL_NAME", "Qwen2.5-72B-Instruct")
@@ -84,7 +86,7 @@ def get_eval(question, answer, pred, max_tokens: int, retries: int = 1):
             except requests.exceptions.JSONDecodeError:
                 eval_logger.error(f"JSON decode error on attempt {attempt + 1}. Response text: {response.text}")
                 continue  # Skip to next retry
-            content = response_data["choices"][0]["message"]["content"].strip()
+            content = require_chat_message_text(response_data).strip()
             if content != "":
                 return content, response_data["model"]
         # Handle HTTP errors separately

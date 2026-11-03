@@ -19,6 +19,7 @@ from azure.identity import (
 from openai import AzureOpenAI
 from PIL import Image
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.azure_openai_compat import build_client as build_azure_compat_client
 from lmms_eval.azure_openai_compat import has_endpoint_support
 
@@ -70,7 +71,7 @@ def call_gpt4o(prompt: str, max_tokens: int = 512) -> str:
             max_tokens=max_tokens,
             temperature=0,
         )
-        return resp.choices[0].message.content
+        return require_chat_message_text(resp)
     except Exception as e:
         print(f"[GPT-4o Error] {e}")
         return ""

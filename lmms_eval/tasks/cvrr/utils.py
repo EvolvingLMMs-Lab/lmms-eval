@@ -8,6 +8,8 @@ import requests
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
@@ -138,7 +140,7 @@ def get_gpt_eval(question, answer, pred, max_tokens: int, retries: int = 5):
             except requests.exceptions.JSONDecodeError:
                 eval_logger.error(f"JSON decode error on attempt {attempt + 1}. Response text: {response.text}")
                 continue  # Skip to next retry
-            content = response_data["choices"][0]["message"]["content"].strip()
+            content = require_chat_message_text(response_data).strip()
             if content != "":
                 return content, response_data["model"]
         # Handle HTTP errors separately

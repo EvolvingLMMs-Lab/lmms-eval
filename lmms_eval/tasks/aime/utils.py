@@ -5,6 +5,8 @@ from typing import Dict, List, Optional
 
 import datasets
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 if os.getenv("PROMPTSTEP") is not None:
     QUERY_TEMPLATE = "{Question}\n\nThink for up to " + os.getenv("PROMPTSTEP") + " steps."
 elif os.getenv("PROMPTTOKEN") is not None:
@@ -180,7 +182,7 @@ class ChatCompletionSampler:
                     temperature=self.temperature,
                     max_tokens=self.max_tokens,
                 )
-                return response.choices[0].message.content
+                return require_chat_message_text(response)
             # NOTE: BadRequestError is triggered once for MMMU, please uncomment if you are reruning MMMU
             except openai.BadRequestError as e:
                 print("Bad Request Error", e)

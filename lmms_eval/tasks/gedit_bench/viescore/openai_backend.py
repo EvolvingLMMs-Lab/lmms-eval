@@ -19,6 +19,8 @@ from typing import List, Optional, Union
 
 import numpy as np
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 
 def encode_image_to_base64(image) -> str:
     """Convert PIL Image or file path to base64 string."""
@@ -151,7 +153,7 @@ class OpenAIBackend:
                 temperature=self.temperature,
             )
 
-            return response.choices[0].message.content if response.choices else ""
+            return require_chat_message_text(response)
 
         except Exception as e:
             error_str = str(e)

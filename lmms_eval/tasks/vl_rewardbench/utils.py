@@ -7,6 +7,8 @@ from collections import defaultdict
 import requests
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 LLM_PARSE_ANSWER_PROMPT = """
 You are given a pairwise judgement for two responses. Please return the better response according to the judgement.
 Return the Answer X ONLY. e.g., Answer 1 or Answer 2.
@@ -88,7 +90,7 @@ def parse_by_llm(response, model="gpt-4o-mini", max_tokens=32):
     response = requests.post(API_URL, headers=headers, data=json.dumps(data).encode("utf-8"))
     result = response.content.decode("utf-8")
     dict_result = json.loads(result)
-    llm_output = dict_result["choices"][0]["message"]["content"].strip()
+    llm_output = require_chat_message_text(dict_result).strip()
     return llm_output
 
 

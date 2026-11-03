@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Union
 import aiohttp
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.models.model_utils.usage_metrics import log_usage
 
 from ..base import AsyncServerInterface
@@ -66,13 +67,13 @@ class AsyncAzureOpenAIProvider(AsyncServerInterface):
                 try:
                     if self.use_async_client:
                         response = await self.async_client.chat.completions.create(**payload)
-                        content = response.choices[0].message.content
+                        content = require_chat_message_text(response)
                         model_used = response.model
                         usage = response.usage.model_dump() if hasattr(response.usage, "model_dump") else None
                         raw_response = response
                     else:
                         response = await self._make_async_request(payload, config.timeout)
-                        content = response["choices"][0]["message"]["content"]
+                        content = require_chat_message_text(response)
                         model_used = response["model"]
                         usage = response.get("usage")
                         raw_response = response

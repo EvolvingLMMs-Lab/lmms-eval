@@ -28,6 +28,7 @@ import yaml
 from loguru import logger as eval_logger
 from PIL import Image
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.models.model_utils.load_video import import_decord
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
@@ -402,7 +403,7 @@ def get_eval_generic(question, answer, pred, max_tokens: int, retries: int = 5):
             except requests.exceptions.JSONDecodeError:
                 eval_logger.error(f"JSON decode error on attempt {attempt + 1}. Response text: {response.text}")
                 continue  # Skip to next retry
-            content = response_data["choices"][0]["message"]["content"].strip()
+            content = require_chat_message_text(response_data).strip()
             if content != "":
                 return content, response_data["model"]
         # Handle HTTP errors separately

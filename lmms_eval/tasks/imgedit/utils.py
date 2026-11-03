@@ -24,6 +24,7 @@ from loguru import logger as eval_logger
 from openai import OpenAI
 from PIL import Image
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.tasks.imgedit.prompt import IMGEDIT_PROMPTS
 
 # Environment variable names for OpenAI API configuration
@@ -201,7 +202,7 @@ def _call_openai_for_evaluation(
             temperature=0.1,
         )
 
-        return response.choices[0].message.content
+        return require_chat_message_text(response)
     except Exception as e:
         eval_logger.error(f"Error calling OpenAI API: {e}")
         return None

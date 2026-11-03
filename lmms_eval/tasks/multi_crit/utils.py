@@ -12,6 +12,8 @@ import numpy as np
 import requests
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 # The prompt text below is copied verbatim from the official Multi-Crit
 # implementation at commit ``c4b0c32``. Whitespace is evaluation-significant:
 # do not reflow or edit these strings without updating the parity tests.
@@ -332,7 +334,7 @@ def _parse_with_verifier(
         )
         response.raise_for_status()
         payload = response.json()
-        verifier_raw_output = str(payload["choices"][0]["message"]["content"]).strip()
+        verifier_raw_output = str(require_chat_message_text(payload)).strip()
         prediction = parse_verifier_preference(verifier_raw_output) or "error"
     except Exception as exc:  # pragma: no cover - provider failures vary
         eval_logger.error(f"Multi-Crit verifier failed for {question_id}: {_safe_exception_summary(exc)}")

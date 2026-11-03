@@ -8,6 +8,8 @@ import yaml
 from loguru import logger as eval_logger
 from openai import OpenAI
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 
 def load_phyx_config():
     with open(Path(__file__).parent / "phyx.yaml", "r") as f:
@@ -53,7 +55,7 @@ class PhyXEvaluator:
             try:
                 response = self.client.chat.completions.create(**payload)
                 if n == 1:
-                    prediction = response.choices[0].message.content.strip()
+                    prediction = require_chat_message_text(response).strip()
                     if prediction and prediction != "":
                         return prediction
                 else:

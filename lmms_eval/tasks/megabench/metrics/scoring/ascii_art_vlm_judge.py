@@ -6,6 +6,8 @@ import requests
 from metrics.scoring.common.conversions import ascii_text_to_image
 from metrics.scoring.vlm_as_judge import OpenAIVLMJudger
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 
 class AsciiArtVLMJudger(OpenAIVLMJudger):
     """A GPT-4o judge for assessing if two ASCII art images depict the same thing."""
@@ -91,7 +93,7 @@ class AsciiArtVLMJudger(OpenAIVLMJudger):
         if response_data and "choices" in response_data:
             choices = response_data["choices"]
             if choices and "message" in choices[0]:
-                message_content = choices[0]["message"]["content"]
+                message_content = require_chat_message_text({"choices": choices})
                 print(f"gpt-4o judge results: {message_content}; tokens:{total_tokens}")
         else:
             print("gpt-4o judge query failed...")

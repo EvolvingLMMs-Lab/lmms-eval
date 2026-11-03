@@ -42,6 +42,8 @@ import requests
 from datasets import Dataset
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 # Constants
 LETTER_ALPH = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 CANNOT_ANSWER_TEXT = "Cannot answer from the caption"
@@ -346,7 +348,7 @@ def call_llm_judge(prompt: str) -> str:
     try:
         resp = requests.post(api_url, json={"model": JUDGE_MODEL, "messages": [{"role": "system", "content": QA_SYSTEM_PROMPT}, {"role": "user", "content": prompt}], "temperature": 0.0, "max_tokens": 4}, timeout=60)
         resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+        return require_chat_message_text(resp.json())
     except Exception as e:
         eval_logger.warning(f"Judge API error: {e}")
         return ""

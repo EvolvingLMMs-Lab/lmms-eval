@@ -4,6 +4,8 @@ import re
 from math_verify import parse, verify
 from openai import OpenAI
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 API_KEY = os.getenv("JUDGE_API_KEY", "YOUR_API_KEY")
 BASE_URL = os.getenv("JUDGE_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME = os.getenv("JUDGE_MODEL_NAME", "gpt-4o-mini")
@@ -388,7 +390,7 @@ def llm_as_judge_sync(predict_str, ground_truth, extra_info):
     }
     response = client.chat.completions.create(**payload)
     try:
-        score = int(response.choices[0].message.content)
+        score = int(require_chat_message_text(response))
     except Exception:
         score = 0
     return score

@@ -13,6 +13,7 @@ from openai import AzureOpenAI, OpenAI
 from PIL import Image
 from tqdm import tqdm
 
+from lmms_eval.api.chat_response import require_chat_message_content
 from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
@@ -346,7 +347,7 @@ class OpenAICompatible(lmms):
             for attempt in range(self.max_retries):
                 try:
                     response = self.client.chat.completions.create(**payload)
-                    response_text = _normalize_openai_message_content(response.choices[0].message.content)
+                    response_text = _normalize_openai_message_content(require_chat_message_content(response))
                     token_counts = None
                     if hasattr(response, "usage") and response.usage:
                         log_usage(

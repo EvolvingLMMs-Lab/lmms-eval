@@ -21,6 +21,7 @@ from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from tqdm import tqdm
 
 import lmms_eval.tasks._task_utils.file_utils as file_utils
+from lmms_eval.api.chat_response import require_chat_message_text
 
 # import nltk
 # nltk.download('punkt')
@@ -192,7 +193,7 @@ def get_eval(candidate: str, task: str, content: str, max_tokens: int, retries: 
             response.raise_for_status()
             response_data = response.json()
 
-            content = response_data["choices"][0]["message"]["content"].strip()
+            content = require_chat_message_text(response_data).strip()
             gpt_score = extract_last_number(content)
             if content != "" and gpt_score != 0:
                 return content, gpt_prompt, gpt_score
