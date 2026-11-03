@@ -34,6 +34,12 @@ _LIBRI_TS_PROMPT = "<|startoftranscript|><|en|><|transcribe|>"
 
 
 def _is_librispeech_task(task: str) -> bool:
+    """True only for lmms-eval task names that start with ``librispeech``.
+
+    ``openslr_librispeech`` and ``open_asr_librispeech_*`` do not match and keep
+    the original one-shot path. That is intentional: recovery targets the HF
+    AutoRun ``librispeech_*`` splits, not those other suites.
+    """
     return str(task).strip().startswith("librispeech")
 
 
