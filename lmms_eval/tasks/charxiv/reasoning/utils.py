@@ -28,7 +28,7 @@ def get_number_instruction(answer):
 
 
 def charxiv_reasoning_doc_to_text_cot(doc, lmms_eval_specific_kwargs=None):
-    inst_category = doc["reasoning_q_source"]
+    inst_category = doc["reasoning_a_type"]
     if inst_category in [1, 2, 3]:
         question = REASONING_RESP_INST[inst_category].format(doc["reasoning_q"])
     # 4: number-in-general -> need to specify the number of decimal places

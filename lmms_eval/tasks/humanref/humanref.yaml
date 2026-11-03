@@ -1,0 +1,58 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: https://huggingface.co/datasets/IDEA-Research/HumanRef/resolve/9a7b1c1e80ecfa777e2e5af1082120b2f34f31e6/annotations.jsonl
+task: "humanref"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.humanref_doc_to_visual
+doc_to_text: !function utils.humanref_doc_to_text
+doc_to_target: "answer_boxes"
+process_results: !function utils.humanref_process_results
+metric_list:
+  - metric: humanref_density_f1@0.5:0.95
+    aggregation: !function utils.humanref_density_f1
+    higher_is_better: true
+  - metric: humanref_density_f1@0.5
+    aggregation: !function utils.humanref_density_f1_50
+    higher_is_better: true
+  - metric: humanref_recall@0.5:0.95
+    aggregation: !function utils.humanref_recall
+    higher_is_better: true
+  - metric: humanref_recall@0.5
+    aggregation: !function utils.humanref_recall_50
+    higher_is_better: true
+  - metric: humanref_precision@0.5:0.95
+    aggregation: !function utils.humanref_precision
+    higher_is_better: true
+  - metric: humanref_precision@0.5
+    aggregation: !function utils.humanref_precision_50
+    higher_is_better: true
+  - metric: humanref_rejection_acc
+    aggregation: !function utils.humanref_rejection_acc
+    higher_is_better: true
+  - metric: humanref_attribute_density_f1@0.5:0.95
+    aggregation: !function utils.humanref_attribute_density_f1
+    higher_is_better: true
+  - metric: humanref_position_density_f1@0.5:0.95
+    aggregation: !function utils.humanref_position_density_f1
+    higher_is_better: true
+  - metric: humanref_interaction_density_f1@0.5:0.95
+    aggregation: !function utils.humanref_interaction_density_f1
+    higher_is_better: true
+  - metric: humanref_reasoning_density_f1@0.5:0.95
+    aggregation: !function utils.humanref_reasoning_density_f1
+    higher_is_better: true
+  - metric: humanref_celebrity_density_f1@0.5:0.95
+    aggregation: !function utils.humanref_celebrity_density_f1
+    higher_is_better: true
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  do_sample: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  version: 0.0

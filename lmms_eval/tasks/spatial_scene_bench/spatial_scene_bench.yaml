@@ -1,0 +1,3 @@
+dataset_name: full
+task: "spatial_scene_bench"
+include: _default_template_yaml

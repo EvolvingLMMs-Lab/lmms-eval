@@ -1,0 +1,4 @@
+# 200-answer subset of mavis_gt with the same domain mix, for cheaper runs (see README).
+task: "mavis_gt_mini"
+process_docs: !function utils.mavis_mini_process_docs
+include: _default_template_yaml

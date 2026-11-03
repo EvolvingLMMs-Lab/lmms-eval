@@ -1,4 +1,4 @@
-"""Tests for the MMMU scoring pipeline.
+"""Tests for the MMMU scoring and interleaved-image pipelines.
 
 Covers the contract between ``mmmu_process_results``, ``parse_open_response`` and
 ``eval_open``: open-ended predictions must stay a list of answer candidates so that
@@ -7,7 +7,14 @@ Covers the contract between ``mmmu_process_results``, ``parse_open_response`` an
 No dataset download, no model inference, no API keys required.
 """
 
+from collections.abc import Callable
+from typing import Any
+
+import pytest
+from PIL import Image
+
 from lmms_eval.tasks.mmmu import utils
+from lmms_eval.tasks.mmmu.reasoning import utils as reasoning_utils
 
 
 def _open_doc(answer, doc_id="validation_Math_1"):
@@ -141,3 +148,89 @@ def test_multi_choice_answer_is_scored_correct():
 
     assert judge_dict[doc["id"]] == "Correct"
     assert metrics["acc"] == 1.0
+
+
+@pytest.fixture
+def image_doc(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+    monkeypatch.setenv("NUM_IMAGE", "1")
+    monkeypatch.setitem(utils.config["metadata"], "interleaved_format", False)
+    monkeypatch.setitem(reasoning_utils.config["metadata"], "interleaved_format", False)
+    doc = _multi_choice_doc("A")
+    doc["image_1"] = Image.new("RGB", (2, 2), "red")
+    doc["image_2"] = Image.new("RGB", (2, 2), "blue")
+    return doc
+
+
+_MESSAGE_BUILDERS = [
+    utils.mmmu_doc_to_messages,
+    reasoning_utils.mmmu_doc_to_messages,
+    reasoning_utils.mmmu_reward_doc_to_messages,
+]
+_PROMPT_KWARGS = {"prompt_type": "format", "multiple_choice_prompt": "", "open_ended_prompt": ""}
+
+
+@pytest.mark.parametrize("builder", _MESSAGE_BUILDERS)
+@pytest.mark.parametrize(
+    ("question", "options", "expected_colors"),
+    [
+        ("Compare <image 2> with <image 1>.", "['first', 'second']", ["blue", "red"]),
+        (
+            "A graph <image 1> and a spanning tree <image 2> of <image 1> are given, Give the Fundamental Cut sets of <image 1> with respect of <image 2>",
+            "['first', 'second']",
+            ["red", "blue", "red", "red", "blue"],
+        ),
+        ("Compare <image 2> with the options.", "['<image 1>', '<image 2>']", ["blue", "red", "blue"]),
+        ("Describe <image 1>.", "['first', 'second']", ["red"]),
+    ],
+)
+def test_interleaved_images_follow_every_reference(builder: Callable, question: str, options: str, expected_colors: list[str], image_doc: dict[str, Any]) -> None:
+    image_doc.update(question=question, options=options)
+
+    content = builder(image_doc, _PROMPT_KWARGS)[-1]["content"]
+
+    colors = [part["url"].getpixel((0, 0)) for part in content if part["type"] == "image"]
+    assert colors == [Image.new("RGB", (1, 1), color).getpixel((0, 0)) for color in expected_colors]
+
+
+@pytest.mark.parametrize("builder", _MESSAGE_BUILDERS)
+def test_repeated_image_references_keep_intermediate_question_text(builder: Callable, image_doc: dict[str, Any]) -> None:
+    image_doc["question"] = "A graph <image 1> and a spanning tree <image 2> of <image 1> are given, Give the Fundamental Cut sets of <image 1> with respect of <image 2>"
+
+    content = builder(image_doc, _PROMPT_KWARGS)[-1]["content"]
+
+    assert [part["text"] for part in content if part["type"] == "text"] == [
+        "A graph",
+        "and a spanning tree",
+        "of",
+        "are given, Give the Fundamental Cut sets of",
+        "with respect of",
+        "A. first\nB. second\nC. third\nD. fourth",
+    ]
+
+
+@pytest.mark.parametrize("module", [utils, reasoning_utils])
+def test_numbered_visuals_remain_unique_and_sorted(module: Any, image_doc: dict[str, Any]) -> None:
+    image_doc["question"] = "Compare <image 2> with <image 1> and <image 2>."
+
+    visuals = module.mmmu_doc_to_visual(image_doc)
+
+    assert [image.getpixel((0, 0)) for image in visuals] == [(255, 0, 0), (0, 0, 255)]
+
+
+def test_qwen3_numbered_messages_keep_unique_images(image_doc: dict[str, Any]) -> None:
+    image_doc["question"] = "Compare <image 2> with <image 1> and <image 2>."
+
+    content = utils.mmmu_doc_to_messages(image_doc, {"format": "qwen3_vl"})[-1]["content"]
+
+    assert [part["url"].getpixel((0, 0)) for part in content if part["type"] == "image"] == [(255, 0, 0), (0, 0, 255)]
+    assert image_doc["question"] in content[-1]["text"]
+
+
+def test_num_image_two_still_duplicates_a_single_image(image_doc: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NUM_IMAGE", "2")
+    image_doc["question"] = "Describe <image 1>."
+
+    content = utils.mmmu_doc_to_messages(image_doc, _PROMPT_KWARGS)[-1]["content"]
+
+    assert [part["url"].getpixel((0, 0)) for part in content if part["type"] == "image"] == [(255, 0, 0), (255, 0, 0)]
+    assert content[-1]["text"] == ".\nA. first\nB. second\nC. third\nD. fourth"

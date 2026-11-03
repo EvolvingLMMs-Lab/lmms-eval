@@ -1,7 +1,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: 5-Minute Quick Start
-    url: https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/quickstart.md
+    url: https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/getting-started/quickstart.md
     about: Run your first evaluation in a few minutes
   - name: Contributing Guide
     url: https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/CONTRIBUTING.md

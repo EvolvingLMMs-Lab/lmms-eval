@@ -1,0 +1,46 @@
+test_split: test
+output_type: generate_until
+doc_to_messages: !function utils.doc_to_messages
+doc_to_text: !function utils.doc_to_text
+doc_to_visual: !function utils.doc_to_visual
+doc_to_target: answer
+process_results: !function utils.process_results
+generation_kwargs:
+  max_new_tokens: 32768
+  temperature: 0
+  do_sample: false
+model_specific_generation_kwargs:
+  default: {}
+  qwen2_5_omni:
+    raise_on_error: true
+  qwen2_5_omni_chat:
+    raise_on_error: true
+  qwen3_omni:
+    raise_on_error: true
+  qwen3_omni_chat:
+    raise_on_error: true
+lmms_eval_specific_kwargs:
+  default:
+    supports_separate_audio: false
+  openai:
+    api_audio_opt_in: true
+  qwen2_5_omni:
+    supports_separate_audio: true
+  qwen2_5_omni_chat:
+    supports_separate_audio: true
+  qwen3_omni:
+    supports_separate_audio: true
+  qwen3_omni_chat:
+    supports_separate_audio: true
+metric_list:
+  - metric: text
+    aggregation: !function utils.aggregate_text
+    higher_is_better: true
+  - metric: text_image
+    aggregation: !function utils.aggregate_text_image
+    higher_is_better: true
+  - metric: cs
+    aggregation: !function utils.aggregate_cs
+    higher_is_better: true
+metadata:
+  version: 1.0

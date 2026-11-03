@@ -272,6 +272,23 @@ accelerate launch --num_processes 8 --main_process_port 30000 -m lmms_eval \
 
 ```
 
+### Ollama
+
+```bash
+export OPENAI_API_KEY=ollama  # any non-empty value
+
+TASK=$1
+MODEL_VERSION=$2   # e.g. qwen2.5vl:7b
+ollama pull $MODEL_VERSION
+
+# base_url points to the Ollama server; replace localhost:11434 with your Ollama host and port.
+python3 -m lmms_eval \
+    --model openai \
+    --model_args model_version=$MODEL_VERSION,base_url=http://localhost:11434/v1 \
+    --tasks $TASK \
+    --batch_size 1
+```
+
 ### OpenAI-compatible server with server-side video decoding
 
 With `pass_video_url=True`, the `openai` model sends videos as URLs (local paths become `file://`) and lets the server decode them. By default it asks for `num_frames=max_frames_num` in `media_io_kwargs`. Some server-side loaders sample by frame rate and ignore `num_frames`, for example vLLM's MiniMax-M3 and Qwen3-VL loaders. For those, two options control the frame count:

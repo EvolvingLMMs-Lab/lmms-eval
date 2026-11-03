@@ -591,7 +591,7 @@ class TestCreateAndFinalize(_CacheTestBase):
         with (
             patch.dict(os.environ, {"LMMS_CACHE_RUN_ID": "job-remote"}, clear=False),
             self._mock_utils(),
-            patch("lmms_eval.caching.response_cache.detect_fs_type", return_value=FsType.REMOTE),
+            patch("lmms_eval.caching.response_cache.detect_fs_type", side_effect=lambda path: FsType.REMOTE if str(path).startswith(cache_root) else FsType.LOCAL),
             patch("lmms_eval.caching.response_cache.find_local_scratch", return_value=scratch_root),
         ):
             rc = ResponseCache.create(cache_root, model="m", world_size=2, global_rank=1)

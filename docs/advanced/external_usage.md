@@ -243,7 +243,7 @@ result = client.wait_for_job(job["job_id"])
 print(result["result"])
 ```
 An async client (`AsyncEvalClient`) is also available for use in async
-training loops. See the [v0.6 release notes](lmms-eval-0.6.md) for full
+training loops. See the [v0.6 release notes](../releases/lmms-eval-0.6.md) for full
 server API documentation.
 ---
 

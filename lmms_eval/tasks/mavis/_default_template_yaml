@@ -1,0 +1,40 @@
+dataset_path: seokwon99/MAVIS
+dataset_name: gt_rag
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.mavis_doc_to_visual
+doc_to_text: !function utils.mavis_doc_to_text
+doc_to_messages: !function utils.mavis_doc_to_messages
+doc_to_target: "A"
+# Sampling used in the paper for answer generation.
+generation_kwargs:
+  max_new_tokens: 2048
+  temperature: 0.7
+  top_p: 0.95
+  do_sample: true
+process_results: !function utils.mavis_process_results
+# The judge needs the input image and the image documents, so keep images in the docs given to process_results.
+process_results_use_image: true
+# Groundedness = F1 of citation recall/precision; informativeness = F1 of completeness/relevance.
+# Scored by an LLM judge (gpt-4.1 by default); see utils.py for the MAVIS_JUDGE_* variables.
+metric_list:
+  - metric: mavis_groundedness
+    aggregation: !function utils.mavis_aggregate
+    higher_is_better: true
+  - metric: mavis_informativeness
+    aggregation: !function utils.mavis_aggregate
+    higher_is_better: true
+  - metric: mavis_recall
+    aggregation: !function utils.mavis_aggregate
+    higher_is_better: true
+  - metric: mavis_precision
+    aggregation: !function utils.mavis_aggregate
+    higher_is_better: true
+  - metric: mavis_completeness
+    aggregation: !function utils.mavis_aggregate
+    higher_is_better: true
+  - metric: mavis_relevance
+    aggregation: !function utils.mavis_aggregate
+    higher_is_better: true
+metadata:
+  version: 0.0

@@ -15,7 +15,7 @@ generation_kwargs:
   num_beams: 1
   do_sample: false
 process_results: !function utils.coco_process_result
-# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+# Note that the metric name can be either a registered metric function (such as the case for GQA) or a key name returned by process_results
 metric_list:
   - metric: coco_Bleu_4 
     aggregation : !function utils.coco_bleu4

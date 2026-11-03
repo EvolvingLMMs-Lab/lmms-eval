@@ -1,0 +1,343 @@
+{
+  "runtime_commit": "57989fe83671b620e142ac58e6c8dc5a5a480d91",
+  "model": {
+    "id": "llava-hf/llava-onevision-qwen2-0.5b-ov-hf",
+    "revision": "74dd0bf867a4cda7950c17663794267c60cf4b40",
+    "backend": "llava_hf",
+    "dtype": "bfloat16"
+  },
+  "hardware": {
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "filesystem": "NFS 4.2 over TCP on loopback",
+    "scratch_filesystem": "local ext4"
+  },
+  "versions": {
+    "torch": "2.8.0+cu128",
+    "transformers": "4.57.6",
+    "datasets": "5.0.1"
+  },
+  "generation_kwargs": {
+    "temperature": 0,
+    "do_sample": false,
+    "max_new_tokens": 32,
+    "top_p": 1,
+    "num_beams": 1
+  },
+  "dataset": {
+    "dataset": "lmms-lab-encoder/MMMU",
+    "revision": "364f2e2eb107b36e07ff4c5a15f5947a759cef47",
+    "split": "validation",
+    "dataset_documents": 900,
+    "selected_documents": 8,
+    "samples": [
+      {
+        "doc_id": 0,
+        "dataset_id": "validation_Accounting_1",
+        "target": "B",
+        "images": [
+          {
+            "size": [
+              733,
+              237
+            ],
+            "mode": "RGB",
+            "pixel_sha256": "8c0e668eb3ed2bfe67600ec3f22f902f22693ad78799e357eb71cc1a09c154c7"
+          }
+        ]
+      },
+      {
+        "doc_id": 1,
+        "dataset_id": "validation_Accounting_2",
+        "target": "C",
+        "images": [
+          {
+            "size": [
+              342,
+              310
+            ],
+            "mode": "RGB",
+            "pixel_sha256": "50b929dc71f02660d585ea7cbd9ea68597c8b41cb4693b256acacfdc206b785a"
+          }
+        ]
+      },
+      {
+        "doc_id": 2,
+        "dataset_id": "validation_Accounting_3",
+        "target": "B",
+        "images": [
+          {
+            "size": [
+              336,
+              169
+            ],
+            "mode": "RGB",
+            "pixel_sha256": "4f18f682e0531b034e3649f03362a317ee2d9d4a29a6dad29520b2d0f897c6a0"
+          }
+        ]
+      },
+      {
+        "doc_id": 3,
+        "dataset_id": "validation_Accounting_4",
+        "target": "D",
+        "images": [
+          {
+            "size": [
+              1222,
+              237
+            ],
+            "mode": "RGB",
+            "pixel_sha256": "b4e9a194723aecb6e34fbdf856e3426490e9fe2c1602dcfbf2ce129cf7f5099b"
+          }
+        ]
+      },
+      {
+        "doc_id": 4,
+        "dataset_id": "validation_Accounting_5",
+        "target": "B",
+        "images": [
+          {
+            "size": [
+              1219,
+              217
+            ],
+            "mode": "RGB",
+            "pixel_sha256": "ffffb5bb96ad019ff4586654ab1e1c4e545bd9c44a434f42f4d62d785b55404c"
+          }
+        ]
+      },
+      {
+        "doc_id": 5,
+        "dataset_id": "validation_Accounting_6",
+        "target": "A",
+        "images": [
+          {
+            "size": [
+              1216,
+              286
+            ],
+            "mode": "RGB",
+            "pixel_sha256": "d2b2e07811861e9bc4655c9585593ac52455fbebd465a6969b84b3cb3443ce49"
+          }
+        ]
+      },
+      {
+        "doc_id": 6,
+        "dataset_id": "validation_Accounting_7",
+        "target": "B",
+        "images": [
+          {
+            "size": [
+              436,
+              112
+            ],
+            "mode": "RGB",
+            "pixel_sha256": "d4b7d24370e2e0b281ab53bbfe31c3fb4d2a81c61862d6cb79a2055ffac7ea70"
+          }
+        ]
+      },
+      {
+        "doc_id": 7,
+        "dataset_id": "validation_Accounting_8",
+        "target": "A",
+        "images": [
+          {
+            "size": [
+              756,
+              244
+            ],
+            "mode": "RGB",
+            "pixel_sha256": "ff0b79c5d35b59752b55cc747849b3d5621f2c4aa4e63f745e3d8d4f6d6f2ad5"
+          }
+        ]
+      }
+    ]
+  },
+  "cases": [
+    {
+      "case": "cold",
+      "cache_stats": {
+        "hits": 0,
+        "hits_shared": 0,
+        "misses": 8,
+        "skipped": 0
+      },
+      "mmmu_acc": 0.375,
+      "samples": [
+        {
+          "doc_id": 0,
+          "dataset_id": "validation_Accounting_1",
+          "prediction": "B",
+          "target": "B",
+          "parsed_prediction": [
+            "B"
+          ]
+        },
+        {
+          "doc_id": 1,
+          "dataset_id": "validation_Accounting_2",
+          "prediction": "B",
+          "target": "C",
+          "parsed_prediction": [
+            "B"
+          ]
+        },
+        {
+          "doc_id": 2,
+          "dataset_id": "validation_Accounting_3",
+          "prediction": "B",
+          "target": "B",
+          "parsed_prediction": [
+            "B"
+          ]
+        },
+        {
+          "doc_id": 3,
+          "dataset_id": "validation_Accounting_4",
+          "prediction": "B",
+          "target": "D",
+          "parsed_prediction": [
+            "B"
+          ]
+        },
+        {
+          "doc_id": 4,
+          "dataset_id": "validation_Accounting_5",
+          "prediction": "A",
+          "target": "B",
+          "parsed_prediction": [
+            "A"
+          ]
+        },
+        {
+          "doc_id": 5,
+          "dataset_id": "validation_Accounting_6",
+          "prediction": "B",
+          "target": "A",
+          "parsed_prediction": [
+            "B"
+          ]
+        },
+        {
+          "doc_id": 6,
+          "dataset_id": "validation_Accounting_7",
+          "prediction": "B",
+          "target": "B",
+          "parsed_prediction": [
+            "B"
+          ]
+        },
+        {
+          "doc_id": 7,
+          "dataset_id": "validation_Accounting_8",
+          "prediction": "B",
+          "target": "A",
+          "parsed_prediction": [
+            "B"
+          ]
+        }
+      ],
+      "log_sha256": "526d59cdf3bf35e19717e650bbcb09b83255962b931c31cf180f5d1bc487b57c"
+    },
+    {
+      "case": "warm",
+      "cache_stats": {
+        "hits": 8,
+        "hits_shared": 8,
+        "misses": 0,
+        "skipped": 0
+      },
+      "mmmu_acc": 0.375,
+      "samples": [
+        {
+          "doc_id": 0,
+          "dataset_id": "validation_Accounting_1",
+          "prediction": "B",
+          "target": "B",
+          "parsed_prediction": [
+            "B"
+          ]
+        },
+        {
+          "doc_id": 1,
+          "dataset_id": "validation_Accounting_2",
+          "prediction": "B",
+          "target": "C",
+          "parsed_prediction": [
+            "B"
+          ]
+        },
+        {
+          "doc_id": 2,
+          "dataset_id": "validation_Accounting_3",
+          "prediction": "B",
+          "target": "B",
+          "parsed_prediction": [
+            "B"
+          ]
+        },
+        {
+          "doc_id": 3,
+          "dataset_id": "validation_Accounting_4",
+          "prediction": "B",
+          "target": "D",
+          "parsed_prediction": [
+            "B"
+          ]
+        },
+        {
+          "doc_id": 4,
+          "dataset_id": "validation_Accounting_5",
+          "prediction": "A",
+          "target": "B",
+          "parsed_prediction": [
+            "A"
+          ]
+        },
+        {
+          "doc_id": 5,
+          "dataset_id": "validation_Accounting_6",
+          "prediction": "B",
+          "target": "A",
+          "parsed_prediction": [
+            "B"
+          ]
+        },
+        {
+          "doc_id": 6,
+          "dataset_id": "validation_Accounting_7",
+          "prediction": "B",
+          "target": "B",
+          "parsed_prediction": [
+            "B"
+          ]
+        },
+        {
+          "doc_id": 7,
+          "dataset_id": "validation_Accounting_8",
+          "prediction": "B",
+          "target": "A",
+          "parsed_prediction": [
+            "B"
+          ]
+        }
+      ],
+      "log_sha256": "e0a8d0b4d1158df29cb3de42c2d3b919bf3652ec6e4401c467760312fca76e82"
+    }
+  ],
+  "checks": {
+    "real_media_resolved_for_cli_documents": true,
+    "cli_image_marker_observed": true,
+    "nonempty_predictions": true,
+    "prediction_and_metric_parity": true,
+    "warm_inference_skipped": true,
+    "snapshot_integrity": "ok",
+    "snapshot_entries": 8,
+    "remote_sqlite_journals": 0
+  },
+  "scope": "Eight real MMMU validation samples via the public CLI. Cache-lifecycle smoke test, not a full model-quality benchmark; loopback NFS does not cover independent client hosts.",
+  "validation_notes": [
+    "The CLI sample logger omits PIL image objects; media dimensions and pixel hashes were resolved separately from the same pinned dataset and matched to CLI doc IDs.",
+    "The fixture selects only the pinned validation parquet; verification_mode=no_checks avoids the dataset card demanding unused dev/test splits.",
+    "top_p and num_beams are explicit because llava_hf adds these defaults to request kwargs in place. An initial run without explicit defaults produced cache misses on replay; that independent existing behavior is not fixed by this NFS PR."
+  ]
+}

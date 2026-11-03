@@ -1,0 +1,3 @@
+include: ../mvbench/mvbench_moving_count.yaml
+task: tempcore_mvbench_moving_count
+process_docs: !function utils.mvbench_moving_count_docs

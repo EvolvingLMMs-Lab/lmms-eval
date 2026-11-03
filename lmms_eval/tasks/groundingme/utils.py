@@ -118,13 +118,13 @@ def _normalize_bbox(bbox: List[float], width: int, height: int) -> List[float]:
 
 def convert_bbox_from_mimo(bbox: List[float], width: int, height: int) -> List[float]:
     """Convert bbox coordinates from MIMO resized space to original image space."""
-    mimo_width, mimo_height = smart_resize_mimo(height, width)
+    mimo_height, mimo_width = smart_resize_mimo(height, width)
     return [bbox[0] / mimo_width * width, bbox[1] / mimo_height * height, bbox[2] / mimo_width * width, bbox[3] / mimo_height * height]
 
 
 def convert_bbox_from_qwen(bbox: List[float], width: int, height: int) -> List[float]:
     """Convert bbox coordinates from Qwen resized space to original image space."""
-    qwen_width, qwen_height = smart_resize_qwen(height, width)
+    qwen_height, qwen_width = smart_resize_qwen(height, width)
     return [bbox[0] / qwen_width * width, bbox[1] / qwen_height * height, bbox[2] / qwen_width * width, bbox[3] / qwen_height * height]
 
 
@@ -168,7 +168,8 @@ def parse_bbox(input_str: str) -> List[float]:
             last_match = matches[-1]
             return [float(coord) for coord in last_match]
         else:
-            return [0, 0, 0, 0]
+            # Unparsed: a box that matches nothing, not even the Rejection target [0, 0, 0, 0]
+            return [-1, -1, -1, -1]
 
 
 def groundingme_process_result(doc, result):

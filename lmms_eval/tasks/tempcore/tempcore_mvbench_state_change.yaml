@@ -1,0 +1,3 @@
+include: ../mvbench/mvbench_state_change.yaml
+task: tempcore_mvbench_state_change
+process_docs: !function utils.mvbench_state_change_docs

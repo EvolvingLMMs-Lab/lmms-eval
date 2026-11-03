@@ -1,0 +1,26 @@
+task: sparc_visual
+include: _default_template_yaml
+process_docs: !function utils.sparc_visual_process_docs
+process_results: !function utils.sparc_visual_process_results_by_level
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+  - metric: acc_level_1
+    aggregation: !function utils.sparc_visual_aggregate_level_1
+    higher_is_better: true
+  - metric: acc_level_2
+    aggregation: !function utils.sparc_visual_aggregate_level_2
+    higher_is_better: true
+  - metric: acc_level_3
+    aggregation: !function utils.sparc_visual_aggregate_level_3
+    higher_is_better: true
+  - metric: acc_level_4
+    aggregation: !function utils.sparc_visual_aggregate_level_4
+    higher_is_better: true
+  - metric: acc_level_5
+    aggregation: !function utils.sparc_visual_aggregate_level_5
+    higher_is_better: true
+  - metric: invalid_path
+    aggregation: mean
+    higher_is_better: false

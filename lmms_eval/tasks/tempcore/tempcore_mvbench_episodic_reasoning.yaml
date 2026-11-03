@@ -1,0 +1,3 @@
+include: ../mvbench/mvbench_episodic_reasoning.yaml
+task: tempcore_mvbench_episodic_reasoning
+process_docs: !function utils.mvbench_episodic_reasoning_docs

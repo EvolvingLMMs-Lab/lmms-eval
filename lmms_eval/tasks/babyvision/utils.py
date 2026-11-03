@@ -35,15 +35,16 @@ def _get_openai_client() -> Optional["OpenAI"]:
 
 
 def parse_bool_response(response_text: str) -> Optional[bool]:
-    """Parse boolean response from LLM."""
-    text = response_text.strip().lower()
-    if "true" in text:
-        return True
-    elif "false" in text:
-        return False
-    else:
-        eval_logger.warning(f"Could not parse boolean from response: {response_text[:200]}...")
+    """Parse boolean response from LLM.
+
+    Uses the first standalone "true"/"false", so "False, not true" is False and
+    "untrue" is not read as True.
+    """
+    match = re.search(r"\b(true|false)\b", (response_text or "").lower())
+    if match is None:
+        eval_logger.warning(f"Could not parse boolean from response: {(response_text or '')[:200]}...")
         return None
+    return match.group(1) == "true"
 
 
 def extract_boxed_answer(text: str) -> Optional[str]:
@@ -162,7 +163,7 @@ def babyvision_process_results(doc, results, **kwargs):
             "babyvision_overall_accuracy": {
                 "task_type": task_type,
                 "subtype": subtype,
-                "correct": False,
+                "correct": None,
                 "error": "No API client",
             }
         }
@@ -181,67 +182,61 @@ def babyvision_process_results(doc, results, **kwargs):
         judge_response = response.choices[0].message.content
         correct = parse_bool_response(judge_response)
 
-        if correct is None:
-            correct = False
-
     except Exception as e:
         eval_logger.error(f"LLM judge API call failed: {e}")
         return {
             "babyvision_overall_accuracy": {
                 "task_type": task_type,
                 "subtype": subtype,
-                "correct": False,
+                "correct": None,
                 "error": str(e),
             }
         }
 
-    return {
-        "babyvision_overall_accuracy": {
-            "task_type": task_type,
-            "subtype": subtype,
-            "correct": correct,
-            "parsed_pred": parsed_pred,
-            "groundtruth": groundtruth,
-        }
+    entry = {
+        "task_type": task_type,
+        "subtype": subtype,
+        "correct": correct,
+        "parsed_pred": parsed_pred,
+        "groundtruth": groundtruth,
     }
+    if correct is None:
+        entry["error"] = "Could not parse judge response"
+    return {"babyvision_overall_accuracy": entry}
 
 
 def babyvision_aggregate_results(results):
-    """Aggregate results across all samples."""
-    if not results:
-        return 0.0
+    """Aggregate results across all samples.
 
-    correct_count = sum(1 for r in results if r.get("correct", False))
-    total_count = len(results)
-
-    accuracy = correct_count / total_count if total_count > 0 else 0.0
+    Samples the judge could not score (no client, API error, unparseable
+    verdict) have `correct` set to None. They are left out of the accuracy
+    rather than counted as wrong, and if none were scored the result is NaN.
+    """
+    judged = [r for r in results if r.get("correct") is not None]
+    unjudged_count = len(results) - len(judged)
+    correct_count = sum(1 for r in judged if r["correct"])
+    accuracy = correct_count / len(judged) if judged else float("nan")
 
     # Count by task type/subtype
     task_type_counts = defaultdict(lambda: {"correct": 0, "total": 0})
-    error_count = 0
-
-    for r in results:
-        task_type = r.get("task_type", "unknown")
-        subtype = r.get("subtype", "unknown")
-        key = f"{task_type}/{subtype}"
+    for r in judged:
+        key = f"{r.get('task_type', 'unknown')}/{r.get('subtype', 'unknown')}"
         task_type_counts[key]["total"] += 1
-        if r.get("correct", False):
+        if r["correct"]:
             task_type_counts[key]["correct"] += 1
-        if r.get("error"):
-            error_count += 1
 
     # Log results
     eval_logger.info("=" * 60)
     eval_logger.info("BabyVision Final Results")
     eval_logger.info("=" * 60)
-    eval_logger.info(f"Overall Accuracy: {accuracy:.4f} ({correct_count}/{total_count})")
-    if error_count > 0:
-        eval_logger.warning(f"Errors encountered: {error_count}/{total_count}")
+    eval_logger.info(f"Overall Accuracy: {accuracy:.4f} ({correct_count}/{len(judged)})")
+    if unjudged_count > 0:
+        eval_logger.warning(f"Judge failed on {unjudged_count}/{len(results)} samples; they are excluded from the accuracy")
     eval_logger.info("-" * 60)
     eval_logger.info("Accuracy by Task Type/Subtype:")
     for key in sorted(task_type_counts.keys()):
         stats = task_type_counts[key]
-        acc = stats["correct"] / stats["total"] if stats["total"] > 0 else 0.0
+        acc = stats["correct"] / stats["total"]
         eval_logger.info(f"  {key}: {acc:.4f} ({stats['correct']}/{stats['total']})")
     eval_logger.info("=" * 60)
 

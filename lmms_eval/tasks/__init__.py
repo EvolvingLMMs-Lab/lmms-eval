@@ -254,7 +254,10 @@ class TaskManager:
                 }
             if self._config_is_python_task(config):
                 if self._class_has_config_in_constructor(config["class"]):
-                    task_object = config["class"](config=config)
+                    task_kwargs = {"config": config}
+                    if getattr(config["class"], "MODEL_NAME_AWARE", False) and "model_name" in inspect.signature(config["class"].__init__).parameters:
+                        task_kwargs["model_name"] = self.model_name
+                    task_object = config["class"](**task_kwargs)
                 else:
                     task_object = config["class"]()
                 if isinstance(task_object, ConfigurableTask):
@@ -352,7 +355,7 @@ class TaskManager:
                             **name_or_config,
                         }
                     else:
-                        task_config = name_or_config
+                        task_config = {"task": name, **name_or_config}
                     return _load_task(task_config, task=name)
             else:
                 group_config, update_config = _process_group_config(name_or_config)

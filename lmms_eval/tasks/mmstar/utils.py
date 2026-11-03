@@ -129,7 +129,7 @@ def mmstar_aggregate_results(results):
     Args:
         results: a list of values returned by process_results
     Returns:
-        A score
+        The accuracy over all questions in results
     """
     l2_category_scores = defaultdict(list)
     for result in results:
@@ -137,14 +137,11 @@ def mmstar_aggregate_results(results):
         l2_category = result["l2_category"]
         l2_category_scores[l2_category].append(score)
 
-    l2_category_avg_score = {}
     for l2_category, scores in l2_category_scores.items():
-        avg_score = sum(scores) / len(scores)
-        l2_category_avg_score[l2_category] = avg_score
-        eval_logger.info(f"{l2_category}: {avg_score:.2f}")
+        eval_logger.info(f"{l2_category}: {sum(scores) / len(scores):.2f}")
 
-    avg_score = sum(l2_category_avg_score.values()) / len(l2_category_avg_score)
-    return avg_score
+    # Weight every question equally, as the official scorer does (correct / 250 per category, correct / 1500 overall).
+    return sum(result["score"] for result in results) / len(results)
 
 
 # --- mmstar_hybrid -----------------------------------------------------------

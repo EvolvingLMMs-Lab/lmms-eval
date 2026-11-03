@@ -1,0 +1,7 @@
+include: _default_template_yaml
+class: !function task.OmniCompassTask
+task: omnicompass_av_sg
+dataset_path: VCLab-PolyU/OmniCompass
+dataset_kwargs:
+  track: AV
+  task: SG

@@ -1,0 +1,8 @@
+group: tempcore
+task:
+  - tempcore_mvbench
+  - tempcore_nextqa
+  - tempcore_egoschema
+  - tempcore_mlvu
+  - tempcore_longvideobench
+  - tempcore_videomme

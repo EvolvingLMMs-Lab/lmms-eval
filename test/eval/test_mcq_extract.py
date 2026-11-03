@@ -42,7 +42,7 @@ def test_corpus_structure() -> None:
             assert set(context["options"]) == set(choices), case
             assert all(isinstance(text, str) and text.strip() for text in context["options"].values()), case
     assert {case["category"] for case in _CASES} >= {"regression", "legacy", "container", "phrase", "multilingual", "correction", "ambiguous", "boundary", "custom", "article", "model_reply"}
-    assert sum(case["category"] == "regression" for case in _CASES) == 6
+    assert sum(case["category"] == "regression" for case in _CASES) == 16
     assert sum(case["category"] == "legacy" for case in _CASES) == 26
     assert {case["category"] for case in _CASES} >= {"hack_mmmu", "hack_mmmu_pro", "hack_videommmu", "hack_mmbench", "hack_seedbench", "hack_ai2d"}
     alphabet_sizes = {len(case["choices"] or list("ABCDEFGH")) for case in _CASES}

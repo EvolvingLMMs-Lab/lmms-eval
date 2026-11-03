@@ -1,0 +1,3 @@
+include: ../mvbench/mvbench_character_order.yaml
+task: tempcore_mvbench_character_order
+process_docs: !function utils.mvbench_character_order_docs

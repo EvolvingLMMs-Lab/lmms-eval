@@ -86,6 +86,188 @@
       "rationale": "Because introduces a justification for the leading answer A, not an English article."
     },
     {
+      "id": "regression_markdown_bold_label_and_text",
+      "category": "regression",
+      "response": "**B. dog**",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "Bold emphasis may wrap a punctuated label together with its option text."
+    },
+    {
+      "id": "regression_markdown_bold_declared_label",
+      "category": "regression",
+      "response": "The answer is **C. Red**",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "A declaration stays explicit when bold wraps the label and the option text."
+    },
+    {
+      "id": "regression_markdown_bold_parenthesized_text",
+      "category": "regression",
+      "response": "The correct answer is **(C) Red**.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "Bold emphasis may wrap a parenthesized label and the option text that follows it."
+    },
+    {
+      "id": "regression_markdown_bold_label_then_prose",
+      "category": "regression",
+      "response": "**C. Red**\n\nThe car in the video is red.",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "A leading bold label remains the answer when later lines only explain it."
+    },
+    {
+      "id": "regression_markdown_bold_answer_line",
+      "category": "regression",
+      "response": "Answer: **B. The man is cooking**",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "An answer marker selects the bold label even when the option text is emphasized with it."
+    },
+    {
+      "id": "regression_chinese_answer_fullwidth_colon",
+      "category": "regression",
+      "response": "答案：B",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "The Chinese answer marker accepts a fullwidth colon before the adjacent choice."
+    },
+    {
+      "id": "regression_chinese_answer_ascii_colon",
+      "category": "regression",
+      "response": "答案: B",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "The Chinese answer marker accepts an ASCII colon and whitespace before the choice."
+    },
+    {
+      "id": "regression_chinese_final_answer_colon",
+      "category": "regression",
+      "response": "最终答案：C",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "A final-answer prefix does not block the Chinese answer-colon marker."
+    },
+    {
+      "id": "regression_chinese_option_word",
+      "category": "regression",
+      "response": "选项B",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "The option marker must be matched whole so the shorter selection marker does not consume its first character."
+    },
+    {
+      "id": "regression_chinese_short_colon",
+      "category": "regression",
+      "response": "答：B",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "B",
+      "rationale": "The short Chinese answer marker accepts a colon before the adjacent choice."
+    },
+    {
+      "id": "boundary_markdown_bold_unpunctuated_word",
+      "category": "boundary",
+      "response": "**A cat** is shown",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Bold text without a punctuated label is prose, not a leading option."
+    },
+    {
+      "id": "boundary_markdown_bold_glued_token",
+      "category": "boundary",
+      "response": "**B.dog**",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Bold styling does not turn a glued token such as B.dog into an option label."
+    },
+    {
+      "id": "boundary_markdown_bold_alternative",
+      "category": "boundary",
+      "response": "Answer: **A or B**",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "Emphasis does not make an explicit alternative a single choice."
+    },
+    {
+      "id": "boundary_markdown_bold_paren_alternative",
+      "category": "boundary",
+      "response": "**(A) or (B)**",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A parenthesized alternative stays ambiguous when bold wraps both choices."
+    },
+    {
       "id": "legacy_bare_upper",
       "category": "legacy",
       "response": "B",

@@ -184,7 +184,7 @@ class InstructBLIP(lmms):
             if "<image>" in context:
                 # instruct blip does not expect the <image> tag
                 context = context.replace("<image>", "")
-            # Set trunction equals true here, the max length for qformer tokenizer is 512
+            # Set truncation equals true here, the max length for qformer tokenizer is 512
             # if not truncate, some questions will cause size mismatch
             # The transformer implementation can't handle multi images for blip
             # Concat it into one image

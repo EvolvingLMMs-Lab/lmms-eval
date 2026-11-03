@@ -1,0 +1,3 @@
+dataset_name: mini
+task: "spatial_scene_bench_mini"
+include: _default_template_yaml

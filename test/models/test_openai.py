@@ -5,8 +5,14 @@ import os
 import tempfile
 import unittest
 from types import SimpleNamespace
+from unittest import mock
+
+import av
+import numpy as np
+from openai import AzureOpenAI
 
 from lmms_eval.models.chat.openai import OpenAICompatible as ChatOpenAICompatible
+from lmms_eval.models.model_utils.load_video import _probe_video_metadata
 from lmms_eval.models.simple.openai import OpenAICompatible as SimpleOpenAICompatible
 
 
@@ -61,6 +67,12 @@ def _configure_openai_model(model, completions: _CaptureCompletions, *, model_ve
     model.video_target_frames = None
     model.video_max_frames = None
     model.enable_thinking_kwarg = None
+    # These fixtures bypass __init__, so supply the chat backend's defaults.
+    model.audio_format = "audio_url"
+    model.audio_encoding = "base64"
+    model.return_response_json = False
+    model.image_detail = None
+    model.token_limit_field = "max_tokens"
     model._rank = 0
     model.task_dict = {"demo": {"test": [{"id": 0}]}}
 
@@ -182,10 +194,32 @@ class TestOpenAICompatibleGenerationParameters(unittest.TestCase):
                 self.assertEqual(completions.payloads, [])
 
 
-def _write_video(path: str, *, frames: int = 20, fps: int = 10) -> None:
-    import av
-    import numpy as np
+class TestOpenAICompatibleClientRetries(unittest.TestCase):
+    # generate_until owns retries, so the SDK client must not retry on its own.
+    def test_simple_backend_disables_sdk_retries(self):
+        model = SimpleOpenAICompatible(model_version="gpt-4o", base_url="http://localhost:1/v1", api_key="test")
 
+        self.assertEqual(model.client.max_retries, 0)
+
+    def test_chat_backend_disables_sdk_retries(self):
+        model = ChatOpenAICompatible(model_version="gpt-4o", base_url="http://localhost:1/v1", api_key="test")
+
+        self.assertEqual(model.client.max_retries, 0)
+
+    def test_azure_backend_disables_sdk_retries(self):
+        azure_env = {
+            "AZURE_OPENAI_API_KEY": "test",
+            "AZURE_OPENAI_API_BASE": "https://example.openai.azure.com",
+            "AZURE_OPENAI_API_VERSION": "2024-06-01",
+        }
+        with mock.patch.dict(os.environ, azure_env):
+            model = SimpleOpenAICompatible(model_version="gpt-4o", azure_openai=True)
+
+        self.assertIsInstance(model.client, AzureOpenAI)
+        self.assertEqual(model.client.max_retries, 0)
+
+
+def _write_video(path: str, *, frames: int = 20, fps: int = 10) -> None:
     with av.open(path, "w") as container:
         stream = container.add_stream("mpeg4", rate=fps)
         stream.width = stream.height = 32
@@ -233,8 +267,6 @@ class TestOpenAICompatibleVideoFrameControls(unittest.TestCase):
     def test_target_frames_fps_does_not_round_to_one_frame_fewer(self):
         # 19 frames at 10 fps: 1.9 * (8 / 1.9) == 7.999..., so floor() and int()
         # samplers would return 7 frames for an unadjusted fps.
-        from lmms_eval.models.model_utils.load_video import _probe_video_metadata
-
         clip = os.path.join(self.tmp.name, "rounding.mp4")
         _write_video(clip, frames=19)
         frames, rate = _probe_video_metadata(clip, count_frames=True)

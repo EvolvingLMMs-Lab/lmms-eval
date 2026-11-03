@@ -135,6 +135,16 @@ def test_mmstar_actual_scoring(case: dict[str, Any], scorer_name: str) -> None:
         assert scorer(doc, [case["response"]])["average"]["score"] == 0.0
 
 
+def test_mmstar_aggregation_weights_every_question_equally() -> None:
+    """MMStar category and average scores are accuracies over questions, as in the official scorer."""
+    module = importlib.import_module("lmms_eval.tasks.mmstar.utils")
+    l2_categories = ["image scene and topic"] * 3 + ["image emotion"]
+    docs = [{"index": index, "answer": "A", "category": "coarse perception", "l2_category": l2_category} for index, l2_category in enumerate(l2_categories)]
+    results = [module.mmstar_process_results(doc, [response]) for doc, response in zip(docs, ["A", "A", "A", "B"])]
+    for metric in ("coarse perception", "average"):
+        assert module.mmstar_aggregate_results([result[metric] for result in results]) == 0.75
+
+
 @pytest.mark.parametrize("benchmark", ["lvbench", "mlvu", "videomme"])
 @pytest.mark.parametrize("case", _SCORING_CASES, ids=lambda case: case["id"])
 def test_video_benchmark_four_choice_wrappers(benchmark: str, case: dict[str, Any]) -> None:

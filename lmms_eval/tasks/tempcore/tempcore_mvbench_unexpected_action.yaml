@@ -1,0 +1,3 @@
+include: ../mvbench/mvbench_unexpected_action.yaml
+task: tempcore_mvbench_unexpected_action
+process_docs: !function utils.mvbench_unexpected_action_docs

@@ -18,14 +18,14 @@ jobs:
     steps:
       # pull_request_target must only execute trusted repository code.
       # Never check out the contributor's head/merge ref or execute PR commands.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
         with:
           repository: ${{ github.repository }}
           ref: ${{ github.sha }}
           persist-credentials: false
           sparse-checkout: .github/pr-evidence
       - name: Require E2E evidence for new and existing evaluation code
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             const { run } = require('./.github/pr-evidence/validate.cjs');

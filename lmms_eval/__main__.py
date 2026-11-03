@@ -243,6 +243,11 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         help="Speed up evaluation by caching the building of dataset requests. `None` if not caching.",
     )
     parser.add_argument(
+        "--fail_on_error",
+        action="store_true",
+        help="Exit with status 1 if an evaluation fails. Disabled by default for compatibility.",
+    )
+    parser.add_argument(
         "--check_integrity",
         action="store_true",
         help="Whether to run the relevant part of the test suite for the tasks",
@@ -302,7 +307,7 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         "--show_config",
         action="store_true",
         default=False,
-        help="If True, shows the the full config of all tasks at the end of the evaluation.",
+        help="If True, shows the full config of all tasks at the end of the evaluation.",
     )
     parser.add_argument(
         "--include_path",
@@ -518,6 +523,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
     args_list = []
     results_list = []
+    evaluation_failed = False
     if args.config:
         if not os.path.exists(args.config):
             raise ValueError(f"Config file does not exist: {args.config}")
@@ -608,12 +614,17 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                         eval_logger.info(f"Logging to SwanLab failed due to {e}")
 
             except Exception as e:
+                # A failed rank must exit nonzero so the launcher can stop peers
+                # that are still waiting in distributed collectives.
+                if int(os.environ.get("WORLD_SIZE", 1)) > 1 or (torch.distributed.is_available() and torch.distributed.is_initialized() and torch.distributed.get_world_size() > 1):
+                    raise
                 if args.verbosity == "DEBUG":
                     raise e
                 else:
                     traceback.print_exc()
                     eval_logger.error(f"Error during evaluation: {e}. Please set `--verbosity=DEBUG` to get more information.")
                     results_list.append(None)
+                    evaluation_failed = evaluation_failed or getattr(args, "fail_on_error", False)
 
         for args, results in zip(args_list, results_list):
             # cli_evaluate will return none if the process is not the main process (rank 0)
@@ -634,6 +645,8 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
             accelerator.state.destroy_process_group()
         elif torch.distributed.is_available() and torch.distributed.is_initialized():
             torch.distributed.destroy_process_group()
+    if evaluation_failed:
+        raise SystemExit(1)
 
 
 def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
@@ -719,11 +732,13 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         else:
             task_list = args.tasks.split(",")
             task_names = task_manager.match_tasks(task_list)
+            task_missing = []
             for task in [task for task in task_list if task not in task_names]:
                 if os.path.isfile(task):
                     config = utils.load_yaml_config(task)
                     task_names.append(config)
-            task_missing = [task for task in task_list if task not in task_names and "*" not in task]  # we don't want errors if a wildcard ("*") task name was used
+                elif "*" not in task:  # Unmatched wildcard patterns are allowed.
+                    task_missing.append(task)
 
             if task_missing:
                 missing = ", ".join(task_missing)

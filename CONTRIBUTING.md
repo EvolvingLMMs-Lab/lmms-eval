@@ -6,7 +6,7 @@ Thanks for your interest in contributing to lmms-eval! This guide covers everyth
 
 ### Prerequisites
 
-- Python >= 3.9
+- Python >= 3.10
 - [uv](https://docs.astral.sh/uv/) (package manager)
 - Git
 
@@ -21,7 +21,7 @@ uv sync
 ### Running a Quick Test
 
 ```bash
-python -m lmms_eval \
+uv run python -m lmms_eval \
     --model qwen2_5_vl \
     --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
     --tasks mme \
@@ -205,11 +205,13 @@ Models live under `lmms_eval/models/chat/` (recommended) or `lmms_eval/models/si
 1. **Create `models/chat/my_model.py`**
 2. **Inherit from `lmms`**, set `is_simple = False`
 3. **Implement required methods**: `generate_until`, `loglikelihood`, `generate_until_multi_round`
-4. **Register** in `models/__init__.py`:
+4. **Add a built-in bootstrap declaration** in `models/__init__.py`:
    ```python
-   AVAILABLE_CHAT_TEMPLATE_MODELS = {"my_model": "MyModel", ...}
+   _BUILTIN_CHAT_TEMPLATE_MODELS = {"my_model": "MyModel", ...}
    ```
-5. **Use `optional_import`** for model-specific dependencies:
+   Use `_BUILTIN_SIMPLE_MODELS` for a simple model. The public `AVAILABLE_*` and `MODEL_ALIASES` maps are read-only views.
+5. **For an external package**, publish a `lmms_eval.models` entry point that returns a `ModelManifest`. Model registration runs at process startup, so install the package before starting `lmms-eval`.
+6. **Use `optional_import`** for model-specific dependencies:
    ```python
    from lmms_eval.imports import optional_import
    MyLib, _has_mylib = optional_import("mylib", "MyLib")

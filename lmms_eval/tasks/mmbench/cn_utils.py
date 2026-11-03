@@ -58,7 +58,7 @@ def mmbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         "split": doc["split"],
     }
 
-    query_prompt = f"{data['hint']} {data['question']} {data['options']}" if pd.notna(data["hint"]) else f"{data['question']} {data['options']}"
+    query_prompt = f"{data['hint']} {data['question']} {data['options']}" if pd.notna(data["hint"]) and data["hint"] != "nan" else f"{data['question']} {data['options']}"
 
     if lmms_eval_specific_kwargs:
         query_prompt = f"{query_prompt}\n{lmms_eval_specific_kwargs['post_prompt']}"

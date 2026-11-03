@@ -17,7 +17,7 @@ generation_kwargs:
   do_sample: false
 # The return value of process_results will be used by metrics
 process_results: !function utils.av_odyssey_process_results
-# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+# Note that the metric name can be either a registered metric function (such as the case for GQA) or a key name returned by process_results
 metric_list:
   - metric: av_odyssey_score
     aggregation: !function utils.av_odyssey_aggregate_results

@@ -1,4 +1,9 @@
+import base64
+import io
 import re
+
+from datasets import Dataset
+from PIL import Image
 
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 
@@ -25,6 +30,42 @@ def ai2d_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 def ai2d_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
+
+
+def ai2d_vlmeval_process_docs(dataset: Dataset) -> Dataset:
+    """Adapt AI2D_TEST TSV rows without losing their per-question images."""
+    images = {}
+    for row in dataset:
+        index = str(row["index"])
+        if index in images:
+            raise ValueError(f"Duplicate AI2D_TEST index: {index}")
+        images[index] = row["image"]
+
+    def convert(row):
+        value = row["image"]
+        seen = set()
+        # TSV images may reference another row; resolve before limit/sharding.
+        while isinstance(value, str) and value.isdecimal():
+            if value in seen or value not in images:
+                raise ValueError(f"Invalid AI2D_TEST image reference: {value}")
+            seen.add(value)
+            value = images[value]
+        if not isinstance(value, str) or not value:
+            raise ValueError(f"Missing AI2D_TEST image at index {row['index']}")
+        if row["answer"] not in ("A", "B", "C", "D"):
+            raise ValueError(f"Invalid AI2D_TEST answer at index {row['index']}: {row['answer']!r}")
+        options = [row[letter] for letter in "ABCD"]
+        if any(not isinstance(option, str) or not option for option in options):
+            raise ValueError(f"Missing AI2D_TEST option at index {row['index']}")
+        return {"image": value, "options": options, "answer": str("ABCD".index(row["answer"]))}
+
+    return dataset.map(convert)
+
+
+def ai2d_vlmeval_doc_to_visual(doc: dict) -> list[Image.Image]:
+    """Decode the image selected by the pinned VLMEvalKit dataset."""
+    with Image.open(io.BytesIO(base64.b64decode(doc["image"], validate=True))) as image:
+        return [image.convert("RGB")]
 
 
 def ai2d_doc_to_target(doc, model_specific_target_kwargs):

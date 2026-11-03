@@ -24,7 +24,7 @@
 
 マルチモーダルモデルの評価は、見た目以上に困難です。何百ものベンチマークが存在しますが、それらを実行するための標準的な方法はありません。ラボ間で結果が異なり、比較の信頼性が低下します。私たちは、個々の努力ではなく、体系的なプロセスを通じてこの問題の解決に取り組んできました。
 
-**2026年1月** - 既存のベンチマークにおいて空間的および構成的な推論が依然として盲点であることを認識しました。[CaptionQA](https://captionqa.github.io/)、[SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench)、[SiteBench](https://sitebench.github.io/)、[ViewSpatial](https://github.com/ViewSpatial/ViewSpatial) を追加しました。リモート評価パイプラインを実行するチームのために、HTTP評価サーバー（#972）を導入しました。また、統計的な厳密さを必要とする方のために、CLT（中心極限定理）とクラスター化標準誤差の推定（#989）を追加しました。
+**2026年1月** - 既存のベンチマークにおいて空間的および構成的な推論が依然として盲点であることを認識しました。[CaptionQA](https://captionqa.github.io/)、[SpatialTreeBench](https://github.com/ByteDance-Seed/SpatialTree)、[SiteBench](https://sitebench.github.io/)、[ViewSpatial](https://github.com/ZJU-REAL/ViewSpatial-Bench) を追加しました。リモート評価パイプラインを実行するチームのために、HTTP評価サーバー（#972）を導入しました。また、統計的な厳密さを必要とする方のために、CLT（中心極限定理）とクラスター化標準誤差の推定（#989）を追加しました。
 
 **2025年10月 (v0.5)** - 音声評価が課題となっていました。モデルは音声を認識できましたが、それをテストするための一貫した方法がありませんでした。このリリースでは、包括的な音声評価、効率のためのレスポンスキャッシング、および音声、視覚、推論にわたる 50 以上のベンチマークバリアントが導入されました。[リリースノート](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.5.md)。
 

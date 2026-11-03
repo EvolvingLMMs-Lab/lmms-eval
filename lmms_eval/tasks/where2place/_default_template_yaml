@@ -1,5 +1,6 @@
 dataset_path: FlagEval/Where2Place
 full_docs: true
+process_results_use_image: true
 output_type: generate_until
 doc_to_visual: !function utils.where2place_doc_to_visual
 doc_to_text: !function utils.where2place_doc_to_text

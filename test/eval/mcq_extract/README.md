@@ -37,9 +37,11 @@ verification pipeline; MMStar is only one real model E2E entry point.
    choice outside the allowed alphabet returns empty, without falling back
    to an earlier distractor.
    Legacy open markers `<answer> c` and `answer> d` remain supported. Literal
-   multilingual markers are Chinese `答案是`, `答案为`, `选`; Korean `옵션`,
-   `정답은`, `답은`, `답:`; and Japanese `答えは`. Allow whitespace and common
-   punctuation between each marker and its adjacent choice token.
+   multilingual markers are Chinese `答案是`, `答案为`, `答案:` / `答案：`
+   (with an optional `最终` prefix), `答:` / `答：`, `选项`, and `选`; Korean
+   `옵션`, `정답은`, `답은`, `답:`; and Japanese `答えは`. Match `选项` before
+   the shorter `选` marker. Allow whitespace and common punctuation between
+   each marker and its adjacent choice token.
    Fullwidth parentheses around ASCII choices are also formatting. In an
    explicit Korean/Japanese declaration, the grammatical suffixes `입니다`
    and `です` may immediately follow the choice (`정답은 b입니다.`,
@@ -52,7 +54,11 @@ verification pipeline; MMStar is only one real model E2E entry point.
    Unambiguous trailing choices occur on a standalone final line or follow a
    comma/semicolon. Merely ending prose with `Vitamin B` or `the value of C`
    is insufficient. Markdown emphasis and inline-code wrappers around a choice
-   (`**B**`, `*B*`, or `` `B` ``) preserve its meaning.
+   (`**B**`, `*B*`, or `` `B` ``) preserve its meaning. The same emphasis may
+   wrap a punctuated label together with its option text (`**B. dog**`,
+   `**(C) Red**`) when whitespace separates the text from the label. A glued
+   token (`**B.dog**`), an unpunctuated word (`**A cat**`), or an alternative
+   directly after the label (`**A or B**`, `**(A) or (B)**`) is still empty.
 4. A response beginning with `A`/`a` followed by ordinary noun prose is
    ambiguous with the English article and returns empty. Answer assertions
    such as `A is correct`, `A because ...`, `A seems correct`, and punctuated
@@ -95,11 +101,12 @@ native-parser replay. The option keys must match `choices`. `expected` still
 specifies this shared extractor's contract, independently of what the native
 benchmark heuristic returns.
 
-Coverage includes the six #1554 review examples; all existing positive and
-negative tests; structured formats; case/whitespace/Markdown variants;
-multilingual phrases; explicit corrections and precedence; alternatives and
-option lists; invalid and extended choice alphabets; acronyms, prose,
-punctuation, identifiers and Unicode boundaries; and empty inputs.
+Coverage includes the six #1554 review examples; the #1608 markdown-label
+and Chinese-colon regressions; all existing positive and negative tests;
+structured formats; case/whitespace/Markdown variants; multilingual phrases;
+explicit corrections and precedence; alternatives and option lists; invalid
+and extended choice alphabets; acronyms, prose, punctuation, identifiers and
+Unicode boundaries; and empty inputs.
 
 `test_mcq_extract.py` validates fixture structure and runs every case
 individually against both the shared utility and `MCQExtractor`. Additional
@@ -155,9 +162,10 @@ expectations. No benchmark scorer is changed by adding these test data.
 
 The original `validation.json` and `validation.md` retain the historical
 219-case before/after evidence and four-sample real model smoke test from
-#1564. The benchmark attack fixtures expand the current corpus to 271 cases;
+#1564. The benchmark attack fixtures brought that corpus to 271 cases;
 their observations and validation are recorded separately in
-`benchmark_validation.json` and `benchmark_validation.md`.
+`benchmark_validation.json` and `benchmark_validation.md`. The live corpus
+also includes the later #1608 regression fixtures.
 
 ## Reproduction and verification
 
@@ -190,7 +198,7 @@ cases with uppercase strings, 135/219 with both cases configured, and 113/219
 with both cases and unanchored extraction disabled. This compares agreement
 with this contract; it is not a claim about either parser's general accuracy.
 Rerunning the comparison now includes the added fixtures, so its denominator
-will be 271 rather than the historical 219.
+is the live corpus rather than the historical 219.
 
 The differences include closed answer tags, alternatives (`A or B`), and
 invalid final declarations that must mask earlier valid answers. Those are

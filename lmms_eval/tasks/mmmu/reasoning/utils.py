@@ -73,7 +73,7 @@ def mmmu_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     # If you use doc to messages, the interleaved format is always used
     config["metadata"]["interleaved_format"] = True
     question = mmmu_doc_to_text(doc, lmms_eval_specific_kwargs)
-    visuals = mmmu_doc_to_visual(doc)
+    visuals = mmmu_doc_to_visual(doc, interleaved=True)
     messages = [{"role": "user", "content": []}]
     interleaved_content = question.split("<image>")
     for i, (image, text) in enumerate(zip(visuals, interleaved_content)):
@@ -86,11 +86,14 @@ def mmmu_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     return messages
 
 
-def mmmu_doc_to_visual(doc):
+def mmmu_doc_to_visual(doc, *, interleaved: bool = False):
+    """Keep every image reference for interleaving, or unique images in numbered order."""
     prompt = construct_prompt(doc)
     image_tokens = re.findall(r"<image \d+>", prompt)
     # Remove <> and  swap space as _
-    image_tokens = sorted(list(set([image_token.strip("<>").replace(" ", "_") for image_token in image_tokens])))
+    image_tokens = [image_token.strip("<>").replace(" ", "_") for image_token in image_tokens]
+    if not interleaved:
+        image_tokens = sorted(set(image_tokens))
     visual = [doc[image_token].convert("RGB") for image_token in image_tokens]
     return visual
 
@@ -113,7 +116,7 @@ def mmmu_process_results(doc, results):
 def mmmu_reward_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     config["metadata"]["interleaved_format"] = True
     question = mmmu_doc_to_text(doc)
-    visuals = mmmu_doc_to_visual(doc)
+    visuals = mmmu_doc_to_visual(doc, interleaved=True)
     system_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
     messages = [{"role": "user", "content": []}]
     interleaved_content = question.split("<image>")
