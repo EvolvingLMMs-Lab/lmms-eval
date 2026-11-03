@@ -1,5 +1,6 @@
 # credit to https://github.com/EleutherAI/lm-evaluation-harness
 import collections
+import importlib
 import inspect
 import math
 import pathlib
@@ -459,6 +460,234 @@ def consolidate_results(
     return results, samples, configs, versions, num_fewshot, higher_is_better
 
 
+def _resolve_group_postprocess_callable(raw):
+    """Resolve group postprocess_results value to a callable.
+
+    Supports a callable directly (from YAML !function) or a string import path
+    such as "lmms_eval.tasks.sitebench.utils.sitebench_merge_results".
+    """
+    if raw is None:
+        return None
+    if callable(raw):
+        return raw
+    if isinstance(raw, str):
+        try:
+            module_name, func_name = raw.rsplit(".", 1)
+            mod = importlib.import_module(module_name)
+            fn = getattr(mod, func_name)
+            if callable(fn):
+                return fn
+            eval_logger.warning(f"Group postprocess_results '{raw}' resolved to non-callable {fn}")
+            return None
+        except Exception as e:
+            eval_logger.warning(f"Failed to resolve group postprocess_results '{raw}': {e}")
+            return None
+    eval_logger.warning(f"Unsupported postprocess_results type {type(raw)}: {raw}")
+    return None
+
+
+def _group_postprocess_context(
+    *,
+    group_name,
+    subtask_names,
+    results,
+    samples=None,
+    configs=None,
+    versions=None,
+    output_dir=None,
+    model_output_dir=None,
+    sample_files=None,
+    group_config=None,
+    group_metadata=None,
+):
+    return {
+        "group_name": group_name,
+        "group": group_name,
+        "subtask_names": subtask_names,
+        "subtasks": subtask_names,
+        "task_names": subtask_names,
+        "results": results,
+        "samples": samples,
+        "configs": configs,
+        "versions": versions,
+        "output_dir": output_dir,
+        "output_path": output_dir,
+        "model_output_dir": model_output_dir,
+        "model_result_dir": model_output_dir,
+        "sample_files": sample_files,
+        "sample_paths": sample_files,
+        "group_config": group_config,
+        "config": group_config,
+        "group_metadata": group_metadata,
+        "metadata": group_metadata,
+    }
+
+
+def _bind_group_postprocess_call(hook, context):
+    """Return a zero-arg caller whose arguments already match ``hook``.
+
+    Binding happens before the hook runs. A TypeError raised inside the hook
+    must not be treated as a bad signature and must not cause a second call.
+    """
+    group_name = context["group_name"]
+    subtask_names = context["subtask_names"]
+    results = context["results"]
+    try:
+        signature = inspect.signature(hook)
+    except (TypeError, ValueError):
+
+        def _call_without_signature():
+            return hook(group_name, subtask_names, results)
+
+        return _call_without_signature
+
+    parameters = list(signature.parameters.values())
+    has_var_keyword = any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in parameters)
+    if has_var_keyword:
+        filtered = dict(context)
+    else:
+        filtered = {key: value for key, value in context.items() if key in signature.parameters}
+
+    try:
+        signature.bind(**filtered)
+    except TypeError:
+        positional = [parameter for parameter in parameters if parameter.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)]
+        if len(positional) >= 3:
+            positional_names = [parameter.name for parameter in positional[:3]]
+            rest = {key: value for key, value in filtered.items() if key not in positional_names}
+            try:
+                signature.bind(group_name, subtask_names, results, **rest)
+            except TypeError:
+                rest = None
+            else:
+
+                def _call_positional_with_rest(rest=rest):
+                    return hook(group_name, subtask_names, results, **rest)
+
+                return _call_positional_with_rest
+        try:
+            signature.bind(group_name, subtask_names, results)
+        except TypeError as exc:
+            eval_logger.warning(f"Group postprocess hook '{group_name}' arguments do not match its signature: {exc}")
+            return None
+
+        def _call_positional():
+            return hook(group_name, subtask_names, results)
+
+        return _call_positional
+
+    def _call_keywords():
+        return hook(**filtered)
+
+    return _call_keywords
+
+
+def _invoke_group_postprocess(
+    hook,
+    *,
+    group_name,
+    subtask_names,
+    results,
+    samples=None,
+    configs=None,
+    versions=None,
+    output_dir=None,
+    model_output_dir=None,
+    sample_files=None,
+    group_config=None,
+    group_metadata=None,
+):
+    """Invoke a group postprocess hook once with the arguments it accepts."""
+    if hook is None:
+        return None
+    context = _group_postprocess_context(
+        group_name=group_name,
+        subtask_names=subtask_names,
+        results=results,
+        samples=samples,
+        configs=configs,
+        versions=versions,
+        output_dir=output_dir,
+        model_output_dir=model_output_dir,
+        sample_files=sample_files,
+        group_config=group_config,
+        group_metadata=group_metadata,
+    )
+    call = _bind_group_postprocess_call(hook, context)
+    if call is None:
+        return None
+    try:
+        return call()
+    except Exception as exc:
+        eval_logger.warning(f"Group postprocess hook '{group_name}' failed: {exc}")
+        return None
+
+
+def _apply_group_postprocess(
+    group_obj,
+    group_name,
+    results,
+    versions,
+    show_group_table,
+    task_aggregation_list,
+    *,
+    samples,
+    configs,
+    output_dir,
+    model_output_dir,
+    sample_files,
+    aggregate_metric_list,
+):
+    """Merge an opt-in group hook into ``results``.
+
+    Returns ``show_group_table`` unchanged when the group has no hook. The
+    caller must already have finished the default aggregation path.
+    """
+    if group_obj is None:
+        return show_group_table
+    raw_hook = getattr(group_obj._config, "postprocess_results", None)
+    if not raw_hook:
+        return show_group_table
+
+    hook_fn = _resolve_group_postprocess_callable(raw_hook)
+    if hook_fn is None:
+        return show_group_table
+
+    task_list = list(task_aggregation_list.get(group_name, []))
+    group_config = group_obj._config.to_dict(keep_callable=True)
+    group_metadata = group_config.get("metadata")
+    if "alias" not in results[group_name]:
+        results[group_name]["alias"] = group_name
+    hook_result = _invoke_group_postprocess(
+        hook_fn,
+        group_name=group_name,
+        subtask_names=task_list,
+        results=results,
+        samples=samples,
+        configs=configs,
+        versions=versions,
+        output_dir=output_dir,
+        model_output_dir=model_output_dir,
+        sample_files=sample_files,
+        group_config=group_config,
+        group_metadata=group_metadata,
+    )
+    if isinstance(hook_result, dict) and hook_result:
+        for key, value in hook_result.items():
+            results[group_name][key] = value
+        results[group_name].pop(" ", None)
+        show_group_table = True
+        if aggregate_metric_list is None and "samples" not in results[group_name] and task_list:
+            sizes = [results[task].get("samples", 0) for task in task_list if "samples" in results[task]]
+            if sizes:
+                results[group_name]["samples"] = sum(sizes)
+        if aggregate_metric_list is None and group_metadata is not None and group_name not in versions:
+            versions[group_name] = group_metadata.get("version", None)
+    elif hook_result is not None and not isinstance(hook_result, dict):
+        eval_logger.warning(f"Group postprocess hook '{group_name}' returned non-dict {type(hook_result)}, ignoring")
+    return show_group_table
+
+
 def consolidate_group_results(
     results,
     versions,
@@ -466,6 +695,11 @@ def consolidate_group_results(
     task_root=None,
     show_group_table=False,
     task_aggregation_list=None,
+    samples=None,
+    configs=None,
+    output_dir=None,
+    model_output_dir=None,
+    sample_files=None,
 ) -> Tuple[dict, dict, bool, Union[None, dict]]:
     """
     (Recursively) calculates groups' aggregated metrics and updates the results and versions dictionaries with this info.
@@ -490,9 +724,10 @@ def consolidate_group_results(
 
     for group_or_task, group_or_task_info in task_dict.items():
         # Convert to string
-        if isinstance(group_or_task, ConfigurableGroup):
-            group_config = group_or_task.config
-            group_or_task = group_or_task.group_name
+        group_obj = group_or_task if isinstance(group_or_task, ConfigurableGroup) else None
+        if group_obj is not None:
+            group_config = group_obj.config
+            group_or_task = group_obj.group_name
         else:
             group_config = None
 
@@ -512,12 +747,35 @@ def consolidate_group_results(
                 group_or_task,
                 show_group_table,
                 task_aggregation_list,
+                samples=samples,
+                configs=configs,
+                output_dir=output_dir,
+                model_output_dir=model_output_dir,
+                sample_files=sample_files,
             )
             if task_root:
                 task_aggregation_list.setdefault(task_root, []).extend(task_aggregation_list.get(group_or_task, []))
 
-            if (group_config is None) or (group_config["aggregate_metric_list"] is None):
+            hook_kwargs = {
+                "samples": samples,
+                "configs": configs,
+                "output_dir": output_dir,
+                "model_output_dir": model_output_dir,
+                "sample_files": sample_files,
+            }
+            aggregate_metric_list = None if group_config is None else group_config["aggregate_metric_list"]
+            if (group_config is None) or (aggregate_metric_list is None):
                 results[group_or_task][" "] = " "
+                show_group_table = _apply_group_postprocess(
+                    group_obj,
+                    group_or_task,
+                    results,
+                    versions,
+                    show_group_table,
+                    _task_aggregation_list,
+                    aggregate_metric_list=aggregate_metric_list,
+                    **hook_kwargs,
+                )
                 continue
 
             if "aggregate_metric_list" in group_config:
@@ -567,6 +825,17 @@ def consolidate_group_results(
                 group_metadata = group_config.get("metadata", None)
                 if group_metadata is not None:
                     versions[group_or_task] = group_metadata.get("version", None)
+
+            show_group_table = _apply_group_postprocess(
+                group_obj,
+                group_or_task,
+                results,
+                versions,
+                show_group_table,
+                _task_aggregation_list,
+                aggregate_metric_list=aggregate_metric_list,
+                **hook_kwargs,
+            )
     # print(results)
     return results, versions, show_group_table, task_aggregation_list
 
