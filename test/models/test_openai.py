@@ -258,6 +258,23 @@ class TestOpenAICompatibleVideoFrameControls(unittest.TestCase):
     def test_default_payload_is_unchanged(self):
         self.assertEqual(self._media_io_kwargs(_video_request(self.video)), {"video": {"num_frames": 32}})
 
+    def test_default_target_and_max_payloads_on_one_clip(self):
+        """CPU payload check: default stays num_frames only; target and max are opt-in."""
+        request = _video_request(self.video)
+        default = self._media_io_kwargs(request)
+        target = self._media_io_kwargs(request, video_target_frames=8)
+        capped = self._media_io_kwargs(request, video_max_frames=16)
+        both = self._media_io_kwargs(request, video_target_frames=8, video_max_frames=16)
+
+        self.assertEqual(default, {"video": {"num_frames": 32}})
+        self.assertEqual(target["video"]["num_frames"], 8)
+        self.assertAlmostEqual(target["video"]["fps"], 4.0, delta=1e-4)
+        self.assertNotIn("max_frames", target["video"])
+        self.assertEqual(capped, {"video": {"num_frames": 32, "max_frames": 16}})
+        self.assertEqual(both["video"]["num_frames"], 8)
+        self.assertEqual(both["video"]["max_frames"], 16)
+        self.assertAlmostEqual(both["video"]["fps"], 4.0, delta=1e-4)
+
     def test_target_frames_sends_count_and_matching_fps(self):
         kwargs = self._media_io_kwargs(_video_request(self.video), video_target_frames=8)
         self.assertEqual(kwargs["video"]["num_frames"], 8)
