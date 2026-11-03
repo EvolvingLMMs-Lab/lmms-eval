@@ -1,4 +1,5 @@
 # taken directly from https://github.com/wenqi-wang20/SITE-Bench/blob/main/eval_scripts/sitebench/utils.py
+import json
 import os
 import random
 import string
@@ -447,8 +448,6 @@ def _sitebench_empty_stats():
 
 def _sitebench_stats_from_samples(samples_list):
     """Compute metric_stats from in-memory logged samples (list of dicts)."""
-    from collections import defaultdict
-
     metric_stats = defaultdict(_sitebench_empty_stats)
     category_stats = defaultdict(_sitebench_empty_stats)
     for item in samples_list:
@@ -493,9 +492,19 @@ def _sitebench_stats_from_samples(samples_list):
     return dict(metric_stats), dict(category_stats), overall
 
 
-def _sitebench_merge_stats(stats1, stats2):
-    from collections import defaultdict
+def _sitebench_stats_from_jsonl(path):
+    """Load a samples JSONL file into the same stats shape as in-memory samples."""
+    samples_list = []
+    with open(path, "r", encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            samples_list.append(json.loads(line))
+    metric_stats, category_stats, overall = _sitebench_stats_from_samples(samples_list)
+    return {"metric_stats": metric_stats, "category_stats": category_stats, "overall": overall}
 
+
+def _sitebench_merge_stats(stats1, stats2):
     merged = defaultdict(_sitebench_empty_stats)
     for key, val in (stats1 or {}).items():
         merged[key]["acc_num"] += val.get("acc_num", 0.0)
@@ -567,32 +576,21 @@ def sitebench_merge_results(
 
     # If samples is empty but sample_files are available, try to load JSONL files
     metric_stats_list = []
-    category_stats_list = []
 
-    # Try file-based path first if we have file paths and samples are empty/insufficient
+    # Prefer on-disk JSONL when in-memory samples were not logged.
     use_file = False
     if sample_files and isinstance(sample_files, dict):
-        # check if any file exists
-        try:
-            import os
-
-            existing = {k: v for k, v in sample_files.items() if isinstance(v, str) and os.path.exists(v)}
-            if existing and (not samples or all(not samples.get(t) for t in subtask_names)):
-                # attempt to use file-based stats
-                try:
-                    from lmms_eval.tasks.sitebench.merge_results import compute_stats_from_jsonl
-
-                    for task in subtask_names:
-                        path = existing.get(task)
-                        if path:
-                            stats = compute_stats_from_jsonl(path)
-                            metric_stats_list.append(stats.get("metric_stats", {}))
-                            category_stats_list.append(stats.get("category_stats", {}))
-                    use_file = True
-                except Exception:
-                    use_file = False
-        except Exception:
-            pass
+        existing = {k: v for k, v in sample_files.items() if isinstance(v, str) and os.path.exists(v)}
+        if existing and (not samples or all(not samples.get(t) for t in subtask_names)):
+            for task in subtask_names:
+                path = existing.get(task)
+                if not path:
+                    continue
+                stats = _sitebench_stats_from_jsonl(path)
+                metric_stats = stats.get("metric_stats", {})
+                if metric_stats:
+                    metric_stats_list.append(metric_stats)
+            use_file = bool(metric_stats_list)
 
     if not use_file:
         if not isinstance(samples, dict) or not subtask_names:
@@ -601,10 +599,9 @@ def sitebench_merge_results(
             task_samples = samples.get(task, [])
             if not task_samples:
                 continue
-            m_stats, c_stats, _ = _sitebench_stats_from_samples(task_samples)
+            m_stats, _, _ = _sitebench_stats_from_samples(task_samples)
             if m_stats:
                 metric_stats_list.append(m_stats)
-                category_stats_list.append(c_stats)
 
     if not metric_stats_list:
         return {}
@@ -613,11 +610,6 @@ def sitebench_merge_results(
     merged_metric = metric_stats_list[0]
     for ms in metric_stats_list[1:]:
         merged_metric = _sitebench_merge_stats(merged_metric, ms)
-    merged_category = {}
-    if category_stats_list:
-        merged_category = category_stats_list[0]
-        for cs in category_stats_list[1:]:
-            merged_category = _sitebench_merge_stats(merged_category, cs)
 
     # Compute group metrics
     out = {}

@@ -57,6 +57,10 @@ class GroupConfig(dict):
         for k, v in list(cfg_dict.items()):
             if callable(v):
                 cfg_dict[k] = self.serialize_function(v, keep_callable=keep_callable)
+        # An unset hook must not appear in dumped configs. Every group would
+        # otherwise grow a new null field and diverge from pre-hook output.
+        if cfg_dict.get("postprocess_results") is None:
+            cfg_dict.pop("postprocess_results", None)
         return cfg_dict
 
     def serialize_function(self, value: Union[Callable, str], keep_callable=False) -> Union[Callable, str]:
