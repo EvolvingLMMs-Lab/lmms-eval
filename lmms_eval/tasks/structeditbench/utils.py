@@ -37,6 +37,8 @@ import numpy as np
 from loguru import logger as eval_logger
 from PIL import Image
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 STRUCTEDITBENCH_CATEGORIES = ["chart", "math", "graph", "puzzle", "science", "table"]
 CHART_SUBCATEGORIES = {"add_and_del", "auxiliary", "category", "color", "num"}
 
@@ -216,7 +218,7 @@ def _call_chat(client, *, model: str, messages: List[Dict[str, Any]], max_tokens
                 max_tokens=max_tokens,
                 temperature=temperature,
             )
-            return resp.choices[0].message.content if resp.choices else ""
+            return require_chat_message_text(resp)
         except Exception as e:
             last_error = e
             msg = str(e).lower()

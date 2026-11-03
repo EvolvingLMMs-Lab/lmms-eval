@@ -9,6 +9,7 @@ import requests
 from loguru import logger as eval_logger
 
 import lmms_eval.tasks._task_utils.file_utils as file_utils
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
 from lmms_eval.tasks.worldqa.worldqa_mc_evaluator import WorldQA_MC_Evaluator
@@ -82,7 +83,7 @@ def get_eval(question: str, ground_truth: str, candidate: str, max_tokens: int, 
             response.raise_for_status()
             response_data = response.json()
 
-            content = response_data["choices"][0]["message"]["content"].strip()
+            content = require_chat_message_text(response_data).strip()
             if content != "":
                 return content, response_data["model"]
             break  # If successful, break out of the loop

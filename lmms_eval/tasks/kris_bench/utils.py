@@ -42,6 +42,7 @@ import numpy as np
 from loguru import logger as eval_logger
 from PIL import Image
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.tasks.kris_bench.prompt import (
     prompt_abnormal_instruction_following,
     prompt_consist,
@@ -303,7 +304,7 @@ def _call_chat(messages: List[Dict[str, Any]], *, max_tokens: int, temperature: 
                 max_tokens=max_tokens,
                 temperature=temperature,
             )
-            return resp.choices[0].message.content if resp.choices else ""
+            return require_chat_message_text(resp)
         except Exception as e:
             last_error = e
             s = str(e).lower()

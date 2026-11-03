@@ -45,6 +45,34 @@ def _is_blank(content: Any) -> bool:
     return False
 
 
+def _message_text(message: Any) -> str:
+    if message is None:
+        raise ValueError(EMPTY_CHAT_RESPONSE)
+    content = _lookup(message, "content")
+    if isinstance(content, str):
+        text = content
+    elif isinstance(content, (list, tuple)):
+        if len(content) == 0:
+            raise ValueError(EMPTY_CHAT_RESPONSE)
+        text = _text_from_parts(content)
+    elif content is None or _is_blank(content):
+        raise ValueError(EMPTY_CHAT_RESPONSE)
+    else:
+        text = str(content)
+    if text.strip() == "":
+        raise ValueError(EMPTY_CHAT_RESPONSE)
+    return text
+
+
+def require_choice_message_text(choice: Any) -> str:
+    """Return one choice's message as text.
+
+    Raises:
+        ValueError: the message is missing, or its content is missing or blank.
+    """
+    return _message_text(_lookup(choice, "message"))
+
+
 def require_chat_message_content(response: Any) -> Any:
     """Return the first choice's message content.
 
@@ -69,13 +97,7 @@ def require_chat_message_text(response: Any) -> str:
 
     Blank strings and content that is None raise before any ``str.strip`` call.
     """
-    content = require_chat_message_content(response)
-    if isinstance(content, str):
-        return content
-    if isinstance(content, (list, tuple)):
-        text = _text_from_parts(content)
-    else:
-        text = str(content)
-    if text.strip() == "":
+    choices = _lookup(response, "choices")
+    if not choices:
         raise ValueError(EMPTY_CHAT_RESPONSE)
-    return text
+    return require_choice_message_text(choices[0])

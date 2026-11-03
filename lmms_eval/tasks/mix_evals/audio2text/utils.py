@@ -7,6 +7,8 @@ import requests
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
@@ -84,7 +86,7 @@ def get_eval(model_response: str, ground_truth: str, max_tokens: int, retries: i
             response.raise_for_status()
             response_data = response.json()
 
-            content = response_data["choices"][0]["message"]["content"].strip()
+            content = require_chat_message_text(response_data).strip()
             if content != "":
                 return content, response_data["model"]
             break  # If successful, break out of the loop

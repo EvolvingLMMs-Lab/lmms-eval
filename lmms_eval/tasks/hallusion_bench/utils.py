@@ -6,6 +6,8 @@ import numpy as np
 import requests
 from tqdm import tqdm
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 API_TYPE = os.getenv("API_TYPE", "openai")
 
 if API_TYPE == "openai":
@@ -64,7 +66,7 @@ def evaluate_by_chatgpt(data, output_entry, correctness_entry, gpt_model="gpt-4"
                 else:  # If this was the last attempt, log and return empty
                     eval_logger.error(f"All {retries} attempts failed. Last error message: {str(e)}")
         try:
-            output_text = response["choices"][0]["message"]["content"]
+            output_text = require_chat_message_text(response)
         except Exception as e:
             eval_logger.info(f"Get error {str(e)} when extracting response")
             output_text = "unclear"
@@ -137,7 +139,7 @@ def check_same_by_chatgpt(data, output_entry, gpt_model="gpt-4", load_json=False
                         eval_logger.error(f"All {retries} attempts failed. Last error message: {str(e)}")
 
             try:
-                output_text = response["choices"][0]["message"]["content"]
+                output_text = require_chat_message_text(response)
             except Exception as e:
                 eval_logger.info(f"Get error {str(e)} when extracting response")
                 output_text = "different"

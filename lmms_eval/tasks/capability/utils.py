@@ -11,6 +11,7 @@ from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from lmms_eval.tasks.capability.prompt import Prompts
 
@@ -450,7 +451,7 @@ class Evaluator:
             return None
 
         try:
-            response_message = response["choices"][0]["message"]["content"].strip()
+            response_message = require_chat_message_text(response).strip()
             return response_message
         except Exception as e:
             eval_logger.info(f"Error parsing {self.eval_model} response: {e}\nResponse: {response}")

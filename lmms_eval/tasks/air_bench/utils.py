@@ -8,6 +8,7 @@ import numpy as np
 import requests
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
@@ -82,7 +83,7 @@ def get_eval(max_tokens: int, content: str, retries: int = retries):
             response.raise_for_status()
             response_data = response.json()
 
-            content = response_data["choices"][0]["message"]["content"].strip()
+            content = require_chat_message_text(response_data).strip()
             if content != "":
                 return content, response_data["model"]
             break  # If successful, break out of the loop

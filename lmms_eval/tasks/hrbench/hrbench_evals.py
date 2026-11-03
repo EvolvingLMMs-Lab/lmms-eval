@@ -6,6 +6,8 @@ import time
 import requests
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 
 class HRBenchEval:
     API_TYPE = os.getenv("API_TYPE", "openai")
@@ -113,7 +115,7 @@ class HRBenchEval:
             patience -= 1
             try:
                 response = self._post_request(payload)
-                prediction = response["choices"][0]["message"]["content"].strip()
+                prediction = require_chat_message_text(response).strip()
                 if prediction and prediction != "" and "Failed to obtain answer via API" not in prediction:
                     ret = self.can_infer(prediction, options)
                     data["gpt_prediction"] = ret

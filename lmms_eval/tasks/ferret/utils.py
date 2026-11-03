@@ -9,6 +9,8 @@ import requests
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 NUM_SECONDS_TO_SLEEP = 0.5
 
 FERRET_W_METRICS = ["gpt_eval_ferret_refer_desc", "gpt_eval_ferret_refer_reason", "gpt_eval_ferret_ground_conv"]
@@ -69,7 +71,7 @@ def get_eval(content: str, max_tokens: int, retries: int = 3):
             response.raise_for_status()
             response_data = response.json()
 
-            content = response_data["choices"][0]["message"]["content"].strip()
+            content = require_chat_message_text(response_data).strip()
             if content != "":
                 return content, response_data["model"]
             break  # If successful, break out of the loop

@@ -8,6 +8,8 @@ import requests
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 one_score_pattern = re.compile("\[\[(\d+\.?\d*)\]\]")
@@ -102,7 +104,7 @@ def chat_compeletion_openai(model, messages, temperature, max_tokens):
             except requests.exceptions.JSONDecodeError:
                 eval_logger.error(f"JSON decode error on attempt {attempt + 1}. Response text: {response.text}")
                 continue  # Skip to next retry
-            content = response_data["choices"][0]["message"]["content"].strip()
+            content = require_chat_message_text(response_data).strip()
             if content != "":
                 return content, response_data["model"]
         # Handle HTTP errors separately

@@ -12,6 +12,7 @@ from loguru import logger as eval_logger
 from tqdm import tqdm
 
 import lmms_eval.tasks._task_utils.file_utils as file_utils
+from lmms_eval.api.chat_response import require_chat_message_text
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -330,7 +331,7 @@ def get_eval_generic(question, answer, pred, task, max_tokens: int, retries: int
             except requests.exceptions.JSONDecodeError:
                 eval_logger.error(f"JSON decode error on attempt {attempt + 1}. Response text: {response.text}")
                 continue  # Skip to next retry
-            content = response_data["choices"][0]["message"]["content"].strip()
+            content = require_chat_message_text(response_data).strip()
             if content != "":
                 return content, response_data["model"]
         # Handle HTTP errors separately
@@ -399,7 +400,7 @@ def get_eval_consistency(question1, question2, answer, pred1, pred2, max_tokens:
             except requests.exceptions.JSONDecodeError:
                 eval_logger.error(f"JSON decode error on attempt {attempt + 1}. Response text: {response.text}")
                 continue  # Skip to next retry
-            content = response_data["choices"][0]["message"]["content"].strip()
+            content = require_chat_message_text(response_data).strip()
             if content != "":
                 return content, response_data["model"]
         # Handle HTTP errors separately

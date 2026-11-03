@@ -13,6 +13,7 @@ from loguru import logger as eval_logger
 from openai import AsyncOpenAI
 from tqdm import tqdm
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
@@ -228,7 +229,7 @@ class AsyncOpenAIChat(lmms):
             payload["tool_choice"] = "auto"  # or "auto" for automatic tool selection
 
         response = await self.client.chat.completions.create(**payload)
-        last_response = response.choices[0].message.content
+        last_response = require_chat_message_text(response)
         # Extract usage metrics
         input_tokens = 0
         output_tokens = 0
@@ -310,7 +311,7 @@ class AsyncOpenAIChat(lmms):
                 reasoning_tokens=reasoning_tokens,
                 source="model",
             )
-            last_response = response.choices[0].message.content
+            last_response = require_chat_message_text(response)
             try:
                 all_response += last_response
             except Exception as e:

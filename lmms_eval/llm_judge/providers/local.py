@@ -13,6 +13,8 @@ from typing import Optional
 import requests
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 from ..base import ServerInterface
 from ..protocol import Request, Response, ServerConfig
 
@@ -50,7 +52,7 @@ class LocalProvider(ServerInterface):
                 resp.raise_for_status()
                 data = resp.json()
 
-                content = data["choices"][0]["message"]["content"]
+                content = require_chat_message_text(data)
                 usage = data.get("usage")
 
                 return Response(

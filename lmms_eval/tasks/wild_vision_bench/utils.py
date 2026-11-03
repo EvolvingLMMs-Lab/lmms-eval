@@ -11,6 +11,8 @@ import requests
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 NUM_SECONDS_TO_SLEEP = 5
 
 
@@ -97,7 +99,7 @@ def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
             response.raise_for_status()
             response_data = response.json()
             # print(response_data)
-            return response_data["choices"][0]["message"]["content"], GPT_EVAL_MODEL_NAME
+            return require_chat_message_text(response_data), GPT_EVAL_MODEL_NAME
         except requests.exceptions.RequestException as e:
             eval_logger.error(f"Request failed on attempt {attempt + 1}: {e}")
             time.sleep(wait_time)

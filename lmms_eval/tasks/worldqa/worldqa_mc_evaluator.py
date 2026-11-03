@@ -4,6 +4,8 @@ import time
 import requests
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text, require_choice_message_text
+
 
 class WorldQA_MC_Evaluator:
     def __init__(self, sys_prompt="There are several options:", API_KEY="", API_URL="", model_version="gpt-3.5-turbo-0613"):
@@ -82,11 +84,11 @@ class WorldQA_MC_Evaluator:
             try:
                 response = self._post_request(payload)
                 if n == 1:
-                    prediction = response["choices"][0]["message"]["content"].strip()
+                    prediction = require_chat_message_text(response).strip()
                     if prediction and prediction != "":
                         return prediction
                 else:
-                    prediction = [choice["message"]["content"].strip() for choice in response["choices"]]
+                    prediction = [require_choice_message_text(choice).strip() for choice in response["choices"]]
                     if prediction and prediction[0] != "":
                         return prediction
 

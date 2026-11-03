@@ -33,6 +33,8 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 import numpy as np
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 CATEGORY_RANGES = {
     "culture": range(1, 401),
     "time": range(401, 568),
@@ -294,7 +296,7 @@ def _call_judge(messages: List[Dict[str, Any]]) -> str:
                 temperature=0.0,
                 max_tokens=128,
             )
-            return resp.choices[0].message.content if resp.choices else ""
+            return require_chat_message_text(resp)
         except Exception as e:
             last_error = e
             retryable = any(k in str(e).lower() for k in ["timeout", "timed out", "504", "502", "503", "gateway", "rate limit", "overloaded"])

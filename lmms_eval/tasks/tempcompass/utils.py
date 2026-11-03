@@ -8,6 +8,8 @@ from pathlib import Path
 import requests
 import yaml
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
@@ -392,7 +394,7 @@ def get_llm_output_for_captioning(prompt):
     dict_result = json.loads(result)
     token_count = dict_result["usage"]
     try:
-        llm_output = dict_result["choices"][0]["message"]["content"].strip()
+        llm_output = require_chat_message_text(dict_result).strip()
     except Exception:
         if "error" in dict_result and dict_result["error"]["type"] == "invalid_request_error":
             llm_output = "invalid_request_error"
@@ -477,7 +479,7 @@ def get_llm_output(prompt, sys_prompt, max_tokens=128):
     response = requests.post(API_URL, headers=headers, data=json.dumps(data).encode("utf-8"))
     result = response.content.decode("utf-8")
     dict_result = json.loads(result)
-    llm_output = dict_result["choices"][0]["message"]["content"].strip()
+    llm_output = require_chat_message_text(dict_result).strip()
     return llm_output
 
 

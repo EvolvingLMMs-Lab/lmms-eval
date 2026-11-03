@@ -1,5 +1,6 @@
 """Focused tests for empty choices, missing messages, and blank content."""
 
+import asyncio
 from types import SimpleNamespace
 from unittest import mock
 
@@ -9,8 +10,10 @@ from lmms_eval.api.chat_response import (
     EMPTY_CHAT_RESPONSE,
     require_chat_message_content,
     require_chat_message_text,
+    require_choice_message_text,
 )
 from lmms_eval.llm_judge.protocol import Request, ServerConfig
+from lmms_eval.llm_judge.providers.async_openai import AsyncOpenAIProvider
 from lmms_eval.llm_judge.providers.openai import OpenAIProvider
 
 
@@ -97,3 +100,46 @@ def test_openai_judge_dict_payload_rejects_missing_content():
     provider._make_request = mock.Mock(return_value={"choices": [{"message": {"content": None}}], "model": "gpt-test"})
     with pytest.raises(ValueError, match=EMPTY_CHAT_RESPONSE):
         provider.evaluate(_request())
+
+
+def test_each_choice_rejects_blank_content_before_strip():
+    choices = [{"message": {"content": "A"}}, {"message": {"content": None}}]
+    with pytest.raises(ValueError, match=EMPTY_CHAT_RESPONSE):
+        [require_choice_message_text(choice).strip() for choice in choices]
+    assert require_choice_message_text({"message": {"content": "  B  "}}).strip() == "B"
+
+
+def _async_provider():
+    provider = AsyncOpenAIProvider.__new__(AsyncOpenAIProvider)
+    provider.config = ServerConfig(model_name="gpt-4o-mini", num_retries=1, retry_delay=0, max_tokens=8, temperature=0)
+    provider.api_key = "test"
+    provider.use_async_client = True
+    provider.async_client = mock.Mock()
+    provider.semaphore = asyncio.Semaphore(1)
+    return provider
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        _response(choices=[]),
+        _response(choices=[SimpleNamespace(message=None)]),
+        _response(choices=[_message(None)]),
+        {"choices": [{"message": {"content": "   "}}]},
+    ],
+)
+def test_async_openai_judge_raises_for_invalid_response(payload):
+    provider = _async_provider()
+    provider.async_client.chat.completions.create = mock.AsyncMock(return_value=payload)
+
+    with pytest.raises(ValueError, match=EMPTY_CHAT_RESPONSE):
+        asyncio.run(provider.evaluate_async(_request()))
+
+    assert provider.async_client.chat.completions.create.await_count == 1
+
+
+def test_async_openai_judge_strips_valid_content():
+    provider = _async_provider()
+    provider.async_client.chat.completions.create = mock.AsyncMock(return_value=_response(choices=[_message("  yes  ")]))
+    result = asyncio.run(provider.evaluate_async(_request()))
+    assert result.content == "yes"

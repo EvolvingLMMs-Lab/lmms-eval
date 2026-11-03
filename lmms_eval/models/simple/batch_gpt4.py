@@ -13,6 +13,8 @@ from openai import OpenAI
 from PIL import Image
 from tqdm import tqdm
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 # Local application/library specific imports
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
@@ -172,7 +174,7 @@ class BatchGPT4(lmms):
             if batch_status.status == "completed":
                 eval_logger.info("Batch processing completed.")
                 batch_results = self.retrieve_batch_results(batch_status.output_file_id)
-                res = [result["response"]["choices"][0]["message"]["content"] for result in json.loads(batch_results)]
+                res = [require_chat_message_text(result["response"]) for result in json.loads(batch_results)]
                 return res
             elif batch_status.status == "failed":
                 eval_logger.info("Batch processing failed.")
