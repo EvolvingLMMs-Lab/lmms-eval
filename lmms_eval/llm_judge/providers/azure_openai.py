@@ -5,6 +5,7 @@ from typing import Dict, Optional
 import requests
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.models.model_utils.usage_metrics import log_usage
 
 from ..protocol import Request, Response, ServerConfig
@@ -64,15 +65,13 @@ class AzureOpenAIProvider(OpenAIProvider):
             try:
                 if self.use_client:
                     response = self.client.chat.completions.create(**payload)
-                    if not response.choices or response.choices[0].message is None:
-                        raise ValueError("LLM returned empty or filtered response")
-                    content = response.choices[0].message.content
+                    content = require_chat_message_text(response)
                     model_used = response.model
                     usage = response.usage.model_dump() if hasattr(response.usage, "model_dump") else None
                     raw_response = response
                 else:
                     response = self._make_request(payload, config.timeout)
-                    content = response["choices"][0]["message"]["content"]
+                    content = require_chat_message_text(response)
                     model_used = response["model"]
                     usage = response.get("usage")
                     raw_response = response

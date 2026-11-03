@@ -9,6 +9,8 @@ from openai import OpenAI
 from PIL import Image
 from tqdm import tqdm
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 
 def doc_to_visual(sample: dict) -> list:
     visual_list = []
@@ -138,9 +140,7 @@ def mmesci_agg(results: List[Dict[str, Any]]) -> Dict[str, float]:
                 max_tokens=8,
                 timeout=TIMEOUT,
             )
-            if not resp.choices or resp.choices[0].message is None:
-                raise ValueError("LLM returned empty or filtered response")
-            judge_result = resp.choices[0].message.content.strip()
+            judge_result = require_chat_message_text(resp).strip()
             if judge_result not in ["correct", "incorrect"]:
                 judge_result = "error"
         except Exception as e:

@@ -17,6 +17,7 @@ from azure.identity import (
 from openai import AzureOpenAI, OpenAI
 from PIL import Image
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.azure_openai_compat import build_client as build_azure_compat_client
 from lmms_eval.azure_openai_compat import has_endpoint_support
 
@@ -47,9 +48,7 @@ class AzureJudgeClient:
 
     def chat_completion(self, *, messages, **kwargs) -> str:
         resp = self.client.chat.completions.create(model=self.deployment, messages=messages, **kwargs)
-        if not resp.choices or resp.choices[0].message is None:
-            raise ValueError("LLM returned empty or filtered response")
-        return resp.choices[0].message.content
+        return require_chat_message_text(resp)
 
 
 class OpenAIJudgeClient:
@@ -65,9 +64,7 @@ class OpenAIJudgeClient:
 
     def chat_completion(self, *, messages, **kwargs) -> str:
         resp = self.client.chat.completions.create(model=self.deployment, messages=messages, **kwargs)
-        if not resp.choices or resp.choices[0].message is None:
-            raise ValueError("LLM returned empty or filtered response")
-        return resp.choices[0].message.content
+        return require_chat_message_text(resp)
 
 
 class AzureEndpointJudgeClient:
@@ -79,9 +76,7 @@ class AzureEndpointJudgeClient:
     def chat_completion(self, *, messages, **kwargs) -> str:
         client, deployment = build_azure_compat_client(model=self.deployment)
         resp = client.chat.completions.create(model=deployment, messages=messages, **kwargs)
-        if not resp.choices or resp.choices[0].message is None:
-            raise ValueError("LLM returned empty or filtered response")
-        return resp.choices[0].message.content
+        return require_chat_message_text(resp)
 
 
 _JUDGE_CLIENT: AzureJudgeClient | AzureEndpointJudgeClient | OpenAIJudgeClient | None = None

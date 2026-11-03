@@ -15,6 +15,7 @@ from loguru import logger as eval_logger
 from openai import OpenAI
 from PIL import Image
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.tasks.babyvision_gen.prompt import build_evaluation_prompt
 
 BABYVISION_API_KEY = os.getenv("BABYVISION_API_KEY")
@@ -107,9 +108,7 @@ def _call_openai_for_evaluation(
             temperature=0.0,
         )
 
-        if not response.choices or response.choices[0].message is None:
-            raise ValueError("LLM returned empty or filtered response")
-        return response.choices[0].message.content
+        return require_chat_message_text(response)
     except Exception as e:
         eval_logger.error(f"Error calling OpenAI API: {e}")
         return None

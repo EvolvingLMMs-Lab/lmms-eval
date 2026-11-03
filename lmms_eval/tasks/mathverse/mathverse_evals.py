@@ -6,6 +6,7 @@ from loguru import logger as eval_logger
 from openai import AzureOpenAI, OpenAI
 from tqdm import tqdm
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.llm_judge import ServerConfig, get_server
 
 
@@ -46,9 +47,7 @@ class MathVerseEvaluator:
             try:
                 response = self.client.chat.completions.create(**payload)
                 if n == 1:
-                    if not response.choices or response.choices[0].message is None:
-                        raise ValueError("LLM returned empty or filtered response")
-                    prediction = response.choices[0].message.content.strip()
+                    prediction = require_chat_message_text(response).strip()
                     if prediction and prediction != "":
                         return prediction
                 else:

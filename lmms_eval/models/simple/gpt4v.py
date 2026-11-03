@@ -9,6 +9,7 @@ from openai import AzureOpenAI, OpenAI
 from PIL import Image  # noqa: E402
 from tqdm import tqdm
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
@@ -193,9 +194,7 @@ class GPT4V(lmms):
             for attempt in range(MAX_RETRIES):
                 try:
                     response = self.client.chat.completions.create(**payload)
-                    if not response.choices or response.choices[0].message is None:
-                        raise ValueError("LLM returned empty or filtered response")
-                    response_text = response.choices[0].message.content
+                    response_text = require_chat_message_text(response)
                     break  # If successful, break out of the loop
 
                 except Exception as e:

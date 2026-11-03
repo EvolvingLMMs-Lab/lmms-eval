@@ -12,6 +12,8 @@ import pandas as pd
 import requests
 import yaml
 
+from lmms_eval.api.chat_response import require_chat_message_text
+
 eval_logger = logging.getLogger("lmms-eval")
 
 
@@ -114,9 +116,7 @@ def get_chat_response(gpt_model_name, base64_images, question, ground_truth_answ
     for attempt in range(max_retries):
         try:
             response = client.chat.completions.create(model=gpt_model_name, messages=messages, max_tokens=1024, response_format={"type": "json_object"}, temperature=0.0)
-            if not response.choices or response.choices[0].message is None:
-                raise ValueError("LLM returned empty or filtered response")
-            response_data = response.choices[0].message.content
+            response_data = require_chat_message_text(response)
             # print(response_data)
             response_data = json.loads(response_data)
             rating = response_data["Rating"]

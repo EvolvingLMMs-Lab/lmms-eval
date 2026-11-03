@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Optional
 
 from loguru import logger as eval_logger
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.tasks.babyvision.prompt import build_judge_prompt
 
 if TYPE_CHECKING:
@@ -179,9 +180,7 @@ def babyvision_process_results(doc, results, **kwargs):
             temperature=0.0,
         )
 
-        if not response.choices or response.choices[0].message is None:
-            raise ValueError("LLM returned empty or filtered response")
-        judge_response = response.choices[0].message.content
+        judge_response = require_chat_message_text(response)
         correct = parse_bool_response(judge_response)
 
     except Exception as e:

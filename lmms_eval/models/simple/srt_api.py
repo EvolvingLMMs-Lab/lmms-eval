@@ -15,6 +15,7 @@ from sglang.test.test_utils import (
 )
 from tqdm import tqdm
 
+from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
@@ -198,9 +199,7 @@ class SRT_API(lmms):
         for attempt in range(5):
             try:
                 response = await self.client.chat.completions.create(model=self.model_version, messages=messages, temperature=gen_kwargs["temperature"], max_tokens=gen_kwargs["max_new_tokens"], timeout=self.timeout)
-                if not response.choices or response.choices[0].message is None:
-                    raise ValueError("LLM returned empty or filtered response")
-                response_text = response.choices[0].message.content.strip()
+                response_text = require_chat_message_text(response).strip()
                 break  # If successful, break out of the loop
 
             except Exception as e:
@@ -263,9 +262,7 @@ class SRT_API(lmms):
         for attempt in range(5):
             try:
                 response = self.client.chat.completions.create(model=self.model_version, messages=messages, temperature=gen_kwargs["temperature"], max_tokens=gen_kwargs["max_new_tokens"], timeout=self.timeout)
-                if not response.choices or response.choices[0].message is None:
-                    raise ValueError("LLM returned empty or filtered response")
-                response_text = response.choices[0].message.content.strip()
+                response_text = require_chat_message_text(response).strip()
                 break  # If successful, break out of the loop
 
             except Exception as e:
