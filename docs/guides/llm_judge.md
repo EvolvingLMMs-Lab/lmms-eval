@@ -4,7 +4,7 @@
 
 | `API_TYPE` | Provider | Credentials |
 | --- | --- | --- |
-| `openai` (default) | OpenAI chat completions | `OPENAI_API_KEY` |
+| `openai` (default) | OpenAI chat completions | `OPENAI_API_KEY`, optional `OPENAI_API_URL` |
 | `azure` | Azure OpenAI | `AZURE_API_KEY`, `AZURE_ENDPOINT`, `AZURE_API_VERSION` |
 | `minimax` / `async_minimax` | MiniMax chat completions | `MINIMAX_API_KEY` |
 | `jev` / `typesafe` | TypeSafe Jev | `TYPESAFE_API_KEY` |
@@ -26,7 +26,29 @@ export MODEL_VERSION=jev-latest
 export JEV_NOUL_THRESHOLD=0.5
 ```
 
-`ServerConfig.noul_threshold` overrides the environment variable. `TYPESAFE_MODEL` (or `JEV_MODEL`) overrides a non-Jev `model_name`.
+`ServerConfig.noul_threshold` overrides the environment variable. `TYPESAFE_MODEL` (or `JEV_MODEL`) overrides a non-Jev `model_name`. The native path requires `TYPESAFE_API_KEY`. It does not read `OPENROUTER_API_KEY`.
+
+### OpenRouter
+
+OpenRouter does not serve System One. The only Jev id it lists is `typesafe/jev-router`. It has no `jev-latest`, no `jev-1.14.0`, and no `POST /v1/systemone`. That id is an OpenAI-compatible `chat/completions` router: OpenRouter picks an underlying model for each request. A test call was answered by `openai/gpt-6-luna`. The response is plain text. There is no `noul`, `score`, or `choice` probability, and a later call can be a different model, so the judgment is not reproducible.
+
+Use the existing OpenAI judge (`API_TYPE=openai`), not `API_TYPE=jev`. `OpenAIProvider` and `AsyncOpenAIProvider` read these variables:
+
+| Variable | Role |
+| --- | --- |
+| `API_TYPE` | `openai` (or `async_openai` for the async client). |
+| `OPENAI_API_KEY` | Bearer token. Put the OpenRouter key here. The judge does not read `OPENROUTER_API_KEY`. |
+| `OPENAI_API_URL` | API root. Set `https://openrouter.ai/api/v1`. Do not append `/chat/completions`; the client adds that path. Default is `https://api.openai.com/v1`. |
+| `MODEL_VERSION` | Chat model id. Set `typesafe/jev-router`. The provider does not read this variable. Tasks such as `k12` copy it into `ServerConfig.model_name`, and that string is sent as `model`. |
+
+```bash
+export API_TYPE=openai
+export OPENAI_API_KEY=...
+export OPENAI_API_URL=https://openrouter.ai/api/v1
+export MODEL_VERSION=typesafe/jev-router
+```
+
+The task prompt is sent as a normal chat completion, and the task parses the generated text. This route does not apply the noul threshold, and it does not return `parsed_result["probability"]`. For calibrated `noul`, `score`, and `choice` answers, use `API_TYPE=jev` with `TYPESAFE_API_KEY` as described above.
 
 ### How judge calls are mapped
 
