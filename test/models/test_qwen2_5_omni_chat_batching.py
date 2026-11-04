@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import unittest
+from importlib.util import find_spec
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import torch
 from PIL import Image
 
 from lmms_eval.api.instance import Instance
-from lmms_eval.models.chat.qwen2_5_omni import Qwen2_5_Omni
-from lmms_eval.models.simple import qwen2_5_omni as simple_omni
 from lmms_eval.protocol import ChatMessages
+
+if TYPE_CHECKING:
+    from lmms_eval.models.chat.qwen2_5_omni import Qwen2_5_Omni
 
 
 class _Inputs(dict):
@@ -79,11 +82,27 @@ def _request(index: int, kwargs: dict, media=None) -> Instance:
     )
 
 
-class TestQwenProcessorLoading(unittest.TestCase):
+class _QwenOmniTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        missing = [name for name in ("librosa", "moviepy", "qwen_omni_utils") if find_spec(name) is None]
+        if missing:
+            raise unittest.SkipTest(f"Qwen2.5-Omni runtime dependencies unavailable: {', '.join(missing)}")
+
+        from lmms_eval.models.chat.qwen2_5_omni import Qwen2_5_Omni
+        from lmms_eval.models.simple import qwen2_5_omni as simple_omni
+
+        cls.chat_adapter = Qwen2_5_Omni
+        cls.simple_omni = simple_omni
+
+
+class TestQwenProcessorLoading(_QwenOmniTestCase):
     def test_processor_uses_model_source_in_simple_and_chat_adapters(self) -> None:
         default_source = "Qwen/Qwen2.5-Omni-7B"
         local_source = "/models/qwen-omni-snapshot"
-        for adapter in (simple_omni.Qwen2_5_Omni, Qwen2_5_Omni):
+        simple_omni = self.simple_omni
+        for adapter in (simple_omni.Qwen2_5_Omni, self.chat_adapter):
             for model_args, expected in (({}, default_source), ({"pretrained": local_source}, local_source)):
                 with (
                     self.subTest(adapter=adapter.__module__, model_args=model_args),
@@ -97,9 +116,9 @@ class TestQwenProcessorLoading(unittest.TestCase):
                     self.assertIs(wrapper.tokenizer, load_processor.return_value.tokenizer)
 
 
-class TestQwenNativeBatch(unittest.TestCase):
+class TestQwenNativeBatch(_QwenOmniTestCase):
     def _wrapper(self, batch_size: int) -> Qwen2_5_Omni:
-        wrapper = Qwen2_5_Omni.__new__(Qwen2_5_Omni)
+        wrapper = self.chat_adapter.__new__(self.chat_adapter)
         wrapper.batch_size_per_gpu = batch_size
         wrapper._rank = 0
         wrapper.task_dict = {"task": {"test": [{"text": f"question-{i}"} for i in range(5)]}}
