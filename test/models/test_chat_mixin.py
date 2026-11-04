@@ -51,6 +51,22 @@ class _Model(ChatMixin):
         return text
 
 
+class _BatchModel(_Model):
+    def __init__(self, batch_size: int, task_dict: dict) -> None:
+        super().__init__(batch_size, task_dict)
+        self.batch_calls = []
+        self.batch_error = None
+        self.batch_result = ...
+
+    def _infer_batch(self, conversations: list[ChatMessages], gen_kwargs: dict) -> list[str]:
+        texts = [messages.messages[0].content[0].text for messages in conversations]
+        self.batch_calls.append((texts, dict(gen_kwargs)))
+        gen_kwargs["inference_only"] = True
+        if self.batch_error is not None:
+            raise self.batch_error
+        return texts if self.batch_result is ... else self.batch_result
+
+
 def _request(context: str, callback, kwargs: dict, doc_id: int, task: str, split: str) -> Instance:
     return Instance(
         request_type="generate_until",
@@ -198,5 +214,77 @@ class TestChatMixinGenerateUntil(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invalid document"):
             _run(model, [request], progress)
         self.assertEqual(model.calls, [])
+        self.assertEqual(model.cache_hook.entries, [])
+        self.assertEqual((progress[0].n, progress[0].closed), (0, True))
+
+
+class TestChatMixinNativeBatch(unittest.TestCase):
+    def setUp(self) -> None:
+        self.task_dict = {"a": {"test": [{"marker": str(i)} for i in range(5)]}, "b": {"dev": [{"marker": "b"}]}}
+        self.kwargs = {"temperature": 0.2}
+        self.requests = [_request(f"ctx-{i}", _callback(f"owner-{i}"), self.kwargs, i, "a", "test") for i in range(5)]
+
+    def test_batch_sizes_owners_tail_cache_and_no_mutation(self) -> None:
+        for size in (1, 2, 4):
+            with self.subTest(size=size):
+                model = _BatchModel(size, self.task_dict)
+                requests = [self.requests[0], _request("other", _callback("B"), self.kwargs, 0, "b", "dev"), *self.requests[1:]]
+                result, bar = _run(model, requests)
+                expected = ["owner-0:0", "B:b", *[f"owner-{i}:{i}" for i in range(1, 5)]]
+                self.assertEqual(result, expected)
+                self.assertEqual([len(call[0]) for call in model.batch_calls], [size] * (len(requests) // size) + ([len(requests) % size] if len(requests) % size else []))
+                self.assertCountEqual([text for texts, _ in model.batch_calls for text in texts], expected)
+                self.assertTrue(all(kwargs == self.kwargs for _, kwargs in model.batch_calls))
+                self.assertCountEqual([(key[0], key[1], answer) for _, key, answer in model.cache_hook.entries], [(r.args[0], self.kwargs, answer) for r, answer in zip(requests, expected)])
+                self.assertEqual(self.kwargs, {"temperature": 0.2})
+                self.assertEqual((bar.n, bar.total, bar.closed), (6, 6, True))
+
+    def test_grouped_kwargs_and_batch_failure_policy(self) -> None:
+        other = {"temperature": 0.8}
+        requests = [self.requests[0], _request("other", _callback("B"), other, 0, "b", "dev"), self.requests[1]]
+        model = _BatchModel(4, self.task_dict)
+        model.batch_error = RuntimeError("batch failed")
+        result, bar = _run(model, requests)
+        self.assertEqual(result, ["", "", ""])
+        self.assertEqual([len(call[0]) for call in model.batch_calls], [2, 1])
+        self.assertEqual({(len(texts), kwargs["temperature"]) for texts, kwargs in model.batch_calls}, {(2, 0.2), (1, 0.8)})
+        self.assertEqual(len(model.cache_hook.entries), 3)
+        self.assertEqual((bar.n, bar.closed), (3, True))
+        self.assertEqual(other, {"temperature": 0.8})
+
+        strict = {"raise_on_error": True}
+        model = _BatchModel(4, self.task_dict)
+        model.batch_error = RuntimeError("batch failed")
+        progress = []
+        with self.assertRaisesRegex(RuntimeError, "batch failed"):
+            _run(model, [_request("strict", _callback("A"), strict, 0, "a", "test")], progress)
+        self.assertEqual(model.cache_hook.entries, [])
+        self.assertEqual((progress[0].n, progress[0].closed), (0, True))
+        self.assertEqual(strict, {"raise_on_error": True})
+
+    def test_malformed_result_has_no_side_effects(self) -> None:
+        for malformed in (None, "two", ["one"], ["one", 2]):
+            with self.subTest(malformed=malformed):
+                model = _BatchModel(2, self.task_dict)
+                model.batch_result = malformed
+                progress = []
+                with self.assertRaisesRegex(ValueError, "one string per request"):
+                    _run(model, self.requests[:2], progress)
+                self.assertEqual(model.cache_hook.entries, [])
+                self.assertEqual((progress[0].n, progress[0].closed), (0, True))
+
+    def test_empty_and_preparation_error(self) -> None:
+        model = _BatchModel(4, {})
+        result, bar = _run(model, [])
+        self.assertEqual((result, model.batch_calls, bar.n, bar.closed), ([], [], 0, True))
+
+        def broken(_doc: dict) -> list:
+            raise ValueError("invalid document")
+
+        model = _BatchModel(4, self.task_dict)
+        progress = []
+        with self.assertRaisesRegex(ValueError, "invalid document"):
+            _run(model, [self.requests[0], _request("bad", broken, self.kwargs, 1, "a", "test")], progress)
+        self.assertEqual(model.batch_calls, [])
         self.assertEqual(model.cache_hook.entries, [])
         self.assertEqual((progress[0].n, progress[0].closed), (0, True))

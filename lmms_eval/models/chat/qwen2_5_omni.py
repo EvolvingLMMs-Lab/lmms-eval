@@ -27,24 +27,32 @@ class Qwen2_5_Omni(ChatMixin, Qwen2_5_OmniSimple):
         return ChatMessages(messages=[system, *chat_messages.messages])
 
     def _infer_one(self, chat_messages: ChatMessages, gen_kwargs: dict) -> str:
-        chat_messages = self._with_system(chat_messages)
-        hf_messages = chat_messages.to_hf_messages(
-            image_kwargs=self.image_kwargs,
-            video_kwargs=self.video_kwargs,
-        )
+        return self._infer_batch([chat_messages], gen_kwargs)[0]
+
+    def _infer_batch(self, conversations: list[ChatMessages], gen_kwargs: dict) -> list[str]:
+        if not conversations:
+            return []
+        hf_conversations = [
+            self._with_system(messages).to_hf_messages(
+                image_kwargs=self.image_kwargs,
+                video_kwargs=self.video_kwargs,
+            )
+            for messages in conversations
+        ]
 
         # Audio/video are separate content blocks (silent MELD clips).
         use_audio_in_video = False
 
-        text = self.processor.apply_chat_template(hf_messages, add_generation_prompt=True, tokenize=False)
-        audios, images, videos = process_mm_info(hf_messages, use_audio_in_video=use_audio_in_video)
+        texts = [self.processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=False) for messages in hf_conversations]
+        audios, images, videos = process_mm_info(hf_conversations, use_audio_in_video=use_audio_in_video)
         inputs = self.processor(
-            text=text,
+            text=texts,
             audio=audios,
             images=images,
             videos=videos,
             return_tensors="pt",
             padding=True,
+            padding_side="left",
             use_audio_in_video=use_audio_in_video,
         )
         if self.device_map == "auto":
@@ -52,21 +60,22 @@ class Qwen2_5_Omni(ChatMixin, Qwen2_5_OmniSimple):
         else:
             inputs = inputs.to(self.model.device).to(self.model.dtype)
 
-        gen_kwargs.setdefault("max_new_tokens", 4096)
-        gen_kwargs.setdefault("temperature", 0)
-        gen_kwargs.setdefault("top_p", None)
-        gen_kwargs.setdefault("num_beams", 1)
+        generation = dict(gen_kwargs)
+        generation.setdefault("max_new_tokens", 4096)
+        generation.setdefault("temperature", 0)
+        generation.setdefault("top_p", None)
+        generation.setdefault("num_beams", 1)
 
         cont = self.model.generate(
             **inputs,
             return_audio=False,
             eos_token_id=self.tokenizer.eos_token_id,
             pad_token_id=self.tokenizer.pad_token_id,
-            do_sample=gen_kwargs["temperature"] > 0,
-            temperature=gen_kwargs["temperature"],
-            top_p=gen_kwargs["top_p"],
-            num_beams=gen_kwargs["num_beams"],
-            max_new_tokens=gen_kwargs["max_new_tokens"],
+            do_sample=generation["temperature"] > 0,
+            temperature=generation["temperature"],
+            top_p=generation["top_p"],
+            num_beams=generation["num_beams"],
+            max_new_tokens=generation["max_new_tokens"],
             use_cache=self.use_cache,
             use_audio_in_video=use_audio_in_video,
             thinker_do_sample=False,
@@ -79,5 +88,5 @@ class Qwen2_5_Omni(ChatMixin, Qwen2_5_OmniSimple):
         # align with the generated sequence prefix — trimming by it yields
         # empty strings on video inputs. This mirrors the upstream
         # XModBench/AudioBench Qwen2.5-Omni runner.
-        full = self.processor.batch_decode(cont, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        return full.split("assistant\n")[-1].strip()
+        full_sequences = self.processor.batch_decode(cont, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+        return [full.split("assistant\n")[-1].strip() for full in full_sequences]
