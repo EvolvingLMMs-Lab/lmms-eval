@@ -99,6 +99,19 @@ Open-ended generation. The model produces text given an input prompt + media.
 
 Returns `list[str]` - one generated string per request.
 
+Chat wrappers using `ChatMixin` normally infer one request at a time, even
+when `--batch_size` is greater than one. A wrapper can opt into native
+text-output batching by implementing
+`_infer_batch(self, conversations: list[ChatMessages], gen_kwargs: dict) -> list[str]`.
+The mixin passes one chunk of individually constructed conversations with
+shared generation settings and requires one string per request, in the same
+order. It validates the whole result before writing any cache entries. A
+generation exception applies to the entire chunk: the mixin returns empty
+strings unless `raise_on_error` is set, in which case it propagates the error.
+Malformed result shape or types always raise. The hook is synchronous and
+does not retry failed members individually. `qwen2_5_omni_chat` uses this
+hook for text output; it does not enable audio generation.
+
 ### `loglikelihood`
 
 Scoring for multiple-choice tasks. The model computes the log-probability of a target continuation given a context.

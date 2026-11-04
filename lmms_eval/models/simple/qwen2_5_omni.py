@@ -74,7 +74,7 @@ class Qwen2_5_Omni(lmms):
 
         Qwen2_5OmniForConditionalGeneration._tp_plan = [] if Qwen2_5OmniForConditionalGeneration._tp_plan is None else Qwen2_5OmniForConditionalGeneration._tp_plan
         self._model = Qwen2_5OmniForConditionalGeneration.from_pretrained(pretrained, torch_dtype="auto", device_map=self.device_map, attn_implementation=attn_implementation).eval()
-        self.processor = Qwen2_5OmniProcessor.from_pretrained("Qwen/Qwen2.5-Omni-7B")
+        self.processor = Qwen2_5OmniProcessor.from_pretrained(pretrained)
         self.max_num_frames = max_num_frames
         self._tokenizer = self.processor.tokenizer
 

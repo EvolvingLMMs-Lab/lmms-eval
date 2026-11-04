@@ -48,8 +48,9 @@ class ChatMixin:
     more memory than Qwen-Omni's for the same clip).
 
     Subclasses must define `_infer_one(self, chat_messages, gen_kwargs) -> str`.
-    Requests are grouped for ordering but inferred individually, even when
-    `batch_size` is greater than one.
+    Subclasses may opt into native text-output batching by defining
+    `_infer_batch(self, conversations, gen_kwargs) -> list[str]`.
+    Other subclasses continue to infer each request individually.
     """
 
     is_simple = False
@@ -78,6 +79,40 @@ class ChatMixin:
 
         try:
             for chunk in chunks:
+                infer_batch = getattr(self, "_infer_batch", None)
+                if callable(infer_batch):
+                    conversations = []
+                    cache_keys = []
+                    for ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split in chunk:
+                        gen_kwargs = dict(all_gen_kwargs)
+                        gen_kwargs.pop("raise_on_error", False)
+                        doc = self.task_dict[task][split][doc_id]
+                        raw_messages = doc_to_messages(doc)
+                        conversations.append(ChatMessages(**{"messages": raw_messages}))
+                        cache_keys.append((ctx, gen_kwargs))
+
+                    # Collator groups equal generation settings. Give inference
+                    # its own copy so defaults cannot enter any cache key.
+                    batch_kwargs = dict(cache_keys[0][1])
+                    raise_on_error = chunk[0][2].get("raise_on_error", False)
+                    try:
+                        answers = infer_batch(conversations, batch_kwargs)
+                    except Exception as e:
+                        if raise_on_error:
+                            raise
+                        eval_logger.error(f"Error in generating: {e}\n{traceback.format_exc()}")
+                        answers = [""] * len(chunk)
+
+                    # A broken adapter result is a contract error, not a model
+                    # inference failure. Validate before cache/progress writes.
+                    if not isinstance(answers, (list, tuple)) or len(answers) != len(chunk) or any(not isinstance(answer, str) for answer in answers):
+                        raise ValueError("_infer_batch must return one string per request")
+                    for key, answer in zip(cache_keys, answers):
+                        res.append(answer)
+                        self.cache_hook.add_partial("generate_until", key, answer)
+                        pbar.update(1)
+                    continue
+
                 for ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split in chunk:
                     gen_kwargs = dict(all_gen_kwargs)
                     raise_on_error = gen_kwargs.pop("raise_on_error", False)
