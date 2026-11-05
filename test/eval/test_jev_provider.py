@@ -239,6 +239,17 @@ class TestJevScoreAndChoice:
         assert top.content == "10"
         assert bottom.content == "1"
 
+    @pytest.mark.parametrize(
+        "output_format,positive,negative",
+        [("true/false", True, False), ("correct/incorrect", True, False), ("label", True, False)],
+    )
+    def test_binary_formats_follow_the_noul_decision(self, monkeypatch, output_format, positive, negative):
+        provider = _provider(monkeypatch, noul_threshold=0.5)
+        for probability, expected in ((0.9, positive), (0.1, negative)):
+            with mock.patch("lmms_eval.llm_judge.providers.jev.requests.post", return_value=_http(200, _noul(probability))):
+                result = provider.evaluate_binary("q", "a", "p", output_format=output_format)
+            assert result["result"] is expected
+
     def test_rubric_levels_are_sent_as_score_criteria(self, monkeypatch):
         provider = _provider(monkeypatch)
         rubric = {"accuracy": ["wrong", "partial", "right"]}
@@ -379,6 +390,14 @@ class TestJevFailures:
 
 
 class TestAsyncJev:
+    def test_async_rubric_returns_scores(self, monkeypatch):
+        monkeypatch.setenv("TYPESAFE_API_KEY", "k")
+        provider = AsyncJevProvider(_config(max_concurrent=2))
+        with mock.patch("lmms_eval.llm_judge.providers.jev.requests.post", return_value=_http(200, _score_body({"accuracy": 2}))) as post:
+            result = asyncio.run(provider.evaluate_with_rubric_async("2+2?", "4", {"accuracy": ["wrong", "partial", "right"]}))
+        assert result["scores"] == {"accuracy": 2.0}
+        assert _posted(post)["questions"]["accuracy"]["type"] == "score"
+
     def test_async_evaluate_uses_same_payload(self, monkeypatch):
         monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
         provider = AsyncJevProvider(_config(max_concurrent=2))

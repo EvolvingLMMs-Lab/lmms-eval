@@ -609,6 +609,10 @@ class JevProvider(ServerInterface):
         Yes/no cutoff in ``[0, 1]``. Default 0.5. A noul probability at or
         above the cutoff is the positive label. ``ServerConfig.noul_threshold``
         overrides this.
+    TYPESAFE_API_URL : str, optional
+        Full endpoint URL. Default ``JEV_API_URL``. Set it to
+        ``https://openrouter.ai/api/v1/systemone`` to reach Jev through
+        OpenRouter, with the OpenRouter key in ``TYPESAFE_API_KEY``.
     TYPESAFE_MODEL : str, optional
         Jev model id used when the task config still names a generative model.
         ``JEV_MODEL`` is the fallback. Default ``jev-latest``.
@@ -643,8 +647,13 @@ class JevProvider(ServerInterface):
             config=config,
         )
         response = self.evaluate(request)
-        parsed_result = ResponseParser.parse_binary_response(response.content, output_format)
         details = response.parsed_result if isinstance(response.parsed_result, dict) else {}
+        decision = details.get("decision")
+        if isinstance(decision, bool):
+            # The noul decision is authoritative: ResponseParser only knows 0/1 and yes/no.
+            parsed_result = int(decision) if output_format in {"0/1", "1/0"} else decision
+        else:
+            parsed_result = ResponseParser.parse_binary_response(response.content, output_format)
         return {
             "result": parsed_result,
             "raw_response": response.content,
@@ -685,7 +694,7 @@ class JevProvider(ServerInterface):
         last_error: Optional[BaseException] = None
         for attempt in range(attempts):
             try:
-                response = requests.post(JEV_API_URL, headers=headers, json=payload, timeout=config.timeout)
+                response = requests.post(os.getenv("TYPESAFE_API_URL") or JEV_API_URL, headers=headers, json=payload, timeout=config.timeout)
             except requests.exceptions.RequestException as exc:
                 last_error = exc
                 if attempt >= attempts - 1:
