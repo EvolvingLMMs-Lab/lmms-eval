@@ -1,7 +1,10 @@
+import hashlib
+import json
 import os
 
 from tqdm import tqdm
 
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from lmms_eval.tasks.hallusion_bench.utils import (
     assign_correctness,
     evaluate_by_chatgpt,
@@ -45,6 +48,14 @@ def hb_process_results(doc, result):
     return {k: sample for k in metric}
 
 
+def _judge_cache_file(split: str, data: list, args) -> str:
+    # The GPT judgments are cached on disk, shared by aAcc/qAcc/fAcc. Key the file on the judged content so that
+    # a run never reuses the judgments of an earlier run (another model, another --limit) in the same --output_path.
+    keys = ("category", "subcategory", "set_id", "figure_id", "question_id", "question", "gt_answer_details", output_entry)
+    digest = hashlib.sha256(json.dumps([[sample[key] for key in keys] for sample in data]).encode()).hexdigest()[:16]
+    return generate_submission_file(f"hallusion_output_{split}_{digest}.json", args, subpath="gpt_response")
+
+
 def hb_aggregation_result(results, metric, args):
     data_vd = []
     data_vs = []
@@ -54,10 +65,8 @@ def hb_aggregation_result(results, metric, args):
         if data["category"] == "VS":
             data_vs.append(data)
     eval_logger.info("Do gpt eval vd ...")
-    path = os.path.join(args.output_path, "gpt_response")
-    os.makedirs(path, exist_ok=True)
-    save_json_path_vd = f"{path}/hallusion_output_vd_model.json"
-    save_json_path_vs = f"{path}/hallusion_output_vs_model.json"
+    save_json_path_vd = _judge_cache_file("vd", data_vd, args)
+    save_json_path_vs = _judge_cache_file("vs", data_vs, args)
     data_vd = evaluate_by_chatgpt(data_vd, output_entry=output_entry, correctness_entry=correctness_entry, load_json=True, save_json_path=save_json_path_vd)
     # data_vd = check_same_by_chatgpt(data_vd, output_entry=output_entry, load_json=True, save_json_path=save_json_path_vd)
     data_vd = assign_correctness(data_vd, correctness_entry=correctness_entry)
