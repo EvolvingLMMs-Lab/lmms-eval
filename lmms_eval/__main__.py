@@ -615,9 +615,16 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
             except Exception as e:
                 # A failed rank must exit nonzero so the launcher can stop peers
-                # that are still waiting in distributed collectives.
+                # that are still waiting in distributed collectives. Exit here,
+                # without tearing down the process group: destroy_process_group()
+                # and the NCCL backend's own shutdown can wait on those blocked
+                # peers, so this rank would hang before the launcher sees it fail.
                 if int(os.environ.get("WORLD_SIZE", 1)) > 1 or (torch.distributed.is_available() and torch.distributed.is_initialized() and torch.distributed.get_world_size() > 1):
-                    raise
+                    traceback.print_exc()
+                    eval_logger.error(f"Error during distributed evaluation: {e}. Exiting this rank with status 1 so the launcher stops the other ranks.")
+                    sys.stdout.flush()
+                    sys.stderr.flush()
+                    os._exit(1)
                 if args.verbosity == "DEBUG":
                     raise e
                 else:
