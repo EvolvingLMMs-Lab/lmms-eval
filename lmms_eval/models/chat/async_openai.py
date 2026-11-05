@@ -35,6 +35,14 @@ from lmms_eval.protocol import ChatMessages
 load_dotenv(verbose=True)
 
 
+def _turn_text(response) -> str:
+    """Message text for one turn; a tool-call turn may carry no text."""
+    choices = getattr(response, "choices", None)
+    if choices and getattr(choices[0], "finish_reason", None) == "tool_calls" and getattr(choices[0].message, "tool_calls", None):
+        return getattr(choices[0].message, "content", None) or ""
+    return require_chat_message_text(response)
+
+
 @register_model("async_openai")
 class AsyncOpenAIChat(lmms):
     is_simple = False
@@ -229,7 +237,7 @@ class AsyncOpenAIChat(lmms):
             payload["tool_choice"] = "auto"  # or "auto" for automatic tool selection
 
         response = await self.client.chat.completions.create(**payload)
-        last_response = require_chat_message_text(response)
+        last_response = _turn_text(response)
         # Extract usage metrics
         input_tokens = 0
         output_tokens = 0
@@ -272,7 +280,7 @@ class AsyncOpenAIChat(lmms):
                     eval_logger.debug(f"Calling {call.function.name}...")
                     result = await self.mcp_client.run_tool(call.function.name, eval(call.function.arguments))
                     all_response += f"<tool_call>{call.function.name} {call.function.arguments}</tool_call></tool_response>"
-                    tool_messages.append({"role": "tool", "name": call.function.name, "content": []})
+                    tool_messages.append({"role": "tool", "tool_call_id": call.id, "name": call.function.name, "content": []})
                     for content in result.content:
                         tool_message = self.mcp_client.convert_result_to_openai_format(content)
                         for content in tool_message:
@@ -311,7 +319,7 @@ class AsyncOpenAIChat(lmms):
                 reasoning_tokens=reasoning_tokens,
                 source="model",
             )
-            last_response = require_chat_message_text(response)
+            last_response = _turn_text(response)
             try:
                 all_response += last_response
             except Exception as e:

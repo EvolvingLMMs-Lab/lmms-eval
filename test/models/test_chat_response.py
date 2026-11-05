@@ -143,3 +143,22 @@ def test_async_openai_judge_strips_valid_content():
     provider.async_client.chat.completions.create = mock.AsyncMock(return_value=_response(choices=[_message("  yes  ")]))
     result = asyncio.run(provider.evaluate_async(_request()))
     assert result.content == "yes"
+
+
+def _chat_turn(*, finish_reason, content, tool_calls=None):
+    message = SimpleNamespace(content=content, tool_calls=tool_calls)
+    return SimpleNamespace(choices=[SimpleNamespace(finish_reason=finish_reason, message=message)])
+
+
+def test_async_openai_chat_allows_null_content_on_tool_call_turn():
+    from lmms_eval.models.chat.async_openai import _turn_text
+
+    turn = _chat_turn(finish_reason="tool_calls", content=None, tool_calls=[SimpleNamespace(id="call_1")])
+    assert _turn_text(turn) == ""
+
+
+def test_async_openai_chat_still_rejects_blank_final_turn():
+    from lmms_eval.models.chat.async_openai import _turn_text
+
+    with pytest.raises(ValueError, match=EMPTY_CHAT_RESPONSE):
+        _turn_text(_chat_turn(finish_reason="stop", content=None))
