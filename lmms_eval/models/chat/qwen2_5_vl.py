@@ -18,6 +18,26 @@ if not _has_qwen_vl:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
 
+def _sampled_fps(md) -> float:
+    """Sampled fps of one video from qwen-vl-utils metadata.
+
+    `md` is a dict (qwen-vl-utils) or a transformers `VideoMetadata`. Newer
+    transformers expose `sampled_fps`; 4.57.x does not, so derive it from the
+    sampled frame count, the source frame count and the source fps.
+    """
+
+    def get(key):
+        return md.get(key) if isinstance(md, dict) else getattr(md, key, None)
+
+    sampled = get("sampled_fps")
+    if sampled is not None:
+        return float(sampled)
+    fps, total, indices = get("fps"), get("total_num_frames"), get("frames_indices")
+    if fps is not None and total and indices is not None:
+        return len(indices) / total * float(fps)
+    return float(fps) if fps else 2.0
+
+
 @register_model("qwen2_5_vl_chat")
 class Qwen2_5_VL(Qwen2_5_VLSimple):
     is_simple = False
@@ -93,12 +113,24 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             )
 
             video_metadatas = None
+            videos_kwargs = None
             if video_inputs is not None:
                 video_inputs, video_metadatas = zip(*video_inputs)
                 video_inputs, video_metadatas = list(video_inputs), list(video_metadatas)
+                # Derive sampled fps from metadata so both transformers branches
+                # (old: fps in videos_kwargs, new: metadata.sampled_fps) see the
+                # correct temporal value. qwen-vl-utils stops returning fps when
+                # return_video_metadata=True, so we reconstruct it.
+                fps_list = [_sampled_fps(md) for md in video_metadatas]
+                videos_kwargs = {**video_kwargs_qwen}
+                # fps may be single value or list; processor handles both
+                if len(fps_list) == 1:
+                    videos_kwargs["fps"] = fps_list[0]
+                elif fps_list:
+                    videos_kwargs["fps"] = fps_list
 
             padding_side = "left" if self.batch_size > 1 else "right"
-            inputs = self.processor(
+            processor_kwargs = dict(
                 text=texts,
                 images=image_inputs,
                 videos=video_inputs,
@@ -107,6 +139,9 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 padding_side=padding_side,
                 return_tensors="pt",
             )
+            if videos_kwargs:
+                processor_kwargs["videos_kwargs"] = videos_kwargs
+            inputs = self.processor(**processor_kwargs)
 
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
