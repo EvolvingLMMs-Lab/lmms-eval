@@ -1,5 +1,6 @@
 # credit to https://github.com/EleutherAI/lm-evaluation-harness
 import collections
+import dataclasses
 import inspect
 import os
 from functools import partial
@@ -12,7 +13,9 @@ from lmms_eval.api.group import ConfigurableGroup, GroupConfig
 from lmms_eval.api.task import ConfigurableMessagesTask, ConfigurableTask, Task
 from lmms_eval.evaluator_utils import get_subtask_list
 
-GROUP_ONLY_KEYS = list(GroupConfig().to_dict().keys())
+# Use the dataclass fields: to_dict() omits an unset postprocess_results, which would
+# make it look like a task key when a group YAML sets it.
+GROUP_ONLY_KEYS = [f.name for f in dataclasses.fields(GroupConfig)]
 
 
 class TaskManager:
