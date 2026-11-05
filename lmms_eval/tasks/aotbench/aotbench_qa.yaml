@@ -1,0 +1,7 @@
+task: aotbench_qa
+include: _default_template_yaml
+dataset_kwargs:
+  data_files:
+    test: data_files/AoTBench_QA.json
+  video: True
+  cache_dir: aotbench

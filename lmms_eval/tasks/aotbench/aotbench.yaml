@@ -1,0 +1,7 @@
+group: aotbench
+task:
+  - aotbench_reversefilm
+  - aotbench_ucf101
+  - aotbench_rtime_t2v
+  - aotbench_rtime_v2t
+  - aotbench_qa

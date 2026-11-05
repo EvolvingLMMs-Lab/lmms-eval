@@ -383,6 +383,10 @@ python -m lmms_eval --tasks list_with_num
 - [YouCook2](http://youcook2.eecs.umich.edu/) (youcook2_val)
 
 ### Long Video & Temporal Understanding
+- [AoTBench](https://huggingface.co/datasets/sherryxzh/AoTBench) (aotbench) - Sensitivity to temporal direction in video ([code](https://github.com/zihuixue/seeAoT))
+  - Reversed segment detection (aotbench_reversefilm, aotbench_ucf101)
+  - Directional caption matching (aotbench_rtime_t2v, aotbench_rtime_v2t)
+  - Temporally demanding video QA (aotbench_qa)
 - [Charades-STA](https://github.com/jiyanggao/TALL) (charades_sta)
 - [CG-Bench](https://github.com/CG-Bench/CG-Bench) (cgbench)
   - Video-only MCQ (cgbench)

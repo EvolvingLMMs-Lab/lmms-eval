@@ -1,0 +1,19 @@
+dataset_path: sherryxzh/AoTBench
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.aotbench_doc_to_visual
+doc_to_text: !function utils.aotbench_doc_to_text
+doc_to_target: ans
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.aotbench_process_results
+metric_list:
+  - metric: aotbench_acc
+    aggregation: !function utils.aotbench_aggregate
+    higher_is_better: true
+metadata:
+  - version: 0.0
