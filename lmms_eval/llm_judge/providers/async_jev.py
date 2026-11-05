@@ -45,6 +45,11 @@ class AsyncJevProvider(AsyncServerInterface):
         """Per-item score judgment."""
         return self._sync.evaluate_with_rubric(*args, **kwargs)
 
+    async def evaluate_with_rubric_async(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
+        """Per-item score judgment in a worker thread, so rubric callers get real scores."""
+        async with self.semaphore:
+            return await asyncio.to_thread(self._sync.evaluate_with_rubric, *args, **kwargs)
+
     def evaluate_comparative(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
         """Pairwise scores as two Jev score questions."""
         return self._sync.evaluate_comparative(*args, **kwargs)
