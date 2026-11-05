@@ -133,6 +133,20 @@ def test_summary_excludes_warmups_and_uses_nearest_rank_p95():
     assert summary["case"]["end_to_end_duration_ns"] == {"median": 3, "p95": 100, "pvariance": 1522}
 
 
+def test_summary_omits_unavailable_peak_rss():
+    record = {
+        "repetition": {"case_id": "case", "warmup": False},
+        "phases": [{"name": "inference", "duration_ns": 5}],
+        "resources": {"end_to_end_duration_ns": 5, "peak_host_rss_bytes": None},
+        "counters": {"end_to_end_scored_documents_per_second": 1.0},
+    }
+
+    summary = _summarize([record, record])
+
+    assert "peak_host_rss_bytes" not in summary["case"]
+    assert summary["case"]["end_to_end_duration_ns"] == {"median": 5, "p95": 5, "pvariance": 0}
+
+
 def test_correctness_mismatch_emits_no_summary(monkeypatch, tmp_path, capsys):
     digests = iter(("sha256:" + "a" * 64, "sha256:" + "b" * 64, "sha256:" + "c" * 64))
 
