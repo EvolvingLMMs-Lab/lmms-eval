@@ -6,12 +6,14 @@
 | --- | --- | --- |
 | `openai` (default) | OpenAI chat completions | `OPENAI_API_KEY`, optional `OPENAI_API_URL` |
 | `azure` | Azure OpenAI | `AZURE_API_KEY`, `AZURE_ENDPOINT`, `AZURE_API_VERSION` |
-| `minimax` / `async_minimax` | MiniMax chat completions | `MINIMAX_API_KEY` |
+| `minimax` / `async_minimax` | MiniMax chat completions | `MINIMAX_API_KEY`, optional `MINIMAX_MODEL`, `MINIMAX_API_URL` |
 | `jev` / `typesafe` | TypeSafe Jev | `TYPESAFE_API_KEY` |
 | `async_jev` / `async_typesafe` | Jev, async | `TYPESAFE_API_KEY` |
 | `local` | An OpenAI-compatible local server | `OPENAI_API_URL` |
 
 `async_*` names are the non-blocking clients. A missing key makes `is_available()` false and `evaluate` raises; it does not stop process startup.
+
+MiniMax: a task that asks for a non-MiniMax model (its GPT default) is sent to `MINIMAX_MODEL`, else `MiniMax-M3`, with a warning. `MiniMax-M3` runs with thinking disabled so short `max_tokens` budgets return text; `MiniMax-M3.1-Flash` always thinks, so give it a larger `max_tokens`.
 
 ## TypeSafe Jev
 

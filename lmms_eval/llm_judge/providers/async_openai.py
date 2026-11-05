@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import aiohttp
 from loguru import logger as eval_logger
@@ -36,6 +36,10 @@ class AsyncOpenAIProvider(AsyncServerInterface):
     def is_available(self) -> bool:
         return bool(self.api_key)
 
+    def _extra_body(self, config: ServerConfig) -> Dict[str, Any]:
+        """Provider-specific request fields; subclasses for OpenAI-compatible APIs override this."""
+        return {}
+
     async def evaluate_async(self, request: Request) -> Response:
         """Evaluate using OpenAI API asynchronously"""
         if not self.is_available():
@@ -60,6 +64,14 @@ class AsyncOpenAIProvider(AsyncServerInterface):
 
         if config.response_format == "json":
             payload["response_format"] = {"type": "json_object"}
+
+        extra_body = self._extra_body(config)
+        if extra_body:
+            # The SDK rejects unknown kwargs, so extra fields travel in extra_body; plain HTTP takes them top-level.
+            if self.use_async_client:
+                payload["extra_body"] = extra_body
+            else:
+                payload.update(extra_body)
 
         # Make API call with retries
         async with self.semaphore:
