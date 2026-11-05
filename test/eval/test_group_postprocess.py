@@ -284,3 +284,30 @@ def test_sitebench_merge_results_combines_subtask_samples():
     assert merged["accuracy,none"] == 50.0
     assert merged["chance_adjusted_acc,none"] == 50.0
     assert merged["sitebench_accuracy,none"] == 50.0
+
+
+def test_group_yaml_with_hook_loads_through_task_manager():
+    from lmms_eval.tasks import GROUP_ONLY_KEYS, TaskManager
+
+    assert "postprocess_results" in GROUP_ONLY_KEYS
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with open(os.path.join(tmpdir, "hooks.py"), "w", encoding="utf-8") as handle:
+            handle.write("def hook(group_name, subtasks, results, **kwargs):\n    return {'from_group_yaml,none': 7}\n")
+        with open(os.path.join(tmpdir, "data.jsonl"), "w", encoding="utf-8") as handle:
+            handle.write('{"q": "a", "a": "b"}\n')
+        task_yaml = (
+            "task: hooked_leaf\ndataset_path: json\ndataset_kwargs:\n  data_files: {data_file}\ntest_split: train\n"
+            "output_type: generate_until\ndoc_to_text: q\ndoc_to_target: a\n"
+            "metric_list:\n  - metric: exact_match\n    aggregation: mean\n    higher_is_better: true\n"
+        )
+        with open(os.path.join(tmpdir, "hooked_leaf.yaml"), "w", encoding="utf-8") as handle:
+            handle.write(task_yaml.format(data_file=os.path.join(tmpdir, "data.jsonl")))
+        with open(os.path.join(tmpdir, "hooked_group.yaml"), "w", encoding="utf-8") as handle:
+            handle.write("group: hooked_group\ntask:\n  - hooked_leaf\npostprocess_results: !function hooks.hook\n")
+        manager = TaskManager(include_path=tmpdir, include_defaults=False)
+        task_dict = manager.load_task_or_group("hooked_group")
+        group = next(key for key in task_dict if getattr(key, "group_name", None) == "hooked_group")
+        assert callable(group._config.postprocess_results)
+        results = {"hooked_leaf": {"alias": "hooked_leaf", "acc,none": 0.5, "acc_stderr,none": 0.0, "samples": 4}, "hooked_group": {"alias": "hooked_group"}}
+        results_out, _, _, _ = consolidate_group_results(results, {}, {group: task_dict[group]})
+        assert results_out["hooked_group"]["from_group_yaml,none"] == 7
