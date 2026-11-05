@@ -9,9 +9,6 @@ import json
 
 import numpy as np
 import pytest
-
-pytest.importorskip("qwen_vl_utils")
-transformers = pytest.importorskip("transformers")
 from transformers import Qwen2_5_VLProcessor, Qwen2TokenizerFast, Qwen2VLImageProcessor, Qwen2VLVideoProcessor
 from transformers.video_utils import VideoMetadata
 
@@ -67,10 +64,14 @@ def _second_per_grid_ts(processor, nframes, metadata):
     return out["second_per_grid_ts"].tolist()
 
 
-@pytest.mark.parametrize("make_metadata", [
-    lambda n: {"fps": SOURCE_FPS, "total_num_frames": SOURCE_FRAMES, "frames_indices": list(range(n))},
-    lambda n: VideoMetadata(total_num_frames=SOURCE_FRAMES, fps=SOURCE_FPS, frames_indices=list(range(n))),
-], ids=["dict", "VideoMetadata"])
+@pytest.mark.parametrize(
+    "make_metadata",
+    [
+        lambda n: {"fps": SOURCE_FPS, "total_num_frames": SOURCE_FRAMES, "frames_indices": list(range(n))},
+        lambda n: VideoMetadata(total_num_frames=SOURCE_FRAMES, fps=SOURCE_FPS, frames_indices=list(range(n))),
+    ],
+    ids=["dict", "VideoMetadata"],
+)
 def test_second_per_grid_ts_follows_frame_budget(processor, make_metadata):
     values = {n: _second_per_grid_ts(processor, n, make_metadata(n)) for n in FRAME_BUDGETS}
     for n, ts in values.items():
