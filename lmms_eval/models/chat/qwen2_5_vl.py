@@ -18,6 +18,26 @@ if not _has_qwen_vl:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
 
+def _sampled_fps(md) -> float:
+    """Sampled fps of one video from qwen-vl-utils metadata.
+
+    `md` is a dict (qwen-vl-utils) or a transformers `VideoMetadata`. Newer
+    transformers expose `sampled_fps`; 4.57.x does not, so derive it from the
+    sampled frame count, the source frame count and the source fps.
+    """
+
+    def get(key):
+        return md.get(key) if isinstance(md, dict) else getattr(md, key, None)
+
+    sampled = get("sampled_fps")
+    if sampled is not None:
+        return float(sampled)
+    fps, total, indices = get("fps"), get("total_num_frames"), get("frames_indices")
+    if fps is not None and total and indices is not None:
+        return len(indices) / total * float(fps)
+    return float(fps) if fps else 2.0
+
+
 @register_model("qwen2_5_vl_chat")
 class Qwen2_5_VL(Qwen2_5_VLSimple):
     is_simple = False
@@ -101,26 +121,7 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 # (old: fps in videos_kwargs, new: metadata.sampled_fps) see the
                 # correct temporal value. qwen-vl-utils stops returning fps when
                 # return_video_metadata=True, so we reconstruct it.
-                fps_list = []
-                for md in video_metadatas:
-                    if isinstance(md, dict):
-                        if "sampled_fps" in md and md["sampled_fps"] is not None:
-                            fps_list.append(float(md["sampled_fps"]))
-                        else:
-                            fps = md.get("fps")
-                            total = md.get("total_num_frames")
-                            indices = md.get("frames_indices")
-                            if fps is not None and total and indices is not None and total > 0:
-                                fps_list.append(len(indices) / total * float(fps))
-                            elif fps is not None:
-                                fps_list.append(float(fps))
-                            else:
-                                fps_list.append(2.0)
-                    else:
-                        try:
-                            fps_list.append(float(md.sampled_fps))
-                        except Exception:
-                            fps_list.append(float(getattr(md, "fps", 2.0) or 2.0))
+                fps_list = [_sampled_fps(md) for md in video_metadatas]
                 videos_kwargs = {**video_kwargs_qwen}
                 # fps may be single value or list; processor handles both
                 if len(fps_list) == 1:
