@@ -8,6 +8,7 @@ import pandas as pd
 import yaml
 from PIL import Image
 
+from lmms_eval.llm_judge.openai_endpoint import resolve_openai_chat_completions_url
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from lmms_eval.tasks.mmupd.mmupd_evals import MMUPD_Evaluator
 
@@ -25,7 +26,7 @@ GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 API_TYPE = os.getenv("API_TYPE", "openai")
 
 if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+    API_URL = resolve_openai_chat_completions_url()
     API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
 elif API_TYPE == "azure":
     API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")

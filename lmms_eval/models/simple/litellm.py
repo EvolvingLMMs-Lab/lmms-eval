@@ -17,6 +17,7 @@ import os
 from typing import Any, Optional
 
 from lmms_eval.api.registry import register_model
+from lmms_eval.llm_judge.openai_endpoint import resolve_openai_api_base
 from lmms_eval.models.simple.openai import OpenAICompatible as OpenAICompatibleBase
 
 # Placeholder key passed to ``openai.OpenAI(api_key=...)`` inside the super().__init__()
@@ -79,7 +80,7 @@ class LiteLLMCompatible(OpenAICompatibleBase):
         **kwargs: Any,
     ) -> None:
         resolved_api_key = api_key or os.getenv("OPENAI_API_KEY")
-        resolved_base_url = base_url or os.getenv("OPENAI_API_BASE")
+        resolved_base_url = base_url or resolve_openai_api_base()
 
         # The parent __init__ builds an openai.OpenAI(...) client and raises if no API
         # key is resolvable. Hand it a placeholder so construction succeeds; we swap
