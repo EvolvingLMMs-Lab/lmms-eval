@@ -11,31 +11,12 @@ from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.model_utils.load_video import _probe_video_metadata
 from lmms_eval.models.simple.qwen2_5_vl import Qwen2_5_VL as Qwen2_5_VLSimple
+from lmms_eval.models.simple.qwen2_5_vl import _sampled_fps
 from lmms_eval.protocol import ChatMessages
 
 process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
 if not _has_qwen_vl:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
-
-
-def _sampled_fps(md) -> float:
-    """Sampled fps of one video from qwen-vl-utils metadata.
-
-    `md` is a dict (qwen-vl-utils) or a transformers `VideoMetadata`. Newer
-    transformers expose `sampled_fps`; 4.57.x does not, so derive it from the
-    sampled frame count, the source frame count and the source fps.
-    """
-
-    def get(key):
-        return md.get(key) if isinstance(md, dict) else getattr(md, key, None)
-
-    sampled = get("sampled_fps")
-    if sampled is not None:
-        return float(sampled)
-    fps, total, indices = get("fps"), get("total_num_frames"), get("frames_indices")
-    if fps is not None and total and indices is not None:
-        return len(indices) / total * float(fps)
-    return float(fps) if fps else 2.0
 
 
 @register_model("qwen2_5_vl_chat")
