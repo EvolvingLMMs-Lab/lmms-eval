@@ -5,14 +5,14 @@ Reuses :class:`AsyncOpenAIProvider` with the same MiniMax defaults as
 """
 
 import os
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from loguru import logger as eval_logger
 
 from ..base import AsyncServerInterface
 from ..protocol import Request, Response, ServerConfig
 from .async_openai import AsyncOpenAIProvider
-from .minimax import MINIMAX_BASE_URL, _default_config, _request_for_minimax, _strip_think_tags
+from .minimax import _default_config, _minimax_base_url, _minimax_extra_body, _request_for_minimax, _strip_think_tags
 
 
 class AsyncMiniMaxProvider(AsyncOpenAIProvider):
@@ -26,8 +26,8 @@ class AsyncMiniMaxProvider(AsyncOpenAIProvider):
         config = _default_config(config)
         AsyncServerInterface.__init__(self, config)
         self.api_key = os.getenv("MINIMAX_API_KEY", "")
-        self.base_url = MINIMAX_BASE_URL
-        self.api_url = f"{MINIMAX_BASE_URL}/chat/completions"
+        self.base_url = _minimax_base_url()
+        self.api_url = f"{self.base_url}/chat/completions"
         self.async_client = None
         self.use_async_client = False
         if not self.api_key:
@@ -41,6 +41,9 @@ class AsyncMiniMaxProvider(AsyncOpenAIProvider):
             self.use_async_client = True
         except ImportError:
             eval_logger.warning("AsyncOpenAI client not available, using aiohttp for MiniMax")
+
+    def _extra_body(self, config: ServerConfig) -> Dict[str, Any]:
+        return _minimax_extra_body(config)
 
     async def evaluate_async(self, request: Request) -> Response:
         """Evaluate using the MiniMax API asynchronously."""

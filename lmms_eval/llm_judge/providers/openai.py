@@ -51,6 +51,10 @@ class OpenAIProvider(ServerInterface):
     def is_available(self) -> bool:
         return bool(self.api_key)
 
+    def _extra_body(self, config: ServerConfig) -> Dict[str, Any]:
+        """Provider-specific request fields; subclasses for OpenAI-compatible APIs override this."""
+        return {}
+
     def evaluate(self, request: Request) -> Response:
         """Evaluate using OpenAI API"""
         if not self.is_available():
@@ -75,6 +79,14 @@ class OpenAIProvider(ServerInterface):
 
         if config.response_format == "json":
             payload["response_format"] = {"type": "json_object"}
+
+        extra_body = self._extra_body(config)
+        if extra_body:
+            # The SDK rejects unknown kwargs, so extra fields travel in extra_body; plain HTTP takes them top-level.
+            if self.use_client:
+                payload["extra_body"] = extra_body
+            else:
+                payload.update(extra_body)
 
         # Make API call with retries
         for attempt in range(config.num_retries):

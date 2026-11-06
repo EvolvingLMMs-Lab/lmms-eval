@@ -161,6 +161,51 @@ class TestMiniMaxEvaluate:
         assert payload["model"] == "MiniMax-M3"
         assert request.config.temperature == 2.0
 
+    def test_task_default_gpt_model_is_replaced(self, monkeypatch):
+        provider = self._provider(monkeypatch)
+        provider.client.chat.completions.create.return_value = _completion("ok")
+        request = _request(model_name="gpt-4o-2024-11-20")
+
+        provider.evaluate(request)
+
+        assert provider.client.chat.completions.create.call_args.kwargs["model"] == "MiniMax-M3"
+        assert request.config.model_name == "gpt-4o-2024-11-20"
+
+    def test_minimax_model_env_overrides_the_replacement(self, monkeypatch):
+        provider = self._provider(monkeypatch)
+        monkeypatch.setenv("MINIMAX_MODEL", "MiniMax-M2.7")
+        provider.client.chat.completions.create.return_value = _completion("ok")
+
+        provider.evaluate(_request(model_name="gpt-4o"))
+
+        assert provider.client.chat.completions.create.call_args.kwargs["model"] == "MiniMax-M2.7"
+
+    def test_m3_sends_thinking_disabled_but_flash_does_not(self, monkeypatch):
+        provider = self._provider(monkeypatch)
+        provider.client.chat.completions.create.return_value = _completion("7")
+
+        provider.evaluate(_request(max_tokens=10))
+        assert provider.client.chat.completions.create.call_args.kwargs["extra_body"] == {"thinking": {"type": "disabled"}}
+
+        provider.evaluate(_request(model_name="MiniMax-M3.1-Flash"))
+        assert "extra_body" not in provider.client.chat.completions.create.call_args.kwargs
+
+    def test_requests_fallback_sends_thinking_top_level(self, monkeypatch):
+        provider = self._provider(monkeypatch)
+        provider.use_client = False
+        response = mock.Mock()
+        response.json.return_value = {"choices": [{"message": {"content": "7"}}], "model": "MiniMax-M3", "usage": {}}
+        with mock.patch("lmms_eval.llm_judge.providers.openai.requests.post", return_value=response) as post:
+            provider.evaluate(_request())
+        assert post.call_args.kwargs["json"]["thinking"] == {"type": "disabled"}
+        assert "extra_body" not in post.call_args.kwargs["json"]
+
+    def test_base_url_env_override(self, monkeypatch):
+        monkeypatch.setenv("MINIMAX_API_KEY", "k")
+        monkeypatch.setenv("MINIMAX_API_URL", "https://api.minimaxi.com/v1/")
+        assert MiniMaxProvider().base_url == "https://api.minimaxi.com/v1"
+        assert AsyncMiniMaxProvider().api_url == "https://api.minimaxi.com/v1/chat/completions"
+
     def test_strips_think_tags(self, monkeypatch):
         provider = self._provider(monkeypatch)
         provider.client.chat.completions.create.return_value = _completion("<think>secret</think>Final answer.")
