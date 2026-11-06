@@ -29,6 +29,7 @@ from loguru import logger as eval_logger
 from PIL import Image
 
 from lmms_eval.api.chat_response import require_chat_message_text
+from lmms_eval.llm_judge.openai_endpoint import resolve_openai_chat_completions_url
 from lmms_eval.models.model_utils.load_video import import_decord
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
@@ -41,7 +42,7 @@ GPT_EVAL_MODEL_NAME = "gpt-4o-mini"
 API_TYPE = os.getenv("API_TYPE", "openai")
 
 if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+    API_URL = resolve_openai_chat_completions_url()
     API_KEY = os.getenv("OPENAI_API_KEY", "")
     headers = {
         "Authorization": f"Bearer {API_KEY}",

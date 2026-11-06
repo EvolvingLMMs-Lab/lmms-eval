@@ -10,6 +10,7 @@ from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.models.model_utils.usage_metrics import log_usage
 
 from ..base import AsyncServerInterface
+from ..openai_endpoint import resolve_openai_api_base
 from ..protocol import Request, Response, ServerConfig
 from .openai import OpenAIProvider, build_sampling_kwargs
 
@@ -20,7 +21,7 @@ class AsyncOpenAIProvider(AsyncServerInterface):
     def __init__(self, config: Optional[ServerConfig] = None):
         super().__init__(config)
         self.api_key = os.getenv("OPENAI_API_KEY", "")
-        base_url = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1")
+        base_url = resolve_openai_api_base()
         self.api_url = base_url.rstrip("/") + "/chat/completions"
 
         # Try to use async OpenAI client if available

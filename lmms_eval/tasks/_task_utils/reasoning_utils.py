@@ -5,9 +5,10 @@ from math_verify import parse, verify
 from openai import OpenAI
 
 from lmms_eval.api.chat_response import require_chat_message_text
+from lmms_eval.llm_judge.openai_endpoint import resolve_openai_api_base
 
 API_KEY = os.getenv("JUDGE_API_KEY", "YOUR_API_KEY")
-BASE_URL = os.getenv("JUDGE_BASE_URL", "https://api.openai.com/v1")
+BASE_URL = os.getenv("JUDGE_BASE_URL") or resolve_openai_api_base()
 MODEL_NAME = os.getenv("JUDGE_MODEL_NAME", "gpt-4o-mini")
 USE_LLM_JUDGE = os.getenv("USE_LLM_JUDGE", "False")
 
