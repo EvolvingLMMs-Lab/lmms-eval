@@ -74,8 +74,32 @@ def _interleave_visual_content(context: str, processed_visuals: list) -> list:
     return content_parts or [{"type": "text", "text": ""}]
 
 
-def _limit_video_inputs(video_inputs, max_num_frames: int):
-    """Uniformly cap every video in a batch while preserving both endpoints."""
+def _sampled_fps(md) -> float:
+    """Sampled fps of one video from qwen-vl-utils metadata.
+
+    `md` is a dict (qwen-vl-utils) or a transformers `VideoMetadata`. Newer
+    transformers expose `sampled_fps`; 4.57.x does not, so derive it from the
+    sampled frame count, the source frame count and the source fps.
+    """
+
+    def get(key):
+        return md.get(key) if isinstance(md, dict) else getattr(md, key, None)
+
+    sampled = get("sampled_fps")
+    if sampled is not None:
+        return float(sampled)
+    fps, total, indices = get("fps"), get("total_num_frames"), get("frames_indices")
+    if fps is not None and total and indices is not None:
+        return len(indices) / total * float(fps)
+    return float(fps) if fps else 2.0
+
+
+def _limit_video_inputs(video_inputs, max_num_frames: int, video_metadatas=None):
+    """Uniformly cap every video in a batch while preserving both endpoints.
+
+    When `video_metadatas` is given, each video's `frames_indices` is cut to the
+    frames that were kept, so `_sampled_fps` reports the fps the model sees.
+    """
     if video_inputs is None or max_num_frames is None or max_num_frames <= 0:
         return video_inputs
 
@@ -83,9 +107,36 @@ def _limit_video_inputs(video_inputs, max_num_frames: int):
         total_frames = video_input.shape[0]
         if total_frames <= max_num_frames:
             continue
-        indices = np.linspace(0, total_frames - 1, max_num_frames, dtype=int)
-        video_inputs[video_index] = video_input[np.unique(indices)]
+        indices = np.unique(np.linspace(0, total_frames - 1, max_num_frames, dtype=int))
+        video_inputs[video_index] = video_input[indices]
+        if video_metadatas is not None:
+            md = video_metadatas[video_index]
+            source = md.get("frames_indices") if isinstance(md, dict) else getattr(md, "frames_indices", None)
+            if source is not None:
+                kept = [int(source[i]) for i in indices]
+                if isinstance(md, dict):
+                    md["frames_indices"] = kept
+                else:
+                    md.frames_indices = kept
     return video_inputs
+
+
+def _process_vision_inputs(batched_messages, max_num_frames: int):
+    """Run qwen-vl-utils, cap the frames and return `(images, videos, processor_kwargs)`.
+
+    `processor_kwargs` carries the metadata and fps of the frames the model
+    actually sees, so the processor's `second_per_grid_ts` follows the frame
+    budget instead of staying at the default 1.0 (older Transformers read `fps`,
+    newer ones read the metadata).
+    """
+    image_inputs, video_inputs, video_kwargs = process_vision_info(batched_messages, return_video_kwargs=True, return_video_metadata=True)
+    if video_inputs is None:
+        return image_inputs, None, {}
+    video_inputs, video_metadatas = (list(x) for x in zip(*video_inputs))
+    video_inputs = _limit_video_inputs(video_inputs, max_num_frames, video_metadatas)
+    fps_list = [_sampled_fps(md) for md in video_metadatas]
+    videos_kwargs = {**video_kwargs, "fps": fps_list[0] if len(fps_list) == 1 else fps_list}
+    return image_inputs, video_inputs, {"video_metadata": video_metadatas, "videos_kwargs": videos_kwargs}
 
 
 def _build_video_content(video: str, *, min_pixels: int, max_pixels: int, fps: Optional[float], nframes: Optional[int]) -> dict:
@@ -395,8 +446,7 @@ class Qwen2_5_VL(lmms):
                 batched_messages.append(message)
 
             texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
-            image_inputs, video_inputs = process_vision_info(batched_messages)
-            video_inputs = _limit_video_inputs(video_inputs, self.max_num_frames)
+            image_inputs, video_inputs, video_processor_kwargs = _process_vision_inputs(batched_messages, self.max_num_frames)
             padding_side = "left" if self.batch_size > 1 else "right"
             inputs = self.processor(
                 text=texts,
@@ -405,6 +455,7 @@ class Qwen2_5_VL(lmms):
                 padding=True,
                 padding_side=padding_side,
                 return_tensors="pt",
+                **video_processor_kwargs,
             )
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
@@ -581,14 +632,14 @@ class Qwen2_5_VL(lmms):
                     batched_messages.append(message)
 
                 texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in batched_messages]
-                image_inputs, video_inputs = process_vision_info(batched_messages)
-                video_inputs = _limit_video_inputs(video_inputs, self.max_num_frames)
+                image_inputs, video_inputs, video_processor_kwargs = _process_vision_inputs(batched_messages, self.max_num_frames)
                 inputs = self.processor(
                     text=texts,
                     images=image_inputs,
                     videos=video_inputs,
                     padding=True,
                     return_tensors="pt",
+                    **video_processor_kwargs,
                 )
 
                 if self.device_map == "auto":
