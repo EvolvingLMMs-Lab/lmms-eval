@@ -13,6 +13,7 @@ from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.llm_judge.openai_endpoint import resolve_openai_chat_completions_url
 from lmms_eval.models.model_utils.load_video import import_decord
 from lmms_eval.models.model_utils.media_encoder import (
     encode_image_to_base64,
@@ -22,7 +23,7 @@ from lmms_eval.models.model_utils.media_encoder import (
 API_TYPE = os.getenv("API_TYPE", "openai")
 NUM_SECONDS_TO_SLEEP = 10
 if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+    API_URL = resolve_openai_chat_completions_url()
     API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
 
 elif API_TYPE == "azure":
