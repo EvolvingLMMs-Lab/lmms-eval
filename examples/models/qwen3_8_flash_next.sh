@@ -20,11 +20,13 @@ accelerate launch --num_processes=1 --main_process_port=12346 -m lmms_eval \
     --output_path $OUTPUT_PATH \
     --batch_size 1
 
-# vLLM backend on 2x 80 GB GPUs: vLLM keeps the n-gram embedding in CPU memory.
-# The n-gram embedding needs pipeline_parallel_size=1, and the 2 KV heads limit tensor_parallel_size to 2.
+# vLLM backend on 2x 80 GB GPUs: vLLM keeps the n-gram embedding in CPU memory (engram cpu_offload, on by default).
+# The n-gram embedding needs pipeline_parallel_size=1. Use expert parallelism: plain tensor parallelism
+# splits the MoE layers below the 128-wide FP8 quantization blocks. On 4 or 8 GPUs, raise tensor_parallel_size.
+# FlashInfer compiles kernels at startup, so CUDA_HOME must point to a CUDA toolkit that matches PyTorch.
 # python -m lmms_eval \
 #     --model vllm \
-#     --model_args model=$MODEL,tensor_parallel_size=2,gpu_memory_utilization=0.95,max_model_len=16384,max_num_seqs=8,enforce_eager=True \
+#     --model_args model=$MODEL,tensor_parallel_size=2,enable_expert_parallel=True,moe_backend=triton,gpu_memory_utilization=0.95,max_model_len=16384,max_num_seqs=8,disable_custom_all_reduce=True \
 #     --gen_kwargs max_new_tokens=12288,temperature=1.0,top_p=0.95,top_k=20 \
 #     --tasks $TASKS \
 #     --batch_size 8 \
