@@ -40,6 +40,8 @@ python -m lmms_eval \
 
 The first run downloads the dataset repository, including the videos, and links it to `$HF_HOME/IMAVB`. Check that your backend sends the audio track of the video to the model: for `qwen2_5_omni`, the simple adapter (`--force_simple`) reads the audio of video inputs, and the chat adapter does not.
 
+The clips are long, so the default video budget of `qwen2_5_omni` can run out of memory on an 80 GB GPU. To use a smaller budget, set `MODEL_SEQ_LEN=32768` in the environment (read by `qwen-omni-utils`).
+
 ## Citation
 
 ```bibtex
