@@ -40,7 +40,8 @@ class TaskOutput:
             group_alias (str): The alias of the task group.
             is_group (bool): Indicates if the task is a group.
             logged_samples (list): The list of logged samples.
-            sample_len (int): The length of the samples.
+            sample_len (int): The number of documents scored for the task.
+            sample_counts (dict): The number of items behind each "metric,filter" key; a metric can cover fewer documents than ``sample_len``.
             sample_metrics (defaultdict): The dictionary of samples' metrics.
             agg_metrics (defaultdict): The dictionary of aggregate metrics.
 
@@ -75,6 +76,7 @@ class TaskOutput:
         self.is_group = is_group
         self.logged_samples = []
         self.sample_len = None
+        self.sample_counts = {}
         self.sample_metrics = collections.defaultdict(list)
         self.per_sample_metrics = collections.defaultdict(list)  # Per-sample scores for stability metrics
         self.agg_metrics = collections.defaultdict(list)
@@ -122,7 +124,7 @@ class TaskOutput:
                     self.agg_metrics[metric_key] = agg_fn(items, args=self.task.args)
                 else:
                     self.agg_metrics[metric_key] = agg_fn(items)
-                self.sample_len = len(items)  # TODO: same sample size for each metric?
+                self.sample_counts[metric_key] = len(items)
                 if isinstance(bootstrap_iters, int):
                     stderr_fn = stderr_for_metric(
                         metric=agg_fn,
@@ -362,6 +364,7 @@ def prepare_print_tasks(
         task_agg[name]["alias"] = tab_string + alias
         if "samples" in task_agg[name]:
             task_agg[name].pop("samples")
+        task_agg[name].pop("sample_counts", None)
 
         if from_configurable_group and (" " not in results[name]):
             group_tab_string = " " * group_depth + "- " if group_depth > 0 else ""
@@ -369,6 +372,7 @@ def prepare_print_tasks(
             group_agg[name]["alias"] = group_tab_string + alias
             if "samples" in group_agg[name]:
                 group_agg[name].pop("samples")
+            group_agg[name].pop("sample_counts", None)
 
         if isinstance(task_or_group_obj, dict):
             task_depth += 1
@@ -438,6 +442,7 @@ def consolidate_results(
             metric_key = f"{metric},{filter_key}"
             results[task_output.task_name][metric_key] = task_output.agg_metrics[metric_key]
             results[task_output.task_name]["samples"] = task_output.sample_len
+            results[task_output.task_name].setdefault("sample_counts", {})[metric_key] = task_output.sample_counts.get(metric_key, task_output.sample_len)
             results[task_output.task_name][f"{metric}_stderr,{filter_key}"] = task_output.agg_metrics[f"{metric}_stderr,{filter_key}"]
             # Output CLT stderr
             clt_key = f"{metric}_stderr_clt,{filter_key}"
@@ -785,14 +790,15 @@ def consolidate_group_results(
 
             task_list = _task_aggregation_list[group_or_task]
 
-            metric_list = list({key for task in task_list for key in results[task].keys() if "_stderr" not in key and key not in ["task", "alias", "samples"]})
+            metric_list = list({key for task in task_list for key in results[task].keys() if "_stderr" not in key and key not in ["task", "alias", "samples", "sample_counts"]})
             for metric in metric_list:
                 stderr = "_stderr,".join(metric.split(","))
 
                 # gather metrics, sizes, and stderrs from subtasks
                 metrics = [results[task][metric] for task in task_list if metric in results[task]]  # TODO: copy?
                 stderrs = [results[task][stderr] for task in task_list if stderr in results[task]]
-                sizes = [results[task]["samples"] for task in task_list if metric in results[task]]
+                # weight each subtask by the number of items behind this metric, which can be fewer than its documents
+                sizes = [results[task].get("sample_counts", {}).get(metric, results[task]["samples"]) for task in task_list if metric in results[task]]
 
                 for metric_config in agg_metric_list:
                     for filter_name in metric_config["filter_list"]:
@@ -820,8 +826,9 @@ def consolidate_group_results(
                         else:
                             # NOTE: this assumes we are using the mean to aggregate. There are warnings about this elsewhere
                             results[group_or_task][stderr] = pooled_sample_stderr(stderrs, sizes)
+                        results[group_or_task].setdefault("sample_counts", {})[metric] = sum(sizes)
 
-                results[group_or_task]["samples"] = sum(sizes)
+                results[group_or_task]["samples"] = sum(results[task]["samples"] for task in task_list if "samples" in results[task])
                 group_metadata = group_config.get("metadata", None)
                 if group_metadata is not None:
                     versions[group_or_task] = group_metadata.get("version", None)
