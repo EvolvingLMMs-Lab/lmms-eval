@@ -111,7 +111,8 @@ def test_unset_hook_keeps_default_group_metrics(monkeypatch):
     assert group_metrics["alias"] == "nohook"
     assert " " not in group_metrics
     assert "marker,none" not in group_metrics
-    assert set(group_metrics) == {"alias", "acc,none", "acc_stderr,none", "samples"}
+    assert set(group_metrics) == {"alias", "acc,none", "acc_stderr,none", "samples", "sample_counts"}
+    assert group_metrics["sample_counts"] == {"acc,none": 10}
     assert show_group_table is True
     assert versions_out["nohook"] == 1
     assert resolved == []
