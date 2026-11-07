@@ -37,7 +37,7 @@ def _resolve_model_class(pretrained: str, is_moe: bool):
     model_type = getattr(config, "model_type", "")
 
     if "qwen4_exp" in model_type:
-        # Qwen3.8-Flash-Next previews the Qwen4 architecture; one class covers its MoE layers.
+        # Qwen3.8-Flash-Next (qwen4_exp) previews the Qwen4 architecture; one class covers its MoE layers.
         from transformers import Qwen4ExpForConditionalGeneration
 
         model_cls = Qwen4ExpForConditionalGeneration
@@ -72,7 +72,8 @@ class Qwen3_VL(lmms):
 
     - Qwen3-VL: https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct
     - Qwen3.5:  https://huggingface.co/Qwen/Qwen3.5-4B
-    - Qwen3.8:  https://huggingface.co/Qwen/Qwen3.8-Flash-Next
+    - Qwen3.8:  https://huggingface.co/Qwen/Qwen3.8-27B
+    - Qwen3.8-Flash-Next: https://huggingface.co/Qwen/Qwen3.8-Flash-Next
     """
 
     DEFAULT_GEN_KWARGS = {

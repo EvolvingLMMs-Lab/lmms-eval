@@ -6,12 +6,10 @@ from lmms_eval.models.simple.qwen3_5 import Qwen3_5
 
 @register_model("qwen3_8")
 class Qwen3_8(Qwen3_5):
-    """Qwen3.8 model family.
+    """Qwen3.8 dense models, which use the Qwen3.5 multimodal architecture.
 
-    The default checkpoint, Qwen3.8-Flash-Next, previews the Qwen4 architecture
-    (``qwen4_exp``) and shares the Qwen3.5 vision processor. Qwen3.8 dense
-    checkpoints such as Qwen3.8-27B use the Qwen3.5 architecture.
-    https://huggingface.co/Qwen/Qwen3.8-Flash-Next
+    https://huggingface.co/Qwen/Qwen3.8-27B
+    For Qwen3.8-Flash-Next (``qwen4_exp``), use ``qwen3_8_flash_next``.
     """
 
     DEFAULT_GEN_KWARGS = {
@@ -23,7 +21,7 @@ class Qwen3_8(Qwen3_5):
 
     def __init__(
         self,
-        pretrained: str = "Qwen/Qwen3.8-Flash-Next",
+        pretrained: str = "Qwen/Qwen3.8-27B",
         min_pixels: int = 64 * 32 * 32,
         max_pixels: int = 128 * 32 * 32,
         total_pixels: int = 224 * 1024 * 32 * 32,
