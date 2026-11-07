@@ -299,6 +299,11 @@ python -m lmms_eval --tasks list_with_num
   - Full set, 27,631 questions / 335 videos (herbench_full)
   - Lite subset, 2,000 questions / 68 videos (herbench_lite)
   - Refined lite subset, 1,971 questions / 68 videos (herbench_lite_v2)
+- [IMAVB](https://huggingface.co/datasets/ngqtrung/IMAVB) (imavb) - Audio-visual false-premise detection on movie clips; group mean = balanced accuracy. [Usage](../../lmms_eval/tasks/imavb/README.md)
+  - imavb_standard_vision
+  - imavb_standard_audio
+  - imavb_misleading_vision
+  - imavb_misleading_audio
 - [IntPhys2](https://arxiv.org/abs/2506.09849) (intphys2)
   - intphys2_debug
 - [MLVU](https://github.com/JUNJIE99/MLVU) (mlvu)
