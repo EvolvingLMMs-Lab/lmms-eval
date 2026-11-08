@@ -1,0 +1,3 @@
+task: imavb_standard_vision
+test_split: standard_vision
+include: _default_template_yaml

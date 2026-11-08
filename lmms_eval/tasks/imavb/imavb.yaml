@@ -1,0 +1,12 @@
+group: imavb
+task:
+  - imavb_standard_vision
+  - imavb_standard_audio
+  - imavb_misleading_vision
+  - imavb_misleading_audio
+aggregate_metric_list:
+  - metric: accuracy
+    aggregation: mean
+    weight_by_size: false
+metadata:
+  version: 0.0
