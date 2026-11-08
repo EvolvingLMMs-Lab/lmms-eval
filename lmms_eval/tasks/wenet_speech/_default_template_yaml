@@ -10,4 +10,5 @@ generation_kwargs:
   temperature: 0.0
 
 metadata:
-  version: 0.0
+  # 0.1: MER tokenizer no longer merges CJK into preceding English tokens (#1636)
+  version: 0.1
