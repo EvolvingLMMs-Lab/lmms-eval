@@ -165,6 +165,33 @@ class TestQwen3VLSimple(unittest.TestCase):
                 self.assertNotIn("nframes", video_message)
                 self.assertEqual(video_message[mode], value)
 
+    def test_strip_thinking_preserves_plain_answers(self):
+        model = self._make_model()
+        model.enable_thinking = True
+        self.assertEqual(model._strip_thinking("A"), "A")
+        self.assertEqual(model._strip_thinking("The answer is C"), "The answer is C")
+
+    def test_strip_thinking_extracts_answer_after_closed_block(self):
+        model = self._make_model()
+        model.enable_thinking = True
+        self.assertEqual(model._strip_thinking("<think>reason</think>A"), "A")
+        self.assertEqual(model._strip_thinking("<think>maybe A</think>\n\nC"), "C")
+
+    def test_strip_thinking_keeps_unclosed_thinking_text(self):
+        # Truncated thinking must not silently become "" (old partition bug).
+        model = self._make_model()
+        model.enable_thinking = True
+        raw = "<think>still reasoning without a close tag"
+        self.assertEqual(model._strip_thinking(raw), raw)
+
+    def test_strip_thinking_disabled_is_noop(self):
+        model = self._make_model()
+        model.enable_thinking = False
+        raw = "<think>reason</think>A"
+        self.assertEqual(model._strip_thinking(raw), raw)
+        model.enable_thinking = None
+        self.assertEqual(model._strip_thinking(raw), raw)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,9 +12,12 @@ from transformers import AutoConfig, AutoProcessor, AutoTokenizer
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
+from lmms_eval.api.reasoning import strip_reasoning_tags
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.load_video import _probe_video_metadata
+
+_THINKING_TAG_PAIRS = [["<think>", "</think>"], ["<thinking>", "</thinking>"]]
 
 process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
 if not _has_qwen_vl:
@@ -349,11 +352,17 @@ class Qwen3_VL(lmms):
         return generate_kwargs
 
     def _strip_thinking(self, answer):
-        """Strip <think>...</think> content from model output if enable_thinking is set."""
-        if self.enable_thinking:
-            _, _, remaining = answer.partition("</think>")
-            return remaining.strip()
-        return answer
+        """Strip thinking blocks when enable_thinking is set.
+
+        Uses :func:`strip_reasoning_tags` so plain answers without a closing
+        ``</think>`` are kept. The previous ``partition("</think>")`` path
+        cleared those answers to an empty string (#1300).
+        """
+        if not self.enable_thinking:
+            return answer
+        if not isinstance(answer, str):
+            return answer
+        return strip_reasoning_tags(answer, _THINKING_TAG_PAIRS)
 
     def _check_context(self, inputs, max_new_tokens):
         if not getattr(self, "strict_generation", False) and getattr(self, "context_length", None) is None:
