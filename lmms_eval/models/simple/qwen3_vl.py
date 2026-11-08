@@ -36,7 +36,13 @@ def _resolve_model_class(pretrained: str, is_moe: bool):
     config = AutoConfig.from_pretrained(pretrained, trust_remote_code=True)
     model_type = getattr(config, "model_type", "")
 
-    if "qwen3_5" in model_type:
+    if "qwen4_exp" in model_type:
+        # Qwen3.8-Flash-Next (qwen4_exp) previews the Qwen4 architecture; one class covers its MoE layers.
+        from transformers import Qwen4ExpForConditionalGeneration
+
+        model_cls = Qwen4ExpForConditionalGeneration
+        dtype_key = "dtype"
+    elif "qwen3_5" in model_type:
         from transformers import (
             Qwen3_5ForConditionalGeneration,
             Qwen3_5MoeForConditionalGeneration,
@@ -59,13 +65,15 @@ def _resolve_model_class(pretrained: str, is_moe: bool):
 @register_model("qwen3_vl")
 class Qwen3_VL(lmms):
     """
-    Unified model class for the Qwen3-VL and Qwen3.5 model families.
+    Unified model class for the Qwen3-VL, Qwen3.5 and Qwen3.8 model families.
 
     Auto-detects the model variant from the HuggingFace config and loads
     the appropriate model class. Supports both dense and MoE variants.
 
     - Qwen3-VL: https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct
     - Qwen3.5:  https://huggingface.co/Qwen/Qwen3.5-4B
+    - Qwen3.8:  https://huggingface.co/Qwen/Qwen3.8-27B
+    - Qwen3.8-Flash-Next: https://huggingface.co/Qwen/Qwen3.8-Flash-Next
     """
 
     DEFAULT_GEN_KWARGS = {
