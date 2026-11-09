@@ -68,6 +68,31 @@ def olympiadbench_doc_to_text(doc):
 math_verify_fn = MathVerifyFn()
 
 
+def _extract_final_boxed(prediction: str) -> str:
+    """Return the final answer's boxes: the last \\boxed{...} and any boxes on its line.
+
+    Braces are matched, so a box may span lines (``\\begin{pmatrix}``) and text
+    after it may contain ``}``. Earlier boxes on other lines are drafts and are
+    ignored; several boxes on the last line stay together because a multi-part
+    answer is often written as ``\\boxed{1}, \\boxed{2}``.
+    """
+    spans = []
+    for match in re.finditer(r"\\boxed\{", prediction):
+        depth = 1
+        end = match.end()
+        while depth and end < len(prediction):
+            depth += {"{": 1, "}": -1}.get(prediction[end], 0)
+            end += 1
+        if depth == 0:
+            spans.append((match.start(), end))
+    if not spans:
+        return ""
+    last_start, last_end = spans[-1]
+    line_start = prediction.rfind("\n", 0, last_start) + 1
+    first_start = min(start for start, _ in spans if start >= line_start)
+    return prediction[first_start:last_end]
+
+
 def olympiadbench_process_results(doc, results):
     precision = doc["error"]
     is_proving = doc["question_type"] == "Theorem proof" or doc["final_answer"] is None
@@ -78,11 +103,7 @@ def olympiadbench_process_results(doc, results):
 
     gt = doc["final_answer"][0].rstrip("。")
 
-    ext_prediction = re.findall(r"(\\boxed\{.*\})", prediction)
-    if len(ext_prediction) == 0:
-        ext_prediction = ""
-    else:
-        ext_prediction = ext_prediction[0]
+    ext_prediction = _extract_final_boxed(prediction)
     accuracy = olympiadbench_evaluator.judge(ext_prediction, gt, precision)
     accuracy = int(accuracy)
 
