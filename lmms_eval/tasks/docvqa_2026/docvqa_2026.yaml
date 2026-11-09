@@ -1,0 +1,52 @@
+dataset_path: VLR-CVC/DocVQA-2026
+dataset_kwargs:
+  revision: 2dba69d9cbc402416a8a7f2dacbbbc2887f6ff88
+  data_files:
+    val: val.parquet
+task: docvqa_2026
+test_split: val
+output_type: generate_until
+process_docs: !function utils.docvqa_2026_process_docs
+doc_to_visual: !function utils.docvqa_2026_doc_to_visual
+doc_to_text: !function utils.docvqa_2026_doc_to_text
+doc_to_target: answer
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  do_sample: false
+  until: []
+process_results: !function utils.docvqa_2026_process_results
+metric_list:
+  - metric: docvqa_2026_acc
+    aggregation: !function utils.docvqa_2026_aggregate_acc
+    higher_is_better: true
+  - metric: docvqa_2026_business_report
+    aggregation: !function utils.docvqa_2026_aggregate_business_report
+    higher_is_better: true
+  - metric: docvqa_2026_comics
+    aggregation: !function utils.docvqa_2026_aggregate_comics
+    higher_is_better: true
+  - metric: docvqa_2026_engineering_drawing
+    aggregation: !function utils.docvqa_2026_aggregate_engineering_drawing
+    higher_is_better: true
+  - metric: docvqa_2026_infographics
+    aggregation: !function utils.docvqa_2026_aggregate_infographics
+    higher_is_better: true
+  - metric: docvqa_2026_maps
+    aggregation: !function utils.docvqa_2026_aggregate_maps
+    higher_is_better: true
+  - metric: docvqa_2026_science_paper
+    aggregation: !function utils.docvqa_2026_aggregate_science_paper
+    higher_is_better: true
+  - metric: docvqa_2026_science_poster
+    aggregation: !function utils.docvqa_2026_aggregate_science_poster
+    higher_is_better: true
+  - metric: docvqa_2026_slide
+    aggregation: !function utils.docvqa_2026_aggregate_slide
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  version: 0.0
