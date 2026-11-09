@@ -545,6 +545,7 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
     repeats=1, or baseline comparison when --baseline is not provided).
     """
     from pytablewriter import LatexTableWriter, MarkdownTableWriter
+    from pytablewriter.typehint import String
 
     if column == "results":
         column_name = "Tasks"
@@ -616,13 +617,11 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
             if m.endswith("_internal_variance") or m.endswith("_consistency_rate"):
                 continue
             # Skip paired t-test fields - they'll be shown as columns, not separate rows
-            if m.startswith("paired_"):
+            if m.startswith("paired_") or "_paired_" in m:
                 continue
 
             hib = HIGHER_IS_BETTER_SYMBOLS.get(higher_is_better.get(m), "")
 
-            # Save original numeric value for diff calculation
-            v_numeric = v if isinstance(v, (int, float)) else None
             v = "%.4f" % v if isinstance(v, float) else v
             if v == "" or v is None:
                 v = "N/A"
@@ -639,25 +638,20 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
             iv = fmt_se(dic.get(m + "_internal_variance," + f))
             cr = fmt_se(dic.get(m + "_consistency_rate," + f))
 
-            # Baseline comparison columns (using paired_ prefix from JSON)
+            # Baseline comparison columns: one paired t-test per metric and filter,
+            # on the per-sample scale the test ran on
+            mean_diff = dic.get(f"{m}_paired_mean_diff,{f}")
+            ci_lower = dic.get(f"{m}_paired_ci_lower,{f}")
+            ci_upper = dic.get(f"{m}_paired_ci_upper,{f}")
+            pval = dic.get(f"{m}_paired_p_value,{f}")
+            compared = isinstance(mean_diff, (int, float))
             baseline_name = dic.get("paired_baseline")
-            baseline_str = str(baseline_name) if baseline_name else "N/A"
-            # Diff column: computed from current value - baseline_score (e.g., -25.0%)
-            baseline_score = dic.get("paired_baseline_score")
-            if v_numeric is not None and isinstance(baseline_score, (int, float)):
-                diff = v_numeric - baseline_score
-                diff_str = "%+.1f%%" % diff
-            else:
-                diff_str = "N/A"
-            # CI column: confidence interval (e.g., [-63.7%, +13.7%])
-            ci_lower = dic.get("paired_ci_lower")
-            ci_upper = dic.get("paired_ci_upper")
+            baseline_str = str(baseline_name) if baseline_name and compared else "N/A"
+            diff_str = "%+.4f" % mean_diff if compared else "N/A"
             if isinstance(ci_lower, (int, float)) and isinstance(ci_upper, (int, float)):
-                ci_str = "[%+.1f%%, %+.1f%%]" % (ci_lower, ci_upper)
+                ci_str = "[%+.4f, %+.4f]" % (ci_lower, ci_upper)
             else:
                 ci_str = "N/A"
-            # P_Value column
-            pval = dic.get("paired_pvalue")
             pval_str = "%.4f*" % pval if isinstance(pval, (int, float)) and pval < 0.05 else ("%.4f" % pval if isinstance(pval, (int, float)) else "N/A")
 
             # Check if v is not empty (handle numpy array safely)
@@ -682,6 +676,10 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
     latex_writer.headers = final_headers
     md_writer.value_matrix = final_values
     latex_writer.value_matrix = final_values
+    # Keep the sign and precision of the paired comparison instead of reparsing it as a number
+    diff_type_hints = [String if h in ("Diff", "P_Value") else None for h in final_headers]
+    md_writer.type_hints = diff_type_hints
+    latex_writer.type_hints = diff_type_hints
 
     # todo: make latex table look good
     # print(latex_writer.dumps())
