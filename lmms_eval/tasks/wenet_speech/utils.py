@@ -23,6 +23,7 @@ def get_column_value(doc, candidates):
 
 
 def tokenize(text):
+    # English as whole tokens, Chinese as characters. ASCII \w avoids absorbing CJK (#1636).
     tokens = []
     i = 0
     while i < len(text):
@@ -31,7 +32,7 @@ def tokenize(text):
             tokens.append(char)
             i += 1
         else:
-            match = re.match(r"[a-zA-Z']+\w*", text[i:])
+            match = re.match(r"[a-zA-Z']+\w*", text[i:], re.ASCII)
             if match:
                 tokens.append(match.group(0))
                 i += match.end()
