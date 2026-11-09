@@ -130,19 +130,17 @@ def extract_anwser_tag(predict_str: str) -> str:
         str: The extracted answer tag, or an empty string if not found.
     """
     # The final answer follows the reasoning: tags or boxes that the model only
-    # mentions while it thinks must not win over the answer after </think>.
+    # mentions while it thinks must not win over a tag or box after </think>.
+    # Without one there (a bare option letter, a cut-off explanation), read the
+    # whole response as before.
     if "</think>" in predict_str:
-        predict_str = predict_str.rsplit("</think>", 1)[1]
+        final_answer = _extract_tag_or_box(predict_str.rsplit("</think>", 1)[1])
+        if final_answer:
+            return final_answer
 
-    # First try to extract from <answer> tags; the last non-empty one is the final answer
-    answer_tags = [tag for tag in re.findall(r"<answer>(.*?)</answer>", predict_str, re.DOTALL) if tag.strip()]
-    if answer_tags:
-        return answer_tags[-1]
-
-    # If no <answer> tag found, try to extract from \boxed{} format
-    boxed_answer = extract_boxed_answer(predict_str)
-    if boxed_answer:
-        return boxed_answer
+    answer = _extract_tag_or_box(predict_str)
+    if answer:
+        return answer
 
     # If neither format found, try to extract the last number or expression
     # This is a fallback for cases where the answer is just stated without formatting
@@ -157,6 +155,15 @@ def extract_anwser_tag(predict_str: str) -> str:
                 return number_match.group(1)
 
     return ""
+
+
+def _extract_tag_or_box(predict_str: str) -> str:
+    # The last non-empty <answer> tag is the final answer
+    answer_tags = [tag for tag in re.findall(r"<answer>(.*?)</answer>", predict_str, re.DOTALL) if tag.strip()]
+    if answer_tags:
+        return answer_tags[-1]
+    # If no <answer> tag found, try to extract from \boxed{} format
+    return extract_boxed_answer(predict_str)
 
 
 def format_reward(predict_str: str) -> float:

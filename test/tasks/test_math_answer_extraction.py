@@ -9,6 +9,9 @@ import sys
 import pytest
 
 from lmms_eval.tasks._task_utils.reasoning_utils import compute_score, extract_anwser_tag
+from lmms_eval.tasks.mathvision.reasoning.utils import (
+    mathvision_doc_to_text as mathvision_reason_doc_to_text,
+)
 from lmms_eval.tasks.mathvision.utils import mathvision_doc_to_text
 
 # --- extract_anwser_tag: the answer after the reasoning, not a tag mentioned inside it ---
@@ -24,9 +27,21 @@ def test_empty_answer_tag_while_thinking_falls_through_to_the_box():
     assert extract_anwser_tag(response) == "3"
 
 
-def test_box_drafted_while_thinking_does_not_beat_the_final_answer():
-    response = "<think>Maybe \\boxed{2}? No, recount.</think>The count is 3."
+def test_answer_tag_after_thinking_beats_a_box_drafted_while_thinking():
+    response = "<think>Maybe \\boxed{2}? No, recount.</think><answer>3</answer>"
     assert extract_anwser_tag(response) == "3"
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        "So the answer is \\boxed{A}.\n</think>\n\nA",
+        "So I will go with A.\n\n\\boxed{A}\n</think>\n\nThe member is a diagonal. If we add a bit more, maybe 5.75.",
+    ],
+)
+def test_no_tag_or_box_after_thinking_reads_the_whole_response(response):
+    # A bare letter or a cut-off explanation after </think>: the box in the reasoning still counts, as before.
+    assert extract_anwser_tag(response) == "A"
 
 
 def test_last_non_empty_answer_tag_wins():
@@ -65,10 +80,11 @@ def test_compute_score_no_longer_credits_a_dropped_sign():
 # --- MathVision prompt: the instruction and the question are separate lines ---
 
 
-def test_mathvision_prompt_separates_instruction_and_question():
-    prompt = mathvision_doc_to_text({"question": "What is 2+2?", "options": []})
+@pytest.mark.parametrize("doc_to_text", [mathvision_doc_to_text, mathvision_reason_doc_to_text])
+def test_mathvision_prompt_separates_instruction_and_question(doc_to_text):
+    prompt = doc_to_text({"question": "What is 2+2?", "options": []})
     assert prompt == 'Please solve the problem step by step and put your answer in one "\\boxed{}".\nWhat is 2+2?'
-    prompt = mathvision_doc_to_text({"question": "Pick one.", "options": ["1", "2"]}, {"mc_prompt": "Answer with the letter."})
+    prompt = doc_to_text({"question": "Pick one.", "options": ["1", "2"]}, {"mc_prompt": "Answer with the letter."})
     assert prompt.endswith('"\\boxed{}".\nPick one.\nChoices: A. 1\nB. 2\nAnswer with the letter.')
 
 

@@ -24,7 +24,7 @@ def mathvision_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is not None:
         mc_prompt = "\n" + lmms_eval_specific_kwargs["mc_prompt"]
 
-    query_prompt = 'Please solve the problem step by step and put your answer in one "\\boxed{}".'
+    query_prompt = 'Please solve the problem step by step and put your answer in one "\\boxed{}".\n'
     if choices_str:
         query_prompt += f"{question}\nChoices: {choices_str}" + mc_prompt
     else:
