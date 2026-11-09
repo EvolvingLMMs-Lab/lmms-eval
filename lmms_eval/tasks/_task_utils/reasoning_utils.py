@@ -129,11 +129,15 @@ def extract_anwser_tag(predict_str: str) -> str:
     Returns:
         str: The extracted answer tag, or an empty string if not found.
     """
-    # First try to extract from <answer> tags
-    pattern = re.compile(r"<answer>(.*?)</answer>", re.DOTALL)
-    match_result = re.search(pattern, predict_str)
-    if match_result:
-        return match_result.group(1)
+    # The final answer follows the reasoning: tags or boxes that the model only
+    # mentions while it thinks must not win over the answer after </think>.
+    if "</think>" in predict_str:
+        predict_str = predict_str.rsplit("</think>", 1)[1]
+
+    # First try to extract from <answer> tags; the last non-empty one is the final answer
+    answer_tags = [tag for tag in re.findall(r"<answer>(.*?)</answer>", predict_str, re.DOTALL) if tag.strip()]
+    if answer_tags:
+        return answer_tags[-1]
 
     # If no <answer> tag found, try to extract from \boxed{} format
     boxed_answer = extract_boxed_answer(predict_str)
@@ -147,7 +151,8 @@ def extract_anwser_tag(predict_str: str) -> str:
         # Look for patterns like "The answer is 204" or just "204"
         if line.strip():
             # Try to find numbers at the end of the line
-            number_match = re.search(r"\b(\d+(?:\.\d+)?)\b(?:\s*\.?\s*$)", line)
+            # Keep a leading minus sign ("x = -3"), but not a hyphen inside a range ("2-3")
+            number_match = re.search(r"(?<![\w.])(-?\d+(?:\.\d+)?)\b(?:\s*\.?\s*$)", line)
             if number_match:
                 return number_match.group(1)
 
