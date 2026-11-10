@@ -3,6 +3,8 @@ import random
 
 import numpy as np
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -57,12 +59,9 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     Parse the prediction from the generated response.
     Return the predicted index e.g., A, B, C, D.
     """
-    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
-    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
-
-    declared = extract_mcq_answer(response, choices=all_choices)
-    if declared:
-        return declared
+    final_answer = extract_final_mcq_answer(response, all_choices)
+    if final_answer:
+        return final_answer
 
     response = str(response)
     for char in [",", ".", "!", "?", ";", ":", "'"]:

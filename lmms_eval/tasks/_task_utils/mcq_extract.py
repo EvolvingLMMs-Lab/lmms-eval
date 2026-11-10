@@ -305,3 +305,63 @@ def extract_mcq_answer(response: str, choices: Optional[List[str]] = None) -> st
         return choice.letter if choice and choice.letter in allowed and not _has_alternative(choice) else ""
     declared = _declared_answer(text, allowed)
     return declared if declared is not None else _implicit_answer(text, allowed)
+
+
+_BLANK_LINE = re.compile(r"\n[ \t\r]*\n")
+
+
+def _allowed_choices(choices: Optional[List[str]]) -> Set[str]:
+    return {choice.upper() for choice in choices or _DEFAULT_CHOICES if len(choice) == 1 and choice.isascii() and choice.isalpha()}
+
+
+def extract_final_mcq_answer(response: str, choices: Optional[List[str]] = None) -> str:
+    r"""Extract the final answer choice of a response that may contain reasoning.
+
+    ``extract_mcq_answer`` reads a short answer. In a long response it also reads
+    the letters a model considers on the way: ``Perhaps the answer is D ...``
+    in the middle of an explanation is an explicit declaration for that parser.
+    A response states its final answer where it starts or where it ends, so this
+    function applies the same parser to those positions only:
+
+    1. An ``<answer>``/``\boxed{}`` container anywhere decides, exactly as in
+       ``extract_mcq_answer`` (the last container, also when it is invalid).
+    2. Several paragraphs: read the first and the last paragraph. The last one
+       holds the conclusion of a reasoning chain, the first one an answer that
+       is explained afterwards. If they select different choices, abstain. An
+       invalid declaration in the last paragraph (``Final answer: unknown``)
+       abstains too; an earlier answer does not replace it.
+    3. One paragraph: read it whole. If it has no explicit declaration and its
+       lines taken together are ambiguous (prose that names several options,
+       then ``**B**`` on the last line), read each line: the lines that select
+       a choice must all select the same one.
+
+    An empty string means that the response does not state one final choice at
+    these positions. Parsers that keep an older benchmark-specific heuristic call
+    this first and fall back to that heuristic on an empty string, so a response
+    that the older parser already reads is scored as before.
+
+    Args:
+        response: Model output. Anything that is not a string returns ``""``.
+        choices: As in ``extract_mcq_answer``.
+
+    Returns:
+        An uppercase offered choice, or an empty string.
+    """
+    if not isinstance(response, str) or not response.strip():
+        return ""
+    text = response.strip()
+    if _last_container(text) is not None:
+        return extract_mcq_answer(text, choices)
+    allowed = _allowed_choices(choices)
+    paragraphs = [block for block in _BLANK_LINE.split(text) if block.strip()]
+    if len(paragraphs) > 1:
+        if _declared_answer(paragraphs[-1], allowed) == "":
+            return ""
+        first = extract_mcq_answer(paragraphs[0], choices)
+        last = extract_mcq_answer(paragraphs[-1], choices)
+        return "" if first and last and first != last else last or first
+    answer = extract_mcq_answer(text, choices)
+    if answer or _declared_answer(text, allowed) is not None:
+        return answer
+    selected = {extract_mcq_answer(line, choices) for line in text.splitlines()} - {""}
+    return selected.pop() if len(selected) == 1 else ""

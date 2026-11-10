@@ -77,6 +77,38 @@ the old unrestricted substring fallback. They cannot infer author intent in
 every ambiguous sentence. Keep ambiguous examples and their policy rationale
 visible in the corpus.
 
+## Final answers in long responses
+
+`extract_final_mcq_answer` is a second entry point for responses that may hold
+reasoning or an explanation. It does not change `extract_mcq_answer` or any
+expectation in `cases.json`; it only decides which part of a long response
+that parser reads.
+
+Rule 2 above lets the last explicit declaration win. In a reasoning chain that
+also selects a letter the model merely considers (`Perhaps the answer is D ...`
+followed by a final `Option C`). A response states its final answer where it
+starts or where it ends, so:
+
+1. A container anywhere decides, exactly as in rule 1 above.
+2. With several paragraphs, only the first and the last paragraph are read.
+   Different choices at the two ends abstain. An invalid declaration in the
+   last paragraph abstains and is not replaced by an earlier answer.
+3. One paragraph is read whole. If it has no explicit declaration and is
+   ambiguous as a whole, each line is read: the lines that select a choice
+   must all select the same one (`... T_A = 3 N and T_C = 4 N ...\n**D**`).
+
+The result is the reviewed answer or an abstention for every case in
+`cases.json` (`test_mcq_final_answer.py` checks this), and identical to
+`extract_mcq_answer` for a one-line response.
+
+Native benchmark parsers that keep their own heuristic (the MMMU-style
+candidate search, the first-capital-letter search, the first-word match) call
+this function first and use the heuristic only when it returns an empty
+string. A response the heuristic already reads is therefore scored as before;
+`test/tasks/test_mcq_final_answer_parsers.py` checks, for each of these
+parsers, that a bare letter and every response without a final answer give
+the same result with and without this step.
+
 ## Fixture format and coverage
 
 `cases.json` is UTF-8 JSON with `schema_version: 1` and a `cases` array. Each

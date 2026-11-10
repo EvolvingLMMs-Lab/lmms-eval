@@ -7,6 +7,8 @@ from pathlib import Path
 
 import yaml
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
 base_cache_dir = os.path.expanduser(hf_home)
 with open(Path(__file__).parent / "scivideobench.yaml", "r") as f:
@@ -107,12 +109,9 @@ def extract_answer_letter(s):
     Extract letter from answer (A, B, C, D, E, F, G, H, I, J)
 
     """
-    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
-    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
-
-    declared = extract_mcq_answer(s, choices=list("ABCDEFGHIJ"))
-    if declared:
-        return declared
+    final_answer = extract_final_mcq_answer(s, list("ABCDEFGHIJ"))
+    if final_answer:
+        return final_answer
 
     s = s.strip()
 

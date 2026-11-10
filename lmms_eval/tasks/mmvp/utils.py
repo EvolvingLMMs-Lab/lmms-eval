@@ -28,6 +28,8 @@ from typing import Any, Dict, List, Optional
 
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 
 def _extract_answer_letter(text: str) -> str:
     """
@@ -44,12 +46,9 @@ def _extract_answer_letter(text: str) -> str:
     Returns:
         The extracted letter (uppercase) or empty string if no letter found.
     """
-    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
-    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
-
-    declared = extract_mcq_answer(text, choices=list("AB"))
-    if declared:
-        return declared
+    final_answer = extract_final_mcq_answer(text, list("AB"))
+    if final_answer:
+        return final_answer
 
     text = text.strip()
 

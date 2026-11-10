@@ -4,6 +4,7 @@ import re
 
 from PIL import Image
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 from lmms_eval.tasks._task_utils.reasoning_utils import (
     make_reasoning_doc_to_messages,
     make_reasoning_process_results,
@@ -59,12 +60,9 @@ mme_realworld_cn_reasoning_doc_to_messages = make_reasoning_doc_to_messages(mme_
 
 
 def extract_characters_regex(s, choices=["(A)", "(B)", "(C)", "(D)", "(E)"]):
-    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
-    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
-
-    declared = extract_mcq_answer(s, choices=list("ABCDE")) if isinstance(s, str) else ""
-    if declared:
-        return declared
+    final_answer = extract_final_mcq_answer(s, list("ABCDE"))
+    if final_answer:
+        return final_answer
 
     if type(s) is dict:
         s = ""

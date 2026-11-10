@@ -31,6 +31,7 @@ from PIL import Image
 from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.models.model_utils.load_video import import_decord
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 
 SOCCERNET_PWD = os.getenv("SOCCERNET_PWD", "s0cc3rn3t")
 
@@ -242,12 +243,9 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     Fixed to avoid 'D. A book' be parsed as A.
     Same as original FALCONbench paper, if parsing failed, it will assign a random choice to model.
     """
-    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
-    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
-
-    declared = extract_mcq_answer(response, choices=all_choices)
-    if declared:
-        return declared
+    final_answer = extract_final_mcq_answer(response, all_choices)
+    if final_answer:
+        return final_answer
 
     s = response.strip()
     answer_prefixes = [

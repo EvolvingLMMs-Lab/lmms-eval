@@ -2,6 +2,8 @@ import re
 
 import datasets
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 egoplan2_features = datasets.Features(
     {
         "sample_id": datasets.Value("string"),
@@ -30,12 +32,9 @@ def egoplan2_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def extract_characters_regex(s):
-    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
-    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
-
-    declared = extract_mcq_answer(s, choices=list("ABCD")) if isinstance(s, str) else ""
-    if declared:
-        return declared
+    final_answer = extract_final_mcq_answer(s, list("ABCD"))
+    if final_answer:
+        return final_answer
 
     s = s.strip()
     answer_prefixes = [

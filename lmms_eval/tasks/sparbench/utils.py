@@ -9,7 +9,7 @@ import pandas as pd
 import yaml
 from loguru import logger as eval_logger
 
-from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 
 MCA_QUESTION_TYPES = [
     "obj_spatial_relation_oo",
@@ -237,7 +237,7 @@ def exact_match(pred, target):
     if pred == target:
         return 1.0
     # "(B)", "B. the left", "The answer is B": read the option letter the response declares.
-    if len(target) == 1 and extract_mcq_answer(pred).lower() == target:
+    if len(target) == 1 and extract_final_mcq_answer(pred).lower() == target:
         return 1.0
     return 0
 

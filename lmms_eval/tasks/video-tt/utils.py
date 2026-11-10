@@ -6,6 +6,8 @@ from pathlib import Path
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 CATEGORIES = [
     "Objective Causality",
     "Objective Causality (Videography Phenomenon & Illusion)",
@@ -122,12 +124,9 @@ def videott_doc_to_text_audio(doc, lmms_eval_specific_kwargs=None):
 
 
 def extract_characters_regex(s):
-    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
-    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
-
-    declared = extract_mcq_answer(s, choices=list("ABCDE")) if isinstance(s, str) else ""
-    if declared:
-        return declared
+    final_answer = extract_final_mcq_answer(s, list("ABCDE"))
+    if final_answer:
+        return final_answer
 
     s = s.strip()
     answer_prefixes = [

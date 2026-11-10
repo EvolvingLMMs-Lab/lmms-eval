@@ -9,6 +9,8 @@ import numpy as np
 import yaml
 from PIL import Image
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 with open(Path(__file__).parent / "lemonade.yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
@@ -164,12 +166,9 @@ def parse_multi_choice_response(response: str, all_choices: list[str], index2ans
         str: The predicted choice label.
     """
 
-    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
-    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
-
-    declared = extract_mcq_answer(response, choices=all_choices)
-    if declared:
-        return declared
+    final_answer = extract_final_mcq_answer(response, all_choices)
+    if final_answer:
+        return final_answer
 
     if response == "API Error":
         return "API Error"

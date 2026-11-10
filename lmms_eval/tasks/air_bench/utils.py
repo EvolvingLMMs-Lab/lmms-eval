@@ -11,6 +11,7 @@ from loguru import logger as eval_logger
 from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 
 
 def air_bench_doc_to_audio(doc):
@@ -221,12 +222,9 @@ def parse_multi_choice_response(response, all_choices):
     Return the predicted choice letter e.g., A, B, C, D.
     """
     # Clean response of unwanted characters
-    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
-    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
-
-    declared = extract_mcq_answer(response, choices=all_choices)
-    if declared:
-        return declared
+    final_answer = extract_final_mcq_answer(response, all_choices)
+    if final_answer:
+        return final_answer
 
     for char in [",", ".", "!", "?", ";", ":", "'"]:
         response = response.strip(char)

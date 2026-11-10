@@ -6,6 +6,8 @@ from pathlib import Path
 import cv2
 import yaml
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 # with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 #     raw_data = f.readlines()
 #     safe_data = []
@@ -118,12 +120,9 @@ def egoplan_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def extract_characters_regex(s):
-    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
-    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
-
-    declared = extract_mcq_answer(s, choices=list("ABCD")) if isinstance(s, str) else ""
-    if declared:
-        return declared
+    final_answer = extract_final_mcq_answer(s, list("ABCD"))
+    if final_answer:
+        return final_answer
 
     s = s.strip()
     answer_prefixes = [

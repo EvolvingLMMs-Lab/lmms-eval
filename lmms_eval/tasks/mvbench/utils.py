@@ -7,6 +7,8 @@ import PIL
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 DATA_LIST = {
     "object_interaction": "star/Charades_segment",
     "action_sequence": "star/Charades_segment",
@@ -135,10 +137,7 @@ def mcq_acc(answer, pred):
 
             return answer
 
-    # A declared answer ("Answer: B", "**B**", \boxed{B}) wins; otherwise the parser above decides.
-    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
-
-    pred = extract_mcq_answer(pred) or process(pred)
+    pred = process(extract_final_mcq_answer(pred) or pred)
     answer = process(answer)
 
     if pred == answer:
