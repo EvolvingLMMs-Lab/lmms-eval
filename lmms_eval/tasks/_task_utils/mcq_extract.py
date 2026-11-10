@@ -330,11 +330,12 @@ def _allowed_choices(choices: Optional[List[str]]) -> Set[str]:
 
 
 def _reads_a_word(choice: _Choice) -> bool:
-    """``the answer is a blue bike``, ``... is a = 3`` and ``... is I think C`` name no choice."""
+    """``the answer is a blue bike``, ``... is a = 3``, ``... is I think C`` and ``... is C minor`` name no choice."""
     following = choice.tail.lstrip(" \t")
-    if choice.wrapped or following == choice.tail or not following or following[0] in _PUNCTUATION:
+    if choice.wrapped or following == choice.tail or not following or following[0] in _PUNCTUATION or _ASSERTION.match(following):
         return False
-    return (not choice.uppercase or choice.letter in "AI") and not _ASSERTION.match(following)
+    # A word after the letter makes it part of a phrase; "a" and "I" are words themselves.
+    return following[0].isalpha() or not choice.uppercase or choice.letter in "AI"
 
 
 def _final_declaration(block: str, allowed: Set[str], opening: bool = False) -> Optional[str]:
