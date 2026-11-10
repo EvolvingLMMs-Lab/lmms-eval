@@ -3,6 +3,8 @@ from collections import defaultdict
 
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 
 def vstar_doc_to_visual(doc):
     """Convert document to visual input."""
@@ -43,6 +45,10 @@ def vstar_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 def extract_answer_letter(response):
     """Extract the answer letter from model response."""
+    final_answer = extract_final_mcq_answer(response, list("ABCD"))
+    if final_answer:
+        return final_answer
+
     # Clean the response
     response = response.strip().upper()
 

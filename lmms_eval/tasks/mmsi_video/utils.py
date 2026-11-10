@@ -9,6 +9,8 @@ import yaml
 from loguru import logger as eval_logger
 from PIL import Image
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 # Get cache directory following the lmms-eval pattern (like vsibench/sitebench)
 # lmms-eval automatically downloads the dataset and extracts zip files to $HF_HOME/<cache_dir>/
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
@@ -91,6 +93,10 @@ def extract_answer(response: str) -> str:
     Extract MCQ answer (A-F) from model response.
     Uses multiple fallback patterns similar to VLMEvalKit.
     """
+    final_answer = extract_final_mcq_answer(response, list("ABCDEF"))
+    if final_answer:
+        return final_answer
+
     if response is None or "no answer" in response.lower():
         return "O"  # Invalid/no answer marker
 

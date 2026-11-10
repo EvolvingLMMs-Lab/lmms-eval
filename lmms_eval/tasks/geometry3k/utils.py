@@ -9,6 +9,8 @@ from typing import Any
 
 from PIL import Image
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 
 def geometry3k_doc_to_visual(doc: dict[str, Any]) -> list[Image.Image]:
     """Extract visual input from a Geometry3K document.
@@ -72,6 +74,10 @@ def _extract_answer_letter(response: str, choices: list[str]) -> str:
     Returns:
         Extracted answer letter (A/B/C/D) or empty string if not found.
     """
+    final_answer = extract_final_mcq_answer(response, list("ABCD"))
+    if final_answer:
+        return final_answer
+
     response = response.strip()
     all_choices = ["A", "B", "C", "D"]
 

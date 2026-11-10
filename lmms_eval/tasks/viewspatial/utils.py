@@ -1,5 +1,7 @@
 import re
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 # Mapping from question_type in dataset to metric key
 VIEWSPATIAL_QUESTION_TYPES = {
     "Camera perspective - Relative Direction": "camera_perspective_relative_direction",
@@ -85,8 +87,9 @@ def viewspatial_process_results(doc, results):
 
     # extract predicted answer
     pred = results[0]
+    final_answer = extract_final_mcq_answer(pred, list("ABCD"))
     pred = pred.split("\n")[-1]
-    pred_answer = extract_option(pred)
+    pred_answer = final_answer or extract_option(pred)
     # eval_logger.info(f"Predicted answer: {pred_answer}")
 
     score = 1.0 if pred_answer == grounded_option else 0.0
