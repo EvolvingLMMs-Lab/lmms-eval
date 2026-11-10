@@ -37,9 +37,13 @@ from lmms_eval.baselines import (  # noqa: E402
     get_baseline_display_name,
     load_baseline,
 )
+from lmms_eval.baselines.comparison import (  # noqa: E402
+    compare_with_baseline,
+    paired_key,
+    task_metrics,
+)
 from lmms_eval.caching.response_cache import ResponseCache  # noqa: E402
 from lmms_eval.evaluator_utils import (  # noqa: E402
-    compute_baseline_comparison,
     consolidate_group_results,
     consolidate_results,
     get_sample_size,
@@ -351,6 +355,7 @@ def _process_document_results(item, *, task: Task, filter_key: str, reasoning_ta
 
         logged_sample = {
             "doc_id": doc_id,
+            "filter": filter_key,
             "doc": saved_doc,
             "target": target,
             "arguments": filtered_arguments,
@@ -766,55 +771,32 @@ def simple_evaluate(
         if baseline:
             baseline_display_name = get_baseline_display_name(baseline)
 
+            samples_by_task = results.get("samples", {})
             for task_name in results.get("results", {}).keys():
+                # Group rows have no samples of their own, so there is nothing to pair
+                if samples_by_task and task_name not in samples_by_task:
+                    continue
                 try:
-                    baseline_scores_dict, baseline_agg = load_baseline(baseline, task_name)
-                    # Extract current scores from samples
-                    if "samples" in results and task_name in results["samples"]:
-                        current_samples = results["samples"][task_name]
-                        # Get score_key from task config, default to "score"
-                        task_config = results.get("configs", {}).get(task_name, {})
-                        score_key = task_config.get("score_key", "score")
-
-                        current_scores = []
-                        baseline_scores = []
-                        for sample in current_samples:
-                            doc_id = sample.get("doc_id")
-                            if doc_id in baseline_scores_dict:
-                                # Extract score: first try exact score_key, then search for *_score fields
-                                score = None
-                                if score_key in sample:
-                                    val = sample[score_key]
-                                    if isinstance(val, (int, float)):
-                                        score = float(val)
-                                    elif isinstance(val, dict) and "score" in val:
-                                        score = float(val["score"])
-                                # Fallback: search for fields ending with "_score" (e.g., videomme_perception_score)
-                                if score is None:
-                                    for key in sample:
-                                        if key.endswith("_score") and key != score_key:
-                                            val = sample[key]
-                                            if isinstance(val, (int, float)):
-                                                score = float(val)
-                                                break
-                                            elif isinstance(val, dict) and "score" in val:
-                                                score = float(val["score"])
-                                                break
-                                if score is not None:
-                                    current_scores.append(score)
-                                    baseline_scores.append(baseline_scores_dict[doc_id])
-
-                        if current_scores and baseline_scores:
-                            comparison = compute_baseline_comparison(current_scores, baseline_scores, baseline_display_name)
-                            task_results = results["results"][task_name]
-                            task_results["paired_baseline"] = comparison["baseline_name"]
-                            task_results["paired_baseline_score"] = comparison["baseline_mean"] * 100
-                            task_results["paired_ci_lower"] = comparison["ci_lower"] * 100
-                            task_results["paired_ci_upper"] = comparison["ci_upper"] * 100
-                            task_results["paired_pvalue"] = comparison["p_value"]
-                            eval_logger.info(f"[Baseline] {task_name}: diff={comparison['mean_diff'] * 100:.2f}%, p={comparison['p_value']:.4f}")
-                        else:
-                            eval_logger.debug(f"[Baseline] Skipping {task_name}: no valid scores found with score_key='{score_key}'")
+                    baseline_samples, baseline_agg = load_baseline(baseline, task_name)
+                    current_samples = samples_by_task.get(task_name)
+                    if not current_samples:
+                        eval_logger.warning(f"[Baseline] Skipping {task_name}: the paired comparison needs per-sample scores, so run with --log_samples")
+                        continue
+                    task_config = results.get("configs", {}).get(task_name, {})
+                    score_key = task_config.get("score_key", "score")
+                    task_results = results["results"][task_name]
+                    comparison = compare_with_baseline(task_results, current_samples, baseline_samples, score_key)
+                    if not comparison:
+                        eval_logger.warning(f"[Baseline] Skipping {task_name}: no metric has a per-sample number on both sides for at least 2 samples (score_key='{score_key}')")
+                        continue
+                    task_results["paired_baseline"] = baseline_display_name
+                    task_results.update(comparison)
+                    for metric, filter_key in task_metrics(task_results):
+                        if paired_key(metric, "p_value", filter_key) in comparison:
+                            mean_diff = comparison[paired_key(metric, "mean_diff", filter_key)]
+                            p_value = comparison[paired_key(metric, "p_value", filter_key)]
+                            n = comparison[paired_key(metric, "n", filter_key)]
+                            eval_logger.info(f"[Baseline] {task_name} {metric},{filter_key}: diff={mean_diff:+.4f}, p={p_value:.4f}, n={n}")
                 except Exception as e:
                     eval_logger.warning(f"[Baseline] Failed for {task_name}: {e}")
 

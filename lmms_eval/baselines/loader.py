@@ -8,7 +8,7 @@ Supports loading baseline results from:
 
 import json
 import os
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from lmms_eval.baselines.registry import BASELINE_REGISTRY
 
@@ -20,7 +20,7 @@ except ImportError:
     eval_logger = logging.getLogger(__name__)
 
 
-def load_baseline(baseline_arg: str, task_name: str) -> Tuple[Dict[int, Any], Optional[Dict[str, Any]]]:
+def load_baseline(baseline_arg: str, task_name: str) -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
     """Load baseline results from local path, HF URL, or preset name.
 
     Args:
@@ -32,7 +32,7 @@ def load_baseline(baseline_arg: str, task_name: str) -> Tuple[Dict[int, Any], Op
         task_name: Current task name for auto-matching presets
 
     Returns:
-        Tuple of (doc_id_to_scores dict, optional aggregated results dict)
+        Tuple of (sample rows with a doc_id, optional aggregated results dict)
     """
     # Check for explicit model:task format
     if ":" in baseline_arg and not baseline_arg.startswith("hf://"):
@@ -55,7 +55,7 @@ def load_baseline(baseline_arg: str, task_name: str) -> Tuple[Dict[int, Any], Op
     raise ValueError(f"Cannot load baseline '{baseline_arg}'. Available presets: {list(BASELINE_REGISTRY.keys())}")
 
 
-def _load_from_registry(model_name: str, task_name: str, baseline_arg: str) -> Tuple[Dict[int, Any], Optional[Dict[str, Any]]]:
+def _load_from_registry(model_name: str, task_name: str, baseline_arg: str) -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
     """Load baseline from registry by model and task name."""
     model_entry = BASELINE_REGISTRY[model_name]
 
@@ -75,22 +75,18 @@ def _load_from_registry(model_name: str, task_name: str, baseline_arg: str) -> T
         raise ValueError(f"Preset '{baseline_arg}' has no 'hf_url' or 'path'")
 
 
-def _load_baseline_from_local(path: str, task_name: str) -> Tuple[Dict[int, Any], Optional[Dict[str, Any]]]:
+def _load_baseline_from_local(path: str, task_name: str) -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
     """Load baseline from local JSONL file."""
     eval_logger.info(f"[Baseline] Loading from: {path}")
-    doc_id_to_scores = {}
+    samples = []
     with open(path, "r", encoding="utf-8") as f:
         for line in f:
             if not line.strip():
                 continue
             sample = json.loads(line)
-            doc_id = sample.get("doc_id")
-            if doc_id is None:
-                continue
-            score = _extract_score_from_sample(sample, task_name)
-            if score is not None:
-                doc_id_to_scores[doc_id] = score
-    eval_logger.info(f"[Baseline] Loaded {len(doc_id_to_scores)} samples")
+            if sample.get("doc_id") is not None:
+                samples.append(sample)
+    eval_logger.info(f"[Baseline] Loaded {len(samples)} samples")
 
     # Try to load aggregated results
     agg_results = None
@@ -102,10 +98,10 @@ def _load_baseline_from_local(path: str, task_name: str) -> Tuple[Dict[int, Any]
         if os.path.exists(results_path):
             with open(results_path, "r") as f:
                 agg_results = json.load(f)
-    return doc_id_to_scores, agg_results
+    return samples, agg_results
 
 
-def _load_baseline_from_hf(hf_path: str, task_name: str) -> Tuple[Dict[int, Any], Optional[Dict[str, Any]]]:
+def _load_baseline_from_hf(hf_path: str, task_name: str) -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
     """Load baseline from HuggingFace Hub."""
     from huggingface_hub import hf_hub_download, list_repo_files
 
@@ -131,27 +127,3 @@ def _load_baseline_from_hf(hf_path: str, task_name: str) -> Tuple[Dict[int, Any]
         raise ValueError(f"No JSONL files in HF repo: {repo_id}")
     local_path = hf_hub_download(repo_id, jsonl_files[0], repo_type="dataset")
     return _load_baseline_from_local(local_path, task_name)
-
-
-def _extract_score_from_sample(sample: Dict[str, Any], task_name: str) -> Optional[float]:
-    """Extract score from a sample dict."""
-    # Try task-specific score key
-    for key in sample:
-        if "score" in key.lower():
-            val = sample[key]
-            if isinstance(val, (int, float)):
-                return float(val)
-            elif isinstance(val, dict):
-                pred = val.get("pred_answer") or val.get("pred")
-                ans = val.get("answer") or val.get("target")
-                if pred and ans:
-                    return 1.0 if str(pred).strip().upper() == str(ans).strip().upper() else 0.0
-    # Fallback: compute from target and filtered_resps
-    target = sample.get("target")
-    filtered_resps = sample.get("filtered_resps")
-    if target and filtered_resps:
-        pred = filtered_resps[0] if isinstance(filtered_resps, list) else filtered_resps
-        if isinstance(pred, list):
-            pred = pred[0] if pred else ""
-        return 1.0 if str(pred).strip().upper() == str(target).strip().upper() else 0.0
-    return None
