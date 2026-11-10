@@ -1,3 +1,6 @@
+from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+
 def sqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     context, question, choices = doc["hint"], doc["question"], doc["choices"]
     len_choices = len(choices)
@@ -32,13 +35,10 @@ def sqa_doc_to_target(doc):
 
 
 def sqa_process_results(doc, results):
-    # I know this is weird, but it's how llava parse it.
-    target = sqa_doc_to_target(doc).strip().lower()
+    target = sqa_doc_to_target(doc).strip()
     pred = results[0].strip()
-    if pred.lower() == target:
+    if pred.lower() == target.lower():
         return {"exact_match": 1.0}
-    # pattern: ^[A-Z]\. .*
-    if len(pred) >= 2 and pred[0].isupper() and pred[1] == ".":
-        result = 1.0 if pred[0].lower() == target else 0.0
-        return {"exact_match": result}
-    return {"exact_match": 0.0}
+    # "A. text", "(A)", "Answer: A", "The answer is A."
+    options = [chr(ord("A") + i) for i in range(len(doc["choices"]))]
+    return {"exact_match": 1.0 if extract_mcq_answer(pred, options) == target else 0.0}
