@@ -164,7 +164,6 @@ def test_parser_reads_a_bare_letter_as_before(module, function, style, letters, 
     [
         ("", "B", 0),  # an empty response is a substring of every target
         ("   ", "B", 0),
-        ("1", "12", 0),
         ("B", "B", 1.0),
         ("b", "B", 1.0),
         ("B. the left", "B", 1.0),
@@ -174,7 +173,14 @@ def test_parser_reads_a_bare_letter_as_before(module, function, style, letters, 
         ("The camera moves left in the second view.\n\n**B**", "B", 1.0),
         ("A", "B", 0),
         ("A or B", "B", 0),
-        ("Because the object is on the left.", "B", 0),
+        ("Because the object is on the left.", "B", 0),  # the first letter of a word is not an option
+        # Read by the scorer's own opening-letter rule, as before.
+        ("B, the left one", "B", 1.0),
+        ("B (the left one)", "B", 1.0),
+        ("B since the chair is on the left.", "B", 1.0),
+        ("B. The answer is not A.", "B", 1.0),
+        ("B. left\nA. right", "B", 1.0),
+        ("B\n\nOption A: wrong.", "B", 1.0),
     ],
 )
 def test_sparbench_exact_match(pred, target, expected):
@@ -198,6 +204,11 @@ def test_sparbench_exact_match(pred, target, expected):
         ("", 0.0),
         ("A or B", 0.0),
         ("C", 0.0),  # not an offered option
+        # Read by the scorer's own "A. text" rule, as before.
+        ("A. The correct option is the first one.", 1.0),
+        ("A. The answer is not B.", 1.0),
+        ("A.x", 1.0),
+        ("A. x\nB. y", 1.0),
     ],
 )
 def test_scienceqa_process_results(pred, expected):

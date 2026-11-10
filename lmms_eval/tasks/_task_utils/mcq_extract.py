@@ -7,7 +7,7 @@ Benchmark-specific official scorers and reasoning stripping remain separate.
 
 import re
 import unicodedata
-from typing import List, NamedTuple, Optional, Set
+from typing import List, NamedTuple, Optional, Set, Tuple
 
 _DEFAULT_CHOICES = list("ABCDEFGH")
 
@@ -34,8 +34,9 @@ _OPTION_LABEL = re.compile(r"(?<!\w)([A-Za-z])[.):](?=\s|$)")
 _ASSERTION = re.compile(r"(?:because\b|(?:is|seems|looks|appears)\s+(?:(?:the|a)\s+)?(?:correct|right|best|answer|option|choice)\b)", re.IGNORECASE)
 _ALTERNATIVE = re.compile(r"(?:and\s*/\s*or\b|and\b|or\b|[/&,+|]|或(?:者)?|和|또는|か|と)\s*", re.IGNORECASE)
 _IMPLICIT_ALTERNATIVES = re.compile(r"(?<!\w)[A-Z]\s*(?:[,/&+|]|and\b|or\b)\s*[A-Z](?!\w)")
-_URL = re.compile(r"(?<!\w)(?:[a-z][a-z0-9+.-]*://|www\.)\S*", re.IGNORECASE)
-_TRAILING_SEGMENT = re.compile(r"(?:^|[\n,;，；])\s*([^\n,;，；]+)\s*$")
+# The scheme is bounded: an unbounded one rescans a long unbroken token from every letter.
+_URL = re.compile(r"(?<!\w)(?:[a-z][a-z0-9+.-]{0,31}://|www\.)\S*", re.IGNORECASE)
+_SEGMENT_SEPARATORS = "\n,;，；"
 _WRAPPERS = (("**", "**"), ("__", "__"), ("`", "`"), ("*", "*"), ("_", "_"), ('"', '"'), ("'", "'"), ("“", "”"), ("‘", "’"), ("(", ")"), ("（", "）"), ("[", "]"), ("{", "}"), ("$", "$"))
 _PUNCTUATION = " \t\r\n.!?,;:。！？，；："
 # Only these closers may span option text. Quotes and brackets stay paired tightly.
@@ -208,6 +209,18 @@ def _last_container(text: str) -> Optional[str]:
     return text[start.end() : box_end] if box_end < len(text) else ""
 
 
+def _trailing_segment(text: str) -> Optional[Tuple[int, str]]:
+    """Return the text after the last line break, comma or semicolon, with its offset.
+
+    Plain string search: a pattern anchored at the end of the text backtracks
+    over every run of whitespace, which takes minutes on a degenerate response.
+    """
+    stripped = text.rstrip()
+    start = max(stripped.rfind(separator) for separator in _SEGMENT_SEPARATORS) + 1
+    segment = stripped[start:].lstrip()
+    return (len(stripped) - len(segment), segment) if segment else None
+
+
 def _implicit_answer(text: str, allowed: Set[str]) -> str:
     """Accept structural labels while abstaining on conflicting option lists."""
     urls = [match.span() for match in _URL.finditer(text)]
@@ -243,9 +256,9 @@ def _implicit_answer(text: str, allowed: Set[str]) -> str:
     if not (leading and leading.letter in candidates) and any(not any(start <= match.start() < end for start, end in urls) for match in _IMPLICIT_ALTERNATIVES.finditer(text)):
         return ""
 
-    trailing = _TRAILING_SEGMENT.search(text)
-    if trailing and not any(start <= trailing.start(1) < end for start, end in urls):
-        choice = _read_choice(trailing.group(1))
+    trailing = _trailing_segment(text)
+    if trailing and not any(start <= trailing[0] < end for start, end in urls):
+        choice = _read_choice(trailing[1])
         if choice and choice.uppercase and not choice.tail.strip(_PUNCTUATION):
             candidates.add(choice.letter)
 
@@ -308,10 +321,73 @@ def extract_mcq_answer(response: str, choices: Optional[List[str]] = None) -> st
 
 
 _BLANK_LINE = re.compile(r"\n[ \t\r]*\n")
+_BLOCK_OPENING = " \t\r\n*_#>`"
+_OPTION_VERDICT = re.compile(r"(?<!\w)option\s+([a-z])(?!\w)\s+is\b", re.IGNORECASE)
 
 
 def _allowed_choices(choices: Optional[List[str]]) -> Set[str]:
     return {choice.upper() for choice in choices or _DEFAULT_CHOICES if len(choice) == 1 and choice.isascii() and choice.isalpha()}
+
+
+def _reads_a_word(choice: _Choice) -> bool:
+    """``the answer is a blue bike``, ``... is a = 3`` and ``... is I think C`` name no choice."""
+    following = choice.tail.lstrip(" \t")
+    if choice.wrapped or following == choice.tail or not following or following[0] in _PUNCTUATION:
+        return False
+    return (not choice.uppercase or choice.letter in "AI") and not _ASSERTION.match(following)
+
+
+def _final_declaration(block: str, allowed: Set[str], opening: bool = False) -> Optional[str]:
+    """Return the choice a block declares; ``None`` without a declaration, ``""`` for an unusable one.
+
+    With ``opening``, the block must start with the declaration: a paragraph that
+    opens a response answers it only if it does not first weigh the options.
+    """
+    declarations = list(_DECLARATION.finditer(block))
+    if not declarations or (opening and declarations[0].start() != len(block) - len(block.lstrip(_BLOCK_OPENING))):
+        return None
+    answer = _declared_answer(block, allowed)
+    last = declarations[-1]
+    if not answer:
+        return answer
+    if last.group("postfix"):
+        # "Option D is correct ... Option B is incorrect" weighs statements; it selects none.
+        return answer if len({letter.upper() for letter in _OPTION_VERDICT.findall(block)}) == 1 else ""
+    choice = _read_choice(block[last.end() :])
+    return "" if choice and _reads_a_word(choice) else answer
+
+
+def _standalone_choice(line: str, allowed: Set[str]) -> str:
+    """Return the choice of a line that holds nothing else: ``B``, ``(B)``, ``**B.**``, ``Option B``."""
+    choice = _read_choice(line)
+    if choice and choice.letter in allowed and (choice.uppercase or choice.wrapped) and not choice.tail.strip(_PUNCTUATION):
+        return choice.letter
+    return ""
+
+
+def _stated_choice(block: str, allowed: Set[str], opening: bool = False) -> Optional[str]:
+    """Return the choice a block states as an answer, not the options it discusses.
+
+    A declaration decides. Without one, the lines that are a standalone choice
+    must agree. A label with text (``B. a blue bike``, ``Option A: no car``) is
+    how options are listed and weighed, so it states nothing here.
+    """
+    declared = _final_declaration(block, allowed, opening)
+    if declared is not None:
+        return declared
+    standalone = {_standalone_choice(line, allowed) for line in block.splitlines()} - {""}
+    return standalone.pop() if len(standalone) == 1 else None
+
+
+def _clean_container(scope: str, allowed: Set[str]) -> bool:
+    """A container holds a choice, not an expression that starts with a letter (``\\boxed{b^2 + 1}``)."""
+    if _declared_answer(scope, allowed) is not None:
+        return True
+    choice = _read_choice(scope)
+    if choice is None or choice.wrapped:
+        return True
+    tail = choice.tail
+    return not tail.strip(_PUNCTUATION) or (tail[0] in ".):：" and (len(tail) == 1 or tail[1].isspace()))
 
 
 def extract_final_mcq_answer(response: str, choices: Optional[List[str]] = None) -> str:
@@ -319,21 +395,33 @@ def extract_final_mcq_answer(response: str, choices: Optional[List[str]] = None)
 
     ``extract_mcq_answer`` reads a short answer. In a long response it also reads
     the letters a model considers on the way: ``Perhaps the answer is D ...``
-    in the middle of an explanation is an explicit declaration for that parser.
-    A response states its final answer where it starts or where it ends, so this
-    function applies the same parser to those positions only:
+    in the middle of an explanation is an explicit declaration for that parser,
+    and ``Option A: no car is visible`` is a leading label. A response states its
+    final answer where it starts or where it ends, so this function reads only
+    those positions, and only statements of an answer:
 
-    1. An ``<answer>``/``\boxed{}`` container anywhere decides, exactly as in
-       ``extract_mcq_answer`` (the last container, also when it is invalid).
-    2. Several paragraphs: read the first and the last paragraph. The last one
+    1. An ``<answer>``/``\boxed{}`` container anywhere decides, as in
+       ``extract_mcq_answer`` (the last container, also when it is invalid). A
+       container whose content only starts with a letter (``\boxed{b^2 + 1}``)
+       holds no choice.
+    2. Several paragraphs: read the last and the first paragraph. The last one
        holds the conclusion of a reasoning chain, the first one an answer that
-       is explained afterwards. If they select different choices, abstain. An
-       invalid declaration in the last paragraph (``Final answer: unknown``)
+       is explained afterwards. A paragraph states an answer with an explicit
+       declaration (the first paragraph must open with it) or with a line that
+       is a standalone choice. Different choices at the two ends abstain. An
+       unusable declaration in the last paragraph (``Final answer: unknown``)
        abstains too; an earlier answer does not replace it.
-    3. One paragraph: read it whole. If it has no explicit declaration and its
-       lines taken together are ambiguous (prose that names several options,
-       then ``**B**`` on the last line), read each line: the lines that select
-       a choice must all select the same one.
+    3. One paragraph: a declaration decides (the last one, as in
+       ``extract_mcq_answer``). Without one, the paragraph must open with the
+       choice (``B``, ``(B) a blue bike``, ``B is correct``), or its lines that
+       are a standalone choice must agree (prose that names several options,
+       then ``**B**`` on the last line). A letter met inside the prose
+       (``subfigure (b)``, ``... the total, C``) is not read.
+
+    A declared letter that begins a phrase is not a choice (``the answer is a
+    blue bike``, ``the answer is I think C``), and ``Option D is correct``
+    next to a verdict on another option weighs statements instead of selecting
+    one.
 
     An empty string means that the response does not state one final choice at
     these positions. Parsers that keep an older benchmark-specific heuristic call
@@ -350,18 +438,22 @@ def extract_final_mcq_answer(response: str, choices: Optional[List[str]] = None)
     if not isinstance(response, str) or not response.strip():
         return ""
     text = response.strip()
-    if _last_container(text) is not None:
-        return extract_mcq_answer(text, choices)
     allowed = _allowed_choices(choices)
+    scope = _last_container(text)
+    if scope is not None:
+        return extract_mcq_answer(text, choices) if _clean_container(scope, allowed) else ""
     paragraphs = [block for block in _BLANK_LINE.split(text) if block.strip()]
     if len(paragraphs) > 1:
-        if _declared_answer(paragraphs[-1], allowed) == "":
+        last = _stated_choice(paragraphs[-1], allowed)
+        first = _stated_choice(paragraphs[0], allowed, opening=True)
+        if last == "" or (first and last and first != last):
             return ""
-        first = extract_mcq_answer(paragraphs[0], choices)
-        last = extract_mcq_answer(paragraphs[-1], choices)
-        return "" if first and last and first != last else last or first
+        return last or first or ""
+    declared = _final_declaration(text, allowed)
+    if declared is not None:
+        return declared
+    opening = _read_choice(text)
     answer = extract_mcq_answer(text, choices)
-    if answer or _declared_answer(text, allowed) is not None:
+    if answer and opening and opening.letter == answer:
         return answer
-    selected = {extract_mcq_answer(line, choices) for line in text.splitlines()} - {""}
-    return selected.pop() if len(selected) == 1 else ""
+    return _stated_choice(text, allowed) or ""

@@ -229,17 +229,15 @@ def compute_cmi_metric(pred, answer):
 
 
 def exact_match(pred, target):
+    final_answer = extract_final_mcq_answer(pred)
     pred = pred.strip().lower()
     target = target.strip().lower()
-    if not pred:
-        # An empty response is a substring of every target; it must not score.
-        return 0
-    if pred == target:
-        return 1.0
-    # "(B)", "B. the left", "The answer is B": read the option letter the response declares.
-    if len(target) == 1 and extract_final_mcq_answer(pred).lower() == target:
-        return 1.0
-    return 0
+    if final_answer:
+        return 1.0 if final_answer.lower() == target else 0
+    # The option letter that opens the response ("b, the left one"); not the first
+    # letter of a word, and not an empty response, which is a substring of every target.
+    opening = re.match(r"\(?([a-z])(?!\w)", pred)
+    return 1.0 if pred == target or (opening and opening.group(1) == target) else 0
 
 
 def abs_dist_norm(pred, target):

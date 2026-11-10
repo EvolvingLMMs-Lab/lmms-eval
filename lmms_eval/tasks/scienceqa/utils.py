@@ -35,10 +35,17 @@ def sqa_doc_to_target(doc):
 
 
 def sqa_process_results(doc, results):
-    target = sqa_doc_to_target(doc).strip()
+    # I know this is weird, but it's how llava parse it.
+    target = sqa_doc_to_target(doc).strip().lower()
     pred = results[0].strip()
-    if pred.lower() == target.lower():
+    if pred.lower() == target:
         return {"exact_match": 1.0}
-    # "A. text", "(A)", "Answer: A", "The answer is A."
     options = [chr(ord("A") + i) for i in range(len(doc["choices"]))]
-    return {"exact_match": 1.0 if extract_final_mcq_answer(pred, options) == target else 0.0}
+    final_answer = extract_final_mcq_answer(pred, options)
+    if final_answer:
+        return {"exact_match": 1.0 if final_answer.lower() == target else 0.0}
+    # pattern: ^[A-Z]\. .*
+    if len(pred) >= 2 and pred[0].isupper() and pred[1] == ".":
+        result = 1.0 if pred[0].lower() == target else 0.0
+        return {"exact_match": result}
+    return {"exact_match": 0.0}

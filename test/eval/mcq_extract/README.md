@@ -81,25 +81,38 @@ visible in the corpus.
 
 `extract_final_mcq_answer` is a second entry point for responses that may hold
 reasoning or an explanation. It does not change `extract_mcq_answer` or any
-expectation in `cases.json`; it only decides which part of a long response
-that parser reads.
+expectation in `cases.json`; it decides which part of a long response is read
+and accepts only statements of an answer there.
 
-Rule 2 above lets the last explicit declaration win. In a reasoning chain that
-also selects a letter the model merely considers (`Perhaps the answer is D ...`
-followed by a final `Option C`). A response states its final answer where it
-starts or where it ends, so:
+Rule 2 above lets the last explicit declaration win, and rule 3 accepts a
+leading label. In a reasoning chain both also select letters the model merely
+considers (`Perhaps the answer is D ...`, `Option A: no car is visible`,
+`subfigure (b)`). A response states its final answer where it starts or where
+it ends, so:
 
-1. A container anywhere decides, exactly as in rule 1 above.
-2. With several paragraphs, only the first and the last paragraph are read.
-   Different choices at the two ends abstain. An invalid declaration in the
-   last paragraph abstains and is not replaced by an earlier answer.
-3. One paragraph is read whole. If it has no explicit declaration and is
-   ambiguous as a whole, each line is read: the lines that select a choice
-   must all select the same one (`... T_A = 3 N and T_C = 4 N ...\n**D**`).
+1. A container anywhere decides, as in rule 1 above. A container whose
+   content only starts with a letter (`\boxed{b^2 + 1}`, `\boxed{a > b}`)
+   holds no choice.
+2. With several paragraphs, only the last and the first paragraph are read. A
+   paragraph states an answer with an explicit declaration (the first
+   paragraph must open with it) or with a line that is a standalone choice
+   (`B`, `(B)`, `**B.**`, `Option B`). A label with text (`B. a blue bike`,
+   `Option A: no car`) is how options are listed and weighed; it states no
+   answer here. Different choices at the two ends abstain. An unusable
+   declaration in the last paragraph abstains and is not replaced by an
+   earlier answer.
+3. In one paragraph a declaration decides, the last one as in rule 2 above.
+   Without a declaration the paragraph must open with the choice
+   (`(B) a blue bike`, `B is correct`), or its lines that are a standalone
+   choice must agree (`... T_A = 3 N and T_C = 4 N ...\n**D**`). A letter
+   met inside the prose is not read.
 
-The result is the reviewed answer or an abstention for every case in
-`cases.json` (`test_mcq_final_answer.py` checks this), and identical to
-`extract_mcq_answer` for a one-line response.
+Two declarations select nothing: a letter that begins a phrase (`the answer
+is a blue bike`, `the answer is I think C`), and `Option D is correct` next
+to a verdict on another option.
+
+For every case in `cases.json` the result is the reviewed answer or an
+abstention, never another letter (`test_mcq_final_answer.py` checks this).
 
 Native benchmark parsers that keep their own heuristic (the MMMU-style
 candidate search, the first-capital-letter search, the first-word match) call
@@ -108,6 +121,9 @@ string. A response the heuristic already reads is therefore scored as before;
 `test/tasks/test_mcq_final_answer_parsers.py` checks, for each of these
 parsers, that a bare letter and every response without a final answer give
 the same result with and without this step.
+
+Known limit: the last declaration wins inside one paragraph, so `Some say the
+answer is C, but it is actually B` reads C, as `extract_mcq_answer` does.
 
 ## Fixture format and coverage
 
