@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 eval_logger = logging.getLogger("lmms-eval")
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
@@ -34,6 +36,10 @@ def _extract_answer_letter(text: str) -> str:
 
     Return an empty string if no letter is found.
     """
+    final_answer = extract_final_mcq_answer(text, list("ABCD"))
+    if final_answer:
+        return final_answer
+
     text = text.strip()
     match = re.match(r"[\(\s]*([A-Z])[\)\.\s]*", text, flags=re.IGNORECASE)
     if match:

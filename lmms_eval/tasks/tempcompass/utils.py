@@ -9,6 +9,7 @@ import requests
 import yaml
 
 from lmms_eval.api.chat_response import require_chat_message_text
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -119,9 +120,12 @@ def tempcompass_process_results_multi_choice(doc, result):
     rating = 0
     match_success = True
     chatgpt_response = None
+    final_answer = extract_final_mcq_answer(pred, list("ABCD"))
 
     # Some hand-crafted matching rules
-    if pred == doc["answer"]:
+    if final_answer:
+        rating = 1 if final_answer == doc["answer"][0] else 0
+    elif pred == doc["answer"]:
         rating = 1
     elif pred in ["A", "B", "C", "D"]:
         rating = 1 if pred == doc["answer"][0] else 0

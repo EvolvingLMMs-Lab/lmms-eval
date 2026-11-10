@@ -4,6 +4,8 @@ from collections import defaultdict
 from anls import anls_score
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 # 19 classes
@@ -40,7 +42,7 @@ def parse_pred_ans_NY(pred_ans):
 
 
 def parse_pred_ans_choice(pred_ans):
-    return pred_ans.replace(" ", "")[0]
+    return pred_ans.replace(" ", "")[:1]
 
 
 def conbench_process_results(doc, results):
@@ -57,7 +59,7 @@ def conbench_process_results(doc, results):
     if doc["question_field"] == "N/Y":
         pred_ans = parse_pred_ans_NY(pred)
     elif doc["question_field"] == "Choices":
-        pred_ans = parse_pred_ans_choice(pred)
+        pred_ans = extract_final_mcq_answer(results[0]).lower() or parse_pred_ans_choice(pred)
     else:
         pred_ans = pred
 
