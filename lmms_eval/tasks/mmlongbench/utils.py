@@ -7,6 +7,8 @@ from typing import Any
 
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
 IMAGE_ROOT_ENV_VAR = "MMLONGBENCH_IMAGE_ROOT"
 
 
@@ -147,6 +149,9 @@ def _extract_predicted_int_list(prediction: str) -> list[int]:
 
 
 def _extract_binary_label(prediction: str) -> str:
+    stated = extract_yes_no_answer(prediction)
+    if stated:
+        return stated
     matches = re.findall(r"\b(yes|no)\b", prediction.lower())
     return matches[-1] if matches else ""
 

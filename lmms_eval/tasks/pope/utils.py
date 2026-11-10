@@ -1,4 +1,5 @@
 # Add the following functions to your existing utils.py file
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
 
 
 def pope_doc_to_visual(doc):
@@ -15,7 +16,7 @@ def pope_doc_to_text(doc, lmms_eval_specific_kwargs):
 
 
 def pope_process_results(doc, results):
-    pred = results[0].lower().strip()
+    pred = extract_yes_no_answer(results[0]) or results[0].lower().strip()
     gt_ans = doc["answer"].lower().strip()
     assert gt_ans in ["yes", "no"]
     score = 1.0 if pred == gt_ans else 0.0

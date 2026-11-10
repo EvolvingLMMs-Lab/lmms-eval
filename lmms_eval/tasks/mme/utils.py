@@ -3,6 +3,8 @@ from collections import defaultdict
 
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 eval_type_dict = {
@@ -47,6 +49,9 @@ def mme_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 def parse_pred_ans(pred_ans):
     """Brought from Otter Eval"""
+    stated = extract_yes_no_answer(pred_ans)
+    if stated:
+        return stated
     pred_ans = pred_ans.lower().strip().replace(".", "")
     pred_label = None
     if pred_ans in ["yes", "no"]:

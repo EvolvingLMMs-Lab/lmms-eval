@@ -3,6 +3,8 @@
 from collections import defaultdict
 from typing import Any, Dict, Optional
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
 
 def vlms_are_biased_doc_to_visual(doc: dict[str, Any]) -> list:
     """Extract image from document.
@@ -58,6 +60,8 @@ def vlms_are_biased_process_results(doc: dict[str, Any], results: list[str]) -> 
     pred_normalized = pred.lower().strip("{}").strip()
     gt_normalized = ground_truth.lower().strip("{}").strip()
     bias_normalized = expected_bias.lower().strip("{}").strip()
+    if gt_normalized in ("yes", "no"):
+        pred_normalized = extract_yes_no_answer(pred) or pred_normalized
 
     # Check for exact match with ground truth
     is_correct = pred_normalized == gt_normalized

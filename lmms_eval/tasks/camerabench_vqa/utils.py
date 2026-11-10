@@ -3,6 +3,8 @@ import re
 
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 SUFFIX_FOR_VQA = {"yes_no": "Please answer Yes or No.", "multiple_choice": "Please output the letter corresponding to the correct option."}
@@ -130,6 +132,10 @@ def extract_answer(output_string, task_type="yes_no"):
 
     if task_type != "yes_no":
         raise ValueError("Task type not supported. Must be 'yes_no'. CameraBench VQA only have 'yes_no' questions.")
+
+    stated = extract_yes_no_answer(output_string)
+    if stated:
+        return 1 if stated == "yes" else 0
 
     # if task_type == "yes_no":
     position_yes_and_a = find_word_position(output_string, "yes")

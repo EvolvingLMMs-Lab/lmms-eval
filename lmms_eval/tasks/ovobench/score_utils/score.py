@@ -1,4 +1,7 @@
 # code from https://github.com/JoeLeelyf/OVO-Bench/blob/main/utils/OVOBenchScore.py
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
+
 def calculate_score_backward_realtime(results):
     def get_score(response, gt):
         if response is None:
@@ -31,6 +34,9 @@ def calculate_score_forward(results):
     def get_score_SSR_CRR(response, gt):
         if response is None:
             return 0
+        stated = extract_yes_no_answer(response)
+        if stated:
+            return int(stated == gt.lower())
         return int(gt in response)
 
     scores = {}

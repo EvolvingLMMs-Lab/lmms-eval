@@ -4,6 +4,8 @@ from collections import defaultdict
 from anls import anls_score
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 # 19 classes
@@ -55,7 +57,7 @@ def conbench_process_results(doc, results):
     pred = pred.replace("\n", "").lower()
     # parser
     if doc["question_field"] == "N/Y":
-        pred_ans = parse_pred_ans_NY(pred)
+        pred_ans = extract_yes_no_answer(results[0]) or parse_pred_ans_NY(pred)
     elif doc["question_field"] == "Choices":
         pred_ans = parse_pred_ans_choice(pred)
     else:

@@ -11,6 +11,8 @@ from huggingface_hub import snapshot_download
 from loguru import logger as eval_logger
 from PIL import Image
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
 SLAKE_REPO_ID = "BoKelvin/SLAKE"
 ANSWER_TYPE_OPEN = "OPEN"
 ANSWER_TYPE_CLOSED = "CLOSED"
@@ -98,6 +100,8 @@ def slake_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, 
     target = doc["answer"]
     pred_norm = normalize_answer(prediction)
     target_norm = normalize_answer(target)
+    if target_norm in ("yes", "no"):
+        pred_norm = extract_yes_no_answer(prediction) or pred_norm
     is_correct = pred_norm == target_norm
     record = {
         "id": str(doc.get("qid") or doc.get("id") or ""),

@@ -14,6 +14,8 @@ from typing import Any, Dict, Optional
 
 import yaml
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
 eval_logger = logging.getLogger("lmms-eval")
 
 # Load task config for use_lmms_judge: merge default template with corecognition.yaml (strip !function lines so yaml.safe_load works)
@@ -110,6 +112,10 @@ def _template_match(pred: str, question_type: str) -> str:
     """Template matching for answer extraction (MCQ and YORN).
     Returns extracted option or 'Fail' if no valid match.
     """
+    if question_type == "YORN":
+        stated = extract_yes_no_answer(pred)
+        if stated:
+            return stated.upper()
     pred = _rm_model_special(pred)
     valid_options = OPTIONS_YORN if question_type == "YORN" else OPTIONS_MCQ
 

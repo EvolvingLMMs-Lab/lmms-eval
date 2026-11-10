@@ -12,6 +12,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
 QUESTION_TYPES = [
     "count",
     "count_relation",
@@ -78,6 +80,9 @@ def parse_answer(text: str, answer_type: str, options: Optional[List[str]] = Non
                 return str(value)
         return None
     if answer_type == "yesno":
+        stated = extract_yes_no_answer(text)
+        if stated:
+            return stated
         m = re.search(r"\b(yes|no)\b", low)
         return m.group(1) if m else None
     if answer_type == "choice":

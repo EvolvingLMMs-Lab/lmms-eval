@@ -1,6 +1,8 @@
 import re
 from collections import defaultdict
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
 TASKS = [
     "circled letter",
     "counting grid - blank grids",
@@ -48,6 +50,9 @@ def parse_response(response: str, task: str) -> str | None:
     task = task.lower()
 
     if task == "touching circles":
+        stated = extract_yes_no_answer(response)
+        if stated:
+            return stated
         if response in ["yes", "no"]:
             return response
 

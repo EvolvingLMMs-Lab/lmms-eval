@@ -5,6 +5,8 @@ import nltk
 import spacy
 from nltk.stem import WordNetLemmatizer
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
 # Configuration
 AMBER_BASE_DIR = os.environ.get("AMBER_BASE_DIR", "./data/amber")
 SIMILARITY_THRESHOLD = 0.8
@@ -252,7 +254,10 @@ def process_discriminative_task(data_item, ground_truth_item, metrics):
 
     truth = ground_truth_item["truth"]
     response = data_item["text"]
-    if "yes" in response.lower():
+    stated = extract_yes_no_answer(response)
+    if stated:
+        response = stated.capitalize()
+    elif "yes" in response.lower():
         response = "Yes"
     elif "no" in response.lower():
         response = "No"

@@ -1,6 +1,8 @@
 import os
 import re
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 SUFFIX_FOR_VQA = {"yes_no": "Please answer Yes or No.", "multiple_choice": "Please output the letter corresponding to the correct option."}
@@ -130,6 +132,9 @@ def extract_answer(output_string, task_type="yes_no"):
         raise ValueError("Task type not supported. Must be 'yes_no' or 'multiple_choice'.")
 
     if task_type == "yes_no":
+        stated = extract_yes_no_answer(output_string)
+        if stated:
+            return 1 if stated == "yes" else 0
         position_yes_and_a = find_word_position(output_string, "yes")
         position_no_and_b = find_word_position(output_string, "no")
     elif task_type == "multiple_choice":
