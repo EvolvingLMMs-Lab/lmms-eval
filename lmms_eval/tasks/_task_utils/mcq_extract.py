@@ -354,7 +354,11 @@ def _final_declaration(block: str, allowed: Set[str], opening: bool = False) -> 
         # "Option D is correct ... Option B is incorrect" weighs statements; it selects none.
         return answer if len({letter.upper() for letter in _OPTION_VERDICT.findall(block)}) == 1 else ""
     choice = _read_choice(block[last.end() :])
-    return "" if choice and _reads_a_word(choice) else answer
+    if choice is None:
+        return answer
+    # "Check each option: (A) shows a curve ..." opens a list; it selects nothing.
+    lists_options = re.match(r"(?:option|choice)\s*[:：]", last.group("prefix"), re.IGNORECASE) and choice.tail.strip(_PUNCTUATION)
+    return "" if lists_options or _reads_a_word(choice) else answer
 
 
 def _standalone_choice(line: str, allowed: Set[str]) -> str:

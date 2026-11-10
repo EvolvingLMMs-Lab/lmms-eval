@@ -70,6 +70,9 @@ def test_never_contradicts_the_reviewed_short_answer_contract(case):
         ("Option D is correct, as both affect the trade winds. Option B is incorrect, because the patterns are opposite.", "", "verdicts on several options"),
         ("The frames are dark.\n\nOption D is correct, as both affect the trade winds. Option B is incorrect.", "", "verdicts on several options in the last paragraph"),
         ("The frames are dark.\n\nOption D is correct.", "D", "one verdict selects the option"),
+        ("Let me check each option: (A) shows a curve on both sides. So (C) is correct.", "", "an option list opened with a colon"),
+        ("Option: B", "B", "a declared option that stands alone"),
+        ("Answer: (B) a blue bike", "B", "a declared answer with its option text"),
         # A letter met inside prose is not read.
         ("Based on subfigure (b), the tree is green.", "", "a sub-figure label"),
         ("Now compute C = 50 * 0.58 - 21.9, which rounds to 7.34.", "", "a variable"),
