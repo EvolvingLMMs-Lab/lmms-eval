@@ -151,6 +151,13 @@ prismmbench = [
     "pdf2image>=1.17.0",
     "pdfplumber>=0.11.9"
 ]
+olmocr_bench = [
+    "beautifulsoup4",
+    "lxml",
+    "fuzzysearch",
+    "playwright",
+    "rapidfuzz",
+]
 tui = [
     "fastapi>=0.100.0",
     "uvicorn>=0.20.0",

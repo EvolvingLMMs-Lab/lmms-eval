@@ -1,0 +1,55 @@
+dataset_path: allenai/olmOCR-bench
+dataset_kwargs:
+  revision: 54a96a6fb6a2bd3b297e59869491db4d3625b711
+  data_files:
+    test: bench_data/arxiv_math.jsonl
+task: olmocr_bench
+class: !function task.OlmocrBenchTask
+test_split: test
+output_type: generate_until
+reasoning_tags: false
+process_docs: !function utils.olmocr_bench_process_docs
+doc_to_visual: !function utils.olmocr_bench_doc_to_visual
+doc_to_text: !function utils.olmocr_bench_doc_to_text
+doc_to_target: pdf
+generation_kwargs:
+  max_new_tokens: 4096
+  temperature: 0.0
+  do_sample: false
+  until: []
+process_results: !function utils.olmocr_bench_process_results
+metric_list:
+  - metric: olmocr_bench_overall
+    aggregation: !function utils.olmocr_bench_aggregate_overall
+    higher_is_better: true
+  - metric: olmocr_bench_arxiv_math
+    aggregation: !function utils.olmocr_bench_aggregate_arxiv_math
+    higher_is_better: true
+  - metric: olmocr_bench_old_scans_math
+    aggregation: !function utils.olmocr_bench_aggregate_old_scans_math
+    higher_is_better: true
+  - metric: olmocr_bench_table_tests
+    aggregation: !function utils.olmocr_bench_aggregate_table_tests
+    higher_is_better: true
+  - metric: olmocr_bench_old_scans
+    aggregation: !function utils.olmocr_bench_aggregate_old_scans
+    higher_is_better: true
+  - metric: olmocr_bench_headers_footers
+    aggregation: !function utils.olmocr_bench_aggregate_headers_footers
+    higher_is_better: true
+  - metric: olmocr_bench_multi_column
+    aggregation: !function utils.olmocr_bench_aggregate_multi_column
+    higher_is_better: true
+  - metric: olmocr_bench_long_tiny_text
+    aggregation: !function utils.olmocr_bench_aggregate_long_tiny_text
+    higher_is_better: true
+  - metric: olmocr_bench_baseline
+    aggregation: !function utils.olmocr_bench_aggregate_baseline
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    prompt_template: full_no_document_anchoring
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  version: 0.0

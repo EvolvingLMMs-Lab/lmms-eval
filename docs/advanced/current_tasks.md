@@ -501,6 +501,7 @@ python -m lmms_eval --tasks list_with_num
 - [OfficeQA](https://github.com/databricks/officeqa) (officeqa)
 - [OCRBench](https://github.com/Yuliang-Liu/MultimodalOCR) (ocrbench)
 - [OCRBench v2](https://github.com/Yuliang-Liu/MultimodalOCR) (ocrbench_v2)
+- [olmOCR-Bench](https://github.com/allenai/olmocr/tree/main/olmocr/bench) (olmocr_bench)
 - [OmniDocBench](https://github.com/opendatalab/OmniDocBench) (omnidocbench)
 - [PRISMM-Bench](https://arxiv.org/abs/2510.16505) (prismm_bench)
   - PRISMM-Bench Identification (prismm_bench_identification)
