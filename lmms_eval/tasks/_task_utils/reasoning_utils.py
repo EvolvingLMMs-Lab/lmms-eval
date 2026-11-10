@@ -5,6 +5,7 @@ from math_verify import parse, verify
 from openai import OpenAI
 
 from lmms_eval.api.chat_response import require_chat_message_text
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 
 API_KEY = os.getenv("JUDGE_API_KEY", "YOUR_API_KEY")
 BASE_URL = os.getenv("JUDGE_BASE_URL", "https://api.openai.com/v1")
@@ -155,6 +156,21 @@ def extract_anwser_tag(predict_str: str) -> str:
                 return number_match.group(1)
 
     return ""
+
+
+def extract_final_choice(predict_str: str) -> str:
+    """Return the option letter a response selects as its final answer, or an empty string.
+
+    The answer follows the reasoning: read the <answer> tag or the box after
+    </think>, or that text itself when it has neither (a bare ``B``, ``... so
+    the answer is B``). If no choice is stated there, read a tag or a box
+    inside the reasoning, as ``extract_anwser_tag`` does.
+    """
+    final_text = predict_str.rsplit("</think>", 1)[-1]
+    choice = extract_final_mcq_answer(_extract_tag_or_box(final_text) or final_text, MCQ_CHOICE_LETTERS)
+    if choice or "</think>" not in predict_str:
+        return choice
+    return extract_final_mcq_answer(_extract_tag_or_box(predict_str), MCQ_CHOICE_LETTERS)
 
 
 def _extract_tag_or_box(predict_str: str) -> str:
@@ -363,6 +379,19 @@ def is_mcq_ground_truth(ground_truth: str) -> bool:
     return normalized in MCQ_CHOICE_LETTERS
 
 
+def _selects_several_choices(predict_str: str) -> bool:
+    """Whether the answer is a list of different option letters (``C, F``, ``A and B``)."""
+    if not re.fullmatch(r"\(?[A-H]\)?(?:\s*(?:,|/|&|and|or)\s*\(?[A-H]\)?)+", predict_str.strip()):
+        return False
+    return len(set(re.findall(r"[A-H]", predict_str))) > 1
+
+
+def _differs_by_symbols_only(part: str, whole: str) -> bool:
+    """Whether ``whole`` adds only punctuation or symbols around ``part``, no letter or digit."""
+    start = whole.find(part)
+    return not any(character.isalnum() for character in whole[:start] + whole[start + len(part) :])
+
+
 def relax_exact_match(predict_str: str, ground_truth: str, relax_portion: float = 0.9) -> float:
     """Check if the prediction string matches the ground truth exactly.
 
@@ -376,14 +405,19 @@ def relax_exact_match(predict_str: str, ground_truth: str, relax_portion: float 
     """
     # If the question is an mcq
     if is_mcq_ground_truth(ground_truth):
+        # The ground truth is one option; an answer that lists several is not that option.
+        if _selects_several_choices(predict_str):
+            return 0.0
         gold_letter = parse_mcq(ground_truth)
         predict_str = parse_mcq(predict_str)
         if predict_str.lower().strip() == gold_letter.lower().strip():
             return 1.0
         return 0.0
-    if predict_str in ground_truth and len(predict_str) >= relax_portion * len(ground_truth):
+    # A near match may drop or add punctuation and symbols, not a letter or a digit
+    # ("ITM Options" is not "DITM Options", "123456789" is not "1234567890").
+    if predict_str in ground_truth and len(predict_str) >= relax_portion * len(ground_truth) and _differs_by_symbols_only(predict_str, ground_truth):
         return 1.0
-    if ground_truth in predict_str and len(ground_truth) >= relax_portion * len(predict_str):
+    if ground_truth in predict_str and len(ground_truth) >= relax_portion * len(predict_str) and _differs_by_symbols_only(ground_truth, predict_str):
         return 1.0
     return 1.0 if predict_str.strip().casefold() == ground_truth.strip().casefold() else 0.0
 
@@ -460,6 +494,11 @@ def compute_score(data_source, solution_str, ground_truth, extra_info=None):
     format_reward_score = format_reward(solution_str)
 
     extracted_answer = extract_anwser_tag(solution_str).strip()
+    if is_mcq_ground_truth(simple_parse(ground_truth)):
+        # A multiple-choice answer is an option letter: read the final choice the
+        # response states (also a bare "B" without a tag or a box, or "\\boxed{c}").
+        # When it states none, the extracted answer is scored as before.
+        extracted_answer = extract_final_choice(solution_str) or extracted_answer
 
     acc_score = acc_reward(extracted_answer, ground_truth, extra_info, format_reward_score, solution_str)
     predict_str = simple_parse(extracted_answer)
