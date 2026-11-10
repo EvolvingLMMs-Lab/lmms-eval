@@ -771,10 +771,14 @@ def simple_evaluate(
         if baseline:
             baseline_display_name = get_baseline_display_name(baseline)
 
+            samples_by_task = results.get("samples", {})
             for task_name in results.get("results", {}).keys():
+                # Group rows have no samples of their own, so there is nothing to pair
+                if samples_by_task and task_name not in samples_by_task:
+                    continue
                 try:
                     baseline_samples, baseline_agg = load_baseline(baseline, task_name)
-                    current_samples = results.get("samples", {}).get(task_name)
+                    current_samples = samples_by_task.get(task_name)
                     if not current_samples:
                         eval_logger.warning(f"[Baseline] Skipping {task_name}: the paired comparison needs per-sample scores, so run with --log_samples")
                         continue
@@ -783,7 +787,7 @@ def simple_evaluate(
                     task_results = results["results"][task_name]
                     comparison = compare_with_baseline(task_results, current_samples, baseline_samples, score_key)
                     if not comparison:
-                        eval_logger.warning(f"[Baseline] Skipping {task_name}: no metric has a per-sample number on both sides (score_key='{score_key}')")
+                        eval_logger.warning(f"[Baseline] Skipping {task_name}: no metric has a per-sample number on both sides for at least 2 samples (score_key='{score_key}')")
                         continue
                     task_results["paired_baseline"] = baseline_display_name
                     task_results.update(comparison)

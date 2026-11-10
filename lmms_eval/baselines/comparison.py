@@ -87,8 +87,8 @@ def compare_with_baseline(
     """Run one paired t-test per reported metric and filter.
 
     Returns the ``<metric>_paired_<field>,<filter>`` entries to add to the
-    task's results. A metric with no per-sample number on both sides is left
-    out.
+    task's results. A metric with a per-sample number on both sides for fewer
+    than two samples is left out.
     """
     out: Dict[str, Any] = {}
     for metric, filter_key in task_metrics(task_results):
@@ -97,7 +97,8 @@ def compare_with_baseline(
             continue
         baseline = scores_by_doc(baseline_samples, metric, filter_key, score_key)
         doc_ids = [doc_id for doc_id in current if doc_id in baseline]
-        if not doc_ids:
+        if len(doc_ids) < 2:
+            # A paired t-test needs at least two pairs; one pair only gives NaN
             continue
         current_scores = [current[doc_id] for doc_id in doc_ids]
         baseline_scores = [baseline[doc_id] for doc_id in doc_ids]

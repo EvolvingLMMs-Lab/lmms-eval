@@ -105,6 +105,13 @@ def test_metrics_without_a_per_sample_number_are_not_compared():
     assert compare_with_baseline(results, samples, samples) == {}
 
 
+def test_a_single_shared_doc_is_not_compared():
+    current = [{"doc_id": i, "filter": "none", "acc": s} for i, s in enumerate([1.0, 0.0])]
+    baseline = [{"doc_id": 0, "filter": "none", "acc": 0.0}]
+
+    assert compare_with_baseline({"acc,none": 0.5}, current, baseline) == {}
+
+
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), None, "0.5", [1.0]])
 def test_sample_score_skips_values_that_are_not_a_finite_number(value):
     assert sample_score({"acc": value}, "acc") is None
