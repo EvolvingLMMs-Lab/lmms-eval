@@ -322,6 +322,7 @@ def extract_mcq_answer(response: str, choices: Optional[List[str]] = None) -> st
 
 _BLANK_LINE = re.compile(r"\n[ \t\r]*\n")
 _BLOCK_OPENING = " \t\r\n*_#>`"
+_LETTER_VERDICT = re.compile(r"(?<!\w)([A-Z])\s+is\s+(?:the\s+)?(?:correct|right|best)\b")
 _OPTION_VERDICT = re.compile(r"(?<!\w)option\s+([a-z])(?!\w)\s+is\b", re.IGNORECASE)
 
 
@@ -354,6 +355,9 @@ def _final_declaration(block: str, allowed: Set[str], opening: bool = False) -> 
     if last.group("postfix"):
         # "Option D is correct ... Option B is incorrect" weighs statements; it selects none.
         return answer if len({letter.upper() for letter in _OPTION_VERDICT.findall(block)}) == 1 else ""
+    # "... the answer is B ... Therefore, C is the correct answer": the conclusion names another letter.
+    if any(letter != answer for letter in _LETTER_VERDICT.findall(block, last.end())):
+        return ""
     choice = _read_choice(block[last.end() :])
     if choice is None:
         return answer

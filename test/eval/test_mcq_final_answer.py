@@ -64,6 +64,8 @@ def test_never_contradicts_the_reviewed_short_answer_contract(case):
         ("The best option is a green tree, since it is tall.", "", "the article a"),
         ("The answer is a = 3.", "", "a variable"),
         ("The answer is I think C.", "", "the pronoun I"),
+        ("Perhaps the answer is B. But only C lists all three. Therefore, C is the correct answer.", "", "a later verdict names another letter; the caller's parser decides"),
+        ("The answer is C. So C is the correct answer.", "C", "a later verdict on the same letter"),
         ("The melody ends on C. The first option is C minor.\n**A**", "", "option text that starts with a letter; the declaration is unusable, so the caller's parser decides"),
         ("The answer is B (the blue bike).", "B", "a declared choice with its option text in parentheses"),
         ("The answer is A because it is red.", "A", "an assertion keeps the choice"),
