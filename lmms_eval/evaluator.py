@@ -1524,6 +1524,7 @@ def evaluate(
                     task_output.logged_samples.append(processed.logged_sample)
                 for metric, value in processed.metrics.items():
                     task_output.sample_metrics[(metric, filter_key)].append(value)
+            task_output.sample_len = len(processed_documents)
 
             pbar.close()
             if RANK == 0:
@@ -1550,6 +1551,16 @@ def evaluate(
 
                 if RANK == 0:
                     task_output.logged_samples = list(itertools.chain.from_iterable(full_samples))
+
+            # then sum the number of scored documents across all ranks
+            sample_lens = [None] * WORLD_SIZE if RANK == 0 else None
+            torch.distributed.gather_object(
+                obj=task_output.sample_len or 0,
+                object_gather_list=sample_lens,
+                dst=0,
+            )
+            if RANK == 0:
+                task_output.sample_len = sum(sample_lens)
 
             # then collect metrics across all ranks
             # All ranks must iterate over metric keys in the SAME order,
