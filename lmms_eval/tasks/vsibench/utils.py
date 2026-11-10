@@ -168,6 +168,13 @@ def process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
 
 
 def fuzzy_matching(pred):
+    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
+    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+    declared = extract_mcq_answer(pred, choices=list("ABCD"))
+    if declared:
+        return declared
+
     return pred.split(" ")[0].rstrip(".").strip()
 
 

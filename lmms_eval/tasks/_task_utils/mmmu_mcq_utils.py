@@ -15,6 +15,13 @@ def get_multi_choice_info(options, start_chr="A"):
 
 
 def parse_mmmu_multi_choice_response(response, all_choices, index2ans):
+    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
+    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+    declared = extract_mcq_answer(response, choices=all_choices)
+    if declared:
+        return declared
+
     for char in [",", ".", "!", "?", ";", ":", "'"]:
         response = response.strip(char)
     response = " " + response + " "
@@ -86,6 +93,13 @@ def parse_mmmu_pro_multi_choice_response(response, all_choices, index2ans):
 
 
 def parse_jmmmu_multi_choice_response(response, all_choices, index2ans):
+    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
+    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+    declared = extract_mcq_answer(response, choices=all_choices)
+    if declared:
+        return declared
+
     for char in [",", ".", "!", "?", ";", ":", "'", "、", "。", "！", "？", "；", "："]:
         response = response.strip(char)
     response = " " + response + " "
@@ -144,6 +158,13 @@ def parse_jmmmu_multi_choice_response(response, all_choices, index2ans):
 
 
 def parse_videommmu_multi_choice_response(response, all_choices, index2ans):
+    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
+    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+    declared = extract_mcq_answer(response, choices=all_choices)
+    if declared:
+        return declared
+
     if response == "API Error" or response == "":
         return "API Error"
 

@@ -135,7 +135,10 @@ def mcq_acc(answer, pred):
 
             return answer
 
-    pred = process(pred)
+    # A declared answer ("Answer: B", "**B**", \boxed{B}) wins; otherwise the parser above decides.
+    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+    pred = extract_mcq_answer(pred) or process(pred)
     answer = process(answer)
 
     if pred == answer:

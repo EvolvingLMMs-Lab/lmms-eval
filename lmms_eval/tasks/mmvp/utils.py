@@ -44,6 +44,13 @@ def _extract_answer_letter(text: str) -> str:
     Returns:
         The extracted letter (uppercase) or empty string if no letter found.
     """
+    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
+    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+    declared = extract_mcq_answer(text, choices=list("AB"))
+    if declared:
+        return declared
+
     text = text.strip()
 
     # Try common patterns

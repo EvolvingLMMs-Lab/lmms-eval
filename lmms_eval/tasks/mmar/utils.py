@@ -130,6 +130,13 @@ def parse_multi_choice_response(response: str, all_choices: List[str], index2ans
     Returns:
         Parsed answer letter (uppercased).
     """
+    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
+    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+    declared = extract_mcq_answer(response, choices=all_choices)
+    if declared:
+        return declared
+
     response = response or ""
 
     # Strip common punctuation from ends

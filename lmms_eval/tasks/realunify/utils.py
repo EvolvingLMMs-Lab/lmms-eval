@@ -43,6 +43,13 @@ def doc_to_text(doc: dict, lmms_eval_specific_kwargs: dict | None = None) -> str
 
 def extract_answer(response: str) -> str:
     """Extract answer letter (A/B/C/D) from model response."""
+    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
+    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+    declared = extract_mcq_answer(response, choices=list("ABCD"))
+    if declared:
+        return declared
+
     response = response.strip()
 
     answer_prefixes = [

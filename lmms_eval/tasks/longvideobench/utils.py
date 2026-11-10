@@ -24,7 +24,6 @@ def timestamp_to_seconds(timestamp):
 
 
 def load_video(video_file, duration, max_num_frames=16):
-
     decord = import_decord()
 
     vr = decord.VideoReader(video_file, ctx=decord.cpu(0), num_threads=1)
@@ -192,6 +191,13 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     Fixed to avoid 'D. A book' be parsed as A.
     Same as original LongVideoBench paper (from author Haoning Wu), if parsing failed, it will assign a random choice to model.
     """
+    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
+    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+    declared = extract_mcq_answer(response, choices=all_choices)
+    if declared:
+        return declared
+
     s = response.strip()
     answer_prefixes = [
         "The best answer is",

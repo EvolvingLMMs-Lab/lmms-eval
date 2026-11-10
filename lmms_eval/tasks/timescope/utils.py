@@ -54,6 +54,13 @@ def timescope_doc_to_visual(doc):
 
 
 def extract_characters_regex(s):
+    # A declared answer ("Answer: B", "**B**", \boxed{B}, <answer>B</answer>) wins; otherwise the task's own parser decides.
+    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+    declared = extract_mcq_answer(s, choices=list("ABCDEF")) if isinstance(s, str) else ""
+    if declared:
+        return declared
+
     s = s.strip()
     answer_prefixes = [
         "The best answer is",
