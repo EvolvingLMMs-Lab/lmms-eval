@@ -3,6 +3,8 @@ from pathlib import Path
 
 from huggingface_hub import snapshot_download
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
 
 @cache
 def _get_videos_dir() -> Path:
@@ -70,6 +72,9 @@ def videonet_binary_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
 
 
 def _extract_binary_prediction(text: str) -> str:
+    stated = extract_yes_no_answer(text)
+    if stated:
+        return stated
     text = text.splitlines()[-1].strip().lower()
     pred = text.replace("*", "").replace("#", "").replace(",", "").replace(".", "").replace(":", "")
 

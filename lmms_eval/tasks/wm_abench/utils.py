@@ -3,6 +3,8 @@ from typing import Any, Dict, List, Optional
 
 from PIL import Image
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
 # Map 0-indexed int to letter
 INDEX_TO_LETTER = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E", 5: "F"}
 # Map 1-indexed int to letter
@@ -231,6 +233,8 @@ def wm_abench_process_results(doc: dict, results: List[str]) -> Dict[str, Any]:
     else:
         # Open-ended: compare lowercase
         pred = pred_raw.lower().strip()
+        if gt in ("yes", "no"):
+            pred = extract_yes_no_answer(pred_raw) or pred
 
     is_correct = pred == gt
 

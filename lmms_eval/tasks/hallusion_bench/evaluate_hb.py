@@ -5,6 +5,7 @@ import os
 from tqdm import tqdm
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
 from lmms_eval.tasks.hallusion_bench.utils import (
     assign_correctness,
     evaluate_by_chatgpt,
@@ -102,7 +103,11 @@ def hb_aggregation_result_aAcc(results, args):
 def hb_aggregation_result_intern(results, metric):
     scores = []
     for result in results:
-        ans = "1" if result["model_prediction"].lower().find("yes") != -1 else "0"
+        stated = extract_yes_no_answer(result["model_prediction"])
+        if stated:
+            ans = "1" if stated == "yes" else "0"
+        else:
+            ans = "1" if result["model_prediction"].lower().find("yes") != -1 else "0"
         scores.append(ans == result["gt_answer"])
         result["answer"] = ans
 

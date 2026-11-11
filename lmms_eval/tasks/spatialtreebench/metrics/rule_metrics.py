@@ -7,6 +7,8 @@ import re
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
 
 def gravityeval(response, answer, extra_info):
     """
@@ -494,6 +496,10 @@ def judgemodel(response, answer, extra_info):
     def parse_last_yes_no(text: str) -> str:
         if not text:
             return "other"
+
+        stated = extract_yes_no_answer(text)
+        if stated:
+            return stated
 
         lower_text = text.lower()
 

@@ -9,6 +9,7 @@ import requests
 import yaml
 
 from lmms_eval.api.chat_response import require_chat_message_text
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -446,6 +447,9 @@ def eval_rule(video_llm_output, question, answer):
 # utils function for yes_no
 def extract_pred(video_llm_output):
     # Extract the yes/no predction from the original video llm output
+    stated = extract_yes_no_answer(video_llm_output)
+    if stated:
+        return stated
     video_llm_output = video_llm_output.lower()
     if video_llm_output.startswith("yes"):
         return "yes"

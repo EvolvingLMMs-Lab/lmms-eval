@@ -7,6 +7,7 @@ from typing import Dict
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
 from lmms_eval.utils import resolve_cache_dir
 
 with open(Path(__file__).parent / "timeblind.yaml", "r") as f:
@@ -43,6 +44,9 @@ def extract_answer(output_string: str, task_type: str = "yes_no") -> int:
     text = _normalize(output_string)
 
     if task_type == "yes_no":
+        stated = extract_yes_no_answer(output_string)
+        if stated:
+            return 1 if stated == "yes" else 0
         patterns = [
             r"(?i)(?:final(?: answer)?|answer|prediction)\s*[:：]\s*(yes|no)\b",
             r"(?i)\b(yes|no)\b(?=[\s\.\,\!\?\)]|$)",

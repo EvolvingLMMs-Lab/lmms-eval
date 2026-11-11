@@ -4,6 +4,7 @@ import re
 from collections import defaultdict
 
 from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
 
 MVH_TYPES = ("cross_instance", "cross_view")
 SHUFFLE_SEED = 2025
@@ -104,7 +105,7 @@ def mvh_process_results(doc, results):
         return {name: record for name in ("mc_acc", "mc_pacc", "aer", "mvh_score")}
 
     matches = {x.lower() for x in re.findall(r"\b(yes|no)\b", response or "", flags=re.I)}
-    pred = next(iter(matches)).capitalize() if len(matches) == 1 else ""
+    pred = extract_yes_no_answer(response).capitalize() or (next(iter(matches)).capitalize() if len(matches) == 1 else "")
     gold = doc["binary_answers"][qidx - 2]
     record = {
         "group_id": doc["group_id"],

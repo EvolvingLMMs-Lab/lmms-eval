@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
 _MASK_CACHE_DIR = os.path.join(tempfile.gettempdir(), "robo_spatial_masks")
 os.makedirs(_MASK_CACHE_DIR, exist_ok=True)
 
@@ -43,8 +45,11 @@ def json2pts(text: str, width=640, height=480) -> np.ndarray:
 
 
 def evaluate_binary_answer(ground_truth, generated_answer):
-    gen_answer = generated_answer.strip().lower().split("\n")[-1]
     is_gt_yes = ground_truth.strip().lower() == "yes"
+    stated = extract_yes_no_answer(generated_answer)
+    if stated:
+        return (stated == "yes") == is_gt_yes
+    gen_answer = generated_answer.strip().lower().split("\n")[-1]
     if is_gt_yes:
         correct = "yes" in gen_answer and "no" not in gen_answer
     else:
