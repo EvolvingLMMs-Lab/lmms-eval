@@ -12,6 +12,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 QUESTION_TYPES = [
     "count",
     "count_relation",
@@ -81,6 +83,9 @@ def parse_answer(text: str, answer_type: str, options: Optional[List[str]] = Non
         m = re.search(r"\b(yes|no)\b", low)
         return m.group(1) if m else None
     if answer_type == "choice":
+        final_answer = extract_final_mcq_answer(text, list("ABCD"[: len(options)]) if options else list("ABCD"))
+        if final_answer:
+            return final_answer
         m = re.search(r"^\(?([A-D])\)?(?:[\s.:)]|$)", seg.strip())
         if m:
             return m.group(1)
