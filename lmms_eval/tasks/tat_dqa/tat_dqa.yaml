@@ -1,0 +1,40 @@
+# A generative VLM adaptation of the pinned TAT-DQA test_gold release.
+# Requires Poppler pdftoppm; original PDF pages are rendered at 144 DPI.
+# The text builder preserves heterogeneous JSON answer types until process_docs.
+dataset_path: text
+dataset_kwargs:
+  data_files:
+    test: https://huggingface.co/datasets/next-tat/TAT-DQA/resolve/bc46208b22f0bfe47152c98fd0938d238ce868c2/tatdqa_dataset_test_gold.json
+  sample_by: document
+task: tat_dqa
+test_split: test
+output_type: generate_until
+process_docs: !function utils.tat_dqa_process_docs
+doc_to_visual: !function utils.tat_dqa_doc_to_visual
+doc_to_text: !function utils.tat_dqa_doc_to_text
+doc_to_messages: !function utils.tat_dqa_doc_to_messages
+doc_to_target: !function utils.tat_dqa_doc_to_target
+generation_kwargs:
+  max_new_tokens: 4096
+  temperature: 0
+  do_sample: false
+  until: []
+process_results: !function utils.tat_dqa_process_results
+metric_list:
+  - metric: tat_dqa_em
+    aggregation: mean
+    higher_is_better: true
+  - metric: tat_dqa_f1
+    aggregation: mean
+    higher_is_better: true
+  - metric: tat_dqa_scale_accuracy
+    aggregation: mean
+    higher_is_better: true
+  - metric: tat_dqa_parse_success
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  version: 0.0
+  render_dpi: 144
+  dataset_revision: bc46208b22f0bfe47152c98fd0938d238ce868c2
+  scorer_revision: 71a02715849942b79c1f74934a139e4b56fc6826

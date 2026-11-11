@@ -256,6 +256,7 @@ python -m lmms_eval --tasks list_with_num
   - MMT Multiple Image Validation (mmt_mi_val)
   - MMT Multiple Image Test (mmt_mi_test)
 - [MuirBench](https://muirbench.github.io/) (muirbench)
+- [TAT-DQA](https://github.com/NExTplusplus/TAT-DQA) (tat_dqa): test gold; JSON answer/scale adaptation with Doc2SoarGraph EM/F1 and scale accuracy.
 - [MP-DocVQA](https://github.com/rubenpt91/MP-DocVQA-Framework) (multidocvqa)
   - MP-DocVQA Validation (multidocvqa_val)
   - MP-DocVQA Test (multidocvqa_test)
