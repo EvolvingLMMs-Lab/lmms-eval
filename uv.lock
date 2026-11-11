@@ -1882,6 +1882,41 @@ wheels = [
 ]
 
 [[package]]
+name = "fuzzysearch"
+version = "0.8.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e9/b4/d92b429ba4bfe5461faa358f84092eceb5ea8985cd2e448daf38bba17737/fuzzysearch-0.8.1.tar.gz", hash = "sha256:e5f50962c6b1c3dfc6c8cdfd5e2604838c95cb10118e4cab518e5292e9e0b1c6", size = 39510, upload-time = "2025-11-11T08:47:10.321Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/66/60/07436c45651c310dac13f0eb383da5e3b34d717ffecf769b019ff5ab6b4c/fuzzysearch-0.8.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:9d25c1e260f38dfda74cbbfd51211e4e644867d023131a5b8061050212d9a0d6", size = 31826, upload-time = "2025-11-11T08:46:20.779Z" },
+    { url = "https://files.pythonhosted.org/packages/ce/6d/a771c014836bed5e074abf7bdd670370359453b7f935b664f86f899bb935/fuzzysearch-0.8.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:757f8d680411df73828bd3981613a8322ba18f9cf7e4a53792ad52c0f5203e09", size = 32541, upload-time = "2025-11-11T08:46:22.48Z" },
+    { url = "https://files.pythonhosted.org/packages/75/55/b2c854fcdfde9a893985181495d05659739fc0d17f4515c0f3a7f4763058/fuzzysearch-0.8.1-cp310-cp310-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:d6bd4f9e18b5decb8603d96b477e49dd3b81743bdc77dc5389f51eb4f8abc621", size = 54539, upload-time = "2025-11-11T08:46:23.502Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/9c/f85a643489dc9f3bd549940e6c47e44393f35684730f935fd23583244f84/fuzzysearch-0.8.1-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a2acd7c3940f063e35bf34619100fa58ff88985264777f908458503a89b9bb33", size = 56279, upload-time = "2025-11-11T08:46:24.934Z" },
+    { url = "https://files.pythonhosted.org/packages/98/0b/778a54487be30a7e1e5b3788cac7d2ee4e7134460a1db258fb72691958b0/fuzzysearch-0.8.1-cp310-cp310-musllinux_1_2_i686.whl", hash = "sha256:928cef6c24b21120abb37e5bdd8a89dd2f71fb07af1e867c6ced282de81c0cc8", size = 55449, upload-time = "2025-11-11T08:46:26.025Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/80/70e5f0940555b62885c9a39e6fbc339875cd71d4149f66f28cfaf982d1fe/fuzzysearch-0.8.1-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:e04ec175642e945b16ce01d2d61d1640385577b470301cf8d8c9545c01eb9ae0", size = 55619, upload-time = "2025-11-11T08:46:27.51Z" },
+    { url = "https://files.pythonhosted.org/packages/ca/08/c2c6d04585f44ed8f6145bba383cace482237ae3d1acae9cc577d01f387a/fuzzysearch-0.8.1-cp310-cp310-win32.whl", hash = "sha256:7fac1c6db91dbaf9c5874ec9e87db884aa48bfdc264e8868af315d61140ba629", size = 35192, upload-time = "2025-11-11T08:46:28.96Z" },
+    { url = "https://files.pythonhosted.org/packages/db/ee/4af7df35303ef8a3f095de2c6bea0ec2eeaf149e4b324c9f1408b778a7cb/fuzzysearch-0.8.1-cp310-cp310-win_amd64.whl", hash = "sha256:797d4f6470e8287cdd0ca8de9993fdc932ce51ea75cd4ea963ce1e71dc20bc2a", size = 36798, upload-time = "2025-11-11T08:46:30.317Z" },
+    { url = "https://files.pythonhosted.org/packages/f8/20/5fdd4fb37746a0b87104731e7237e7efb98e12cb0d91181ea9249a6ad14b/fuzzysearch-0.8.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:def3fc3379d3390cba7e2a34c55888b619484172f59b985f10e9784d79d6f14b", size = 31825, upload-time = "2025-11-11T08:46:31.723Z" },
+    { url = "https://files.pythonhosted.org/packages/0a/e4/6aba3595fa67ab9bd0ff98fea2c6453b4a9587372b80d28fdbc51927b41b/fuzzysearch-0.8.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:c0e9bbcf199907beac9b3d616bf3fec1695095bf4c813ef6c90307791fe18664", size = 32540, upload-time = "2025-11-11T08:46:32.745Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/71/7e4bd895b69538a6fe6744308eebf2742e2ad50aec50b433374c4a30b491/fuzzysearch-0.8.1-cp311-cp311-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:e4bc99cacb03c0f64ad64e0caaeb31298819cc7db63491fc9b876dd7f88ef81d", size = 54611, upload-time = "2025-11-11T08:46:33.799Z" },
+    { url = "https://files.pythonhosted.org/packages/88/96/50a2c640e5c3a161a09235a262234792d01317fab466af64ad05180389db/fuzzysearch-0.8.1-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:066c3dafa48b3967f7d4a343c0a7ea081af9edafb99f2915a80d33a9b0a4bfc9", size = 56286, upload-time = "2025-11-11T08:46:35.057Z" },
+    { url = "https://files.pythonhosted.org/packages/4a/59/645c1c3101875d9f07d7e28b6dc5ee2bb1d4c40ae42dbea22cb858f50042/fuzzysearch-0.8.1-cp311-cp311-musllinux_1_2_i686.whl", hash = "sha256:5eda34e841745c99873e02b2b425d806dbfc075d823f813d8cd68ff12e375095", size = 55523, upload-time = "2025-11-11T08:46:36.163Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/9f/55433fcbcfa681a0253b7bca17b1147ff771512b2f00f986c34b5beb014e/fuzzysearch-0.8.1-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:75d4669836d986135942268209e2b7686ed31dca552a7cf56c98e3802dbc5d9c", size = 55667, upload-time = "2025-11-11T08:46:37.852Z" },
+    { url = "https://files.pythonhosted.org/packages/48/4a/064436a220277190fc2887ef5f050009d941adda9fb7232b9780e0c8d73e/fuzzysearch-0.8.1-cp311-cp311-win32.whl", hash = "sha256:80967eafa2cf44168fcd798a4bf62e6d8fd195cfb57ae62dff037cce2262b497", size = 35189, upload-time = "2025-11-11T08:46:39.382Z" },
+    { url = "https://files.pythonhosted.org/packages/46/39/b5534c7b81b24d207343684f1403b16aa8f59d22e2931310a398bce650a3/fuzzysearch-0.8.1-cp311-cp311-win_amd64.whl", hash = "sha256:b3aaa93889e309efa06754570fda8e98b5a7fd63cef8b67701deac7ef201acbf", size = 36798, upload-time = "2025-11-11T08:46:40.747Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/5f/0b0b2a56d59472becda3b7788e532e25d6a74451679d7d99b411a24553e7/fuzzysearch-0.8.1-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:d3caa5c635ac87c67f58b8a50792073014989e0689263c494e81f5d2ced24101", size = 31830, upload-time = "2025-11-11T08:46:42.163Z" },
+    { url = "https://files.pythonhosted.org/packages/2b/ce/f75349a22df809ea7a4433ff9e24edfbc3cfa160600f159b50e0e4e272a4/fuzzysearch-0.8.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:a8187ebcfea9f76387b57a618480ff536ff2a5da67d5dd31af4c252bf8842d45", size = 32507, upload-time = "2025-11-11T08:46:43.315Z" },
+    { url = "https://files.pythonhosted.org/packages/36/3c/d193b6b80d88d7e3b2c3a45fd582dedcb3b47c3bf2ffb2b85083e3b3ba8a/fuzzysearch-0.8.1-cp312-cp312-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:5d19cf0ebfefe54737a0477defc218123a0addb9d52f43711286aab94603e288", size = 55361, upload-time = "2025-11-11T08:46:44.714Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/36/71a9bd65e361083ed3cbab135cd3a82ae2b089cbca6608af6106acc9017c/fuzzysearch-0.8.1-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:85e5a4f8099517b2bfa384668160fd06b020106e86c6077d21e93a6b4fb348eb", size = 57213, upload-time = "2025-11-11T08:46:45.826Z" },
+    { url = "https://files.pythonhosted.org/packages/0f/7d/23f8d9d137187f5dfececd14f16f79e8257eb0fd2e85397306474f987710/fuzzysearch-0.8.1-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:ea17a28427fb750bbec47f2169f223f81a8388e81535f90d0590efd94489f803", size = 56287, upload-time = "2025-11-11T08:46:46.924Z" },
+    { url = "https://files.pythonhosted.org/packages/ac/a6/c73e8ebc7e6e4ee7f8d2c509c232781dfc79451ebda2254915e0cef17566/fuzzysearch-0.8.1-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:f4f11634b0d22dbd36513dae77b2f794d63b0275879da050b379f91bab398225", size = 56718, upload-time = "2025-11-11T08:46:47.921Z" },
+    { url = "https://files.pythonhosted.org/packages/9b/3f/29d666a60f711a77354a5b23082fe210b4d0277e5d6e9e5146cf56162315/fuzzysearch-0.8.1-cp312-cp312-win32.whl", hash = "sha256:040693ed5c6c3b15807a240b7acf535cacd12771ca5094cec1df62c960010642", size = 35104, upload-time = "2025-11-11T08:46:49.378Z" },
+    { url = "https://files.pythonhosted.org/packages/58/10/f2cef42d66311554723cfc1f7295ba1a83b3dd763845219bba3120bb3c08/fuzzysearch-0.8.1-cp312-cp312-win_amd64.whl", hash = "sha256:46bb36a6c5a966d951125136379a8674377ceea9f755fd542536065a6d47d23e", size = 36766, upload-time = "2025-11-11T08:46:50.362Z" },
+]
+
+[[package]]
 name = "gitdb"
 version = "4.0.12"
 source = { registry = "https://pypi.org/simple" }
@@ -3386,6 +3421,14 @@ mmsearch = [
     { name = "requests" },
     { name = "rouge" },
 ]
+olmocr-bench = [
+    { name = "beautifulsoup4" },
+    { name = "fuzzysearch" },
+    { name = "lxml" },
+    { name = "playwright" },
+    { name = "rapidfuzz", version = "3.14.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "rapidfuzz", version = "3.14.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
 prismmbench = [
     { name = "pdf2image" },
     { name = "pdfplumber" },
@@ -3431,6 +3474,7 @@ requires-dist = [
     { name = "apted", specifier = ">=1.0.3" },
     { name = "av", specifier = ">=17.1.0,<18.0.0" },
     { name = "beautifulsoup4", marker = "extra == 'mmsearch'" },
+    { name = "beautifulsoup4", marker = "extra == 'olmocr-bench'" },
     { name = "capture-metric", marker = "extra == 'metrics'" },
     { name = "chess", specifier = ">=1.11.2,<2" },
     { name = "datasets", specifier = ">=2.19.0" },
@@ -3446,6 +3490,7 @@ requires-dist = [
     { name = "fastapi", marker = "extra == 'tui'", specifier = ">=0.100.0" },
     { name = "flagembedding", marker = "extra == 'mmsearch'" },
     { name = "ftfy" },
+    { name = "fuzzysearch", marker = "extra == 'olmocr-bench'" },
     { name = "google-genai", marker = "extra == 'gemini'", specifier = ">=1.0.0" },
     { name = "hf-transfer" },
     { name = "httpx", specifier = ">=0.23.3" },
@@ -3472,6 +3517,7 @@ requires-dist = [
     { name = "lmms-eval", extras = ["tui"], marker = "extra == 'all'" },
     { name = "lmms-eval", extras = ["video"], marker = "extra == 'all'" },
     { name = "loguru" },
+    { name = "lxml", marker = "extra == 'olmocr-bench'" },
     { name = "math-verify", specifier = ">=0.9.0,<0.10.0" },
     { name = "matplotlib", marker = "extra == 'mmsearch'" },
     { name = "mcp", extras = ["cli"], marker = "extra == 'mcp'", specifier = ">=1.20.0" },
@@ -3489,6 +3535,7 @@ requires-dist = [
     { name = "peft", specifier = ">=0.2.0" },
     { name = "pillow" },
     { name = "playwright", marker = "extra == 'mmsearch'" },
+    { name = "playwright", marker = "extra == 'olmocr-bench'" },
     { name = "portalocker", specifier = ">=2.8" },
     { name = "pre-commit", specifier = ">=4.6.2,<5" },
     { name = "protobuf" },
@@ -3501,6 +3548,7 @@ requires-dist = [
     { name = "pyyaml" },
     { name = "qwen-vl-utils", specifier = ">=0.0.14" },
     { name = "qwen-vl-utils", marker = "extra == 'qwen'" },
+    { name = "rapidfuzz", marker = "extra == 'olmocr-bench'" },
     { name = "reka-api", marker = "extra == 'reka'" },
     { name = "requests", marker = "extra == 'mmsearch'" },
     { name = "rfc8785", specifier = "==0.1.4" },
@@ -3533,7 +3581,7 @@ requires-dist = [
     { name = "zss" },
     { name = "zstandard" },
 ]
-provides-extras = ["core", "server", "mcp", "audio", "metrics", "gemini", "litellm", "swanlab", "reka", "qwen", "mmsearch", "prismmbench", "tui", "video", "video-legacy", "all"]
+provides-extras = ["core", "server", "mcp", "audio", "metrics", "gemini", "litellm", "swanlab", "reka", "qwen", "mmsearch", "prismmbench", "olmocr-bench", "tui", "video", "video-legacy", "all"]
 
 [package.metadata.requires-dev]
 dev = [
