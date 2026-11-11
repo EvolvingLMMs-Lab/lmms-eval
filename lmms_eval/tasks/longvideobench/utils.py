@@ -13,6 +13,7 @@ from PIL import Image
 from lmms_eval import utils as lmms_utils
 from lmms_eval.models.model_utils.load_video import import_decord
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 
 
 def timestamp_to_seconds(timestamp):
@@ -24,7 +25,6 @@ def timestamp_to_seconds(timestamp):
 
 
 def load_video(video_file, duration, max_num_frames=16):
-
     decord = import_decord()
 
     vr = decord.VideoReader(video_file, ctx=decord.cpu(0), num_threads=1)
@@ -192,6 +192,10 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     Fixed to avoid 'D. A book' be parsed as A.
     Same as original LongVideoBench paper (from author Haoning Wu), if parsing failed, it will assign a random choice to model.
     """
+    final_answer = extract_final_mcq_answer(response, all_choices)
+    if final_answer:
+        return final_answer
+
     s = response.strip()
     answer_prefixes = [
         "The best answer is",

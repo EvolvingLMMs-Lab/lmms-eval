@@ -6,6 +6,8 @@ from pathlib import Path
 import cv2
 import yaml
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 # with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 #     raw_data = f.readlines()
 #     safe_data = []
@@ -118,6 +120,10 @@ def egoplan_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def extract_characters_regex(s):
+    final_answer = extract_final_mcq_answer(s, list("ABCD"))
+    if final_answer:
+        return final_answer
+
     s = s.strip()
     answer_prefixes = [
         "The best answer is",

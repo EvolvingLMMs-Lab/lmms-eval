@@ -14,6 +14,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 DEFAULT_PRE_PROMPT = ""
 DEFAULT_POST_PROMPT = "The best answer is:"
 
@@ -130,6 +132,10 @@ def parse_multi_choice_response(response: str, all_choices: List[str], index2ans
     Returns:
         Parsed answer letter (uppercased).
     """
+    final_answer = extract_final_mcq_answer(response, all_choices)
+    if final_answer:
+        return final_answer
+
     response = response or ""
 
     # Strip common punctuation from ends

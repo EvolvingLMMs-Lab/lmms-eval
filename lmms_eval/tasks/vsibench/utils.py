@@ -10,6 +10,7 @@ import yaml
 from loguru import logger as eval_logger
 
 from lmms_eval.models.model_utils.load_video import import_decord
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 
 _NUMBER_WORDS = {
     "zero": 0,
@@ -168,6 +169,10 @@ def process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
 
 
 def fuzzy_matching(pred):
+    final_answer = extract_final_mcq_answer(pred, list("ABCD"))
+    if final_answer:
+        return final_answer
+
     return pred.split(" ")[0].rstrip(".").strip()
 
 

@@ -12,6 +12,7 @@ from loguru import logger as eval_logger
 from PIL import Image
 
 from lmms_eval.models.model_utils.load_video import import_decord
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 
 UpperLetters = list(string.ascii_uppercase)
 Categories = {
@@ -60,6 +61,10 @@ def parse_multi_choice_response(response, all_choices):
     # # Clean response of unwanted characters
     # for char in [",", ".", "!", "?", ";", ":", "'"]:
     #     response = response.strip(char)
+    final_answer = extract_final_mcq_answer(response, all_choices)
+    if final_answer:
+        return final_answer
+
     response = " " + response + " "  # Add space to avoid partial match
 
     candidates = []

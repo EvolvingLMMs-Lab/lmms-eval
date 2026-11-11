@@ -4,6 +4,7 @@ from pathlib import Path
 
 import yaml
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 from lmms_eval.tasks._task_utils.reasoning_utils import compute_score
 
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
@@ -65,6 +66,10 @@ def longvt_tool_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
 
 
 def extract_characters_regex(s):
+    final_answer = extract_final_mcq_answer(s, list("ABCD"))
+    if final_answer:
+        return final_answer
+
     s = s.strip()
     answer_prefixes = [
         "The best answer is",

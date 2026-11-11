@@ -10,6 +10,8 @@ import numpy as np
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 VIDEO_LENGTH = ["short", "medium", "long"]
 CATEGORIES = ["Geometry Angle", "Geometry Area", "Geometry Length", "Chart", "Statistics", "Arithmetic", "Topology", "Graph Theory", "Counting", "Puzzle"]
 
@@ -198,6 +200,10 @@ def videomathqa_doc_to_text_subtitle(doc, lmms_eval_specific_kwargs=None):
 
 
 def extract_characters_regex(s):
+    final_answer = extract_final_mcq_answer(s, list("ABCDE"))
+    if final_answer:
+        return final_answer
+
     s = s.strip()
     answer_prefixes = [
         "The best answer is",

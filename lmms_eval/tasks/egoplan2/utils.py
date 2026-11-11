@@ -2,6 +2,8 @@ import re
 
 import datasets
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 egoplan2_features = datasets.Features(
     {
         "sample_id": datasets.Value("string"),
@@ -30,6 +32,10 @@ def egoplan2_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def extract_characters_regex(s):
+    final_answer = extract_final_mcq_answer(s, list("ABCD"))
+    if final_answer:
+        return final_answer
+
     s = s.strip()
     answer_prefixes = [
         "The best answer is",

@@ -9,6 +9,8 @@ import pandas as pd
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 MCA_QUESTION_TYPES = [
     "obj_spatial_relation_oo",
     "obj_spatial_relation_oc_mv",
@@ -148,7 +150,6 @@ def parse_instruction(instruction):
 
 
 def compute_vci_metric(pred, answer):
-
     _acion_list = ["move_right", "move_left", "move_forward", "move_backward", "move_up", "move_down", "rotate_right", "rotate_left", "rotate_up", "rotate_down"]
     action_order = ["move_right_left", "move_up_down", "move_forward_backward", "rotate_right_left", "rotate_up_down"]
 
@@ -228,22 +229,15 @@ def compute_cmi_metric(pred, answer):
 
 
 def exact_match(pred, target):
-    # return 1. if pred.lower() == target.lower() else 0.
-    pred = pred.lower()
-    target = target.lower()
-    eval_logger.debug(f"[exact_match] pred: '{pred}', target: '{target}'")
-    if pred.lower() == target.lower():
-        eval_logger.debug("[exact_match] Matched via exact match")
-        return 1.0
-    elif pred in target:
-        eval_logger.debug("[exact_match] Matched via 'pred in target'")
-        return 1.0
-    elif pred[0] == target:
-        eval_logger.warning(f"[exact_match] SUSPICIOUS: Matched via pred[0]==target. pred[0]='{pred[0]}', target='{target}'. This compares first char to entire string!")
-        return 1.0
-    else:
-        eval_logger.debug("[exact_match] No match")
-        return 0
+    final_answer = extract_final_mcq_answer(pred)
+    pred = pred.strip().lower()
+    target = target.strip().lower()
+    if final_answer:
+        return 1.0 if final_answer.lower() == target else 0
+    # The option letter that opens the response ("b, the left one"); not the first
+    # letter of a word, and not an empty response, which is a substring of every target.
+    opening = re.match(r"\(?([a-z])(?!\w)", pred)
+    return 1.0 if pred == target or (opening and opening.group(1) == target) else 0
 
 
 def abs_dist_norm(pred, target):
@@ -275,7 +269,6 @@ def to_float(pred):
 
 
 def sparbench_process_results(doc, results):
-
     doc["prediction"] = results[0]
     if doc["task"] in MCA_QUESTION_TYPES:
         for key, value in METRICS_FOR_MCA.items():

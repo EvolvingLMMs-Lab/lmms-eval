@@ -1,3 +1,6 @@
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
+
 def sqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     context, question, choices = doc["hint"], doc["question"], doc["choices"]
     len_choices = len(choices)
@@ -37,6 +40,10 @@ def sqa_process_results(doc, results):
     pred = results[0].strip()
     if pred.lower() == target:
         return {"exact_match": 1.0}
+    options = [chr(ord("A") + i) for i in range(len(doc["choices"]))]
+    final_answer = extract_final_mcq_answer(pred, options)
+    if final_answer:
+        return {"exact_match": 1.0 if final_answer.lower() == target else 0.0}
     # pattern: ^[A-Z]\. .*
     if len(pred) >= 2 and pred[0].isupper() and pred[1] == ".":
         result = 1.0 if pred[0].lower() == target else 0.0

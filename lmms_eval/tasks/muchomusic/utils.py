@@ -2,6 +2,8 @@ import random
 
 import numpy as np
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 
 def muchomusic_doc_to_audio(doc):
     return [doc["context"]]
@@ -39,6 +41,10 @@ def parse_multi_choice_response(response, all_choices):
     Return the predicted choice letter e.g., A, B, C, D.
     """
     # Clean response of unwanted characters
+    final_answer = extract_final_mcq_answer(response, all_choices)
+    if final_answer:
+        return final_answer
+
     for char in [",", ".", "!", "?", ";", ":", "'"]:
         response = response.strip(char)
     response = " " + response + " "  # Add space to avoid partial match

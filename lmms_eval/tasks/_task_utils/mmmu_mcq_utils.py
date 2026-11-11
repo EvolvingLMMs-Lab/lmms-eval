@@ -3,6 +3,8 @@ import re
 
 import numpy as np
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 
 def get_multi_choice_info(options, start_chr="A"):
     all_choices = []
@@ -15,6 +17,10 @@ def get_multi_choice_info(options, start_chr="A"):
 
 
 def parse_mmmu_multi_choice_response(response, all_choices, index2ans):
+    final_answer = extract_final_mcq_answer(response, all_choices)
+    if final_answer:
+        return final_answer
+
     for char in [",", ".", "!", "?", ";", ":", "'"]:
         response = response.strip(char)
     response = " " + response + " "
@@ -86,6 +92,10 @@ def parse_mmmu_pro_multi_choice_response(response, all_choices, index2ans):
 
 
 def parse_jmmmu_multi_choice_response(response, all_choices, index2ans):
+    final_answer = extract_final_mcq_answer(response, all_choices)
+    if final_answer:
+        return final_answer
+
     for char in [",", ".", "!", "?", ";", ":", "'", "、", "。", "！", "？", "；", "："]:
         response = response.strip(char)
     response = " " + response + " "
@@ -144,6 +154,10 @@ def parse_jmmmu_multi_choice_response(response, all_choices, index2ans):
 
 
 def parse_videommmu_multi_choice_response(response, all_choices, index2ans):
+    final_answer = extract_final_mcq_answer(response, all_choices)
+    if final_answer:
+        return final_answer
+
     if response == "API Error" or response == "":
         return "API Error"
 

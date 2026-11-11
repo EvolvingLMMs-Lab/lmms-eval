@@ -23,6 +23,8 @@ import numpy as np
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 DATASET_REPO_ID = "hrinnnn/PerceptionComp"
 
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
@@ -155,6 +157,10 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     Return the predicted index e.g., A, B, C, D.
     https://github.com/MMMU-Benchmark/MMMU/blob/51ce7f3e829c16bb44bc5445782686b4c3508794/eval/eval_utils.py#L10
     """
+    final_answer = extract_final_mcq_answer(response, all_choices)
+    if final_answer:
+        return final_answer
+
     for char in [",", ".", "!", "?", ";", ":", "'"]:
         response = response.strip(char)
     response = " " + response + " "  # add space to avoid partial match

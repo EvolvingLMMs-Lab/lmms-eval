@@ -12,6 +12,8 @@ from typing import Any
 from loguru import logger as eval_logger
 from PIL import Image
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 
 def doc_to_visual(doc: dict) -> list[Image.Image]:
     """Extract visual input from document."""
@@ -43,6 +45,10 @@ def doc_to_text(doc: dict, lmms_eval_specific_kwargs: dict | None = None) -> str
 
 def extract_answer(response: str) -> str:
     """Extract answer letter (A/B/C/D) from model response."""
+    final_answer = extract_final_mcq_answer(response, list("ABCD"))
+    if final_answer:
+        return final_answer
+
     response = response.strip()
 
     answer_prefixes = [

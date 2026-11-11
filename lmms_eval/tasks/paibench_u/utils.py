@@ -5,6 +5,8 @@ from pathlib import Path
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface")
 base_cache_dir = os.path.expanduser(hf_home)
 
@@ -52,6 +54,10 @@ def parse_multi_choice_response(response):
     Same as original LongVideoBench paper (from author Haoning Wu), if parsing failed,
     it will assign a random choice to model.
     """
+    final_answer = extract_final_mcq_answer(response, list("ABCDE"))
+    if final_answer:
+        return final_answer
+
     import random
 
     s = response.strip()
