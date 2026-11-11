@@ -137,7 +137,7 @@ External packages should expose a `ModelManifest` through the `lmms_eval.models`
 | You need to do | Load this reference | Why |
 |----------------|---------------------|-----|
 | Add a new model backend | [references/models.md](references/models.md) | Model class template, registration, `message_format`, validation |
-| Add a new benchmark/task | [references/tasks.md](references/tasks.md) | YAML schema, `reasoning_tags`, `utils.py` contracts, aggregation patterns |
+| Add a new benchmark/task | [references/tasks.md](references/tasks.md) | YAML schema, `reasoning_tags`, `utils.py` contracts, shared answer extraction, aggregation patterns |
 | Start/operate HTTP eval service | [references/api-server.md](references/api-server.md) | Server args, endpoints, client contracts |
 | Insert eval into training jobs (non-blocking) | [references/api-server.md](references/api-server.md) | Training-loop integration patterns using async job submission |
 | Diagnose queue/job states | [references/api-server.md](references/api-server.md) | Job lifecycle, polling, cancellation, queue inspection |
