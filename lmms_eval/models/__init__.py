@@ -152,6 +152,7 @@ _BUILTIN_CHAT_TEMPLATE_MODELS = {
     "omnivinci": "OmniVinci",
     "baichuan_omni": "BaichuanOmni",
     "minicpm_o": "MiniCPM_O",
+    "minicpm_ocr": "MiniCPMOcr",
     "thyme": "Thyme",
     "openai": "OpenAICompatible",
     "vllm": "VLLM",
