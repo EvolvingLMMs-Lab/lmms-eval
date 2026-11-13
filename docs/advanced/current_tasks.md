@@ -494,6 +494,7 @@ python -m lmms_eval --tasks list_with_num
   - DOCVQA Test (docvqa_test)
 - [DocVQA 2026](https://github.com/VLR-CVC/DocVQA2026) (docvqa_2026)
 - [DUDE](https://arxiv.org/abs/2305.08455) (dude)
+- [FERMAT-PINK](https://github.com/9115jin/PINK) (fermat_pink) - Over-correction-aware OCR of handwritten multi-line math solutions
 - [MMLongBench-Doc](https://mayubo2333.github.io/MMLongBench-Doc/) (mmlongbench_doc)
 - [GEdit-Bench](https://github.com/GEdit-Bench/GEdit-Bench) (gedit_bench)
 - [Infographic VQA](https://www.docvqa.org/datasets/infographicvqa) (infovqa)
