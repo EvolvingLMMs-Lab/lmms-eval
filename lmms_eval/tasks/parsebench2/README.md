@@ -71,13 +71,23 @@ then follows the official IR. These are predictions, never inferred from labels.
 This response contract/prompt/rendering is an lmms-eval adaptation, not a claim to
 reproduce a published provider's prompt or leaderboard entry.
 
-Plain Markdown scores applicable transcription dimensions. If any evaluated
-layout document lacks an explicit `layout_pages` channel, layout and overall are
-reported as `NaN` (unavailable). An explicit empty `layout_pages: []` declares a
-supported channel with no predictions and receives the official zero layout
-score. `parsebench2_layout_coverage` reports the fraction of evaluated layout
-documents declaring the channel. Do not describe Markdown-only results as
-complete six-dimension PB2 scores.
+Plain Markdown scores applicable transcription dimensions. Layout capability is
+detected across the run: any valid response on any subset with an explicit
+`layout_pages` channel declares support, including an empty `layout_pages: []`.
+Once declared, individual missing, malformed or Markdown-only layout predictions
+remain in the denominator with their official zero scores. They do not disable
+the layout dimension. For example, one perfect layout prediction plus one
+missing prediction scores 0.5; one explicitly empty layout prediction plus one
+missing prediction scores 0.
+
+With no valid response declaring the channel, layout and overall are reported
+as `NaN` (unavailable). This includes entirely unsupported Markdown-only runs
+and entirely failed runs whose layout capability cannot be established. Missing
+subsets still make affected dimensions unavailable under official aggregation.
+`parsebench2_layout_coverage` measures the fraction of evaluated layout documents
+that actually supplied a valid channel; it remains below 1 for partial failures,
+even when run-level capability is established. Do not describe Markdown-only
+results as complete six-dimension PB2 scores.
 
 A full official `InferenceResult` JSON record is also accepted for replay. Request
 and normalized-output IDs and pipeline names must agree; wrong-document records
@@ -134,3 +144,31 @@ These checks establish only the tested sample's scoring/transport parity and
 local harness behavior. They do not establish full-run parity on 4,317 documents,
 fresh-model inference success, or leaderboard equivalence. Keep an integration
 PR in draft until the repository's real-model E2E requirement is satisfied.
+
+## Fresh CPU smoke validation
+
+A real `llava_hf` chat-backend run was validated on one public `test` document
+(`text/text_dense__baoutou`), using
+`llava-hf/llava-onevision-qwen2-0.5b-ov-hf` at revision
+`74dd0bf867a4cda7950c17663794267c60cf4b40`, CPU float32/eager attention, and a
+128-token generation budget. It rendered a 1584x1224 RGB page, generated a
+non-empty response, and emitted metrics and sample logs. The response was
+truncated, did not follow the requested JSON schema, and scored text 0; other
+required subsets were absent, so overall remained unavailable. This validates
+the inference path, not structured-output quality or full-run equivalence.
+
+```bash
+PB2_MODEL_PATH="$(uv run --extra parsebench2 python -c 'from huggingface_hub import snapshot_download; print(snapshot_download("llava-hf/llava-onevision-qwen2-0.5b-ov-hf", revision="74dd0bf867a4cda7950c17663794267c60cf4b40"))')"
+OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 uv run --extra parsebench2 python -m lmms_eval \
+  --model llava_hf \
+  --model_args "pretrained=${PB2_MODEL_PATH},dtype=float32,device_map=cpu,attn_implementation=eager" \
+  --tasks parsebench2 --limit 1 --batch_size 1 --device cpu \
+  --gen_kwargs max_new_tokens=128 --log_samples --verbosity DEBUG \
+  --output_path ./logs/pb2-cpu-smoke --fail_on_error
+```
+
+The regular contract suite is offline. Add `LMMS_PARSEBENCH2_INTEGRATION=1` to its
+pytest invocation to run two additional regressions using the first two pinned
+public layout documents: explicit supported empty layout plus missing/malformed
+output must score 0 over two documents, while no declaration remains unavailable.
+Neither the smoke prediction nor downloaded public media are checked into git.

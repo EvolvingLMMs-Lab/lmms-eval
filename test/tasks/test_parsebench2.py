@@ -120,7 +120,8 @@ def test_full_record_roundtrip_and_identity(scorer: None, document: dict) -> Non
         utils.decode_response(document, json.dumps(record))
 
 
-def test_layout_normalization_and_missing_dimension(scorer: None, document: dict, tmp_path: Path) -> None:
+@pytest.fixture
+def layout_document(document: dict, tmp_path: Path) -> tuple[dict, dict]:
     # Actual official adapter + layout scorer, fractional xywh in the prompt's IR.
     root = tmp_path / "layout"
     root.mkdir()
@@ -130,6 +131,11 @@ def test_layout_normalization_and_missing_dimension(scorer: None, document: dict
     (root / "example.test.json").write_text(json.dumps({"test_rules": [rule]}))
     doc = {"example_id": "layout/example", "subset": "layout", "document": "layout/example.pdf"}
     prediction = {"markdown": "Hello", "layout_pages": [{"page_number": 1, "width": 1, "height": 1, "items": [{"type": "text", "md": "Hello", "bbox": {"x": 0.1, "y": 0.1, "w": 0.5, "h": 0.2}}]}]}
+    return doc, prediction
+
+
+def test_layout_normalization_and_missing_dimension(scorer: None, layout_document: tuple[dict, dict]) -> None:
+    doc, prediction = layout_document
     item = utils.process_results(doc, [json.dumps(prediction)])["parsebench2_layout"]
     assert utils.aggregate_layout([item]) == pytest.approx(1)
     empty = utils.process_results(doc, ['{"markdown":"","layout_pages":[]}'])["parsebench2_layout"]
@@ -137,7 +143,25 @@ def test_layout_normalization_and_missing_dimension(scorer: None, document: dict
     plain = utils.process_results(doc, ["Hello"])["parsebench2_layout"]
     assert math.isnan(utils.aggregate_layout([plain]))
     assert math.isnan(utils.aggregate_overall([item]))  # absent other subsets
-    assert math.isnan(utils.aggregate_layout([item, {**plain, "evaluation": {**plain["evaluation"], "example_id": "layout/other"}}]))
+    assert utils.aggregate_layout([item, {**plain, "evaluation": {**plain["evaluation"], "example_id": "layout/other"}}]) == pytest.approx(0.5)
+
+
+@pytest.mark.parametrize("response", [None, "", "{broken", '{"markdown":null}', '{"markdown":"x","layout_pages":"bad"}', "Hello"])
+def test_mixed_layout_failures_remain_in_denominator(scorer: None, layout_document: tuple[dict, dict], document: dict, response: str | None) -> None:
+    doc, prediction = layout_document
+    good = utils.process_results(doc, [json.dumps(prediction)])["parsebench2_layout"]
+    empty = utils.process_results(doc, ['{"markdown":"","layout_pages":[]}'])["parsebench2_layout"]
+    failed = utils.process_results(doc, [response])["parsebench2_layout"]
+    failed["evaluation"]["example_id"] = "layout/failed"
+    failed["evaluation"]["test_id"] = "layout/failed"
+    assert utils.aggregate_layout([good, failed]) == pytest.approx(0.5)
+    assert utils.aggregate_layout([empty, failed]) == 0
+    assert math.isnan(utils.aggregate_layout([failed]))  # no capability declaration
+    # A valid structured response elsewhere in this run also declares capability.
+    structured_text = utils.process_results(document, ['{"markdown":"x","layout_pages":[]}'])["parsebench2_layout"]
+    assert utils.aggregate_layout([structured_text, failed]) == 0
+    plain = utils.process_results(doc, ["Hello"])["parsebench2_layout"]
+    assert math.isnan(utils.aggregate_layout([plain, failed]))
 
 
 def test_duplicate_and_repeat_rejection(scorer: None, document: dict) -> None:
@@ -185,3 +209,20 @@ def test_hub_symlink_identity(scorer: None, document: dict, tmp_path: Path, monk
 def test_native_coordinates_are_explicit(scorer: None, document: dict, payload: dict) -> None:
     _, supported, status = utils.decode_response(document, json.dumps(payload))
     assert not supported and status == "invalid"
+
+
+@pytest.mark.parametrize("failure", [None, "{broken"])
+def test_public_mixed_layout_regression(scorer: None, failure: str | None) -> None:
+    """Opt-in real public media/reference regression, without model inference."""
+    import os
+
+    if os.environ.get("LMMS_PARSEBENCH2_INTEGRATION") != "1":
+        pytest.skip("set LMMS_PARSEBENCH2_INTEGRATION=1 to use pinned public layout data")
+    docs = [doc for doc in utils.load_inputs() if doc["subset"] == "layout"][:2]
+    good = utils.process_results(docs[0], ['{"markdown":"","layout_pages":[]}'])["parsebench2_layout"]
+    failed = utils.process_results(docs[1], [failure])["parsebench2_layout"]
+    assert good["evaluation"]["example_id"] != failed["evaluation"]["example_id"]
+    assert next(m["value"] for m in failed["evaluation"]["metrics"] if m["metric_name"] == "layout_grounding_pass_rate") == 0
+    assert utils.aggregate_layout([good, failed]) == 0
+    assert utils.combined_report([good, failed])["dimensions"]["layout"]["slots"][0]["documents"] == 2
+    assert math.isnan(utils.aggregate_layout([failed]))

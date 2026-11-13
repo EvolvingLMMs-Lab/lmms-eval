@@ -101,12 +101,15 @@ def doc_to_text(doc: dict[str, Any], lmms_eval_specific_kwargs: dict | None = No
 
 def doc_to_visual(doc: dict[str, Any]) -> list[Any]:
     """Render every PDF page at 144 DPI or decode an original RGB image."""
+    from loguru import logger
     from PIL import Image
 
     path = fetch(doc["document"])
     if Path(path).suffix.lower() != ".pdf":
         with Image.open(path) as image:
-            return [image.convert("RGB")]
+            images = [image.convert("RGB")]
+        logger.debug("ParseBench-2 media {}: decoded RGB image {}", doc["example_id"], images[0].size)
+        return images
     if version("pypdfium2") != RENDERER_VERSION:
         raise RuntimeError(f"ParseBench-2 rendering requires pypdfium2=={RENDERER_VERSION}.")
     import pypdfium2 as pdfium
@@ -127,6 +130,7 @@ def doc_to_visual(doc: dict[str, Any]) -> list[Any]:
         pdf.close()
     if not images:
         raise ValueError(f"Empty PDF: {doc['example_id']}")
+    logger.debug("ParseBench-2 media {}: rendered {} RGB PDF page(s), sizes={}, PDFium {}, scale=2", doc["example_id"], len(images), [image.size for image in images], RENDERER_VERSION)
     return images
 
 
@@ -268,9 +272,12 @@ def combined_report(items: list[dict[str, Any]]) -> dict[str, Any]:
         grouped.setdefault(item["subset"], []).append(result)
     runner = EvaluationRunner(output_dir=Path("."), next_only=True)
     subset_metrics = {subset: runner.aggregate_metrics(rows) for subset, rows in grouped.items()}
-    # An absent layout channel is unsupported, not a complete six-dimension
-    # evaluation. Explicit layout_pages=[] is supported and scores official 0.
-    if any(item["subset"] == "layout" and not item["layout_supported"] for item in items):
+    # Capability is declared for the run by any valid response carrying the
+    # explicit layout channel (including an empty list), on any subset. Once
+    # declared, missing/invalid/Markdown-only individual pages keep their
+    # official zero predictions in the layout denominator. With no declaration,
+    # a Markdown-only run must not look like a complete six-dimension evaluation.
+    if not any(item["layout_supported"] for item in items):
         subset_metrics.pop("layout", None)
     return combine_next_score(subset_metrics, {subset: len(rows) for subset, rows in grouped.items()})
 
