@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 
 from PIL import Image
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
 
 # Map 0-indexed int to letter
@@ -183,6 +184,10 @@ def wm_abench_doc_to_text(doc: dict, lmms_eval_specific_kwargs: Optional[dict] =
 
 def _extract_answer_letter(text: str) -> str:
     """Extract a single answer letter (A-D) from model response."""
+    final_answer = extract_final_mcq_answer(text, list("ABCDEF"))
+    if final_answer:
+        return final_answer
+
     text = text.strip()
     if not text:
         return ""

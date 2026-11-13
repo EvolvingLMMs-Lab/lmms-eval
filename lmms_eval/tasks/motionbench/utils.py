@@ -9,6 +9,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import datasets
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 QUESTION_TYPES = [
     "Action Order",
     "Motion-related Objects",
@@ -348,6 +350,10 @@ def motionbench_doc_to_messages(doc: Dict[str, Any], lmms_eval_specific_kwargs: 
 
 
 def _extract_choice_letter(text: str) -> str:
+    final_answer = extract_final_mcq_answer(text, list("ABCDEF"))
+    if final_answer:
+        return final_answer
+
     if not isinstance(text, str):
         return ""
 
