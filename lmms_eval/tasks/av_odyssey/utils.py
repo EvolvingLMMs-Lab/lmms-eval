@@ -145,7 +145,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     ans_with_brack = False
     candidates = []
     for choice in all_choices:  # e.g., (A) (B) (C) (D)
-        if f"{choice}" in response:
+        if f"({choice})" in response or f" {choice}." in response:
             candidates.append(choice)
             ans_with_brack = True
 
@@ -169,7 +169,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
         if index_ans:
             if ans_with_brack:
                 for can in candidates:
-                    index = response.rfind(f"({can})")
+                    index = max(response.rfind(f"({can})"), response.rfind(f" {can}."))
                     start_indexes.append(index)  # -1 will be ignored anyway
                 # start_indexes = [generated_response.index(f'({can})') for can in candidates]
             else:
