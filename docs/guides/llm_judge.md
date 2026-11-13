@@ -4,7 +4,7 @@
 
 | `API_TYPE` | Provider | Credentials |
 | --- | --- | --- |
-| `openai` (default) | OpenAI-compatible chat completions (lab default: OpenRouter) | `OPENAI_API_KEY`, optional `OPENAI_API_URL` or `OPENAI_API_BASE` |
+| `openai` (default) | OpenAI-compatible chat completions (default: official OpenAI) | `OPENAI_API_KEY`, optional `OPENAI_API_URL` or `OPENAI_API_BASE` |
 | `azure` | Azure OpenAI | `AZURE_API_KEY`, `AZURE_ENDPOINT`, `AZURE_API_VERSION` |
 | `minimax` / `async_minimax` | MiniMax chat completions | `MINIMAX_API_KEY`, optional `MINIMAX_MODEL`, `MINIMAX_API_URL` |
 | `jev` / `typesafe` | TypeSafe Jev | `TYPESAFE_API_KEY` |
@@ -14,6 +14,8 @@
 `async_*` names are the non-blocking clients. A missing key makes `is_available()` false and `evaluate` raises; it does not stop process startup.
 
 MiniMax: a task that asks for a non-MiniMax model (its GPT default) is sent to `MINIMAX_MODEL`, else `MiniMax-M3`, with a warning. `MiniMax-M3` runs with thinking disabled so short `max_tokens` budgets return text; `MiniMax-M3.1-Flash` always thinks, so give it a larger `max_tokens`.
+
+OpenAI-compatible models use an explicit `base_url` argument, then `OPENAI_API_BASE`. If neither is set, the OpenAI SDK handles `OPENAI_BASE_URL` and its official OpenAI default. Models do not read the judge's `OPENAI_API_URL`. For example, use `OPENAI_API_BASE=http://localhost:8000/v1` with `OPENAI_API_URL=https://api.openai.com/v1` to evaluate a local vLLM model with an OpenAI judge. To opt models into OpenRouter, set `OPENAI_API_BASE=https://openrouter.ai/api/v1` and supply an OpenRouter key and supported model id.
 
 ## TypeSafe Jev
 
@@ -40,7 +42,7 @@ Use the existing OpenAI judge (`API_TYPE=openai`), not `API_TYPE=jev`. `OpenAIPr
 | --- | --- |
 | `API_TYPE` | `openai` (or `async_openai` for the async client). |
 | `OPENAI_API_KEY` | Bearer token. Put the OpenRouter key here. The judge does not read `OPENROUTER_API_KEY`. |
-| `OPENAI_API_URL` or `OPENAI_API_BASE` | API root. Either name works. Do not append `/chat/completions`; the client adds that path. **Default is `https://openrouter.ai/api/v1`.** Set `https://api.openai.com/v1` to use official OpenAI. |
+| `OPENAI_API_URL` or `OPENAI_API_BASE` | Judge API root: `OPENAI_API_URL` takes precedence over the `OPENAI_API_BASE` alias. Defaults to `https://api.openai.com/v1`. Set `https://openrouter.ai/api/v1` to opt in to OpenRouter. A trailing `/chat/completions` is normalized. |
 | `MODEL_VERSION` | Chat model id. Set `typesafe/jev-router`. The provider does not read this variable. Tasks such as `k12` copy it into `ServerConfig.model_name`, and that string is sent as `model`. |
 
 ```bash
