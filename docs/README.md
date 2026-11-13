@@ -49,7 +49,9 @@ User input: --model openai --tasks mmmu_val,video_mmmu,longvideobench_val_v
 A minimal evaluation runs the entire pipeline with a single command. This example evaluates GPT-4.1-mini on MMMU via the OpenAI-compatible API:
 
 ```bash
-export OPENAI_API_KEY="your-api-key"
+export OPENAI_API_KEY="your-openai-key"
+# Optional OpenRouter model endpoint (use an OpenRouter key and model id):
+# export OPENAI_API_BASE="https://openrouter.ai/api/v1"
 
 python -m lmms_eval \
   --model openai \

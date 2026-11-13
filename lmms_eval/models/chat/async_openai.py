@@ -17,6 +17,7 @@ from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.llm_judge.openai_endpoint import resolve_openai_model_base
 from lmms_eval.models.model_utils.concurrency_control import (
     AdaptiveConcurrencyConfig,
     decide_next_concurrency,
@@ -95,7 +96,7 @@ class AsyncOpenAIChat(lmms):
         self.work_dir = work_dir if work_dir is not None else tempfile.mkdtemp()
         self.fps = fps
         self.nframes = nframes
-        self.base_url = base_url if base_url is not None else os.getenv("OPENAI_API_BASE")
+        self.base_url = base_url if base_url is not None else resolve_openai_model_base()
         self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
         self.client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url, timeout=timeout)
         self.max_pixels = max_pixels

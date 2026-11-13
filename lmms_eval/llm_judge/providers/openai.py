@@ -11,6 +11,7 @@ from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 from lmms_eval.models.model_utils.usage_metrics import log_usage
 
 from ..base import ServerInterface
+from ..openai_endpoint import resolve_openai_api_base
 from ..protocol import Request, Response, ServerConfig
 
 
@@ -36,7 +37,7 @@ class OpenAIProvider(ServerInterface):
     def __init__(self, config: Optional[ServerConfig] = None):
         super().__init__(config)
         self.api_key = os.getenv("OPENAI_API_KEY", "")
-        self.base_url = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1")
+        self.base_url = resolve_openai_api_base()
 
         # Initialize OpenAI client
         try:

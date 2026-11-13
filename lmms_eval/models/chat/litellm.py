@@ -11,6 +11,7 @@ import os
 from typing import Any, Optional
 
 from lmms_eval.api.registry import register_model
+from lmms_eval.llm_judge.openai_endpoint import resolve_openai_model_base
 from lmms_eval.models.chat.openai import OpenAICompatible as OpenAICompatibleChatBase
 from lmms_eval.models.simple.litellm import _PLACEHOLDER_API_KEY, _LiteLLMClientShim
 
@@ -30,7 +31,7 @@ class LiteLLMCompatible(OpenAICompatibleChatBase):
         **kwargs: Any,
     ) -> None:
         resolved_api_key = api_key or os.getenv("OPENAI_API_KEY")
-        resolved_base_url = base_url or os.getenv("OPENAI_API_BASE")
+        resolved_base_url = base_url or resolve_openai_model_base()
 
         super().__init__(
             model_version=model_version,

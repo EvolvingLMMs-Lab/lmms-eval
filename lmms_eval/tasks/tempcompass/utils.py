@@ -9,6 +9,7 @@ import requests
 import yaml
 
 from lmms_eval.api.chat_response import require_chat_message_text
+from lmms_eval.llm_judge.openai_endpoint import resolve_openai_chat_completions_url
 from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
 
@@ -26,7 +27,7 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 API_TYPE = os.getenv("API_TYPE", "openai")
 
 if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+    API_URL = resolve_openai_chat_completions_url()
     API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
     headers = {
         "Authorization": f"Bearer {API_KEY}",
