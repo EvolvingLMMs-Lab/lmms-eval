@@ -19,6 +19,7 @@ from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
+from lmms_eval.models.model_utils.processor_kwargs import audio_processor_kwargs
 from lmms_eval.protocol import ChatMessages
 
 try:
@@ -228,7 +229,7 @@ class Huggingface(lmms):
             images = self.flatten(images)
             videos = self.flatten(videos)
             audios = self.flatten(audios)
-            kwargs = {"images": images, "videos": videos, "audios": audios}
+            kwargs = {"images": images, "videos": videos, **audio_processor_kwargs(self.processor, audios)}
             # Decoder-only generation needs left padding when batching: with right
             # padding the prompt is followed by pad tokens and the model continues
             # from those. Tokenizers differ in their default, so set it explicitly.
