@@ -2828,6 +2828,84 @@
       "rationale": "Paired double underscore emphasis around a bare lowercase answer is formatting."
     },
     {
+      "id": "markdown_bold_answer_label",
+      "category": "markdown",
+      "response": "**Answer:** C",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "A bold answer label closes after the colon; its closing ** is not a wrapper around the letter."
+    },
+    {
+      "id": "markdown_bold_final_answer_label",
+      "category": "markdown",
+      "response": "The red cube is left of the sphere.\n\n**Final Answer:** C",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "A bold final-answer label after reasoning declares the letter that follows it."
+    },
+    {
+      "id": "markdown_bold_label_colon_outside",
+      "category": "markdown",
+      "response": "**Answer**: C",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "Emphasis may close before the colon of the answer label."
+    },
+    {
+      "id": "markdown_bold_label_parenthesized_choice",
+      "category": "markdown",
+      "response": "**Answer:** (C)",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "A parenthesized letter after a bold answer label is the selection."
+    },
+    {
+      "id": "markdown_italic_answer_label",
+      "category": "markdown",
+      "response": "*Answer:* C",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "C",
+      "rationale": "Single-asterisk emphasis around the answer label behaves like bold."
+    },
+    {
+      "id": "markdown_bold_label_alternative",
+      "category": "markdown",
+      "response": "**Answer:** C or D",
+      "choices": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "expected": "",
+      "rationale": "A bold label does not hide a second selection; the reply still abstains."
+    },
+    {
       "id": "boundary_unpaired_underscore",
       "category": "boundary",
       "response": "_B",
