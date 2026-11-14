@@ -29,6 +29,20 @@ except ImportError:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
 
+def resolve_auto_model_class(config):
+    """Return the Auto class that loads a generation-capable model for ``config``.
+
+    The auto-model mappings in transformers are keyed by config class, not by ``model_type`` string, and
+    ``trust_remote_code`` models declare their classes in ``config.auto_map`` instead.
+    """
+    auto_map = getattr(config, "auto_map", None) or {}
+    # Image-text-to-text first: some multimodal configs (e.g. mllama) also map to a text-only causal LM class
+    for auto_cls in (AutoModelForImageTextToText, AutoModelForCausalLM):
+        if type(config) in auto_cls._model_mapping or auto_cls.__name__ in auto_map:
+            return auto_cls
+    return AutoModel
+
+
 @register_model("huggingface")
 class Huggingface(lmms):
     is_simple = False
@@ -85,12 +99,7 @@ class Huggingface(lmms):
 
         self.trust_remote_code = trust_remote_code
         config = AutoConfig.from_pretrained(pretrained, trust_remote_code=trust_remote_code)
-        if config.model_type in AutoModelForCausalLM._model_mapping.keys():
-            model_cls = AutoModelForCausalLM
-        elif config.model_type in AutoModelForImageTextToText._model_mapping.keys():
-            model_cls = AutoModelForImageTextToText
-        else:
-            model_cls = AutoModel
+        model_cls = resolve_auto_model_class(config)
 
         self._model = model_cls.from_pretrained(pretrained, trust_remote_code=trust_remote_code, **model_kwargs).eval()
         self.max_num_frames = max_num_frames
