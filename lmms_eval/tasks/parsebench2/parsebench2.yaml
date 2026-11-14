@@ -43,7 +43,7 @@ metric_list:
     aggregation: !function lmms_eval.tasks.parsebench2.utils.aggregate_layout_coverage
     higher_is_better: true
 metadata:
-  version: 1.1
+  version: 1.2
   dataset_revision: a12c9785cd8cd015b5284e0ad0d74722091762f2
   scorer: parse-bench==2.0.1
   prompt: lmms_eval_parsebench2_v1

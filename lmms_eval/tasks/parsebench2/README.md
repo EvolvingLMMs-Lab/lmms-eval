@@ -2,8 +2,8 @@
 
 `--tasks parsebench2` evaluates document transcription and structured layout through
 lmms-eval's native `generate_until` interface, for simple and chat model adapters.
-It loads all 4,317 documents in the pinned public snapshot, interleaving these 13
-subsets: text, headings, strikeout, underline, tables, complex_table_headers,
+Its manifest contains 4,317 documents in the pinned public snapshot, interleaving
+these 13 subsets: text, headings, strikeout, underline, tables, complex_table_headers,
 financial_tables, insurance_filing_tables, dense_tables, charts, layout, forms,
 and fillable_forms. `--limit 13` selects one document per subset; it is a smoke
 sample, not a benchmark result.
@@ -11,6 +11,41 @@ sample, not a benchmark result.
 Sources: [dataset](https://huggingface.co/datasets/llamaindex/ParseBench-2),
 [published outputs](https://huggingface.co/datasets/llamaindex/ParseBench-2-results),
 [official scorer](https://github.com/run-llama/ParseBench/tree/v2.0.1).
+
+## Full pinned run is blocked
+
+With the current dataset revision and `parse-bench==2.0.1`, a complete native
+4,317-document evaluation cannot finish: two text members have no applicable
+extended metrics. Task version 1.2 raises an explicit reference/scorer-eligibility
+error instead of marking an empty metric list successful or silently omitting
+it from aggregation. The guard is generic; it has no ID-specific exclusions.
+
+| Example ID | Pinned reference/scorer limitation |
+|---|---|
+| `text/text_ocr__code` | No reference Markdown consumed by the extended scorer; seven v1 rules. The official CLI admits it through legacy eligibility, then records a failure because no extended metric applies. |
+| `text/text_sparse__anex` | No reference Markdown or rules. The official CLI skips it during legacy eligibility; calling the extended scorer directly also yields no metrics. |
+
+A full published-output audit compared 4,315 non-empty scored examples without
+numeric metric differences at `1e-12`. The official CLI produced 4,316 rows:
+4,315 successful, one failed, and one further manifest member skipped. Its
+failure zero-padding differs from the old task's success-with-empty-metrics
+handling, so those historical scalars are not complete 4,317-document scores.
+The current guard stops evaluation rather than adopting the CLI's silent skip
+or inventing a zero for missing reference coverage.
+
+For diagnostics, the first 13 or 130 interleaved examples are tested eligible
+samples. Report their sample size and missing dimensions; they are not a
+workaround that produces a canonical full-benchmark score. The official CLI
+can diagnose its own eligibility/failure behavior, but its skipped/failed counts
+must remain visible. Do not remove these IDs, fabricate reference text from
+predictions, or disable the guard to claim full-run parity.
+
+Completing the full run requires an authoritative, versioned dataset/scorer
+clarification: provide references consumed by the extended scorers or define
+eligible membership/denominators, and reconcile legacy CLI eligibility with
+extended-metric applicability. Pin and requalify that resolved contract before
+claiming complete benchmark support. This integration does not change the
+external dataset or scorer.
 
 ## Install and run
 
@@ -24,8 +59,14 @@ uv run --extra parsebench2 python -m lmms_eval \
   --model qwen2_5_vl \
   --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
   --tasks parsebench2 --batch_size 1 --limit 13 \
-  --log_samples --output_path ./logs/parsebench2
+  --log_samples --output_path ./logs/parsebench2 --fail_on_error
 ```
+
+Use `--fail_on_error` for automated CLI runs. Without it, the shared harness CLI
+can log an evaluation error, emit no result file, and still exit 0. With the
+flag, the eligibility error exits nonzero. Require the expected complete result
+artifact as well as checking process status; this task does not patch that
+shared CLI behavior.
 
 This is an example command, not a validated fresh-model result. For reproducible
 comparisons, pin the model checkpoint revision through the chosen backend and
@@ -118,13 +159,16 @@ subset macro averages and dimension weights. `parsebench2_overall` is the
 official unweighted mean of all six complete dimensions. Missing subsets/metrics
 leave affected dimensions and overall unavailable. Scores are on [0,1].
 `parsebench2_response_failure_rate` and `parsebench2_layout_coverage` are integration
-diagnostics, not extra official PB2 dimensions. Timing placeholders used to
-construct native scorer records are not measured latency or cost.
+diagnostics, not extra official PB2 dimensions. A zero response-failure rate
+also permits Markdown-only output; it is not proof of JSON conformity or useful
+layout predictions. Inspect the response schema, layout items and layout
+coverage separately. Timing placeholders used to construct native scorer
+records are not measured latency or cost.
 
 ## CPU verification without inference
 
 ```bash
-uv run --extra parsebench2 python -m pytest test/tasks/test_parsebench2.py -q
+uv run --extra parsebench2 python -m pytest test/tasks/test_parsebench2.py test/tasks/test_parsebench2_eligibility.py -q
 uv run --extra parsebench2 python scripts/validation/parsebench2_replay.py \
   --per-subset 10 --output /tmp/pb2-replay
 ```
@@ -138,12 +182,16 @@ and counts must match exactly.
 It checks official successful/failed/skipped counts and writes a receipt plus a
 `from_log` input. It prints a public `lmms_eval --model from_log` command to exercise
 request generation, filtering, sample logging and aggregation without inference.
-`from_log` does not render media itself; the helper renders separately.
+Add `--fail_on_error` to the printed public CLI command when automating it.
+`from_log` does not render media itself; the helper renders separately. Extending
+this helper to the entire current pinned corpus stops at the eligibility guard;
+it is not a supported complete-run reproduction on this pin.
 
 These checks establish only the tested sample's scoring/transport parity and
 local harness behavior. They do not establish full-run parity on 4,317 documents,
-fresh-model inference success, or leaderboard equivalence. Keep an integration
-PR in draft until the repository's real-model E2E requirement is satisfied.
+fresh-model inference success, or leaderboard equivalence. This integration
+remains draft while the full pinned reference/scorer eligibility blocker is
+unresolved; passing sample checks or a fresh inference smoke does not resolve it.
 
 ## Fresh CPU smoke validation
 
@@ -167,8 +215,15 @@ OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 uv run --extra parsebench2 python -m lmms_ev
   --output_path ./logs/pb2-cpu-smoke --fail_on_error
 ```
 
-The regular contract suite is offline. Add `LMMS_PARSEBENCH2_INTEGRATION=1` to its
-pytest invocation to run two additional regressions using the first two pinned
-public layout documents: explicit supported empty layout plus missing/malformed
-output must score 0 over two documents, while no declaration remains unavailable.
-Neither the smoke prediction nor downloaded public media are checked into git.
+A separate attempt on `layout/annotated__0000050863-25-000054_p7` used the same
+model/revision, actual prompt and rendering, with 1,536 output tokens. It emitted
+incomplete Markdown-fenced pseudo-JSON with incorrect fields and no parseable
+layout items. The official document layout score was 0; aggregate layout and
+overall were unavailable. Fresh meaningful structured-layout generation remains
+unverified.
+
+The regular contract suite is offline. Add `LMMS_PARSEBENCH2_INTEGRATION=1` to the
+pytest invocation above for four public-data regressions: two mixed-layout
+failure cases using the first two pinned layout documents, and the two
+ineligible text references described above. Neither predictions nor downloaded
+public media are checked into git.

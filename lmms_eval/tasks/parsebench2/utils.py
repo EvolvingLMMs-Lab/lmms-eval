@@ -224,6 +224,15 @@ def decode_response(doc: dict[str, Any], response: str | None) -> tuple[Any, boo
         return _native_result(doc, {"markdown": ""}), False, "invalid"
 
 
+def _require_official_metrics(example_id: str, metrics: list[Any]) -> None:
+    if not metrics:
+        raise RuntimeError(
+            f"ParseBench-2 {example_id}: no official extended metrics from parse-bench=={SCORER_VERSION} "
+            f"at dataset revision {DATA_REVISION}; reference/scorer eligibility needs review. "
+            "Refusing to omit this example or emit an incomplete aggregate."
+        )
+
+
 def process_results(doc: dict[str, Any], results: list[str]) -> dict[str, Any]:
     """Compute official document metrics once; emit JSON-safe records for rank 0."""
     require_scorer()
@@ -239,6 +248,7 @@ def process_results(doc: dict[str, Any], results: list[str]) -> dict[str, Any]:
     # Call the underlying API directly: evaluator errors must stop the run,
     # rather than disappearing from the official survivor denominator.
     metrics = compute_next_metrics(record, case)
+    _require_official_metrics(doc["example_id"], metrics)
     evaluation = EvaluationResult(
         test_id=case.test_id,
         example_id=doc["example_id"],
@@ -266,6 +276,7 @@ def combined_report(items: list[dict[str, Any]]) -> dict[str, Any]:
     seen = set()
     for item in items:
         result = EvaluationResult.model_validate(item["evaluation"])
+        _require_official_metrics(result.example_id, result.metrics)
         if result.example_id in seen:
             raise ValueError(f"Duplicate scored example: {result.example_id}")
         seen.add(result.example_id)
