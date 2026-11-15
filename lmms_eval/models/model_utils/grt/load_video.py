@@ -72,7 +72,7 @@ def read_video_pyav_seek_uniform(
     *,
     num_frm: int = 8,
     fps: Optional[float] = None,
-    format="rgb24",
+    format="rgb24",  # noqa: A002 - Preserve the existing keyword argument name.
     force_include_last_frame=False,
 ) -> np.ndarray:
     path = video_path if isinstance(video_path, str) else video_path[0]
@@ -176,7 +176,7 @@ def load_video_packet(container, num_frm: int = 8, fps: float = None):
     return [frames[i] for i in indices]
 
 
-def read_video_pyav(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24", force_include_last_frame=False) -> np.ndarray:
+def read_video_pyav(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24", force_include_last_frame=False) -> np.ndarray:  # noqa: A002 - Preserve the existing keyword argument name.
     """
     Read video using the PyAV library.
 
@@ -301,7 +301,7 @@ def load_video_packet_ds(container, num_frm: int = 8, sample_fps: float = None):
     return [all_frames[i] for i in indices]
 
 
-def read_video_pyav_ds(video_path: str, num_frm: int = 8, sample_fps: float = None, format: str = "rgb24", force_include_last_frame: bool = False) -> np.ndarray:
+def read_video_pyav_ds(video_path: str, num_frm: int = 8, sample_fps: float = None, format: str = "rgb24", force_include_last_frame: bool = False) -> np.ndarray:  # noqa: A002 - Preserve the existing keyword argument name.
     """
     Read video and return sampled frames as a NumPy array.
 
@@ -327,7 +327,7 @@ def read_video_pyav_ds(video_path: str, num_frm: int = 8, sample_fps: float = No
     return np.stack(arrs)
 
 
-def read_video_pyav_pil(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24", max_image_size: Optional[Union[Tuple[int, int], int]] = None, resize_strategy: str = "resize", force_include_last_frame=False):
+def read_video_pyav_pil(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24", max_image_size: Optional[Union[Tuple[int, int], int]] = None, resize_strategy: str = "resize", force_include_last_frame=False):  # noqa: A002 - Preserve the existing keyword argument name.
     frames = read_video_pyav(video_path, num_frm=num_frm, fps=fps, format=format, force_include_last_frame=force_include_last_frame)
     pil_frames = []
     for frame in frames:
@@ -346,7 +346,7 @@ def read_video_pyav_pil(video_path: str, *, num_frm: int = 8, fps: float = None,
     # return [Image.fromarray(frame) for frame in frames]
 
 
-def read_video_pyav_base64(video_path: str, *, num_frm: int = 8, fps: Optional[float] = None, format="rgb24", img_format="PNG", max_image_size: Optional[Union[Tuple[int, int], int]] = None, resize_strategy: str = "resize"):
+def read_video_pyav_base64(video_path: str, *, num_frm: int = 8, fps: Optional[float] = None, format="rgb24", img_format="PNG", max_image_size: Optional[Union[Tuple[int, int], int]] = None, resize_strategy: str = "resize"):  # noqa: A002 - Preserve the existing keyword argument name.
     frames = read_video_pyav(video_path, num_frm=num_frm, fps=fps, format=format)
     base64_frames = []
     for frame in frames:
@@ -390,7 +390,7 @@ def read_video_decord_base64(video_path: str, *, num_frm: int = 8, fps: Optional
     return base64_frames
 
 
-def read_video_pyav_seek_base64(video_path: str, *, num_frm: int = 8, fps: Optional[float] = None, format="rgb24", img_format="PNG", max_image_size: Optional[Union[Tuple[int, int], int]] = None, resize_strategy: str = "resize"):
+def read_video_pyav_seek_base64(video_path: str, *, num_frm: int = 8, fps: Optional[float] = None, format="rgb24", img_format="PNG", max_image_size: Optional[Union[Tuple[int, int], int]] = None, resize_strategy: str = "resize"):  # noqa: A002 - Preserve the existing keyword argument name.
     frames = read_video_pyav_seek_uniform(video_path, num_frm=num_frm, fps=fps, format=format)
     return frames_to_base64(frames, img_format=img_format, max_image_size=max_image_size, resize_strategy=resize_strategy)
 
