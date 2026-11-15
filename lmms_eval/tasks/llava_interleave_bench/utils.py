@@ -263,7 +263,7 @@ def overall_score(results):
 # API_TYPE = config["metadata"]["api_type"]
 
 # if API_TYPE == "openai":
-#     API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+#     API_URL = resolve_openai_chat_completions_url()
 #     API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
 #     headers = {
 #         "Authorization": f"Bearer {API_KEY}",

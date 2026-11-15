@@ -13,6 +13,7 @@ import requests
 from loguru import logger as eval_logger
 
 from lmms_eval.api.chat_response import require_chat_message_text
+from lmms_eval.llm_judge.openai_endpoint import resolve_openai_api_base
 
 # The prompt text below is copied verbatim from the official Multi-Crit
 # implementation at commit ``c4b0c32``. Whitespace is evaluation-significant:
@@ -276,10 +277,7 @@ def _verifier_model_name() -> str:
 def _verifier_api_url() -> str:
     """Resolve either a base URL or a full chat-completions endpoint."""
 
-    base_url = os.getenv("OPENAI_API_URL") or os.getenv("OPENAI_API_BASE")
-    if not base_url:
-        base_url = "https://api.openai.com/v1"
-    normalized = base_url.rstrip("/")
+    normalized = resolve_openai_api_base()
     if normalized.endswith("/chat/completions"):
         return normalized
     return f"{normalized}/chat/completions"

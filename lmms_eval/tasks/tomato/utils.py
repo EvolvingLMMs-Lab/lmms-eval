@@ -12,6 +12,7 @@ import yaml
 from loguru import logger as eval_logger
 
 from lmms_eval.api.chat_response import require_chat_message_text
+from lmms_eval.llm_judge.openai_endpoint import resolve_openai_chat_completions_url
 
 random.seed(42)
 
@@ -32,7 +33,7 @@ if USE_GPT_PARSER:
     eval_logger.info(f"Using GPT parser for TOMATO task. The max iteration is set to {MAX_ITER}. If the response is not a valid answer, it will try to use GPT to parse the response.")
     API_TYPE = os.getenv("API_TYPE", "azure")
     if API_TYPE == "openai":
-        endpoint = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+        endpoint = resolve_openai_chat_completions_url()
         deployment = os.getenv("DEPLOYMENT_NAME", "gpt-4o")
         subscription_key = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
         client = OpenAI(
