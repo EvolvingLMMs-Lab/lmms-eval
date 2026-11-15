@@ -2,6 +2,21 @@ import inspect
 from typing import Any
 
 
+def media_processor_kwargs(images: list, videos: list) -> dict:
+    """Return the ``images``/``videos`` keyword arguments for a Hugging Face processor, or ``{}`` per empty media.
+
+    Processors treat empty media lists differently from absent ones: transformers 5.22 crashes inside
+    ``make_batched_videos([])`` for Qwen-VL processors when the task carries no video, and an empty images
+    list breaks text-only requests. Omit empty media so the processor only sees what the request carries.
+    """
+    kwargs = {}
+    if images:
+        kwargs["images"] = images
+    if videos:
+        kwargs["videos"] = videos
+    return kwargs
+
+
 def audio_processor_kwargs(processor: Any, audios: list) -> dict:
     """Return the keyword argument for passing ``audios`` to a Hugging Face processor, or ``{}`` without audio.
 
