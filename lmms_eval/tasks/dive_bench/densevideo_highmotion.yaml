@@ -1,0 +1,3 @@
+# Compatibility name: historical results are the 1000-row preview, not full.
+include: high_motion_high_fps_preview1000.yaml
+task: densevideo_highmotion

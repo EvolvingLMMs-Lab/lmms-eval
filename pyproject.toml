@@ -93,6 +93,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+grt = [
+    "transformers==4.57.6",
+    "qwen-vl-utils==0.0.14",
+    "torch>=2.9,<2.10",
+    "torchvision>=0.24,<0.25",
+    "accelerate>=1.12,<2",
+]
 core = [
     "lmms_eval[server]",
     "lmms_eval[audio]",
@@ -185,6 +192,9 @@ all = [
 "lmms_eval.tui.web.dist" = ["**/*"]
 "lmms_eval.tui.web.dist.assets" = ["**/*"]
 
+[tool.setuptools.exclude-package-data]
+"*" = ["**/__pycache__/*", "**/*.pyc", "**/*.pyo"]
+
 [tool.setuptools.packages.find]
 include = ["lmms_eval*"]
 exclude = [
@@ -230,6 +240,16 @@ lmms-eval-ui = "lmms_eval.tui.cli:main"
 [project.urls]
 Homepage = "https://www.lmms-lab.com/"
 Repository = "https://github.com/EvolvingLMMs-Lab/lmms-eval"
+
+[tool.uv]
+# grt pins the historical Transformers 4.57.6 / torch 2.9 stack. Resolve that
+# extra apart from the rest so the default lock stays on main's versions.
+conflicts = [
+    [
+        { extra = "grt" },
+        { extra = "all" },
+    ],
+]
 
 [dependency-groups]
 dev = [

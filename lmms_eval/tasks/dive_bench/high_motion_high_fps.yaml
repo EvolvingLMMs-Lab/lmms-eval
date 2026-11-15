@@ -1,0 +1,44 @@
+task: dive_bench_high_motion_high_fps
+dataset_path: haichaozhang/highmotion_densevideounderstand
+dataset_kwargs:
+  revision: d44407f607fdf020c59b816884f06ed6d453cf26
+  data_files:
+    test: Egodex_traj.parquet
+  token: true
+test_split: test
+process_docs: !function utils.validate_highmotion
+output_type: generate_until
+doc_to_visual: !function utils.doc_to_visual
+doc_to_text: !function utils.highmotion_doc_to_text
+doc_to_messages: !function utils.highmotion_doc_to_messages
+doc_to_target: !function utils.highmotion_doc_to_answer
+process_results: !function utils.highmotion_process_results
+metric_list:
+  - metric: grid_acc
+    aggregation: mean
+    higher_is_better: true
+  - metric: grid_ade
+    aggregation: mean
+    higher_is_better: false
+  - metric: grid_fde
+    aggregation: mean
+    higher_is_better: false
+  - metric: grid_transition_acc
+    aggregation: mean
+    higher_is_better: true
+  - metric: token_f1
+    aggregation: mean
+    higher_is_better: true
+generation_kwargs:
+  until: ["ASSISTANT:"]
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+metadata:
+  version: 2.0
+  benchmark: DIVE-Bench
+  display_name: High-Motion High-FPS Videos
+  examples: 3243
+  default_sampled_frames: 8
