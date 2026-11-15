@@ -120,7 +120,8 @@ uv pip install --python .venv-grt/bin/python -e '.[grt]'
 
 The verified model-internal patching targets Transformers 4.57.6 and fails closed
 for other versions before loading weights. The optional extra also constrains
-PyTorch 2.9, Torchvision 0.24, Accelerate 1.x, PyAV 15 and qwen-vl-utils 0.0.14.
+PyTorch 2.9, Torchvision 0.24, Accelerate 1.x, and qwen-vl-utils 0.0.14.
+PyAV follows the project pin (`av>=17.1.0,<18`) so the extra can be locked with main.
 The published educational profiles use the PyAV loader and do not require Decord.
 No training or benchmark model weights are bundled.
 
