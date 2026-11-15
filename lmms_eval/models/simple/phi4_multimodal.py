@@ -68,7 +68,8 @@ class Phi4(lmms):
             self.device_map = f"cuda:{accelerator.local_process_index}"
         else:
             self._device = torch.device(device)
-            self.device_map = device_map
+            # An empty device_map is the multi-process default; on a single process load onto `device`
+            self.device_map = device_map or device
         if isinstance(dtype, str) and dtype != "auto":
             dtype = getattr(torch, dtype)
 
