@@ -151,6 +151,10 @@ prismmbench = [
     "pdf2image>=1.17.0",
     "pdfplumber>=0.11.9"
 ]
+parsebench2 = [
+    "parse-bench[llamaparse]==2.0.1; python_version >= '3.12'",
+    "pypdfium2==4.30.0; python_version >= '3.12'",
+]
 olmocr_bench = [
     "beautifulsoup4",
     "lxml",
