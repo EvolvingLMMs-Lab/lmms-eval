@@ -19,7 +19,8 @@ _ANSWER_MARKUP = re.compile(r"<answer\b[^<>]*>|(?<![\w</])answer>|</answer\s*>",
 _ANSWER_CLOSE = re.compile(r"</answer\s*>", re.IGNORECASE)
 _DECLARATION = re.compile(
     r"(?P<prefix>"
-    r"(?<!\w)(?:(?:the|my)\s+)?(?:(?:correct|best|final)\s+)?(?:answer|option|choice)\s*(?:is\b|[:：=])"
+    # Emphasis may close around the label: ``**Answer:** C``, ``**Answer**: C``.
+    r"(?<!\w)(?:(?:the|my)\s+)?(?:(?:correct|best|final)\s+)?(?:answer|option|choice)(?:\*{1,2}|_{1,2})?\s*(?:is\b|[:：=])(?:\*{1,2}|_{1,2})?"
     r"|(?<!\w)i\s+(?:choose|select|pick)\b"
     # ``选项`` must precede ``选``; otherwise ``选项B`` is read as the non-choice ``项``.
     r"|(?:最终)?答案\s*(?:是|为|[:：])|答\s*[:：]|选项|选|옵션|정답은|답은|답\s*[:：]|答えは"
@@ -362,7 +363,7 @@ def _final_declaration(block: str, allowed: Set[str], opening: bool = False) -> 
     if choice is None:
         return answer
     # "Check each option: (A) shows a curve ..." opens a list; it selects nothing.
-    lists_options = re.match(r"(?:option|choice)\s*[:：]", last.group("prefix"), re.IGNORECASE) and choice.tail.strip(_PUNCTUATION)
+    lists_options = re.match(r"(?:option|choice)(?:\*{1,2}|_{1,2})?\s*[:：]", last.group("prefix"), re.IGNORECASE) and choice.tail.strip(_PUNCTUATION)
     return "" if lists_options or _reads_a_word(choice) else answer
 
 
