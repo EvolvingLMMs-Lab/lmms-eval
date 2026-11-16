@@ -17,6 +17,7 @@ from lmms_eval.api.chat_response import require_chat_message_content
 from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.llm_judge.openai_endpoint import resolve_openai_model_base
 from lmms_eval.models.model_utils.concurrency_control import (
     AdaptiveConcurrencyConfig,
     decide_next_concurrency,
@@ -144,7 +145,7 @@ class OpenAICompatible(lmms):
 
         # Use provided parameters or fall back to environment variables
         api_key = api_key or os.getenv("OPENAI_API_KEY")
-        base_url = base_url or os.getenv("OPENAI_API_BASE")
+        base_url = base_url or resolve_openai_model_base()
 
         # Fix URL encoding issue - decode if it's URL encoded
         if base_url and "%" in base_url:

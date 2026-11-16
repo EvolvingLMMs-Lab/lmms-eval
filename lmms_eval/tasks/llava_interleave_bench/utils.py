@@ -5,6 +5,8 @@ from loguru import logger as eval_logger
 from PIL import Image
 from rouge import Rouge
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 spot_the_diff = ["Spot-the-Diff", "Birds-to-Words", "CLEVR-Change"]
 image_edit_instruct = ["IEdit", "HQ-Edit", "MagicBrush"]
 visual_story_telling = ["AESOP", "FlintstonesSV", "PororoSV", "VIST"]
@@ -154,7 +156,7 @@ def mcq_acc(answer, pred):
 
             return answer
 
-    pred = process(pred)
+    pred = process(extract_final_mcq_answer(pred) or pred)
     answer = process(answer)
 
     if pred == answer:
@@ -261,7 +263,7 @@ def overall_score(results):
 # API_TYPE = config["metadata"]["api_type"]
 
 # if API_TYPE == "openai":
-#     API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+#     API_URL = resolve_openai_chat_completions_url()
 #     API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
 #     headers = {
 #         "Authorization": f"Bearer {API_KEY}",

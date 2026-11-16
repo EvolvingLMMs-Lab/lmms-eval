@@ -2,6 +2,8 @@ import logging
 import re
 from typing import List
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 eval_logger = logging.getLogger("lmms-eval")
 
 
@@ -73,7 +75,7 @@ def get_prediction(question_type: str, raw_answer: str, ref_answer: str, options
                     break
         assert len(ref_answer) == 1, f"Ref answer is not a single character: {ref_answer}"
 
-        selected_option = get_option(answer)
+        selected_option = extract_final_mcq_answer(raw_answer, [chr(ord("A") + i) for i in range(len(options))]) or get_option(answer)
         if selected_option and (ord(selected_option) - ord("A") < len(options)):
             correct = selected_option == ref_answer.upper()
             parsed_answer = selected_option

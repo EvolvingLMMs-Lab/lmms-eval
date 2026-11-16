@@ -3,6 +3,8 @@ from collections import defaultdict
 import numpy as np
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 
 def omni_bench_original_doc_to_visual(doc):
     return [doc["audio"], doc["image"]]
@@ -100,6 +102,10 @@ def omni_bench_aggregate_results(results):
 
 
 def parse_multi_choice_response(response, all_choices):
+    final_answer = extract_final_mcq_answer(response, all_choices)
+    if final_answer:
+        return final_answer
+
     response = " " + response.strip() + " "
     _index_ans = True
     ans_with_brack = False

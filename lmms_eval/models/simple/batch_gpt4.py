@@ -18,6 +18,7 @@ from lmms_eval.api.chat_response import require_chat_message_text
 # Local application/library specific imports
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.llm_judge.openai_endpoint import normalize_openai_api_base, resolve_openai_model_base
 from lmms_eval.models.model_utils.load_video import import_decord
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 
@@ -26,7 +27,7 @@ API_TYPE = os.getenv("API_TYPE", "openai")
 NUM_SECONDS_TO_SLEEP = 5
 
 if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+    API_URL = resolve_openai_model_base()
     API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
     headers = {
         "Authorization": f"Bearer {API_KEY}",
@@ -50,7 +51,7 @@ class BatchGPT4(lmms):
         self,
         model_version: str = "gpt-4o",
         api_key: str = API_KEY,
-        api_url: str = API_URL,
+        api_url: str | None = API_URL,
         modality: str = "image",
         max_frames_num: int = 10,
         timeout: int = 120,
@@ -68,7 +69,7 @@ class BatchGPT4(lmms):
 
         self.api_key = api_key
         self.api_url = api_url
-        self.client = OpenAI(api_key=api_key)
+        self.client = OpenAI(api_key=api_key, base_url=normalize_openai_api_base(api_url) if api_url else None)
 
         accelerator = Accelerator()
         assert accelerator.state.local_process_index == 0, "BatchGPT4 does not support distributed inference."

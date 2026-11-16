@@ -4,6 +4,7 @@
 import re
 from typing import Any, Dict, Optional
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 from lmms_eval.tasks.videomme.utils import videomme_doc_to_visual
 
 _DEFAULT_SYSTEM_PROMPT = "You will receive ONLY a video. There is no question. Guess which option letter (A, B, C, or D) is correct. Output exactly one capital letter: A, B, C, or D."
@@ -38,6 +39,10 @@ def doc_to_messages(doc: Dict[str, Any], lmms_eval_specific_kwargs: Optional[dic
 
 def _extract_abcd(s: str) -> str:
     """Extract A/B/C/D from string."""
+    final_answer = extract_final_mcq_answer(s, list("ABCD"))
+    if final_answer:
+        return final_answer
+
     if not s:
         return ""
     s = s.strip().upper()

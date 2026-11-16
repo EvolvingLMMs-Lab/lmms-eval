@@ -2,6 +2,8 @@ import re
 from collections import defaultdict
 from typing import Any, Dict, List, Optional
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 
 def _extract_answer_letter(text: str) -> str:
     """
@@ -17,6 +19,10 @@ def _extract_answer_letter(text: str) -> str:
 
     Return an empty string if no letter is found.
     """
+    final_answer = extract_final_mcq_answer(text, list("ABCDEF"))
+    if final_answer:
+        return final_answer
+
     text = text.strip()
     match = re.match(r"[\(\s]*([A-Z])[\)\.\s]*", text, flags=re.IGNORECASE)
     if match:

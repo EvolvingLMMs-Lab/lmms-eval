@@ -23,6 +23,8 @@ from datasets import Dataset
 from loguru import logger as eval_logger
 from PIL import Image
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 HF_REPO_ID = "Video-Index/Video-Index"
 
 LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -83,6 +85,10 @@ def extract_letter(reply: str | None, options: list[str]) -> str | None:
     """Option letter named by a reply, or None. Order: the leading letter, a stated answer
     ("the answer is B"), the option whose text the reply repeats. `options` are the option
     texts in the order shown to the model (at most ten)."""
+    final_answer = extract_final_mcq_answer(reply, list(LETTERS[: len(options)]))
+    if final_answer:
+        return final_answer
+
     if reply is None:
         return None
     s = _pre(reply).strip()

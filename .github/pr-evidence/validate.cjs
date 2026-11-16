@@ -1,9 +1,9 @@
 "use strict";
 
-// Only docs, tests, and repository maintenance can omit model E2E evidence.
+// Only docs, tests, standalone tools, and repository maintenance can omit model E2E evidence.
 // Unknown paths default to requiring it. Check both sides of renames below.
 function isNonRuntimePath(filename) {
-  return /^(?:docs\/|test\/|tests\/|\.github\/)/.test(filename) ||
+  return /^(?:docs\/|test\/|tests\/|tools\/|\.github\/)/.test(filename) ||
     /\.(?:md|rst)$/i.test(filename) ||
     /^(?:LICENSE|CITATION\.cff|\.gitignore|\.pre-commit-config\.yaml)$/.test(filename);
 }
@@ -88,7 +88,7 @@ async function run({ github, context, core }) {
   } else if (errors.length) {
     core.setFailed(`Missing required reproduction evidence (see CONTRIBUTING.md and the PR template):\n- ${errors.join("\n- ")}`);
   } else if (!e2eRequired) {
-    core.notice("Docs/tests/CI-only PR: model E2E evidence is not required. Report relevant checks under Validation.");
+    core.notice("Docs/tests/tools/CI-only PR: model E2E evidence is not required. Report relevant checks under Validation.");
   } else {
     core.notice("Required reproduction evidence fields are present. Reviewers must verify the commands and results; this check does not run model inference.");
   }

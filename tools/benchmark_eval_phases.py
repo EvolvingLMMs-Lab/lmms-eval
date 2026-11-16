@@ -228,6 +228,9 @@ def _summarize(records: list[dict]) -> dict[str, dict[str, dict[str, float]]]:
         }
         for phase in {phase["name"] for record in case_records for phase in record["phases"]}:
             metrics[f"phase.{phase}.duration_ns"] = [next(item["duration_ns"] for item in record["phases"] if item["name"] == phase) for record in case_records]
+        # A metric can be unavailable on a platform (peak RSS is None without
+        # the `resource` module, e.g. on Windows); leave it out of the summary.
+        metrics = {name: [value for value in values if value is not None] for name, values in metrics.items()}
         summary[case_id] = {
             name: {
                 "median": statistics.median(values),
@@ -235,6 +238,7 @@ def _summarize(records: list[dict]) -> dict[str, dict[str, dict[str, float]]]:
                 "pvariance": statistics.pvariance(values),
             }
             for name, values in metrics.items()
+            if values
         }
     return summary
 

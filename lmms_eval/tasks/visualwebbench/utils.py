@@ -5,6 +5,8 @@ import sys
 import numpy as np
 from rouge import Rouge
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from prompts import DEFAULT_PROMPTS
 
@@ -225,6 +227,10 @@ def parse_multi_choice_response(response: str, all_choices):
     Parse the prediction from the generated response.
     Return the predicted index e.g., A, B, C, D.
     """
+    final_answer = extract_final_mcq_answer(response, all_choices)
+    if final_answer:
+        return final_answer
+
     if len(response) == 1:
         return response.upper()
     elif not response:

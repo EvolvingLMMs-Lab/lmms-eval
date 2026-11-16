@@ -57,6 +57,7 @@ for (const [filename, status, previous_filename] of [
   ["lmms_eval/models/simple/old.py", "removed"],
   ["docs/old-model.md", "renamed", "lmms_eval/models/simple/old.py"],
   ["new-runtime/package.py", "added"],
+  ["tools/old-model.py", "renamed", "lmms_eval/models/simple/old.py"],
 ]) {
   test(`${status} ${filename} cannot use a docs exemption`, () => {
     const result = check(docsReport + "\n- [x] Documentation update", [{ filename, status, previous_filename }]);
@@ -65,7 +66,7 @@ for (const [filename, status, previous_filename] of [
   });
 }
 
-for (const filename of [docsFile.filename, "AGENTS.md", ".github/workflows/ci.yml", ".github/pr-evidence/validate.cjs", "test/eval/test_example.py", ".gitignore"]) {
+for (const filename of [docsFile.filename, "AGENTS.md", ".github/workflows/ci.yml", ".github/pr-evidence/validate.cjs", "test/eval/test_example.py", "tools/benchmark_eval_phases.py", ".gitignore"]) {
   test(`${filename} accepts documented non-runtime validation`, () => {
     const result = check(docsReport, [{ filename, status: "modified" }]);
     assert.equal(result.e2eRequired, false);
@@ -82,6 +83,16 @@ test("mixed docs/runtime files and declared integrations require E2E", () => {
   assert.equal(check(docsReport, [docsFile, modelFile]).e2eRequired, true);
   for (const kind of ["New benchmark/task", "New model integration"]) {
     assert.equal(check(docsReport + `\n- [x] ${kind}`, [docsFile]).e2eRequired, true);
+  }
+});
+
+test("tools exemption does not cover runtime changes or declared integrations", () => {
+  const toolFile = { filename: "tools/benchmark_eval_phases.py", status: "modified" };
+  const testFile = { filename: "test/performance/test_benchmark_eval_phases.py", status: "modified" };
+  assert.equal(check(docsReport, [toolFile, testFile]).e2eRequired, false);
+  assert.equal(check(docsReport, [toolFile, modelFile]).e2eRequired, true);
+  for (const kind of ["New benchmark/task", "New model integration"]) {
+    assert.equal(check(docsReport + `\n- [x] ${kind}`, [toolFile]).e2eRequired, true);
   }
 });
 

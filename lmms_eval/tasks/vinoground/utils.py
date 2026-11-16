@@ -6,6 +6,8 @@ import numpy as np
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
 base_cache_dir = os.path.expanduser(hf_home)
 with open(Path(__file__).parent / "vinoground.yaml", "r") as f:
@@ -59,7 +61,7 @@ def vinoground_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def vinoground_process_results(doc, results):
-    pred = results[0]
+    pred = extract_final_mcq_answer(results[0], list("AB")) or results[0]
 
     major = doc["major"]
     minors = doc["minor"]
@@ -92,7 +94,7 @@ def vinoground_aggregate_results(results):
         else:
             gt = videoscore_dict[idx]["GT"]
         idx = int(idx.split("_")[0])
-        matrix[idx, matrix_col] = pred[0].lower() == gt.lower()
+        matrix[idx, matrix_col] = pred[:1].lower() == gt.lower()
 
         if idx not in index_to_categories.keys():
             index_to_categories[idx] = categories

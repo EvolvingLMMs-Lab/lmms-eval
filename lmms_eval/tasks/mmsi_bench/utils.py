@@ -5,6 +5,8 @@ from collections import defaultdict
 
 from PIL import Image
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 eval_logger = logging.getLogger("lmms-eval")
 
 MMSI_DIRECT_POST_PROMPT = "\nAnswer with the option's letter from the given choices directly. Enclose the option's letter within ``."
@@ -81,6 +83,7 @@ def extract_single_choice_with_word_boundary(pred, gt):
         return None
 
     pred = str(pred)
+    pred = extract_final_mcq_answer(pred, list("ABCDEF")) or pred
 
     pattern_1 = r"``([^`]*)``"
     match = re.search(pattern_1, pred)

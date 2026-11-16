@@ -1,3 +1,11 @@
 dataset_name: core_single_image
 task: "megabench_core_si"
 include: _default_template_yaml
+dataset_kwargs:
+  token: True
+  cache_dir: megabench_data
+  video: True
+  create_link: True
+  # core_single_image / open_single_image were removed from TIGER-Lab/MEGA-Bench on 2025-05-07; this is the last
+  # revision that has them (it already includes the clevr_arithmetic annotation fix from the same day)
+  revision: 88a53016d28715373a12dc46b0dc1fed327b49ee

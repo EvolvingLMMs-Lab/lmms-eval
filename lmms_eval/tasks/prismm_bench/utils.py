@@ -3,6 +3,8 @@ import math
 from pdf2image import convert_from_bytes
 from PIL import Image
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 SYSTEM_PROMPT = "Answer with only the letter of the correct answer (A, B, C, or D), do not output anything else."
 
 
@@ -226,6 +228,10 @@ def prismm_process_results(doc, results):
     if pred_upper == target:
         return {"exact_match": 1.0}
 
+    final_answer = extract_final_mcq_answer(pred, list("ABCD"))
+    if final_answer:
+        return {"exact_match": 1.0 if final_answer == target else 0.0}
+
     if len(pred_upper) >= 1 and pred_upper[0] == target:
         return {"exact_match": 1.0}
 
@@ -364,6 +370,10 @@ def prismm_edit_process_results(doc, results):
     if pred_upper == target:
         return {"exact_match": 1.0}
 
+    final_answer = extract_final_mcq_answer(pred, list("ABCD"))
+    if final_answer:
+        return {"exact_match": 1.0 if final_answer == target else 0.0}
+
     if len(pred_upper) >= 1 and pred_upper[0] == target:
         return {"exact_match": 1.0}
 
@@ -489,6 +499,10 @@ def prismm_pair_match_process_results(doc, results):
 
     if pred_upper == target:
         return {"exact_match": 1.0}
+
+    final_answer = extract_final_mcq_answer(pred, task.get("letters") or [chr(ord("A") + i) for i in range(len(task.get("candidates", [])))])
+    if final_answer:
+        return {"exact_match": 1.0 if final_answer == target else 0.0}
 
     if len(pred_upper) >= 1 and pred_upper[0] == target:
         return {"exact_match": 1.0}

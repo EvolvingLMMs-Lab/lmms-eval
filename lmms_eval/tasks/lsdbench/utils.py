@@ -6,6 +6,8 @@ from pathlib import Path
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
 base_cache_dir = os.path.expanduser(hf_home)
 
@@ -45,6 +47,10 @@ def lsdbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def extract_characters_regex(s):
+    final_answer = extract_final_mcq_answer(s, list("ABCD"))
+    if final_answer:
+        return final_answer
+
     s = s.strip()
 
     pattern = r"(?<![a-zA-Z])[ABCD](?![a-zA-Z])"

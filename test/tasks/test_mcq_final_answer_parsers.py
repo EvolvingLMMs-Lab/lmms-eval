@@ -9,17 +9,50 @@ Three properties are checked for every parser:
 
 import importlib
 import random
+import sys
+from unittest import mock
 
 import pytest
 
 from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 
-INDEX2ANS = {"A": "a red car", "B": "a blue bike", "C": "a green tree", "D": "an old book", "E": "a tall tower", "F": "a small boat"}
+INDEX2ANS = {"A": "a red car", "B": "a blue bike", "C": "a green tree", "D": "an old book", "E": "a tall tower", "F": "a small boat", "G": "a white cup", "H": "a black hat"}
+
+
+def _scored(score, letters):
+    """The offered letters that a scorer accepts as the gold answer of a response."""
+    return "".join(letter for letter in letters if score(letter))
+
+
+def _texts(letters):
+    return [INDEX2ANS[letter] for letter in letters]
+
+
+def _tempcompass(parser, response, letters):
+    def rating(gold):
+        doc = {"answer": f"{gold}. {INDEX2ANS[gold]}", "video_id": "v", "question": "q", "dim": "speed"}
+        return parser(doc, [response])["avg_accuracy"]["rating"]
+
+    with mock.patch.object(sys.modules[parser.__module__], "get_eval_result", return_value=("Incorrect", 0)):
+        return _scored(lambda gold: rating(gold) == 1, letters)
+
+
+def _ai2d(parser, response, letters):
+    regex_filter = parser(regex_pattern=r"([A-Z])\.", group_select=0, ignore_case=True, ignore_punctuation=True)
+    return regex_filter.apply([[response]], [{"options": _texts(letters)}])[0]
+
+
+def _seed(parser, response, letters):
+    return parser({"answer": "A", "data_type": "x", "question_id": 0}, [response])["seed_x"]["pred"]
+
 
 # (module under lmms_eval.tasks, function, call style, offered letters)
 #   "choices+index2ans": f(response, all_choices, index2ans)
 #   "choices":           f(response, all_choices)
 #   "response":          f(response)
+#   "letters":           f(response, "ABCD")
+#   "option_texts":      f(response, [option texts])
+#   a callable:          style(f, response, letters); scorers return the gold letters they accept
 PARSERS = [
     ("_task_utils.mmmu_mcq_utils", "parse_mmmu_multi_choice_response", "choices+index2ans", "ABCD"),
     ("_task_utils.mmmu_mcq_utils", "parse_jmmmu_multi_choice_response", "choices+index2ans", "ABCD"),
@@ -58,6 +91,36 @@ PARSERS = [
     ("scivideobench.utils", "extract_answer_letter", "response", "ABCDEFGHIJ"),
     ("vsibench.utils", "fuzzy_matching", "response", "ABCD"),
     ("mmvp.utils", "_extract_answer_letter", "response", "AB"),
+    ("blink.utils", "_extract_answer_letter", "letters", "ABCD"),
+    ("cv_bench.utils", "_extract_answer_letter", "response", "ABCDEF"),
+    ("embspatial.utils", "_extract_answer_letter", "response", "ABCD"),
+    ("geometry3k.utils", "_extract_answer_letter", "option_texts", "ABCD"),
+    ("wm_abench.utils", "_extract_answer_letter", "response", "ABCDEF"),
+    ("vstar_bench.utils", "extract_answer_letter", "response", "ABCD"),
+    ("mmsi_video.utils", "extract_answer", "response", "ABCDEF"),
+    ("omni_bench.utils", "parse_multi_choice_response", "choices", "ABCD"),
+    ("visualwebbench.utils", "parse_multi_choice_response", "choices", "ABCDEFGH"),
+    ("motionbench.utils", "_extract_choice_letter", "response", "ABCDEF"),
+    ("videomme_v2.utils", "extract_characters_regex", "response", "ABCDEFGH"),
+    ("lsdbench.utils", "extract_characters_regex", "response", "ABCD"),
+    ("video_index.utils", "extract_letter", "option_texts", "ABCDE"),
+    ("videomme.video_only_abcd.utils", "_extract_abcd", "response", "ABCD"),
+    ("spatial_scene_bench.utils", "parse_answer", lambda f, response, letters: f(response, "choice", _texts(letters)), "ABCD"),
+    ("seedbench.utils", "seed_process_result", _seed, "ABCD"),
+    ("seedbench.ko_utils", "seed_process_result", _seed, "ABCD"),
+    ("seedbench_2.utils", "seed_process_result", _seed, "ABCD"),
+    ("ai2d.utils", "MultiChoiceRegexFilter", _ai2d, "ABCD"),
+    ("mantis.utils", "get_prediction", lambda f, response, letters: _scored(lambda gold: f("multi-choice", response, gold, [f"({x}) {INDEX2ANS[x]}" for x in letters])["correct"], letters), "ABCD"),
+    ("llava_interleave_bench.utils", "mcq_acc", lambda f, response, letters: _scored(lambda gold: f(gold, response) == 1, letters), "ABCDE"),
+    ("viewspatial.utils", "viewspatial_process_results", lambda f, response, letters: _scored(lambda gold: f({"answer": gold}, [response])["overall_accuracy"]["score"] == 1.0, letters), "ABCD"),
+    ("mmsi_bench.utils", "extract_single_choice_with_word_boundary", lambda f, response, letters: _scored(lambda gold: f(response, gold) == 1.0, letters), "ABCDEF"),
+    ("unig2u.mmsi.utils", "extract_single_choice_with_word_boundary", lambda f, response, letters: _scored(lambda gold: f(response, gold) == 1.0, letters), "ABCD"),
+    ("vinoground.utils", "vinoground_process_results", lambda f, response, letters: f({"major": "m", "minor": None, "index": "1_pos_text"}, [response])["vinoground_score"]["pred"][:1].upper(), "AB"),
+    ("prismm_bench.utils", "prismm_process_results", lambda f, response, letters: _scored(lambda gold: f({"task_identification": {"answer": gold}}, [response])["exact_match"] == 1.0, letters), "ABCD"),
+    ("prismm_bench.utils", "prismm_edit_process_results", lambda f, response, letters: _scored(lambda gold: f({"task_remedy": {"answer": gold}}, [response])["exact_match"] == 1.0, letters), "ABCD"),
+    ("prismm_bench.utils", "prismm_pair_match_process_results", lambda f, response, letters: _scored(lambda gold: f({"task_pair_match": {"answer": gold, "letters": list(letters)}}, [response])["exact_match"] == 1.0, letters), "ABCDE"),
+    ("tempcompass.utils", "tempcompass_process_results_multi_choice", _tempcompass, "ABCD"),
+    ("conbench.utils", "conbench_process_results", lambda f, response, letters: _scored(lambda gold: f({"question_field": "Choices", "answer": gold, "image_id": 0}, [response])["ConScore_D"]["score"] == 1, letters), "ABCD"),
 ]
 PARSER_IDS = [f"{module}:{function}" for module, function, _, _ in PARSERS]
 
@@ -111,6 +174,12 @@ def _load(module, function):
 
 def _call(parser, style, response, letters):
     choices = list(letters)
+    if callable(style):
+        return style(parser, response, letters)
+    if style == "letters":
+        return parser(response, letters)
+    if style == "option_texts":
+        return parser(response, _texts(letters))
     if style == "choices+index2ans":
         return parser(response, choices, {letter: INDEX2ANS[letter] for letter in choices if letter in INDEX2ANS})
     if style == "choices":
@@ -235,3 +304,19 @@ def test_mvbench_keeps_its_own_result_when_no_final_answer_is_read(monkeypatch):
     with_step = [mvbench.mcq_acc(gold, response) for response in responses for gold in ("B", "B. a blue bike")]
     monkeypatch.setattr(mvbench, "extract_final_mcq_answer", lambda *args, **kwargs: "")
     assert with_step == [mvbench.mcq_acc(gold, response) for response in responses for gold in ("B", "B. a blue bike")]
+
+
+def test_conbench_scores_an_empty_choice_response_as_wrong():
+    conbench = _load("conbench.utils", "conbench_process_results")[0]
+    for response in ["", "   ", "\n"]:
+        assert conbench.conbench_process_results({"question_field": "Choices", "answer": "A", "image_id": 0}, [response])["ConScore_D"]["score"] == 0
+
+
+def test_vinoground_scores_an_empty_response_as_wrong(monkeypatch):
+    vinoground = _load("vinoground.utils", "vinoground_aggregate_results")[0]
+    scores = {f"{i}_{kind}": {"GT": "A"} for i in range(500) for kind in ("pos", "neg")}
+    monkeypatch.setattr(vinoground, "prep_data", lambda: (scores, scores))
+    docs = [({"major": "m", "minor": None, "index": f"{i}_{kind}_{question}"}, "" if i == 0 else "A") for i in range(500) for kind in ("pos", "neg") for question in ("text", "video")]
+    results = [vinoground.vinoground_process_results(doc, [response])["vinoground_score"] for doc, response in docs]
+    text, video, group = vinoground.vinoground_aggregate_results(results)
+    assert (text, video, group) == (99.8, 99.8, 99.8)

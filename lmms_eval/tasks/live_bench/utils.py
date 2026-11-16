@@ -13,6 +13,7 @@ import requests
 import yaml
 
 from lmms_eval.api.chat_response import require_chat_message_text
+from lmms_eval.llm_judge.openai_endpoint import normalize_openai_api_base, resolve_openai_chat_completions_url
 
 eval_logger = logging.getLogger("lmms-eval")
 
@@ -31,7 +32,7 @@ API_TYPE = config["metadata"]["api_type"]
 EVAL_WITH_MINI = config["metadata"]["eval_with_mini"]
 
 if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+    API_URL = resolve_openai_chat_completions_url()
     API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
     headers = {
         "Authorization": f"Bearer {API_KEY}",
@@ -86,7 +87,7 @@ def format_prompt(question, ground_truth_answer, answer, criteria):
 
 
 def get_chat_response(gpt_model_name, base64_images, question, ground_truth_answer, answer, criteria, max_retries=5, wait_time=10):
-    client = openai.OpenAI(api_key=API_KEY)
+    client = openai.OpenAI(api_key=API_KEY, base_url=normalize_openai_api_base(API_URL))
 
     content = []
     for base64_image in base64_images:

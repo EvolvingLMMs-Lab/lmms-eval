@@ -3,6 +3,7 @@ import string
 from typing import Any, Dict, List, Optional
 
 from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 
 config = load_default_template_yaml(__file__)
 
@@ -28,6 +29,10 @@ def _extract_answer_letter(text: str, valid_letters: str = string.ascii_uppercas
 
     Return an empty string if no answer letter is found.
     """
+    final_answer = extract_final_mcq_answer(text, list(valid_letters.upper()))
+    if final_answer:
+        return final_answer
+
     text = text.strip()
     letters = re.escape(valid_letters.upper())
 

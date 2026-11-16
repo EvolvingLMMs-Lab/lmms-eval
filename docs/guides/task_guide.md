@@ -207,6 +207,35 @@ This function returns a single numeric value. The input is defined in `Task.proc
 
 The value here determines the input to the aggregation function, though the name used matches the metric function. These metrics all have simple needs and just need the accuracy or gold and predicted values, but immediately below this there are examples of metrics with more complicated needs you can use as reference.
 
+### Reading the Answer From a Response
+
+A model seldom returns a bare `B` or `yes`. It writes `**B**`, `Answer: B`, `\boxed{B}`, `Yes, there is a dog.`, or an explanation that ends with the answer, and a reasoning model does this most of the time. A parser written for one task (first character, first capital letter, substring search, exact match) misreads these responses and marks a correct answer as wrong, or gives credit for a letter or a `no` that the model only mentions. Use the shared readers in `lmms_eval/tasks/_task_utils/` in `process_results` instead of a new parser:
+
+| Answer type | Helper | Returns |
+| --- | --- | --- |
+| Option letter | `extract_final_mcq_answer(response, choices)` in `mcq_extract.py` | The uppercase letter, or `""` |
+| Yes/no | `extract_yes_no_answer(response)` in `yes_no_extract.py` | `"yes"`, `"no"`, or `""` |
+| Answer in an `<answer>` tag or `\boxed{}` (option letter, number or free form) | `make_reasoning_process_results(...)` in `reasoning_utils.py` | A complete `process_results` function |
+
+Both readers return the final answer that the response states and return `""` when they are not sure. They do not search the prose for a letter or a `yes`. The docstring of each function is its contract.
+
+```python
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
+
+def my_process_results(doc, results):
+    letters = [chr(ord("A") + i) for i in range(len(doc["options"]))]
+    pred = extract_final_mcq_answer(results[0], letters)  # "" when no final answer is stated
+    return {"accuracy": float(pred == doc["answer"].strip().upper())}
+```
+
+- Pass the option letters of the document, so that a letter that is not an option is not read.
+- Give the reader the response as it is. Do not lowercase it, remove punctuation or cut it to the first characters before the call.
+- A new task scores `""` as wrong. Do not add a random or first-letter fallback.
+- A port of a benchmark that has an official parser calls the reader first and keeps the official parser for the responses it does not read: `pred = extract_final_mcq_answer(response, letters) or official_parse(response)`. Yes/no scorers that accept other words (`true`, `y`) keep them the same way: `pred = extract_yes_no_answer(response) or own_rule(response)`.
+- Do not handle `<think>` blocks. The framework removes them before `process_results` (see `reasoning_tags`).
+- When a task keeps its own parser as the fallback, add it to the registry of `test/tasks/test_mcq_final_answer_parsers.py` (`PARSERS`) or `test/tasks/test_yes_no_scorers.py` (`SITES`). The tests check that final answers are read and that every other response gives the result of the old parser.
+
 ## Good Reference Tasks
 
 Contributing a new task can be daunting! Luckily, much of the work has often been done for you in a different, similarly evaluated task. Good examples of task implementations to study include:

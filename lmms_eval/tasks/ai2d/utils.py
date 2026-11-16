@@ -6,6 +6,7 @@ from datasets import Dataset
 from PIL import Image
 
 from lmms_eval.filters.extraction import ExtendedRegexFilter
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
 
 
 def ai2d_doc_to_text(doc, lmms_eval_specific_kwargs=None):
@@ -105,6 +106,10 @@ class MultiChoiceRegexFilter(ExtendedRegexFilter):
             # Process each response
             filtered = []
             for resp in r:
+                final_answer = extract_final_mcq_answer(resp, [chr(ord("A") + i) for i in range(len(doc["options"]))])
+                if final_answer:
+                    filtered.append(final_answer)
+                    continue
                 # Try to match the option letter at the start of the response
                 match = option_letter_regex.match(resp)
                 if match:

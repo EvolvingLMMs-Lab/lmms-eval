@@ -1,5 +1,7 @@
 import json
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 
 def seed_doc_to_visual(doc):
     return [image.convert("RGB") for image in doc["image"]]
@@ -27,7 +29,10 @@ def seed_doc_to_text(doc, model_specific_kwargs=None):
 
 def seed_process_result(doc, result):
     pred = result[0].strip()
-    if len(pred) > 1:
+    final_answer = extract_final_mcq_answer(pred, list("ABCD"))
+    if final_answer:
+        pred = final_answer
+    elif len(pred) > 1:
         pred = pred[0]
     answer = doc["answer"]
     data_type = doc["data_type"].split(" ")

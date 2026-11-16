@@ -184,6 +184,26 @@ dataset_kwargs:
 cluster_key: videoID    # Correlated questions -> clustered standard errors
 ```
 
+### Answer Extraction
+
+Do not write a new parser (first character, first capital letter, substring search, exact match) for option-letter or yes/no answers. Reasoning models return `**B**`, `Answer: B`, `\boxed{B}` or an explanation that ends with the answer, and such parsers misread them. Use the shared readers in `lmms_eval/tasks/_task_utils/`; both return `""` when the response states no final answer.
+
+```python
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+from lmms_eval.tasks._task_utils.yes_no_extract import extract_yes_no_answer
+
+def my_process_results(doc, results):
+    letters = [chr(ord("A") + i) for i in range(len(doc["options"]))]
+    pred = extract_final_mcq_answer(results[0], letters)  # uppercase letter or ""
+    # yes/no task: pred = extract_yes_no_answer(results[0])  # "yes", "no" or ""
+    return {"accuracy": float(pred == doc["answer"].strip().upper())}
+```
+
+- Pass the raw response and the option letters of the document. Score `""` as wrong; no random or first-letter fallback.
+- Port of a benchmark with an official parser: reader first, official parser as the fallback (`extract_final_mcq_answer(response, letters) or official_parse(response)`), and add the parser to `PARSERS` in `test/tasks/test_mcq_final_answer_parsers.py` or `SITES` in `test/tasks/test_yes_no_scorers.py`.
+- Answer in an `<answer>` tag or `\boxed{}` (letter, number or free form): `make_reasoning_process_results(...)` from `_task_utils/reasoning_utils.py` gives the whole `process_results`.
+- Details: "Reading the Answer From a Response" in `docs/guides/task_guide.md`.
+
 ### LLM-as-Judge Scoring
 
 ```python

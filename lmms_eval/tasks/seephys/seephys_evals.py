@@ -12,6 +12,8 @@ from openai import OpenAI
 from sympy import Eq, latex, simplify
 from sympy.parsing.latex import parse_latex
 
+from lmms_eval.llm_judge.openai_endpoint import resolve_openai_api_base
+
 FAIL_MSG = "Failed to obtain answer via API."
 
 
@@ -60,7 +62,7 @@ class SeephysEvaluator:
 
         if not config.get("metadata", {}).get("quick_extract", False):
             self.juder_model = config["metadata"].get("eval_model_name")
-            API_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+            API_URL = os.getenv("OPENAI_BASE_URL") or resolve_openai_api_base()
             API_KEY = os.getenv("OPENAI_API_KEY", "")
             if not API_KEY:
                 eval_logger.error("OPENAI_API_KEY not found. Please set the environment variable: `export OPENAI_API_KEY=$Your_KEY`")

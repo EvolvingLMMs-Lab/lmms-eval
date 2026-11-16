@@ -5,6 +5,8 @@ from collections import defaultdict
 from loguru import logger as eval_logger
 from PIL import Image
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 
 def msr_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     question = doc["question"].strip()
@@ -60,6 +62,7 @@ def msr_doc_to_visual(doc):
 
 
 def extract_single_choice_with_word_boundary(pred, gt):
+    pred = extract_final_mcq_answer(pred, list("ABCD")) or pred
     pattern_1 = r"``([^`]*)``"
     match = re.search(pattern_1, pred)
     if match:
