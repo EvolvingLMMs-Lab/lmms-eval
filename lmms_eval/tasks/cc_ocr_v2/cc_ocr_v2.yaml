@@ -1,0 +1,40 @@
+dataset_path: ./cc_ocr_v2_data
+dataset_kwargs:
+  load_from_disk: true
+task: cc_ocr_v2
+test_split: test
+output_type: generate_until
+reasoning_tags: false
+doc_to_visual: !function utils.doc_to_visual
+doc_to_text: !function utils.doc_to_text
+doc_to_messages: !function utils.doc_to_messages
+doc_to_target: answer
+process_results: !function utils.process_results
+generation_kwargs:
+  max_new_tokens: 24576
+  temperature: 0
+  do_sample: false
+  until: []
+metric_list:
+  - metric: cc_ocr_v2_average
+    aggregation: !function scoring.aggregate_results
+    higher_is_better: true
+  - metric: cc_ocr_v2_recognition
+    aggregation: !function scoring.aggregate_recognition
+    higher_is_better: true
+  - metric: cc_ocr_v2_parsing
+    aggregation: !function scoring.aggregate_parsing
+    higher_is_better: true
+  - metric: cc_ocr_v2_grounding
+    aggregation: !function scoring.aggregate_grounding
+    higher_is_better: true
+  - metric: cc_ocr_v2_extraction
+    aggregation: !function scoring.aggregate_extraction
+    higher_is_better: true
+  - metric: cc_ocr_v2_qa
+    aggregation: !function scoring.aggregate_qa
+    higher_is_better: true
+metadata:
+  version: 0.0
+  dataset_revision: f80226d958d748daa0bf805ed6f69c2d41823e80
+  evaluator_revision: 58c6f20c464ad8471e49f5faab2b126c7e39556a
