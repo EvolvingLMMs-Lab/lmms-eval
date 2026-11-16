@@ -82,13 +82,6 @@ Python 3.12 or newer is required by the official scorer. From the source checkou
 uv sync --python 3.12 --extra extractbench
 ```
 
-The optional dependency set uses published PyPI releases with the same version
-pins for all installers. For a pip-based environment:
-
-```bash
-pip install 'lmms_eval[extractbench]'
-```
-
 The runtime guard checks the scorer and shared schema package versions.
 The dependency lock records the release artifact hashes.
 
