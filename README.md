@@ -205,6 +205,12 @@ bash examples/models/openai_compatible.sh
 bash examples/models/ollama.sh
 ```
 
+### Evaluation with llama.cpp (Local)
+
+```bash
+bash examples/models/llama_cpp.sh
+```
+
 ### Evaluation of Qwen2.5-VL
 
 ```bash
@@ -570,7 +576,7 @@ Create a YAML config under `lmms_eval/tasks/` with dataset path, splits, and a `
 <details>
 <summary><strong>Can I evaluate a model behind an API (e.g., GPT-4o, Claude)?</strong></summary>
 
-Yes. Use `--model openai` with `--model_args model=gpt-4o` and set `OPENAI_API_KEY`. Any OpenAI-compatible endpoint works, including local vLLM/SGLang/Ollama servers.
+Yes. Use `--model openai` with `--model_args model=gpt-4o` and set `OPENAI_API_KEY`. Any OpenAI-compatible endpoint works, including local vLLM/SGLang/Ollama/llama.cpp servers.
 
 </details>
 
