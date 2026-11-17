@@ -105,14 +105,17 @@ def _run_power_analysis(args: argparse.Namespace) -> None:
     if args.tasks and args.tasks not in ["list", "list_groups", "list_tags", "list_subtasks"]:
         task_sizes = collect_task_sizes(args.tasks, verbosity=args.verbosity, include_path=args.include_path)
 
-    result = power_analysis(
-        effect_size=args.effect_size,
-        std_a=args.std_a,
-        std_b=args.std_b,
-        alpha=args.alpha,
-        power=args.power,
-        correlation=args.correlation,
-    )
+    try:
+        result = power_analysis(
+            effect_size=args.effect_size,
+            std_a=args.std_a,
+            std_b=args.std_b,
+            alpha=args.alpha,
+            power=args.power,
+            correlation=args.correlation,
+        )
+    except ValueError as e:
+        raise SystemExit(f"lmms_eval: error: invalid power analysis parameters: {e}") from e
 
     print("\n" + "=" * 60)
     print("POWER ANALYSIS RESULTS")

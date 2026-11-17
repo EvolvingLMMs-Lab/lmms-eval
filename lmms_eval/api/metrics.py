@@ -3,6 +3,7 @@ import collections
 import math
 import random
 import re
+import statistics
 import string
 from collections.abc import Iterable
 from typing import Any, List
@@ -26,7 +27,7 @@ def mean(arr):
 
 @register_aggregation("median")
 def median(arr):
-    return arr[len(arr) // 2]
+    return statistics.median(arr)
 
 
 # Certain metrics must be calculated across all documents in a benchmark.
@@ -914,6 +915,15 @@ def power_analysis(
     """
     from scipy import stats
 
+    if not math.isfinite(effect_size) or effect_size == 0:
+        raise ValueError(f"effect_size must be a finite, non-zero number, got {effect_size}")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be strictly between 0 and 1, got {alpha}")
+    if not 0 < power < 1:
+        raise ValueError(f"power must be strictly between 0 and 1, got {power}")
+    if not -1 <= correlation <= 1:
+        raise ValueError(f"correlation must be between -1 and 1, got {correlation}")
+
     # Handle std defaults: if neither provided, use 0.5; if only std_a, assume equal
     if std_a is None and std_b is None:
         std_a = std_b = 0.5  # Default for binary (0/1) scores
@@ -927,7 +937,11 @@ def power_analysis(
 
     # General formula: Var(X-Y) = Var(X) + Var(Y) - 2*Cov(X,Y)
     # where Cov(X,Y) = rho * std_a * std_b
+    if std_a < 0 or std_b < 0:
+        raise ValueError(f"std_a and std_b must be non-negative, got std_a={std_a}, std_b={std_b}")
     var_diff = std_a**2 + std_b**2 - 2 * correlation * std_a * std_b
+    if var_diff <= 0:
+        raise ValueError(f"The paired difference has zero variance (std_a={std_a}, std_b={std_b}, correlation={correlation}), so the required sample size is undefined. Lower the correlation or provide non-zero standard deviations.")
     std_diff = math.sqrt(var_diff)
     d = effect_size / std_diff
     min_n = math.ceil(((z_alpha + z_beta) / d) ** 2)
