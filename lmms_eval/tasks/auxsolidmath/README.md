@@ -32,5 +32,6 @@ AuxSolidMath is a benchmark for evaluating solid geometry reasoning with auxilia
 
 Uses string matching with numerical tolerance for answer comparison. Supports:
 - Exact string matching
-- Numerical comparison with tolerance
+- Numerical comparison with tolerance (plain arithmetic such as `3/4` is parsed, never executed)
+- The reference inside a longer answer such as `x = 3`, as a whole term only (`6` does not match `16`, `6.5`, `1/6` or `√6`)
 - LaTeX expression normalization

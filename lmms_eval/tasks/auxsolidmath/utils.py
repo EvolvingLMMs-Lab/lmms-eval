@@ -6,10 +6,24 @@ Paper: https://arxiv.org/abs/2510.11020
 Dataset: https://huggingface.co/datasets/shasha/AuxSolidMath
 """
 
+import ast
+import operator
 import re
 from typing import Any, Dict, List, Optional
 
 from PIL import Image
+
+# Answer text after a cue such as "the answer is": stop at a sentence break, but keep
+# decimal points ("0.75") and the commas of an interval or list ("[37°, 90°]").
+_ANSWER_TEXT = r"((?:[^\n.,]|\.(?=\d)|,(?=[^\n]*[\])]))+)"
+
+# A reference found inside a longer answer must be a whole term: "6" must not match
+# "16", "6.5", "1/6", "6/7", "√6", "6√2", "-6", "6^2" or "6π".
+_TERM_START = r"(?<![\d.√π/^*+\-])"
+_TERM_END = r"(?![\d√π/^*+\-]|\.\d)"
+
+_BINARY_OPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv, ast.Pow: operator.pow}
+_UNARY_OPS = {ast.UAdd: operator.pos, ast.USub: operator.neg}
 
 
 def _extract_answer_from_response(response: str) -> Optional[str]:
@@ -18,10 +32,10 @@ def _extract_answer_from_response(response: str) -> Optional[str]:
         return None
 
     patterns = [
-        r"(?:final answer|answer is|the answer is|答案是|答案为|结果是|结果为)[:\s]*([^\n.,]+)",
+        r"(?:final answer(?:\s+is)?|answer is|the answer is|答案是|答案为|结果是|结果为)[:\s]*" + _ANSWER_TEXT,
         r"\\boxed\{([^}]+)\}",
         r"=\s*([^\n.,=]+)$",
-        r"(?:therefore|hence|thus|so)[,:\s]*(?:the answer is)?[:\s]*([^\n.,]+)",
+        r"(?:therefore|hence|thus|so)[,:\s]*(?:the answer is)?[:\s]*" + _ANSWER_TEXT,
     ]
 
     response_lower = response.lower()
@@ -47,6 +61,7 @@ def _normalize_math_answer(answer: str) -> str:
 
     answer = answer.strip()
     answer = re.sub(r"\s+", "", answer)
+    answer = answer.replace("$", "")
     answer = answer.replace("\\sqrt", "sqrt")
     answer = answer.replace("\\frac", "frac")
     answer = answer.replace("\\pi", "pi")
@@ -62,6 +77,26 @@ def _normalize_math_answer(answer: str) -> str:
     return answer
 
 
+def _eval_arithmetic(node: ast.AST) -> float:
+    if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+        return float(node.value)
+    if isinstance(node, ast.BinOp) and type(node.op) in _BINARY_OPS:
+        return _BINARY_OPS[type(node.op)](_eval_arithmetic(node.left), _eval_arithmetic(node.right))
+    if isinstance(node, ast.UnaryOp) and type(node.op) in _UNARY_OPS:
+        return _UNARY_OPS[type(node.op)](_eval_arithmetic(node.operand))
+    raise ValueError(f"not plain arithmetic: {type(node).__name__}")
+
+
+def _safe_eval_number(expr: str) -> Optional[float]:
+    """Value of a plain arithmetic expression (numbers with + - * / **), or None. Never runs code."""
+    try:
+        value = _eval_arithmetic(ast.parse(expr, mode="eval").body)
+    except (SyntaxError, ValueError, ZeroDivisionError, OverflowError, RecursionError):
+        return None
+    # A negative base with a fractional power gives a complex number.
+    return value if isinstance(value, float) else None
+
+
 def _compare_math_answers(pred: str, gt: str, tolerance: float = 0.01) -> bool:
     """Compare two mathematical answers with tolerance for numerical values."""
     if not pred or not gt:
@@ -73,17 +108,16 @@ def _compare_math_answers(pred: str, gt: str, tolerance: float = 0.01) -> bool:
     if pred_norm == gt_norm:
         return True
 
-    try:
-        pred_val = float(eval(pred_norm.replace("sqrt", "**0.5").replace("pi", "3.14159265358979")))
-        gt_val = float(eval(gt_norm.replace("sqrt", "**0.5").replace("pi", "3.14159265358979")))
+    pred_val = _safe_eval_number(pred_norm.replace("sqrt", "**0.5").replace("pi", "3.14159265358979"))
+    gt_val = _safe_eval_number(gt_norm.replace("sqrt", "**0.5").replace("pi", "3.14159265358979"))
+    if pred_val is not None and gt_val is not None:
         if abs(pred_val - gt_val) < tolerance:
             return True
         if gt_val != 0 and abs((pred_val - gt_val) / gt_val) < tolerance:
             return True
-    except (SyntaxError, NameError, ValueError, ZeroDivisionError):
-        pass
 
-    return pred_norm in gt_norm or gt_norm in pred_norm
+    # The reference may sit inside a longer answer ("x=3", "the cosine is √6/3"), as a whole term only.
+    return re.search(_TERM_START + re.escape(gt_norm) + _TERM_END, pred_norm) is not None
 
 
 def auxsolidmath_doc_to_visual(doc: Dict[str, Any]) -> List[Image.Image]:
