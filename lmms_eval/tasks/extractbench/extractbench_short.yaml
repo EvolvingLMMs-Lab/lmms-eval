@@ -1,0 +1,3 @@
+include: _default_template_yaml
+task: extractbench_short
+test_split: short
