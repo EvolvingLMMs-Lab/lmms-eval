@@ -290,7 +290,7 @@ class Qwen2_5_Omni(lmms):
                     temperature=gen_kwargs["temperature"],
                     top_p=gen_kwargs["top_p"],
                     num_beams=gen_kwargs["num_beams"],
-                    max_new_tokens=gen_kwargs["max_new_tokens"],
+                    thinker_max_new_tokens=gen_kwargs["max_new_tokens"],
                     use_cache=self.use_cache,
                     use_audio_in_video=current_use_audio,
                     thinker_do_sample=False,

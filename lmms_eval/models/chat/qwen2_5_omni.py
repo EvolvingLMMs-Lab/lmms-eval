@@ -75,7 +75,7 @@ class Qwen2_5_Omni(ChatMixin, Qwen2_5_OmniSimple):
             temperature=generation["temperature"],
             top_p=generation["top_p"],
             num_beams=generation["num_beams"],
-            max_new_tokens=generation["max_new_tokens"],
+            thinker_max_new_tokens=generation["max_new_tokens"],
             use_cache=self.use_cache,
             use_audio_in_video=use_audio_in_video,
             thinker_do_sample=False,
