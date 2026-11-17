@@ -5,7 +5,6 @@ from typing import Any
 from loguru import logger as eval_logger
 from PIL import Image
 
-CODE_FENCE_PATTERN = re.compile(r"```(?:json)?\s*(.*?)```", re.IGNORECASE | re.DOTALL)
 GRID_PATTERN = re.compile(r"\[\s*\[.*?\]\s*\]", re.DOTALL)
 
 
@@ -130,12 +129,10 @@ def _parse_grid_from_response(text: str) -> list[list[int]] | None:
     if parsed_grid is not None:
         return parsed_grid
 
-    for block in CODE_FENCE_PATTERN.findall(text):
-        parsed_grid = _try_parse_grid(block)
-        if parsed_grid is not None:
-            return parsed_grid
-
-    for match in GRID_PATTERN.findall(text):
+    # Use the last grid, as the official ARC Prize harness does: a response often
+    # quotes the test input or a first attempt before its final answer.
+    # GRID_PATTERN also finds grids inside code fences.
+    for match in reversed(GRID_PATTERN.findall(text)):
         parsed_grid = _try_parse_grid(match)
         if parsed_grid is not None:
             return parsed_grid
