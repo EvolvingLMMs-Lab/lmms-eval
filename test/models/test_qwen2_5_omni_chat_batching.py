@@ -196,7 +196,7 @@ class TestQwenNativeBatch(_QwenOmniTestCase):
                 self.assertTrue(all(call["padding"] is True and call["padding_side"] == "left" for call in wrapper.processor.calls))
                 self.assertEqual(wrapper.processor.tokenizer.padding_side, "right")
                 self.assertTrue(all(call["return_audio"] is False and call["use_audio_in_video"] is False and call["thinker_do_sample"] is False for call in wrapper.model.calls))
-                self.assertTrue(all(call["do_sample"] is True and call["max_new_tokens"] == 11 for call in wrapper.model.calls))
+                self.assertTrue(all(call["do_sample"] is True and call["thinker_max_new_tokens"] == 11 and "max_new_tokens" not in call for call in wrapper.model.calls))
                 self.assertEqual(kwargs, {"max_new_tokens": 11, "temperature": 0.5, "top_p": 0.8, "num_beams": 2})
                 self.assertEqual(len(wrapper.cache_hook.entries), 5)
                 self.assertCountEqual([(key[0], answer) for _, key, answer in wrapper.cache_hook.entries], [(f"ctx-{i}", f"final-{i}") for i in range(5)])
@@ -211,7 +211,8 @@ class TestQwenNativeBatch(_QwenOmniTestCase):
         self.assertEqual(kwargs, {"temperature": 0})
         self.assertEqual(len(wrapper.model.calls), 1)
         self.assertEqual(wrapper.model.calls[0]["do_sample"], False)
-        self.assertEqual(wrapper.model.calls[0]["max_new_tokens"], 4096)
+        self.assertEqual(wrapper.model.calls[0]["thinker_max_new_tokens"], 4096)
+        self.assertNotIn("max_new_tokens", wrapper.model.calls[0])
         self.assertEqual(wrapper.model.calls[0]["top_p"], None)
         self.assertEqual(wrapper.model.calls[0]["num_beams"], 1)
 
@@ -221,6 +222,30 @@ class TestQwenNativeBatch(_QwenOmniTestCase):
             self.assertEqual(wrapper._infer_one(messages, kwargs), "final-0")
         self.assertEqual(len(wrapper.model.calls), 2)
 
+    def test_public_limits_reach_native_thinker_without_weights(self) -> None:
+        from transformers import Qwen2_5OmniForConditionalGeneration
+
+        class Thinker:
+            def __init__(self):
+                self.calls = []
+
+            def generate(self, **kwargs):
+                self.calls.append(kwargs)
+                return kwargs["input_ids"]
+
+        wrapper = self._wrapper(1)
+        thinker = Thinker()
+        native = SimpleNamespace(speaker_map={"Chelsie": 0}, has_talker=False, thinker=thinker, talker=SimpleNamespace(codec_pad_token=0))
+        messages = ChatMessages(messages=[{"role": "user", "content": [{"type": "text", "text": "single"}]}])
+        for public_kwargs, expected in (({"max_new_tokens": 1}, 1), ({"max_new_tokens": 16}, 16), ({"max_new_tokens": 11}, 11), ({}, 4096)):
+            with self.subTest(public_kwargs=public_kwargs), patch("lmms_eval.models.chat.qwen2_5_omni.process_mm_info", return_value=(None, None, None)):
+                wrapper._infer_one(messages, public_kwargs)
+                model_kwargs = wrapper.model.calls[-1]
+                self.assertNotIn("max_new_tokens", model_kwargs)
+                Qwen2_5OmniForConditionalGeneration.generate(native, **model_kwargs, generation_mode="text")
+                self.assertEqual(thinker.calls[-1]["max_new_tokens"], expected)
+                self.assertEqual(public_kwargs, {} if expected == 4096 else {"max_new_tokens": expected})
+
     def test_decoded_cardinality_raises_before_cache(self) -> None:
         for decoded in ([], ["assistant\none"], ["assistant\none"] * 3):
             with self.subTest(decoded=decoded):
@@ -229,3 +254,50 @@ class TestQwenNativeBatch(_QwenOmniTestCase):
                     with self.assertRaisesRegex(ValueError, "one string per request"):
                         wrapper.generate_until([_request(0, {}), _request(1, {})])
                 self.assertEqual(wrapper.cache_hook.entries, [])
+
+
+class TestQwenSimpleGenerationLimit(_QwenOmniTestCase):
+    def test_public_limit_is_sent_to_thinker_for_explicit_and_default_values(self) -> None:
+        class SimpleInputs(_Inputs):
+            @property
+            def input_ids(self):
+                return self["input_ids"]
+
+        class SimpleProcessor(_Processor):
+            def __call__(self, **kwargs):
+                self.calls.append(kwargs)
+                return SimpleInputs(input_ids=torch.tensor([[0]], dtype=torch.long))
+
+        class SimpleModel(_Model):
+            def generate(self, **kwargs):
+                self.calls.append(kwargs)
+                return torch.cat((kwargs["input_ids"], torch.tensor([[1]], dtype=torch.long)), dim=1)
+
+        adapter = self.simple_omni.Qwen2_5_Omni
+        for supplied, expected in ((1, 1), (16, 16), (11, 11), (None, 4096)):
+            with self.subTest(supplied=supplied):
+                wrapper = adapter.__new__(adapter)
+                wrapper.batch_size_per_gpu = 1
+                wrapper._rank = 0
+                wrapper.task_dict = {"task": {"test": [{"text": "question"}]}}
+                wrapper.cache_hook = _Cache()
+                wrapper.processor = SimpleProcessor()
+                wrapper.processor.tokenizer.encode = lambda text: [0]
+                wrapper.processor.tokenizer.decode = lambda token: ""
+                wrapper.processor.batch_decode = lambda rows, **kwargs: ["answer"]
+                wrapper._tokenizer = wrapper.processor.tokenizer
+                wrapper._model = SimpleModel()
+                wrapper.device_map = "cpu"
+                wrapper.use_cache = True
+                wrapper.system_prompt = "system"
+                gen_kwargs = {} if supplied is None else {"max_new_tokens": supplied}
+                request = Instance(
+                    request_type="generate_until",
+                    arguments=("question", gen_kwargs, lambda doc: [], 0, "task", "test"),
+                    idx=0,
+                    metadata={"task": "task", "doc_id": 0, "repeats": 1},
+                )
+                with patch.object(self.simple_omni, "process_mm_info", return_value=(None, None, None)):
+                    self.assertEqual(wrapper.generate_until([request]), ["answer"])
+                self.assertEqual(wrapper.model.calls[0]["thinker_max_new_tokens"], expected)
+                self.assertNotIn("max_new_tokens", wrapper.model.calls[0])
