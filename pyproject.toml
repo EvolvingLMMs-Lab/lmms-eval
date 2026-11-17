@@ -151,6 +151,13 @@ prismmbench = [
     "pdf2image>=1.17.0",
     "pdfplumber>=0.11.9"
 ]
+extractbench = [
+    "llama-extract-bench==1.0.0; python_version >= '3.12'",
+    "parse-bench==2.0.0; python_version >= '3.12'",
+    "pdf2image>=1.17.0",
+    "pypdf>=6.4.0",
+    "openai>=1.0.0",
+]
 olmocr_bench = [
     "beautifulsoup4",
     "lxml",
