@@ -9,6 +9,7 @@ from pathlib import Path
 import av
 import numpy as np
 
+from lmms_eval.models.model_utils.video_interval import resolve_video_bounds, uniform_indices
 from lmms_eval.protocol import ChatMessages
 
 COLORS = (
@@ -210,3 +211,14 @@ def test_legacy_nested_dict_still_clips():
     assert part.file_uri == "clip.mp4"
     assert part.video_metadata.start_offset == "2s"
     assert part.video_metadata.end_offset == "4s"
+
+
+def test_phi4_samples_inside_the_requested_interval():
+    indexes = uniform_indices(6, 1.0, 3, 2, 4).tolist()
+    assert indexes == [2, 3, 4]
+    assert uniform_indices(6, 1.0, 6).tolist() == [0, 1, 2, 3, 4, 5]
+    path, start, end = resolve_video_bounds({"path": "clip.mp4", "video_start": 0, "video_end": 1})
+    assert path == "clip.mp4"
+    assert start == 0
+    assert end == 1
+    assert uniform_indices(6, 1.0, 2, start, end).tolist()[0] == 0
