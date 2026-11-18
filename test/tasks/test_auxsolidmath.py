@@ -74,3 +74,24 @@ def test_safe_eval_number_computes_plain_arithmetic(expression, value):
 @pytest.mark.parametrize("expression", ["__import__('os').getpid()", "[37,90]", "(3/4)^(1/4)", "2(3)", "x+1", "1/0", "9**9**9", "(-8)**(1/3)"])
 def test_safe_eval_number_rejects_anything_else(expression):
     assert utils._safe_eval_number(expression) is None
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        "**Final Answer:** √6/3",
+        "The final answer is **√6/3**.",
+        "**Answer: √6/3**",
+        "Thus, the distance is **√6/3**.",
+        "The answer is **√6/3** (about 0.816).",
+        "The answer is `√6/3`",
+    ],
+)
+def test_markdown_emphasis_around_the_answer_is_ignored(response):
+    assert score(response, "√6/3") == 1.0
+    assert score(response, "6") == 0.0
+
+
+def test_power_between_digits_is_not_markdown_emphasis():
+    assert score("The answer is 2**3", "8") == 1.0
+    assert score("The answer is **2**", "8") == 0.0

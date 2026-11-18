@@ -62,6 +62,9 @@ def _normalize_math_answer(answer: str) -> str:
     answer = answer.strip()
     answer = re.sub(r"\s+", "", answer)
     answer = answer.replace("$", "")
+    # Markdown emphasis around the answer ("**6**", "**Final Answer:** 6") is not part of it.
+    # "**" between two digits is a power ("2**3") and stays.
+    answer = re.sub(r"(?<!\d)\*\*|\*\*(?!\d)", "", answer).strip("*_`")
     answer = answer.replace("\\sqrt", "sqrt")
     answer = answer.replace("\\frac", "frac")
     answer = answer.replace("\\pi", "pi")
