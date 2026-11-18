@@ -1,3 +1,6 @@
+from lmms_eval.tasks.countqa.utils import parse_count
+
+
 def countbenchqa_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
@@ -10,7 +13,7 @@ def countbenchqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def countbenchqa_process_results(doc, results):
-    pred = results[0].strip()
-    ground_truth = str(doc["number"])
-    score = 1.0 if pred == ground_truth else 0.0
+    # Compare the count as a number, so answers like "3." or "There are 3 dogs." still match.
+    pred = parse_count(results[0] if results else "")
+    score = 1.0 if pred == int(doc["number"]) else 0.0
     return {"acc": score, "exact_match": score}
