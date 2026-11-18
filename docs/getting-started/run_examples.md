@@ -289,6 +289,24 @@ python3 -m lmms_eval \
     --batch_size 1
 ```
 
+### llama.cpp
+
+```bash
+export OPENAI_API_KEY=llama-cpp  # any non-empty value
+
+TASK=$1
+MODEL_VERSION=$2   # the --alias given to llama-server, e.g. qwen2.5-vl-3b
+# Start the server first, e.g.:
+#   llama-server -hf ggml-org/Qwen2.5-VL-3B-Instruct-GGUF --alias $MODEL_VERSION --port 8080
+
+# base_url points to llama-server; replace localhost:8080 with your server's host and port.
+python3 -m lmms_eval \
+    --model openai \
+    --model_args model_version=$MODEL_VERSION,base_url=http://localhost:8080/v1 \
+    --tasks $TASK \
+    --batch_size 1
+```
+
 ### OpenAI-compatible server with server-side video decoding
 
 With `pass_video_url=True`, the `openai` model sends videos as URLs (local paths become `file://`) and lets the server decode them. By default it asks for `num_frames=max_frames_num` in `media_io_kwargs`. Some server-side loaders sample by frame rate and ignore `num_frames`, for example vLLM's MiniMax-M3 and Qwen3-VL loaders. For those, two options control the frame count:

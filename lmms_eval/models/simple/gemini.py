@@ -59,6 +59,30 @@ def _is_audio_path(path: str) -> bool:
     return any(path.lower().endswith(ext) for ext in _AUDIO_EXTS)
 
 
+def _format_video_offset(value) -> Optional[str]:
+    if value is None:
+        return None
+    return f"{float(value):g}s"
+
+
+def gemini_video_part(file_uri: str, mime_type: str, start_time=None, end_time=None):
+    """Build a Gemini file part, attaching a clip when the task named an interval."""
+    if types is None:
+        raise ImportError("google-genai is required to build a Gemini video part. Install with: pip install google-genai")
+    part = types.Part.from_uri(file_uri=file_uri, mime_type=mime_type)
+    start_offset = _format_video_offset(start_time)
+    end_offset = _format_video_offset(end_time)
+    if start_offset is None and end_offset is None:
+        return part
+    metadata = {}
+    if start_offset is not None:
+        metadata["start_offset"] = start_offset
+    if end_offset is not None:
+        metadata["end_offset"] = end_offset
+    part.video_metadata = types.VideoMetadata(**metadata)
+    return part
+
+
 def _audio_mime_type(path: str) -> str:
     """Map an audio file path to Gemini's canonical MIME type by extension."""
     ext = os.path.splitext(path)[1].lower()
@@ -292,13 +316,23 @@ class Gemini(lmms):
         if isinstance(visual, str):
             if _is_video_path(visual):
                 uploaded = self._upload_video(visual)
-                return types.Part.from_uri(file_uri=uploaded.uri, mime_type=uploaded.mime_type)
+                return gemini_video_part(uploaded.uri, uploaded.mime_type)
             if _is_audio_path(visual):
                 with open(visual, "rb") as f:
                     audio_bytes = f.read()
                 return types.Part.from_bytes(data=audio_bytes, mime_type=_audio_mime_type(visual))
             # Assume image path
             return types.Part.from_bytes(data=_image_to_bytes(Image.open(visual).convert("RGB")), mime_type="image/png")
+        if isinstance(visual, dict):
+            path = visual.get("path") or visual.get("url") or visual.get("video")
+            if isinstance(path, str) and _is_video_path(path):
+                uploaded = self._upload_video(path)
+                return gemini_video_part(
+                    uploaded.uri,
+                    uploaded.mime_type,
+                    visual.get("video_start", visual.get("start_time")),
+                    visual.get("video_end", visual.get("end_time")),
+                )
         if isinstance(visual, dict) and "sampling_rate" in visual:
             # Audio dict from HF datasets
             import soundfile as sf
