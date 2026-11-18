@@ -118,3 +118,32 @@ def test_constant_answer_scores_zero_on_a_mixed_exam():
         doc = {"id": "q", "source": "S", "field": "F", "answer": json.dumps(refs), "points": json.dumps(points)}
         results.append(utils.hipho_process_results(doc, ["Final Answer: \\boxed{x, x}"])["hipho_score"])
     assert utils.hipho_aggregate_results(results) == 0.0
+
+
+@pytest.mark.parametrize(
+    "ref, digit",
+    [
+        ("\\boxed{$\\gamma = \\frac{Q}{2M}$}", "2"),
+        ("\\boxed{$v_e = v_0 \\exp(-\\pi \\mu)$}", "0"),
+        ("\\boxed{$\\Gamma = \\frac{1}{\\tau}$}", "1"),
+        ("\\boxed{$\\sqrt{\\frac{\\pi}{G \\rho_0}}$}", "0"),
+    ],
+)
+def test_single_number_inside_an_expression_is_not_its_value(ref, digit):
+    # The numeric fallback read the only number of an expression as the value of the expression.
+    assert score([ref], f"Final Answer: \\boxed{{{digit}}}") == 0.0
+    assert score([ref], f"Final Answer: \\boxed{{x_{digit}}}") == 0.0
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        "Final Answer: \\boxed{\\approx 184.3}",
+        "Final Answer: \\boxed{T \\approx 184.3 \\text{ K}}",
+        "Final Answer: \\boxed{T \\simeq 184.3}",
+        "Final Answer: \\boxed{T = 184.3 \\, \\mathrm{K}}",
+    ],
+)
+def test_value_after_a_relation_sign_keeps_its_tolerance(response):
+    assert score(["\\boxed{184.3}"], response) == 1.0
+    assert score(["\\boxed{190}"], response) == 0.0

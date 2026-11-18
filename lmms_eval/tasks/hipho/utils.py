@@ -8,6 +8,7 @@ from loguru import logger as eval_logger
 
 _BOXED_PREFIX = r"\boxed{"
 _NUMBER_PATTERN = re.compile(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?")
+_LONE_VALUE_PATTERN = re.compile(r"(?:.*(?:=|≈|~|±|\\approx|\\simeq|\\sim|\\pm))?[-+]?\d*\.?\d")
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -161,8 +162,10 @@ def _numeric_value(text: str) -> float | None:
         except ValueError:
             return None
 
+    # A lone number is the value of an answer only when it starts the answer or follows a
+    # relation sign ("184.3k", "v\approx5m/s"), not inside an expression ("f_0", "\frac{q}{2m}").
     matches = _NUMBER_PATTERN.findall(candidate)
-    if len(matches) == 1:
+    if len(matches) == 1 and _LONE_VALUE_PATTERN.match(candidate):
         try:
             return float(matches[0])
         except ValueError:
