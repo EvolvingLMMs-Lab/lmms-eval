@@ -8,6 +8,7 @@ from loguru import logger as eval_logger
 
 _BOXED_PREFIX = r"\boxed{"
 _NUMBER_PATTERN = re.compile(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?")
+_LONE_VALUE_PATTERN = re.compile(r"(?:.*(?:=|≈|~|±|\\approx|\\simeq|\\sim|\\pm))?[-+]?\d*\.?\d")
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -116,8 +117,15 @@ def _strip_latex_wrappers(text: str) -> str:
     return cleaned.strip()
 
 
+def _unwrap_boxed(text: str) -> str:
+    # The dataset stores every reference answer as "\boxed{...}", while predictions are
+    # already unwrapped by _extract_boxed_answers, so unwrap the reference the same way.
+    boxed = _extract_boxed_answers(text)
+    return boxed[0] if boxed else text
+
+
 def _normalize_answer(text: str) -> str:
-    cleaned = _strip_latex_wrappers(text)
+    cleaned = _strip_latex_wrappers(_unwrap_boxed(text))
     cleaned = cleaned.lower()
     cleaned = re.sub(r"\s+", "", cleaned)
     cleaned = cleaned.strip(".:;,。!?")
@@ -129,14 +137,14 @@ def _answer_variants(text: str) -> set[str]:
     if normalized == "":
         return set()
 
+    # "x = 5" may be answered as "x = 5" or just "5". The left-hand side is not an answer
+    # (a wrong "x = 7" shares it), so it is not a variant.
     variants = {normalized}
     if "=" in normalized:
-        left, right = normalized.split("=", maxsplit=1)
-        if left:
-            variants.add(left)
+        right = normalized.split("=", maxsplit=1)[1]
         if right:
             variants.add(right)
-    return {item for item in variants if item}
+    return variants
 
 
 def _numeric_value(text: str) -> float | None:
@@ -154,8 +162,10 @@ def _numeric_value(text: str) -> float | None:
         except ValueError:
             return None
 
+    # A lone number is the value of an answer only when it starts the answer or follows a
+    # relation sign ("184.3k", "v\approx5m/s"), not inside an expression ("f_0", "\frac{q}{2m}").
     matches = _NUMBER_PATTERN.findall(candidate)
-    if len(matches) == 1:
+    if len(matches) == 1 and _LONE_VALUE_PATTERN.match(candidate):
         try:
             return float(matches[0])
         except ValueError:
@@ -181,9 +191,6 @@ def _answers_match(prediction: str, answer: str) -> bool:
                     return True
                 if abs(answer_numeric) > 1e-6 and abs(pred_numeric - answer_numeric) / abs(answer_numeric) <= 1e-3:
                     return True
-
-            if pred_variant in answer_variant or answer_variant in pred_variant:
-                return True
 
     return False
 
