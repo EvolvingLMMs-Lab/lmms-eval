@@ -158,6 +158,10 @@ extractbench = [
     "pypdf>=6.4.0",
     "openai>=1.0.0",
 ]
+cc_ocr_v2 = [
+    "lxml>=4.9.0",
+    "scipy",
+]
 olmocr_bench = [
     "beautifulsoup4",
     "lxml",

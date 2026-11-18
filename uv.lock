@@ -3469,6 +3469,12 @@ audio = [
     { name = "soundfile" },
     { name = "zhconv" },
 ]
+cc-ocr-v2 = [
+    { name = "lxml" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
 core = [
     { name = "anls" },
     { name = "capture-metric" },
@@ -3621,6 +3627,7 @@ requires-dist = [
     { name = "lmms-eval", extras = ["tui"], marker = "extra == 'all'" },
     { name = "lmms-eval", extras = ["video"], marker = "extra == 'all'" },
     { name = "loguru" },
+    { name = "lxml", marker = "extra == 'cc-ocr-v2'", specifier = ">=4.9.0" },
     { name = "lxml", marker = "extra == 'olmocr-bench'" },
     { name = "math-verify", specifier = ">=0.9.0,<0.10.0" },
     { name = "matplotlib", marker = "extra == 'mmsearch'" },
@@ -3665,6 +3672,7 @@ requires-dist = [
     { name = "ruff", specifier = ">=0.16.4" },
     { name = "sacrebleu", specifier = ">=1.5.0" },
     { name = "scikit-learn", specifier = ">=0.24.1" },
+    { name = "scipy", marker = "extra == 'cc-ocr-v2'" },
     { name = "sentence-transformers" },
     { name = "sentencepiece" },
     { name = "soundfile", marker = "extra == 'audio'" },
@@ -3689,7 +3697,7 @@ requires-dist = [
     { name = "zss" },
     { name = "zstandard" },
 ]
-provides-extras = ["core", "server", "mcp", "audio", "metrics", "gemini", "litellm", "swanlab", "reka", "qwen", "mmsearch", "prismmbench", "extractbench", "olmocr-bench", "tui", "video", "video-legacy", "all"]
+provides-extras = ["core", "server", "mcp", "audio", "metrics", "gemini", "litellm", "swanlab", "reka", "qwen", "mmsearch", "prismmbench", "extractbench", "cc-ocr-v2", "olmocr-bench", "tui", "video", "video-legacy", "all"]
 
 [package.metadata.requires-dev]
 dev = [

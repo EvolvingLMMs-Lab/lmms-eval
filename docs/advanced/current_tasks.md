@@ -488,6 +488,7 @@ python -m lmms_eval --tasks list_with_num
 
 ## 5. Document Understanding Tasks
 
+- [CC-OCR V2](https://github.com/Eioss/CC-OCR-V2) (cc_ocr_v2)
 - [DocAtlas-Bench](https://github.com/ahmedheakl/DocAtlas) (docatlas_bench)
 - [DOCVQA](https://github.com/anisha2102/docvqa) (docvqa)
   - DOCVQA Validation (docvqa_val)
