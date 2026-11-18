@@ -1773,9 +1773,16 @@ class ConfigurableMessagesTask(ConfigurableTask):
             return {"type": "image", "url": visual}
         if isinstance(visual, dict):
             media_type = visual.get("type", "video")
-            has_metadata = any(k in visual for k in ("video_start", "video_end"))
-            media_url = visual if has_metadata else (visual.get("url") or visual.get("path") or visual)
-            return {"type": media_type, "url": media_url}
+            media_url = visual.get("url") or visual.get("path") or visual.get("video") or visual
+            content = {"type": media_type, "url": media_url}
+            if media_type == "video" and isinstance(media_url, str):
+                start = visual.get("video_start", visual.get("start_time"))
+                end = visual.get("video_end", visual.get("end_time"))
+                if start is not None:
+                    content["start_time"] = float(start)
+                if end is not None:
+                    content["end_time"] = float(end)
+            return content
         if isinstance(visual, str):
             ext = os.path.splitext(visual)[1].lower()
             if ext in cls._IMAGE_EXTS:

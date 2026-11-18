@@ -10,6 +10,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
+from lmms_eval.models.model_utils.video_interval import resolve_video_bounds
 from lmms_eval.models.simple.phi4_multimodal import Phi4 as Phi4Simple
 from lmms_eval.protocol import ChatMessages
 
@@ -74,7 +75,8 @@ class Phi4(Phi4Simple):
                             images_list.append(img)
                             image_counter += 1
                         elif content.type == "video":
-                            frames = self.load_video(content.url, self.max_frame_num)
+                            video_path, start_time, end_time = resolve_video_bounds(content.url, content.start_time, content.end_time)
+                            frames = self.load_video(video_path, self.max_frame_num, start_time=start_time, end_time=end_time)
                             for frame in frames:
                                 prompt_parts.append(f"<|image_{image_counter}|>")
                                 images_list.append(Image.fromarray(np.uint8(frame)))
