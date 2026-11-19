@@ -44,6 +44,11 @@ class JudgePromptBuilder:
         return CORRECTNESS_JUDGE_PROMPT.format(question=question, answer=answer, prediction=prediction, positive=positive, negative=negative)
 
 
+# A standalone 0 or 1 verdict (also 0.0 / 1.0): not part of a longer number or a word,
+# so the digits in "12", "2019", "1.5" or "v1" are not verdicts.
+_BINARY_VERDICT = re.compile(r"(?<![\w.])([01])(?:\.0+)?(?!\w|\.\d)")
+
+
 class ResponseParser:
     """Helper class to parse different types of judge responses"""
 
@@ -53,11 +58,10 @@ class ResponseParser:
         response = response.strip().lower()
 
         if output_format == "0/1" or output_format == "1/0":
-            # Check for various formats of 1
-            if any(pattern in response for pattern in ["1", "[1]", "score: 1", "answer: 1"]):
-                return 1
-            else:
-                return 0
+            # The prompt asks for the verdict alone, so the verdict is the first standalone 0 or 1
+            # ("1", "[1]", "score: 1"). A "1" inside another number ("0 ... the answer is 12") is not one.
+            verdict = _BINARY_VERDICT.search(response)
+            return 1 if verdict and verdict.group(1) == "1" else 0
         else:
             # yes/no format
             return response == "yes" or response.startswith("yes")
