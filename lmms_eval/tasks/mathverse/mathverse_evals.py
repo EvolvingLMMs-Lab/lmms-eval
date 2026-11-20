@@ -8,7 +8,10 @@ from tqdm import tqdm
 
 from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.llm_judge import ServerConfig, get_server
-from lmms_eval.llm_judge.openai_endpoint import resolve_openai_chat_completions_url
+from lmms_eval.llm_judge.openai_endpoint import (
+    resolve_openai_api_base,
+    resolve_openai_chat_completions_url,
+)
 
 
 class MathVerseEvaluator:
@@ -20,7 +23,7 @@ class MathVerseEvaluator:
             "Authorization": f"Bearer {API_KEY}",
             "Content-Type": "application/json",
         }
-        client = OpenAI(api_key=API_KEY, base_url=API_URL.rstrip("chat/completions"))
+        client = OpenAI(api_key=API_KEY, base_url=resolve_openai_api_base())
         gpt_model = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 
     elif API_TYPE == "azure":
