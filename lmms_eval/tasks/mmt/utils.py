@@ -83,6 +83,29 @@ def mmt_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     return formatted_question
 
 
+def mmt_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    """Chat input for MMT.
+
+    ``mmt_doc_to_text`` prefixes the question with one group-level ``<image>`` marker. The chat path turns
+    every frame into a structured image item, so keeping the literal marker as well sends multi-frame samples
+    to the processor with one marker too many ("Found total 5 <image> tokens and 4 images"). Expand the group
+    marker into one structured image item per frame, in dataset order, and keep the full question, options
+    and prompt configuration. MMT questions carry no per-image ``<image>`` references (no mmt_mi val row
+    does), so the frames form one group at the prefix. The simple-model path (``mmt_doc_to_text``) is
+    unchanged.
+    """
+    visuals = mmt_doc_to_visual(doc)
+    text = mmt_doc_to_text(doc, lmms_eval_specific_kwargs)
+    prefix, rest = text.split("<image>", 1)
+    content = []
+    if prefix.strip():
+        content.append({"type": "text", "text": prefix.strip()})
+    content.extend({"type": "image", "url": visual} for visual in visuals)
+    if rest.strip():
+        content.append({"type": "text", "text": rest.strip()})
+    return [{"role": "user", "content": content}]
+
+
 def mmt_doc_to_choice(doc):
     choices = []
     for option in ["A", "B", "C", "D", "E", "F", "G", "H", "I"]:
