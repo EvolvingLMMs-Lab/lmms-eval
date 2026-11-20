@@ -45,8 +45,9 @@ class JudgePromptBuilder:
 
 
 # A standalone 0 or 1 verdict (also 0.0 / 1.0): not part of a longer number or a word,
-# so the digits in "12", "2019", "1.5" or "v1" are not verdicts.
-_BINARY_VERDICT = re.compile(r"(?<![\w.])([01])(?:\.0+)?(?!\w|\.\d)")
+# so the digits in "12", "2019", "1.5" or "v1" are not verdicts. ASCII word characters only,
+# so a verdict next to CJK text ("得分1", "1分") is still read.
+_BINARY_VERDICT = re.compile(r"(?<![\w.])([01])(?:\.0+)?(?!\w|\.\d)", re.ASCII)
 
 
 class ResponseParser:

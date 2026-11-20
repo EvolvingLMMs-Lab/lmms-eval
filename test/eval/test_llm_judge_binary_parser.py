@@ -47,7 +47,12 @@ def test_a_standalone_one_is_a_correct_verdict(reply):
     assert parse(reply) == 1
 
 
-@pytest.mark.parametrize("reply", ["0", "[0]", "0.0", "Score: 0", "answer: 0", "", "incorrect", "No", "0 (not 1)"])
+@pytest.mark.parametrize("reply, expected", [("得分1", 1), ("1分", 1), ("输出：1", 1), ("得分0", 0), ("0分，答案是12", 0)])
+def test_verdict_next_to_cjk_text_is_read(reply, expected):
+    assert parse(reply) == expected
+
+
+@pytest.mark.parametrize("reply", ["0", "[0]", "0.0", "Score: 0", "answer: 0", "", "incorrect", "No", "0 (not 1)", "v1"])
 def test_zero_and_unreadable_replies_are_incorrect(reply):
     assert parse(reply) == 0
 
