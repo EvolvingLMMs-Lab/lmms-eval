@@ -29,6 +29,12 @@ from lmms_eval.tasks.mvbench.utils import mcq_acc
             "A",
             0,
         ),
+        # Sentence that starts with the article "A" (capital) is not option A
+        ("A person walks into the room", "A", 0),
+        ("A cat sits on a table", "A", 0),
+        ("a person", "A", 0),
+        # Uppercase B-E in prose is still read
+        ("I can see a B", "B", 1),
         # Sentence containing article "a" before the actual answer letter
         (
             "I see a cat in the video, so the answer is B.",
