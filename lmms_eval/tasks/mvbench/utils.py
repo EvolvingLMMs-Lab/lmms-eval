@@ -128,13 +128,18 @@ def mcq_acc(answer, pred):
             answer = answer.strip('"')
             answer = answer.strip(")")
             answer = answer.strip("(")
-            answer = answer.strip().lower()
 
-            # Try to find any single letter (A-E) in the processed answer
-            letter_match = re.search(r"\b([A-E])\b", answer, re.IGNORECASE)
+            if answer.strip().upper() in ["A", "B", "C", "D", "E"]:
+                return answer.strip().upper()
+
+            # Look for a standalone uppercase B-E in the prose. "A" is skipped: "A person ..." and
+            # "I can see a ..." start with the article, and a real "A" answer is read above or by
+            # extract_final_mcq_answer.
+            letter_match = re.search(r"\b([B-E])\b", answer)
             if letter_match:
                 return letter_match.group(1).upper()
 
+            answer = answer.strip().lower()
             return answer
 
     pred = process(extract_final_mcq_answer(pred) or pred)
