@@ -91,7 +91,7 @@ def test_doc_to_visual_returns_one_video_with_the_question(tmp_path, monkeypatch
 def test_chunks_keep_the_video_timeline():
     raw = json.dumps({"sessions": [[{"text": "a", "current_time": 1}, {"text": " ", "current_time": 2}, {"text": "b", "current_time": 3}]], "preamble": 0.0})
 
-    assert omni.normalize_chunks(raw) == [{"text": "a", "current_time": 1.0}, {"text": "b", "current_time": 3.0}]
+    assert omni.normalize_chunks(raw) == [{"text": "a", "current_time": 1.0, "in_preamble": False}, {"text": "b", "current_time": 3.0, "in_preamble": False}]
 
 
 def test_generation_error_scores_as_an_empty_response():
