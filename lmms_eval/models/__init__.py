@@ -100,6 +100,7 @@ _BUILTIN_SIMPLE_MODELS = {
     "qwen2_audio": "Qwen2_Audio",
     "qwen2_vl": "Qwen2_VL",
     "qwen_image_edit": "QwenImageEdit",
+    "qwen3_asr": "Qwen3ASR",
     "qwen3_omni": "Qwen3_Omni",
     "qwen3_vl": "Qwen3_VL",
     "qwen3_5": "Qwen3_5",
