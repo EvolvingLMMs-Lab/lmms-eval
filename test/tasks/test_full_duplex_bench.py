@@ -227,3 +227,16 @@ def test_task_configs_list_every_reported_metric(judge, yaml_name):
     reported = fdb.fdb_process_results(_doc(), [_output()])
 
     assert sorted(configured) == sorted(reported)
+
+
+def test_build_rows_skips_samples_without_transcripts(tmp_path):
+    for sample, files in (("1", ("input.json", "clean_input.json")), ("2", ("input.json",))):
+        folder = tmp_path / "v1.5" / "user_backchannel" / sample
+        folder.mkdir(parents=True)
+        (folder / "metadata.json").write_text("{}")
+        for name in files:
+            (folder / name).write_text(json.dumps({"text": "", "chunks": []}))
+
+    rows = fdb_task._build_rows(str(tmp_path), "user_backchannel")
+
+    assert [row["sample_id"] for row in rows] == ["user_backchannel/1"]

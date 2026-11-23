@@ -228,3 +228,28 @@ def test_unknown_content_mode_is_rejected(client, monkeypatch):
 
     with pytest.raises(ValueError):
         omni._judge_content_accuracy(client(), "v.mp4", "text", "q", [], "m")
+
+
+def test_auto_mode_keeps_video_when_frames_also_fail(client, frames, monkeypatch):
+    monkeypatch.setenv("OMNI_DUPLEXEVAL_JUDGE_MAX_ATTEMPTS", "1")
+    judge = client(_Response(400), _Response(503), _content_reply(2.0))
+
+    assert omni._judge_content_accuracy(judge, "v.mp4", "text", "q", [], "m") == 0.0
+    assert omni._judge_content_accuracy(judge, "v.mp4", "text", "q", [], "m") == 2.0
+    assert [_part_types(call)[-1] for call in judge.requests.calls] == ["video", "image_url", "video"]
+
+
+def test_auto_mode_does_not_switch_after_video_was_accepted(client, frames):
+    judge = client(_content_reply(2.5), _Response(400))
+
+    assert omni._judge_content_accuracy(judge, "v.mp4", "text", "q", [], "m") == 2.5
+    assert omni._judge_content_accuracy(judge, "v.mp4", "text", "q", [], "m") == 0.0
+    assert len(judge.requests.calls) == 2
+
+
+@pytest.mark.parametrize("reply", ['{"content_score": "N/A"}', "", '{"temporal_score": "high"}'])
+def test_unreadable_scores_count_zero_without_raising(client, frames, reply):
+    judge = client(_Response(200, {"choices": [{"message": {"content": reply}}]}))
+
+    assert omni._judge_content_accuracy(judge, "v.mp4", "text", "q", [], "m") == 0.0
+    assert omni._parse_temporal_scores(reply).get("temporal_score") is None

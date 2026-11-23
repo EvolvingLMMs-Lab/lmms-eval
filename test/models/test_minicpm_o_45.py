@@ -203,6 +203,26 @@ class TestMiniCPMO45Duplex(unittest.TestCase):
 
         self.assertEqual(steps, [(0, ["f0", "s0"]), (1, []), (2, ["f2", "s2"]), (3, [])])
 
+    def _run_video(self, frames, segments):
+        wrapper = _duplex()
+        wrapper.stack_frames = 1
+        wrapper.use_ffmpeg = True
+        steps = []
+        loader = lambda path, **kwargs: (frames, segments, None)  # noqa: E731
+        with (
+            mock.patch("lmms_eval.models.simple.minicpm_o_45_duplex._load_minicpmo_utils", return_value=loader),
+            mock.patch.object(MiniCPM_O_45Duplex, "_step", side_effect=lambda audio, frame_list: steps.append((audio, list(frame_list))) or {}),
+        ):
+            wrapper._run_stream({"kind": "video", "path": "v.mp4"}, np.zeros(1), {})
+        return steps
+
+    def test_video_without_audio_streams_its_frames(self):
+        self.assertEqual(self._run_video(["f0", "f1"], []), [(None, ["f0"]), (None, ["f1"])])
+
+    def test_stream_without_frames_or_audio_raises(self):
+        with self.assertRaises(RuntimeError):
+            self._run_video([], [])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -166,27 +166,44 @@ def _parse_json_block(text: str) -> Dict[str, Any]:
     return {}
 
 
+def _to_number(value: Any, caster) -> Any:
+    """``caster(float(value))``, or None when the judge wrote something that is not a number."""
+    try:
+        return caster(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _warn_unreadable(key: str, reply: str) -> None:
+    # As in the official scripts, such a reply scores 0; the warning makes it visible.
+    eval_logger.warning(f"Omni-DuplexEval judge reply has no readable {key}; scored 0. Reply: {reply[:150]!r}")
+
+
 def _parse_success_score(text: str) -> Dict[str, Any]:
     parsed = _parse_json_block(text)
     if "success_score" in parsed:
-        try:
-            parsed["success_score"] = int(float(parsed["success_score"]))
-        except (TypeError, ValueError):
+        score = _to_number(parsed["success_score"], int)
+        if score is None:
             # the official parser defaults an unreadable score to 0
-            parsed["success_score"] = 0
+            _warn_unreadable("success_score", text)
+            score = 0
+        parsed["success_score"] = score
         return parsed
     score_match = re.search(r'"success_score"\s*:\s*([01])', text)
+    if not score_match:
+        _warn_unreadable("success_score", text)
     return {"success_score": int(score_match.group(1)) if score_match else 0, "reasoning": ""}
 
 
 def _parse_temporal_scores(text: str) -> Dict[str, Any]:
     parsed = _parse_json_block(text)
-    if "temporal_score" in parsed:
-        parsed["temporal_score"] = int(float(parsed["temporal_score"]))
-    if "content_score" in parsed:
-        parsed["content_score"] = round(float(parsed["content_score"]), 2)
-    if "is_relevant" in parsed:
-        parsed["is_relevant"] = int(float(parsed["is_relevant"]))
+    for key, caster in (("temporal_score", int), ("content_score", lambda value: round(value, 2)), ("is_relevant", int)):
+        if key in parsed:
+            value = _to_number(parsed[key], caster)
+            if value is None:
+                del parsed[key]
+            else:
+                parsed[key] = value
     if parsed:
         return parsed
     parsed = {}
@@ -688,7 +705,10 @@ def _judge_temporal_sentence(sentence: Dict[str, Any], video_path: str, video_du
     if "error" in response:
         eval_logger.warning(f"Temporal judge call failed: {str(response.get('error'))[:150]}")
         return {"temporal_score": 0, "is_relevant": 0}
-    parsed = _parse_temporal_scores(extract_message_text(response))
+    reply = extract_message_text(response)
+    parsed = _parse_temporal_scores(reply)
+    if "temporal_score" not in parsed:
+        _warn_unreadable("temporal_score", reply)
     return {"temporal_score": int(parsed.get("temporal_score", 0)), "is_relevant": int(parsed.get("is_relevant", 0))}
 
 
@@ -768,8 +788,10 @@ def _extract_uniform_frames(video_path: str, num_frames: int) -> List[bytes]:
 #   "video"  - the official message part {"type": "video", "video": <local path>};
 #              only endpoints that read local files accept it.
 #   "frames" - CONTENT_FALLBACK_FRAMES uniformly-sampled JPEG frames.
-#   "auto"   - (default) try "video" once; if the endpoint rejects that request
-#              format (HTTP 400/415/422), use "frames" for the rest of the run.
+#   "auto"   - (default) try "video"; if the endpoint rejects that request
+#              (HTTP 400/415/422) and the same request with frames succeeds,
+#              use "frames" for the rest of the run; once a video request has
+#              succeeded, keep "video".
 #              Timeouts, rate limits and server errors never change the input.
 CONTENT_INPUT_MODES = ("auto", "video", "frames")
 _VIDEO_REJECTED_STATUSES = (400, 415, 422)
@@ -787,6 +809,11 @@ def _content_input_mode() -> str:
         return _content_input_resolved or "auto"
 
 
+def _resolved_content_input() -> Optional[str]:
+    with _content_input_lock:
+        return _content_input_resolved
+
+
 def _resolve_content_input(mode: str, reason: str) -> None:
     global _content_input_resolved
     with _content_input_lock:
@@ -795,27 +822,36 @@ def _resolve_content_input(mode: str, reason: str) -> None:
             eval_logger.info(f"Omni-DuplexEval content judge input: {mode} ({reason}); every sample in this run uses it.")
 
 
-def _judge_content_from_frames(client: OpenAILLMClient, video_path: str, prompt: str, model_id: str) -> float:
+def _content_score(response: Dict[str, Any]) -> float:
+    reply = extract_message_text(response)
+    parsed = _parse_temporal_scores(reply)
+    if "content_score" not in parsed:
+        _warn_unreadable("content_score", reply)
+    return round(float(parsed.get("content_score", 0.0)), 2)
+
+
+def _judge_content_from_frames(client: OpenAILLMClient, video_path: str, prompt: str, model_id: str) -> Optional[float]:
+    """Content score from sampled frames, or None when no score could be obtained (logged)."""
     frames = _extract_uniform_frames(video_path, CONTENT_FALLBACK_FRAMES)
     if not frames:
         eval_logger.error(f"Content judge: no frames could be extracted from {video_path}; score 0")
-        return 0.0
+        return None
     content: List[Dict[str, Any]] = [{"type": "text", "text": prompt + "\n(The video is provided as uniformly-sampled frames in temporal order.)"}]
     for frame in frames:
         content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(frame).decode('utf-8')}"}})
     response = client.chat_completion(messages=[{"role": "user", "content": content}], model=model_id, max_tokens=1200)
     if "error" in response:
         eval_logger.error(f"Content judge call failed (frames input); score 0: {str(response.get('error'))[:150]}")
-        return 0.0
-    parsed = _parse_temporal_scores(extract_message_text(response))
-    return round(float(parsed.get("content_score", 0.0)), 2)
+        return None
+    return _content_score(response)
 
 
 def _judge_content_accuracy(client: OpenAILLMClient, video_path: str, response_text: str, question: str, references: List[str], model_id: str) -> float:
     prompt = build_content_prompt(response_text, question, references)
     mode = _content_input_mode()
     if mode == "frames":
-        return _judge_content_from_frames(client, video_path, prompt, model_id)
+        score = _judge_content_from_frames(client, video_path, prompt, model_id)
+        return 0.0 if score is None else score
 
     response = client.chat_completion(
         messages=[{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "video", "video": video_path}]}],
@@ -826,13 +862,17 @@ def _judge_content_accuracy(client: OpenAILLMClient, video_path: str, response_t
         if mode == "auto":
             _resolve_content_input("video", "the endpoint accepted the official video message part")
         # As in the official script, a reply without a readable score counts 0.
-        parsed = _parse_temporal_scores(extract_message_text(response))
-        return round(float(parsed.get("content_score", 0.0)), 2)
+        return _content_score(response)
 
     status = response.get("status_code")
-    if mode == "auto" and status in _VIDEO_REJECTED_STATUSES:
-        _resolve_content_input("frames", f"the endpoint rejected the video message part with HTTP {status}")
-        return _judge_content_from_frames(client, video_path, prompt, model_id)
+    if mode == "auto" and status in _VIDEO_REJECTED_STATUSES and _resolved_content_input() != "video":
+        # Switch only when the same request succeeds with frames, so a 400
+        # caused by something other than the video part does not change the run.
+        score = _judge_content_from_frames(client, video_path, prompt, model_id)
+        if score is None:
+            return 0.0
+        _resolve_content_input("frames", f"the endpoint rejected the video message part with HTTP {status} and accepted frames")
+        return score
     # As in the official script, a failed call counts 0.
     eval_logger.error(f"Content judge call failed (video input); score 0: {str(response.get('error'))[:150]}")
     return 0.0

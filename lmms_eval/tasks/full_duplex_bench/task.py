@@ -115,8 +115,6 @@ def _read_transcript(json_path: str) -> str:
     The official judge receives these files unchanged; storing them as strings
     keeps the dataset schema flat.
     """
-    if not os.path.exists(json_path):
-        return json.dumps({"text": "", "chunks": []})
     with open(json_path, "r", encoding="utf-8") as handle:
         payload = json.load(handle)
     if not isinstance(payload, dict):
@@ -142,6 +140,11 @@ def _build_rows(root: str, fdb_task: str) -> list:
     for sample in _sort_numeric(os.listdir(task_dir)):
         sample_dir = os.path.join(task_dir, sample)
         if not os.path.isdir(sample_dir) or not os.path.exists(os.path.join(sample_dir, "metadata.json")):
+            continue
+        missing = [name for name in ("clean_input.json", "input.json") if not os.path.exists(os.path.join(sample_dir, name))]
+        if missing:
+            # The official evaluation skips samples without these transcripts.
+            eval_logger.warning(f"Full-Duplex-Bench sample {fdb_task}/{sample} skipped: missing {', '.join(missing)}")
             continue
         with open(os.path.join(sample_dir, "metadata.json"), "r", encoding="utf-8") as handle:
             metadata = json.load(handle)

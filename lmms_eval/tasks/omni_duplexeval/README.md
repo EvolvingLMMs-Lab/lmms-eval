@@ -51,14 +51,16 @@ input:
 
 | Value | Content judge input |
 | --- | --- |
-| `auto` (default) | the official video part; if the endpoint rejects it (HTTP 400/415/422), 8 uniformly-sampled frames for the whole run (logged once) |
+| `auto` (default) | the official video part; if the endpoint rejects it (HTTP 400/415/422) and the same request with 8 uniformly-sampled frames succeeds, frames for the whole run (logged once); after one accepted video request, always video |
 | `video` | always the official video part |
 | `frames` | always 8 uniformly-sampled frames |
 
 Use `frames` for an endpoint that accepts the request but ignores video parts.
 Timeouts, rate limits (429) and server errors (5xx) are retried
 (`OMNI_DUPLEXEVAL_JUDGE_MAX_ATTEMPTS`, default 3) and never change the input
-mode; a call that still fails scores 0, as in the official scripts.
+mode; a call that still fails, or a reply without a readable score, scores 0
+as in the official scripts and is logged. A failed generation (the duplex
+output carries an `error` key) is logged and scored as an empty response.
 `ffmpeg`/`ffprobe` must be on `PATH`.
 
 ## Example

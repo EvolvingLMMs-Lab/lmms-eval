@@ -260,12 +260,16 @@ class MiniCPM_O_45Duplex(lmms):
             video_frames, audio_segments, stacked_frames = get_video_frame_audio_segments(stream["path"], stack_frames=self.stack_frames, use_ffmpeg=self.use_ffmpeg, adjust_audio_length=True)
             # As in the model card: one step per one-second audio segment; the
             # stacked frame is added only together with its main frame.
-            if audio_segments is not None:
+            if audio_segments is not None and len(audio_segments) > 0:
                 num_chunks = len(audio_segments)
             else:
                 num_chunks = len(video_frames) if video_frames is not None else 0
+                if num_chunks:
+                    eval_logger.warning(f"minicpm_o_45_duplex: no audio decoded from {stream['path']}; streaming {num_chunks} frames without audio")
+            if num_chunks == 0:
+                raise RuntimeError(f"minicpm_o_45_duplex: no frames or audio decoded from {stream['path']}")
             for chunk_idx in range(num_chunks):
-                audio_chunk = audio_segments[chunk_idx] if audio_segments is not None else None
+                audio_chunk = audio_segments[chunk_idx] if audio_segments is not None and chunk_idx < len(audio_segments) else None
                 if audio_chunk is not None and not getattr(audio_chunk, "size", 1):
                     audio_chunk = None
                 frame = video_frames[chunk_idx] if video_frames is not None and chunk_idx < len(video_frames) else None
