@@ -14,8 +14,8 @@ def _ffmpeg(*args):
     subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", *args], check=True)
 
 
-def _video(path, seconds, tone_hz=None):
-    inputs = ["-f", "lavfi", "-i", f"testsrc=size=64x64:rate=2:duration={seconds}"]
+def _video(path, seconds, tone_hz=None, rate=2):
+    inputs = ["-f", "lavfi", "-i", f"testsrc=size=64x64:rate={rate}:duration={seconds}"]
     if tone_hz:
         inputs += ["-f", "lavfi", "-i", f"sine=frequency={tone_hz}:sample_rate=16000:duration={seconds}"]
     _ffmpeg(*inputs, "-c:v", "mpeg4", *(["-c:a", "aac", "-shortest"] if tone_hz else []), str(path))
@@ -253,3 +253,11 @@ def test_unreadable_scores_count_zero_without_raising(client, frames, reply):
 
     assert omni._judge_content_accuracy(judge, "v.mp4", "text", "q", [], "m") == 0.0
     assert omni._parse_temporal_scores(reply).get("temporal_score") is None
+
+
+@needs_ffmpeg
+def test_content_fallback_extracts_every_frame(tmp_path):
+    video = _video(tmp_path / "v.mp4", 4, rate=25)
+
+    assert abs(omni.get_video_duration(video) - 4.0) < 0.1
+    assert len(omni._extract_uniform_frames(video, omni.CONTENT_FALLBACK_FRAMES)) == omni.CONTENT_FALLBACK_FRAMES

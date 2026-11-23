@@ -590,7 +590,7 @@ def score_proactive_reminder(client: OpenAILLMClient, model_id: str, doc: dict, 
 
 
 def get_video_duration(video_path: str) -> float:
-    command = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprinting_wrappers=1:nokey=1", video_path]
+    command = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", video_path]
     try:
         result = subprocess.run(command, stdin=subprocess.DEVNULL, capture_output=True, text=True, check=True)
         return float(result.stdout.strip())
@@ -756,7 +756,8 @@ def _extract_uniform_frames(video_path: str, num_frames: int) -> List[bytes]:
     frames: List[bytes] = []
     with tempfile.TemporaryDirectory(prefix="omni_duplexeval_content_") as temp_dir:
         for index in range(num_frames):
-            frame_time = duration * index / max(1, num_frames - 1)
+            # centre of each of num_frames equal segments (a seek to the very end returns no frame)
+            frame_time = duration * (index + 0.5) / num_frames
             frame_path = os.path.join(temp_dir, f"frame_{index:03d}.jpg")
             command = [
                 "ffmpeg",
