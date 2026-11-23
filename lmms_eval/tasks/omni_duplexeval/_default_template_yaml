@@ -1,0 +1,20 @@
+dataset_path: parquet
+test_split: test
+output_type: generate_until
+
+# answer1 = first reference answer (correction reference for PR tasks, first
+# human description for RTD tasks); used for logging only.
+doc_to_target: answer1
+
+# Duplex wrappers stream media chunk-by-chunk; these knobs only matter for
+# non-duplex models that fall back to plain generation.
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  do_sample: false
+
+doc_to_visual: !function utils.omni_duplexeval_doc_to_visual
+doc_to_text: !function utils.omni_duplexeval_doc_to_text
+
+metadata:
+  version: 1.0

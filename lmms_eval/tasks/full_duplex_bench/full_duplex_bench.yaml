@@ -1,0 +1,6 @@
+group: full_duplex_bench
+task:
+- fdb_user_interruption
+- fdb_user_backchannel
+- fdb_talking_to_other
+- fdb_background_speech

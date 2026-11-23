@@ -484,6 +484,13 @@ python -m lmms_eval --tasks list_with_num
 - [VoiceBench](https://voicebench.github.io/) (voicebench)
 - [WavCaps](https://github.com/XinhaoMei/WavCaps) (wavcaps)
 
+### Full-Duplex / Streaming Interaction
+- [Full-Duplex-Bench v1.5](https://github.com/DanielLin94144/Full-Duplex-Bench) (full_duplex_bench)
+  - fdb_user_interruption, fdb_user_backchannel, fdb_talking_to_other, fdb_background_speech
+- [Omni-DuplexEval](https://github.com/OpenBMB/Omni-DuplexEval) (omni_duplexeval)
+  - omni_duplexeval_rtd (6 real-time-description configs)
+  - omni_duplexeval_pr (event reminder, post-event reminder, correction)
+
 ---
 
 ## 5. Document Understanding Tasks
@@ -694,6 +701,8 @@ python -m lmms_eval --tasks list_with_num
 | `llava_vid` | LlavaVid | Video |
 | `longva` | LongVA | Long Video |
 | `mantis` | Mantis | Multi-image |
+| `minicpm_o_45` | MiniCPM_O_45 | Omni (image/audio/video, half-duplex) |
+| `minicpm_o_45_duplex` | MiniCPM_O_45Duplex | Omni (full-duplex streaming) |
 | `minicpm_v` | MiniCPM_V | Image |
 | `minimonkey` | MiniMonkey | Image |
 | `moviechat` | MovieChat | Long Video |
