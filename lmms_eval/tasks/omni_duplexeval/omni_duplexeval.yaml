@@ -1,0 +1,4 @@
+group: omni_duplexeval
+task:
+- omni_duplexeval_rtd
+- omni_duplexeval_pr

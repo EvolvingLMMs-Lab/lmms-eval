@@ -1,0 +1,30 @@
+dataset_path: Ssshangfu/Full-Duplex-Bench-Data
+class: !function task.FullDuplexBenchTask
+dataset_kwargs:
+  fdb_task: background_speech
+task: fdb_background_speech
+test_split: test
+output_type: generate_until
+
+# The duplex wrapper runs each media file (clean, then overlapped) as an
+# independent streaming session and returns both chunk logs in one response.
+generation_kwargs:
+  duplex_multi_session: true
+  max_new_tokens: 256
+  temperature: 0
+  do_sample: false
+
+doc_to_visual: !function utils.fdb_doc_to_visual
+doc_to_text: !function utils.fdb_doc_to_text
+doc_to_target: correct_label
+process_results: !function utils.fdb_process_results
+metric_list:
+  - metric: fdb_behavior_acc
+    aggregation: !function utils.fdb_aggregate_accuracy
+    higher_is_better: true
+  - metric: fdb_responded_after_overlap
+    aggregation: !function utils.fdb_aggregate_responded
+    higher_is_better: true
+
+metadata:
+  version: 1.5

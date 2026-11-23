@@ -1,0 +1,8 @@
+group: omni_duplexeval_rtd
+task:
+- omni_duplexeval_rtd_world_knowledge
+- omni_duplexeval_rtd_counting
+- omni_duplexeval_rtd_fine_grained_movement
+- omni_duplexeval_rtd_interaction_relation
+- omni_duplexeval_rtd_ocr
+- omni_duplexeval_rtd_omni

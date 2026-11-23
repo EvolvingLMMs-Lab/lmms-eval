@@ -1,0 +1,10 @@
+include: _default_template_yaml
+dataset_kwargs:
+  data_files:
+    test: hf://datasets/Hothan/Omni-DuplexEval/data/PR_event_reminder-*.parquet
+task: omni_duplexeval_pr_event_reminder
+process_results: !function utils.omni_duplexeval_pr_event_reminder_process_results
+metric_list:
+  - metric: omni_duplexeval_pr_success
+    aggregation: !function utils.omni_duplexeval_pr_aggregate
+    higher_is_better: true
