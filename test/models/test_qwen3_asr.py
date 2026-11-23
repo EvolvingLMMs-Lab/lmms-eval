@@ -11,6 +11,7 @@ from lmms_eval.models.simple.qwen3_asr import Qwen3ASR, _waveform
 
 
 def test_audio_types_and_resampling() -> None:
+    pytest.importorskip("librosa")
     wav = np.stack([np.zeros(2400), np.ones(2400)]).astype("float32")
     decoded = NS(get_all_samples=lambda: NS(data=torch.from_numpy(wav), sample_rate=24000))
     modern = _waveform([decoded], 16000)

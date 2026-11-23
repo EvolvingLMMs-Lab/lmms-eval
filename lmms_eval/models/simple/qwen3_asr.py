@@ -6,13 +6,13 @@ from typing import Any
 import numpy as np
 import torch
 from accelerate import Accelerator
+from tqdm import tqdm
 from transformers import AutoProcessor
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
-from lmms_eval.models.model_utils.audio_processing import downsample_audio
 
 AutoModelForMultimodalLM, _ = optional_import("transformers", "AutoModelForMultimodalLM")
 
@@ -31,7 +31,12 @@ def _waveform(media: list[Any], target_rate: int) -> np.ndarray:
         samples = samples.mean(axis=0)
     if samples.ndim != 1 or samples.size == 0 or rate is None or rate <= 0:
         raise ValueError("Expected nonempty audio with a positive sampling rate")
-    return downsample_audio(samples, rate, target_rate) if rate != target_rate else samples
+    if rate == target_rate:
+        return samples
+    # librosa is in the [audio] extra; import it only when a recording needs resampling.
+    from lmms_eval.models.model_utils.audio_processing import downsample_audio
+
+    return downsample_audio(samples, rate, target_rate)
 
 
 @register_model("qwen3_asr")
@@ -41,7 +46,7 @@ class Qwen3ASR(lmms):
     def __init__(self, pretrained: str = "Qwen/Qwen3-ASR-0.6B-hf", revision: str | None = None, language: str | None = None, device: str | None = None, batch_size: int | str = 1) -> None:
         super().__init__()
         if AutoModelForMultimodalLM is None:
-            raise ImportError("qwen3_asr requires Transformers with native Qwen3-ASR support (tested with 5.24.0).")
+            raise ImportError("qwen3_asr requires Transformers 5.13.0 or later, which adds native Qwen3-ASR support.")
         self.batch_size = int(batch_size)
         if self.batch_size < 1:
             raise ValueError("batch_size must be a positive integer")
@@ -58,6 +63,7 @@ class Qwen3ASR(lmms):
     def generate_until(self, requests: list[Instance]) -> list[str]:
         """Transcribe one recording per request, preserving request order and stop strings."""
         responses = []
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
         for options, group in groupby(requests, key=lambda request: request.args[1]):
             generation_kwargs = dict(options)
             until = generation_kwargs.pop("until", []) or []
@@ -84,6 +90,8 @@ class Qwen3ASR(lmms):
                             text = text.split(stop, 1)[0]
                     responses.append(text)
                     self.cache_hook.add_partial("generate_until", (request.args[0], options), text)
+                pbar.update(len(batch))
+        pbar.close()
         return responses
 
     def loglikelihood(self, requests: list[Instance]) -> list[tuple[float, bool]]:
