@@ -171,11 +171,7 @@ def judge_behaviour(payload: Dict[str, Any]) -> List[str]:
 
     env = _judge_env()
     if not env["api_key"] or not env["base_url"] or not env["model"]:
-        raise ValueError(
-            "Full-Duplex-Bench behavior judging needs an OpenAI-compatible endpoint: set "
-            "FDB_JUDGE_API_KEY / FDB_JUDGE_BASE_URL / FDB_JUDGE_MODEL (or the DUPLEXEVAL_* / "
-            "OPENAI_* fallbacks)."
-        )
+        raise ValueError("Full-Duplex-Bench behavior judging needs an OpenAI-compatible endpoint: set FDB_JUDGE_API_KEY / FDB_JUDGE_BASE_URL / FDB_JUDGE_MODEL (or the DUPLEXEVAL_* / OPENAI_* fallbacks).")
 
     response = requests.post(
         f"{env['base_url'].rstrip('/')}/chat/completions",
@@ -249,10 +245,7 @@ def fdb_process_results(doc: dict, results: List[str]) -> Dict[str, float]:
     output_noisy = chunks_to_word_transcript(noisy_chunks)
 
     overlap_start = _overlap_start(doc)
-    responded = any(
-        not chunk.get("is_listen", False) and (chunk.get("text") or "").strip() and float(chunk.get("current_time") or 0.0) >= overlap_start
-        for chunk in noisy_chunks
-    )
+    responded = any(not chunk.get("is_listen", False) and (chunk.get("text") or "").strip() and float(chunk.get("current_time") or 0.0) >= overlap_start for chunk in noisy_chunks)
 
     payload = _compact(
         {

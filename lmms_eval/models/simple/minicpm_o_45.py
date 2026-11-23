@@ -206,10 +206,7 @@ class MiniCPM_O_45(lmms):
         except ImportError:
             return
         if Version(transformers.__version__) != Version(RECOMMENDED_TRANSFORMERS_VERSION):
-            eval_logger.warning(
-                f"MiniCPM-o-4.5 remote code is pinned to transformers=={RECOMMENDED_TRANSFORMERS_VERSION} "
-                f"(installed: {transformers.__version__}); import errors or wrong results are possible."
-            )
+            eval_logger.warning(f"MiniCPM-o-4.5 remote code is pinned to transformers=={RECOMMENDED_TRANSFORMERS_VERSION} (installed: {transformers.__version__}); import errors or wrong results are possible.")
 
     @property
     def config(self):
@@ -311,15 +308,11 @@ class MiniCPM_O_45(lmms):
         track in omni mode; without audio only the frames are kept.
         """
         get_video_frame_audio_segments = _load_minicpmo_utils()
-        video_frames, audio_segments, stacked_frames = get_video_frame_audio_segments(
-            video_path, stack_frames=self.stack_frames, use_ffmpeg=self.use_ffmpeg, adjust_audio_length=True
-        )
+        video_frames, audio_segments, stacked_frames = get_video_frame_audio_segments(video_path, stack_frames=self.stack_frames, use_ffmpeg=self.use_ffmpeg, adjust_audio_length=True)
         content: List = []
         num_frames = len(video_frames) if video_frames is not None else 0
         num_audio = len(audio_segments) if audio_segments is not None else 0
-        has_audio_track = any(
-            seg is not None and getattr(seg, "size", 0) for seg in (audio_segments or [])
-        )
+        has_audio_track = any(seg is not None and getattr(seg, "size", 0) for seg in (audio_segments or []))
         if self.init_audio and not has_audio_track:
             # silent clip: interleave one second of zeros per frame so omni
             # mode still receives a strictly paired [frame, audio] stream
@@ -376,9 +369,7 @@ class MiniCPM_O_45(lmms):
 
     def _frames_only_content(self, video_path: str) -> List[Image.Image]:
         get_video_frame_audio_segments = _load_minicpmo_utils()
-        video_frames, _, _ = get_video_frame_audio_segments(
-            video_path, stack_frames=self.stack_frames, use_ffmpeg=self.use_ffmpeg, use_audio=False
-        )
+        video_frames, _, _ = get_video_frame_audio_segments(video_path, stack_frames=self.stack_frames, use_ffmpeg=self.use_ffmpeg, use_audio=False)
         return list(video_frames or [])
 
     def build_media_content(self, visual) -> Tuple[List, bool]:
@@ -529,4 +520,3 @@ class MiniCPM_O_45(lmms):
         res = re_ords.get_original(res)
         pbar.close()
         return res
-

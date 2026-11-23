@@ -9,7 +9,6 @@ order — e.g. XModBench-style MCQ with media in the stem and in all four
 options.
 """
 
-import numpy as np
 from loguru import logger as eval_logger
 from PIL import Image
 

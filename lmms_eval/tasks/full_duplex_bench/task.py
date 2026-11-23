@@ -53,15 +53,11 @@ def _find_task_dir(root: str, fdb_task: str) -> Optional[str]:
         os.path.join(root, "data-full-duplex-bench", "v1.5", fdb_task),
     ]
     for candidate in candidates:
-        if os.path.isdir(candidate) and any(
-            f == "metadata.json" for _, _, files in os.walk(candidate) for f in files
-        ):
+        if os.path.isdir(candidate) and any(f == "metadata.json" for _, _, files in os.walk(candidate) for f in files):
             return candidate
     # last resort: recursive search (snapshot layouts may nest)
     for dirpath, dirnames, _filenames in os.walk(root):
-        if os.path.basename(dirpath) == fdb_task and any(
-            os.path.exists(os.path.join(dirpath, d, "metadata.json")) for d in dirnames
-        ):
+        if os.path.basename(dirpath) == fdb_task and any(os.path.exists(os.path.join(dirpath, d, "metadata.json")) for d in dirnames):
             return dirpath
     return None
 
@@ -76,17 +72,9 @@ def _resolve_fdb_root(dataset_kwargs: dict) -> str:
     hf_home = os.path.expanduser(os.getenv("HF_HOME", "~/.cache/huggingface/"))
     cache_dir = resolve_cache_dir("full_duplex_bench", base_dir=hf_home)
     snapshot_path = snapshot_download(repo_id=FDB_REPO_ID, repo_type="dataset", allow_patterns=["v1.5/*"])
-    zip_files = [
-        os.path.join(snapshot_path, name)
-        for name in ("v1.5/user_interruption.zip", "v1.5/user_backchannel.zip", "v1.5/talking_to_other.zip", "v1.5/background_speech.zip")
-        if os.path.exists(os.path.join(snapshot_path, name))
-    ]
+    zip_files = [os.path.join(snapshot_path, name) for name in ("v1.5/user_interruption.zip", "v1.5/user_backchannel.zip", "v1.5/talking_to_other.zip", "v1.5/background_speech.zip") if os.path.exists(os.path.join(snapshot_path, name))]
     if not zip_files:
-        raise FileNotFoundError(
-            f"No v1.5 task zips found in the {FDB_REPO_ID} snapshot at {snapshot_path}. "
-            "Pass dataset_kwargs.data_root or set FDB_DATA_ROOT to a directory containing the "
-            "extracted v1.5 data."
-        )
+        raise FileNotFoundError(f"No v1.5 task zips found in the {FDB_REPO_ID} snapshot at {snapshot_path}. Pass dataset_kwargs.data_root or set FDB_DATA_ROOT to a directory containing the extracted v1.5 data.")
     for zip_file in zip_files:
         _unzip_once(zip_file, cache_dir)
     return cache_dir
@@ -114,10 +102,7 @@ def _sort_numeric(samples):
 def _build_rows(root: str, fdb_task: str) -> list:
     task_dir = _find_task_dir(root, fdb_task)
     if task_dir is None:
-        raise FileNotFoundError(
-            f"Could not locate the '{fdb_task}' sample folders under {root!r}. Expected "
-            f"either `<root>/{fdb_task}/<sample>/metadata.json` or `<root>/v1.5/{fdb_task}/...`."
-        )
+        raise FileNotFoundError(f"Could not locate the '{fdb_task}' sample folders under {root!r}. Expected either `<root>/{fdb_task}/<sample>/metadata.json` or `<root>/v1.5/{fdb_task}/...`.")
     rows = []
     for sample in _sort_numeric(os.listdir(task_dir)):
         sample_dir = os.path.join(task_dir, sample)
@@ -165,7 +150,7 @@ class FullDuplexBenchTask(ConfigurableTask):
         fdb_task = dataset_kwargs.pop("fdb_task", None)
         if fdb_task is None:
             task_name = getattr(self.config, "task", "") or ""
-            fdb_task = task_name[len("fdb_"):] if task_name.startswith("fdb_") else ""
+            fdb_task = task_name[len("fdb_") :] if task_name.startswith("fdb_") else ""
         if fdb_task not in CORRECT_LABEL:
             raise ValueError(f"Unknown Full-Duplex-Bench task {fdb_task!r}; expected one of {sorted(CORRECT_LABEL)}")
 

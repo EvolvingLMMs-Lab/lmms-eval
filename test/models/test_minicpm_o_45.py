@@ -48,9 +48,7 @@ class TestMiniCPMO45Helpers(unittest.TestCase):
     def test_duplex_classification(self):
         import numpy as np
 
-        streams = MiniCPM_O_45Duplex._classify_media(
-            ["video.mp4", {"array": np.zeros(1600, dtype="float32"), "sampling_rate": 16000}]
-        )
+        streams = MiniCPM_O_45Duplex._classify_media(["video.mp4", {"array": np.zeros(1600, dtype="float32"), "sampling_rate": 16000}])
         self.assertEqual([s["kind"] for s in streams], ["video", "audio"])
 
 

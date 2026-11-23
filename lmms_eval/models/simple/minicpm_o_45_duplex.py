@@ -149,10 +149,7 @@ class MiniCPM_O_45Duplex(lmms):
 
         # Convert the half-duplex checkpoint into its duplex twin exactly once.
         if not hasattr(self._model, "streaming_prefill"):
-            raise RuntimeError(
-                f"{pretrained!r} does not expose the MiniCPM-o-4.5 duplex API (missing streaming_prefill); "
-                "the minicpm_o_45_duplex wrapper requires openbmb/MiniCPM-o-4_5 or an as_duplex()-capable checkpoint."
-            )
+            raise RuntimeError(f"{pretrained!r} does not expose the MiniCPM-o-4.5 duplex API (missing streaming_prefill); the minicpm_o_45_duplex wrapper requires openbmb/MiniCPM-o-4_5 or an as_duplex()-capable checkpoint.")
         if hasattr(self._model, "as_duplex"):
             self._model = self._model.as_duplex()
 
@@ -172,11 +169,7 @@ class MiniCPM_O_45Duplex(lmms):
 
             return hf_hub_download(repo_id=pretrained, filename=DEFAULT_REF_AUDIO_REPO_FILE)
         except Exception as e:
-            raise RuntimeError(
-                "MiniCPM-o-4.5 duplex mode needs a reference voice clip. Pass ref_audio=<path> "
-                f"or make sure `{DEFAULT_REF_AUDIO_REPO_FILE}` from the {pretrained!r} repo is reachable "
-                f"(hf_hub_download failed: {e})."
-            ) from e
+            raise RuntimeError(f"MiniCPM-o-4.5 duplex mode needs a reference voice clip. Pass ref_audio=<path> or make sure `{DEFAULT_REF_AUDIO_REPO_FILE}` from the {pretrained!r} repo is reachable (hf_hub_download failed: {e}).") from e
 
     @property
     def config(self):
@@ -254,9 +247,7 @@ class MiniCPM_O_45Duplex(lmms):
 
         if stream["kind"] == "video":
             get_video_frame_audio_segments = _load_minicpmo_utils()
-            video_frames, audio_segments, stacked_frames = get_video_frame_audio_segments(
-                stream["path"], stack_frames=self.stack_frames, use_ffmpeg=self.use_ffmpeg, adjust_audio_length=True
-            )
+            video_frames, audio_segments, stacked_frames = get_video_frame_audio_segments(stream["path"], stack_frames=self.stack_frames, use_ffmpeg=self.use_ffmpeg, adjust_audio_length=True)
             num_chunks = len(video_frames) if video_frames is not None else 0
             for chunk_idx in range(num_chunks):
                 audio_chunk = audio_segments[chunk_idx] if audio_segments is not None and chunk_idx < len(audio_segments) else None
@@ -421,4 +412,3 @@ class MiniCPM_O_45Duplex(lmms):
                 handle.write(answer)
         except Exception as e:
             eval_logger.warning(f"Failed to save duplex artifacts for doc {doc_id}: {e}")
-

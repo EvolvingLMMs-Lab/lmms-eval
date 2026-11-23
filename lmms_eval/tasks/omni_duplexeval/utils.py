@@ -53,6 +53,7 @@ def _temporal_max_workers() -> int:
     except ValueError:
         return 2
 
+
 TASK_ALIASES = {
     "correction": "correction",
     "pr_correction": "correction",
@@ -77,11 +78,7 @@ class OpenAILLMClient:
 
         self.requests = requests
         self.api_key = api_key or os.environ.get("DUPLEXEVAL_API_KEY") or os.environ.get("OPENAI_API_KEY")
-        self.base_url = (
-            base_url
-            or os.environ.get("DUPLEXEVAL_BASE_URL")
-            or os.environ.get("OPENAI_BASE_URL")
-        )
+        self.base_url = base_url or os.environ.get("DUPLEXEVAL_BASE_URL") or os.environ.get("OPENAI_BASE_URL")
         self.timeout = timeout
 
         if not self.api_key:
@@ -109,9 +106,7 @@ class OpenAILLMClient:
         if max_tokens is not None:
             payload["max_tokens"] = max_tokens
         try:
-            response = self.requests.post(
-                f"{self.base_url}/chat/completions", headers=self.headers, json=payload, timeout=self.timeout
-            )
+            response = self.requests.post(f"{self.base_url}/chat/completions", headers=self.headers, json=payload, timeout=self.timeout)
             if response.status_code != 200:
                 return {"error": response.text, "status_code": response.status_code}
             return response.json()
@@ -240,20 +235,12 @@ def chunks_to_sentences(chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def response_text_near_time(chunks: List[Dict[str, Any]], start_time: float, window_size: float) -> str:
     end_time = start_time + window_size
-    selected = [
-        chunk["text"]
-        for chunk in chunks
-        if start_time <= float(chunk.get("current_time", 0.0)) <= end_time and chunk.get("text")
-    ]
+    selected = [chunk["text"] for chunk in chunks if start_time <= float(chunk.get("current_time", 0.0)) <= end_time and chunk.get("text")]
     return " ".join(selected).strip()
 
 
 def full_response_text(chunks: List[Dict[str, Any]], include_preamble: bool = True) -> str:
-    return " ".join(
-        chunk.get("text", "")
-        for chunk in chunks
-        if chunk.get("text") and (include_preamble or not chunk.get("in_preamble"))
-    ).strip()
+    return " ".join(chunk.get("text", "") for chunk in chunks if chunk.get("text") and (include_preamble or not chunk.get("in_preamble"))).strip()
 
 
 # ---------------------------------------------------------------------------
@@ -484,8 +471,20 @@ def extract_frames_for_time_range(video_path: str, start_time: float, end_time: 
             frame_time = min(frame_time, max(start_time, end_time - 0.01))
             frame_path = os.path.join(temp_dir, f"frame_{frame_index:03d}.jpg")
             command = [
-                "ffmpeg", "-hide_banner", "-loglevel", "error", "-ss", str(frame_time),
-                "-i", video_path, "-vframes", "1", "-q:v", "2", "-y", frame_path,
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-ss",
+                str(frame_time),
+                "-i",
+                video_path,
+                "-vframes",
+                "1",
+                "-q:v",
+                "2",
+                "-y",
+                frame_path,
             ]
             try:
                 subprocess.run(command, capture_output=True, text=True, check=True)
@@ -614,8 +613,20 @@ def _extract_uniform_frames(video_path: str, num_frames: int) -> List[bytes]:
             frame_time = duration * index / max(1, num_frames - 1)
             frame_path = os.path.join(temp_dir, f"frame_{index:03d}.jpg")
             command = [
-                "ffmpeg", "-hide_banner", "-loglevel", "error", "-ss", str(frame_time),
-                "-i", video_path, "-vframes", "1", "-q:v", "2", "-y", frame_path,
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-ss",
+                str(frame_time),
+                "-i",
+                video_path,
+                "-vframes",
+                "1",
+                "-q:v",
+                "2",
+                "-y",
+                frame_path,
             ]
             try:
                 subprocess.run(command, capture_output=True, text=True, check=True)
@@ -677,9 +688,7 @@ def score_real_time_description(client: OpenAILLMClient, model_id: str, doc: dic
 
     avg_temporal = sum(temporal_scores) / len(temporal_scores) if temporal_scores else 0.0
     references = [str(doc[key]).strip() for key in ("answer1", "answer2") if doc.get(key)]
-    content_score = _judge_content_accuracy(
-        client, video_path, full_response_text(chunks, include_preamble=False), question, references, model_id
-    )
+    content_score = _judge_content_accuracy(client, video_path, full_response_text(chunks, include_preamble=False), question, references, model_id)
     return {"avg_temporal_score": round(avg_temporal, 4), "content_score": content_score}
 
 
