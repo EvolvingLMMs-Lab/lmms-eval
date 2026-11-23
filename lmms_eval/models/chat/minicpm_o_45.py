@@ -1,16 +1,12 @@
 """minicpm_o_45 — MiniCPM-o-4.5 chat-style wrapper.
 
 See `_chat_base.ChatMixin` for the shared rationale and request loop.
-MiniCPM-o-4.5's `model.chat` takes a single user message whose `content` is an
-ordered list mixing PIL images, np audio arrays, per-second video chunks, and
-text. This variant builds the full content list from the task's
-`doc_to_messages`, so the question stem and every option keep their media +
-order — e.g. XModBench-style MCQ with media in the stem and in all four
-options.
+MiniCPM-o-4.5's `model.chat` takes a single user message whose `content` is a
+list of PIL images, np audio arrays and per-second video chunks followed by the
+text. This variant reads the task's `doc_to_messages` (or the messages that
+lmms-eval builds from `doc_to_visual` / `doc_to_text`): the media items keep
+their message order and the text parts are joined after them.
 """
-
-from loguru import logger as eval_logger
-from PIL import Image
 
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.chat._chat_base import ChatMixin
@@ -23,27 +19,17 @@ class MiniCPM_O_45Chat(ChatMixin, MiniCPM_O_45Simple):
     """MiniCPM-o-4.5 that consumes chat-style doc_to_messages prompts."""
 
     def _infer_one(self, chat_messages: ChatMessages, gen_kwargs: dict) -> str:
-        content = []
-        has_audio = False
+        # Media go through the half-duplex builder, which accepts what the chat
+        # path delivers: file paths, in-memory PIL images, decoded audio dicts
+        # and AudioDecoder objects. A media item that cannot be loaded raises,
+        # so ChatMixin reports the failure instead of answering without it.
+        visuals = []
+        texts = []
         for msg in chat_messages.messages:
             for c in msg.content:
                 if c.type == "text":
-                    content.append(c.text)
-                elif c.type == "image":
-                    content.append(Image.open(c.url).convert("RGB"))
-                elif c.type == "video":
-                    try:
-                        content.extend(self._omni_video_content(c.url))
-                        has_audio = has_audio or self.init_audio
-                    except Exception as e:
-                        eval_logger.warning(f"video encode failed {c.url}: {e}")
-                elif c.type == "audio":
-                    try:
-                        content.append(self._load_audio(c.url))
-                        has_audio = True
-                    except Exception as e:
-                        eval_logger.warning(f"audio load failed {c.url}: {e}")
-
-        text_items = [item for item in content if isinstance(item, str)]
-        context = "\n".join(text_items) if text_items else ""
-        return self._call_chat([item for item in content if not isinstance(item, str)], context, gen_kwargs, has_audio)
+                    texts.append(c.text)
+                elif c.type in ("image", "video", "audio"):
+                    visuals.append(c.url)
+        content, has_audio = self.build_media_content(visuals)
+        return self._call_chat(content, "\n".join(texts), gen_kwargs, has_audio)

@@ -19,12 +19,24 @@ doc_to_text: !function utils.fdb_doc_to_text
 doc_to_target: correct_label
 process_results: !function utils.fdb_process_results
 metric_list:
-  - metric: fdb_behavior_acc
-    aggregation: !function utils.fdb_aggregate_accuracy
+  - metric: fdb_expected_behavior
+    aggregation: !function utils.fdb_aggregate_mean
     higher_is_better: true
-  - metric: fdb_responded_after_overlap
-    aggregation: !function utils.fdb_aggregate_responded
+  - metric: fdb_c_respond
+    aggregation: !function utils.fdb_aggregate_mean
+    higher_is_better: false
+  - metric: fdb_c_resume
+    aggregation: !function utils.fdb_aggregate_mean
     higher_is_better: true
+  - metric: fdb_c_uncertain_handling
+    aggregation: !function utils.fdb_aggregate_mean
+    higher_is_better: false
+  - metric: fdb_c_unknown
+    aggregation: !function utils.fdb_aggregate_mean
+    higher_is_better: false
+  - metric: fdb_scoring_failed
+    aggregation: !function utils.fdb_aggregate_mean
+    higher_is_better: false
 
 metadata:
   version: 1.5

@@ -197,6 +197,8 @@ class MiniCPM_O_45(lmms):
 
         self._config = self._model.config
         self.batch_size_per_gpu = int(batch_size)
+        if self.batch_size_per_gpu > 1:
+            eval_logger.warning(f"MiniCPM_O_45 runs one request at a time; batch_size={self.batch_size_per_gpu} only changes how requests are grouped.")
 
     @staticmethod
     def _warn_transformers_version() -> None:
@@ -485,13 +487,14 @@ class MiniCPM_O_45(lmms):
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
+        failed = 0
 
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
             task = task[0]
             split = split[0]
-            # Keep each doc's media list intact (multi-media docs are legal for
-            # e.g. omni_duplexeval's [question_audio, video] ordering).
+            # Keep each doc's media list intact: a doc may carry several media
+            # items, which are passed to the model in order.
             visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
 
             gen_kwargs = all_gen_kwargs[0]
@@ -503,6 +506,7 @@ class MiniCPM_O_45(lmms):
                 elif not isinstance(until, list):
                     raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
 
+            raise_on_error = bool(gen_kwargs.get("raise_on_error", False))
             for i, context in enumerate(contexts):
                 visual = visuals[i] if i < len(visuals) else None
                 try:
@@ -510,6 +514,9 @@ class MiniCPM_O_45(lmms):
                     answer = self._call_chat(content, context, gen_kwargs, has_audio)
                     answer = self._truncate_until(answer, until)
                 except Exception as e:
+                    if raise_on_error:
+                        raise
+                    failed += 1
                     eval_logger.error(f"Error in generating: {e}")
                     answer = ""
 
@@ -519,4 +526,6 @@ class MiniCPM_O_45(lmms):
 
         res = re_ords.get_original(res)
         pbar.close()
+        if failed:
+            eval_logger.warning(f"MiniCPM_O_45: {failed}/{len(requests)} requests failed and were returned as empty answers; set raise_on_error: true in the task's generation_kwargs to stop at the first failure.")
         return res

@@ -25,17 +25,25 @@ Official recipe being wrapped:
         # result: {"is_listen", "text", "end_of_turn", "current_time", "audio_waveform"}
 
 Request contract (per doc):
-    doc_to_visual returns an ordered list of media files. Audio files play the
-    role of the *user's speech* and are prefill-streamed first; video files are
-    *live streams* and follow afterwards in the same session. When the task
-    sets ``duplex_multi_session`` in generation_kwargs, every media item is
-    instead run as an independent session (used by Full-Duplex-Bench, which
-    compares a clean and an overlapped conversation in one sample).
+    doc_to_visual returns an ordered list of media files. In one session,
+    audio files are streamed first (speech that comes before the live
+    stream) and video files follow; ``preamble`` reports the seconds of audio
+    streamed before the video. User speech that happens *during* a video
+    belongs on the video's sound track instead (Omni-DuplexEval does this).
+    When the task sets ``duplex_multi_session`` in generation_kwargs, every
+    media item is run as an independent session (used by Full-Duplex-Bench,
+    which compares a clean and an overlapped conversation in one sample).
+    ``raise_on_error`` in generation_kwargs stops the run at the first failed
+    request instead of returning an error record.
 
 The wrapper returns a JSON string::
 
-    {"sessions": [{"chunks": [{"chunk_idx", "text", "is_listen",
-                               "end_of_turn", "current_time"}]}]}
+    {"sessions": [[{"chunk_idx", "text", "is_listen", "end_of_turn",
+                    "current_time"}, ...], ...],
+     "preamble": <seconds>}
+
+with an additional ``"error"`` key (and empty sessions) when generation
+failed.
 
 so a task's ``process_results`` can score streaming behaviour (response
 timing, interruption handling, proactive speech, ...) without any
@@ -155,6 +163,8 @@ class MiniCPM_O_45Duplex(lmms):
 
         self.ref_audio_path = self._resolve_ref_audio(pretrained, ref_audio)
         self.batch_size_per_gpu = int(batch_size)
+        if self.batch_size_per_gpu > 1:
+            eval_logger.warning(f"MiniCPM_O_45Duplex runs one request at a time; batch_size={self.batch_size_per_gpu} only changes how requests are grouped.")
 
     @staticmethod
     def _resolve_ref_audio(pretrained: str, ref_audio: Optional[str]) -> str:
@@ -248,16 +258,22 @@ class MiniCPM_O_45Duplex(lmms):
         if stream["kind"] == "video":
             get_video_frame_audio_segments = _load_minicpmo_utils()
             video_frames, audio_segments, stacked_frames = get_video_frame_audio_segments(stream["path"], stack_frames=self.stack_frames, use_ffmpeg=self.use_ffmpeg, adjust_audio_length=True)
-            num_chunks = len(video_frames) if video_frames is not None else 0
+            # As in the model card: one step per one-second audio segment; the
+            # stacked frame is added only together with its main frame.
+            if audio_segments is not None:
+                num_chunks = len(audio_segments)
+            else:
+                num_chunks = len(video_frames) if video_frames is not None else 0
             for chunk_idx in range(num_chunks):
-                audio_chunk = audio_segments[chunk_idx] if audio_segments is not None and chunk_idx < len(audio_segments) else None
+                audio_chunk = audio_segments[chunk_idx] if audio_segments is not None else None
                 if audio_chunk is not None and not getattr(audio_chunk, "size", 1):
                     audio_chunk = None
+                frame = video_frames[chunk_idx] if video_frames is not None and chunk_idx < len(video_frames) else None
                 frame_list = []
-                if video_frames[chunk_idx] is not None:
-                    frame_list.append(video_frames[chunk_idx])
-                if stacked_frames is not None and chunk_idx < len(stacked_frames) and stacked_frames[chunk_idx] is not None:
-                    frame_list.append(stacked_frames[chunk_idx])
+                if frame is not None:
+                    frame_list.append(frame)
+                    if stacked_frames is not None and chunk_idx < len(stacked_frames) and stacked_frames[chunk_idx] is not None:
+                        frame_list.append(stacked_frames[chunk_idx])
                 record = self._step(audio_chunk, frame_list)
                 record["chunk_idx"] = chunk_idx
                 records.append(record)
@@ -293,7 +309,8 @@ class MiniCPM_O_45Duplex(lmms):
             record["audio_len"] = int(np.asarray(waveform).size)
         return record
 
-    def _run_session(self, streams: List[Dict[str, Any]], gen_kwargs: dict) -> List[Dict[str, Any]]:
+    def _run_session(self, streams: List[Dict[str, Any]], gen_kwargs: dict) -> Tuple[List[Dict[str, Any]], float]:
+        """Run the streams in one duplex session; return the chunk log and the preamble in seconds."""
         ref_audio = self._load_ref_audio()
         self.model.prepare(
             prefix_system_prompt=self.system_prompt,
@@ -309,8 +326,7 @@ class MiniCPM_O_45Duplex(lmms):
                 # onto the media timeline
                 preamble += len(stream["audio"]) / SPEECH_SAMPLE_RATE
             records.extend(self._run_stream(stream, ref_audio, gen_kwargs))
-        self._last_preamble = preamble
-        return records
+        return records, preamble
 
     # ------------------------------------------------------------------
     # lmms-eval entry point
@@ -346,7 +362,7 @@ class MiniCPM_O_45Duplex(lmms):
                     suffix = os.path.splitext(path_hint)[1] or ".mp4"
                     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as handle:
                         handle.write(bytes(data))
-                        streams.append({"kind": "video", "path": handle.name})
+                        streams.append({"kind": "video", "path": handle.name, "temporary": True})
                 else:
                     eval_logger.warning("minicpm_o_45_duplex: non-video parquet media dict without decode support")
             else:
@@ -362,6 +378,7 @@ class MiniCPM_O_45Duplex(lmms):
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding (duplex)")
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
+        failed = 0
 
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
@@ -372,6 +389,7 @@ class MiniCPM_O_45Duplex(lmms):
             visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
 
             gen_kwargs = all_gen_kwargs[0]
+            raise_on_error = bool(gen_kwargs.get("raise_on_error", False))
 
             for i, context in enumerate(contexts):
                 visual = visuals[i] if i < len(visuals) else None
@@ -379,19 +397,30 @@ class MiniCPM_O_45Duplex(lmms):
                 multi_session = bool(gen_kwargs.get("duplex_multi_session", False))
                 try:
                     if multi_session:
-                        sessions = [self._run_session([stream], gen_kwargs) for stream in streams]
+                        sessions = [self._run_session([stream], gen_kwargs)[0] for stream in streams]
                         preamble = 0.0
                     elif streams:
-                        # user speech first, then the live video streams
-                        sessions = [self._run_session(streams, gen_kwargs)]
-                        preamble = getattr(self, "_last_preamble", 0.0)
+                        # audio streams (user speech) first, then the live video streams
+                        records, preamble = self._run_session(streams, gen_kwargs)
+                        sessions = [records]
                     else:
                         sessions = [[]]
                         preamble = 0.0
                     answer = json.dumps({"sessions": sessions, "preamble": preamble}, ensure_ascii=False)
                 except Exception as e:
+                    if raise_on_error:
+                        raise
+                    failed += 1
                     eval_logger.error(f"Error in duplex generation: {e}")
+                    # Tasks read the "error" key and leave the sample unscored.
                     answer = json.dumps({"sessions": [[]], "preamble": 0.0, "error": str(e)}, ensure_ascii=False)
+                finally:
+                    for stream in streams:
+                        if stream.get("temporary"):
+                            try:
+                                os.remove(stream["path"])
+                            except OSError:
+                                pass
 
                 if self.duplex_save_dir:
                     self._save_artifacts(self.duplex_save_dir, task, split, doc_id[i], answer)
@@ -401,6 +430,8 @@ class MiniCPM_O_45Duplex(lmms):
 
         res = re_ords.get_original(res)
         pbar.close()
+        if failed:
+            eval_logger.warning(f"MiniCPM_O_45Duplex: {failed}/{len(requests)} requests failed; their outputs carry an 'error' key. Set raise_on_error: true in the task's generation_kwargs to stop at the first failure.")
         return res
 
     def _save_artifacts(self, save_dir: str, task: str, split: str, doc_id: Any, answer: str) -> None:

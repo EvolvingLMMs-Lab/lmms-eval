@@ -1,15 +1,23 @@
 """Custom Task class for Full-Duplex-Bench v1.5.
 
-The official data release (`Ssshangfu/Full-Duplex-Bench-Data` on HuggingFace)
-ships per-sample folders with conversation audio inside versioned zip archives
-rather than a loadable parquet/jsonl table, so the stock
-``ConfigurableTask.download`` cannot index it. This subclass resolves the data
-root (environment variable, explicit kwarg, or a fresh snapshot + unzip of the
-official repo) and builds the document list in memory.
+The official v1.5 release (MIT License) is a Google Drive folder linked from
+https://github.com/DanielLin94144/Full-Duplex-Bench (v1_v1.5/dataset/README.md).
+For automatic download this task uses the community mirror
+`Ssshangfu/Full-Duplex-Bench-Data` on HuggingFace, which holds the same v1.5
+zip archives; only its ``v1.5/*`` files are fetched (the repository also hosts
+v1.0 CANDOR-derived archives, which must not be redistributed). Set
+``FDB_DATA_ROOT`` (or ``dataset_kwargs.data_root``) to use a local copy of the
+official release instead.
+
+The archives hold per-sample folders with conversation audio rather than a
+loadable parquet/jsonl table, so the stock ``ConfigurableTask.download`` cannot
+index them. This subclass resolves the data root and builds the document list
+in memory.
 """
 
 import json
 import os
+import shutil
 import zipfile
 from typing import Optional
 
@@ -21,8 +29,7 @@ from lmms_eval.utils import resolve_cache_dir
 
 FDB_REPO_ID = "Ssshangfu/Full-Duplex-Bench-Data"
 
-# task -> expected judge label (v1.5 correctness mapping from the official
-# evaluation repository docs)
+# task -> expected behaviour label (paper Sec. 2, arXiv:2507.23159)
 CORRECT_LABEL = {
     "user_interruption": "C_RESPOND",
     "user_backchannel": "C_RESUME",
@@ -30,17 +37,39 @@ CORRECT_LABEL = {
     "background_speech": "C_RESUME",
 }
 
+# task -> labels that count as the expected behaviour. The paper: "User Talking
+# to Others & Background Speech. Expected behavior is Resume, with brief
+# addressee checks (Uncertain) acceptable."
+ACCEPTED_LABELS = {
+    "user_interruption": ["C_RESPOND"],
+    "user_backchannel": ["C_RESUME"],
+    "talking_to_other": ["C_RESUME", "C_UNCERTAIN_HANDLING"],
+    "background_speech": ["C_RESUME", "C_UNCERTAIN_HANDLING"],
+}
+
 
 def _unzip_once(zip_path: str, cache_dir: str) -> None:
+    """Extract an archive into ``cache_dir``, refusing entries that escape it.
+
+    Files that already exist with the archived size are kept, so a partial
+    earlier extraction is repaired instead of being reused.
+    """
+    root = os.path.realpath(cache_dir)
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         for file_info in zip_ref.infolist():
-            if file_info.is_dir():
+            name = file_info.filename
+            if file_info.is_dir() or name.startswith("__MACOSX/") or os.path.basename(name).startswith("._"):
                 continue
-            target_path = os.path.join(cache_dir, file_info.filename)
-            if not os.path.exists(target_path):
-                os.makedirs(os.path.dirname(target_path), exist_ok=True)
-                with zip_ref.open(file_info) as src, open(target_path, "wb") as dst:
-                    dst.write(src.read())
+            target_path = os.path.realpath(os.path.join(root, name))
+            if os.path.commonpath([root, target_path]) != root:
+                raise ValueError(f"Refusing to extract {name!r} from {zip_path}: the path leaves {root}")
+            if os.path.isfile(target_path) and os.path.getsize(target_path) == file_info.file_size:
+                continue
+            os.makedirs(os.path.dirname(target_path), exist_ok=True)
+            tmp_path = f"{target_path}.tmp.{os.getpid()}"
+            with zip_ref.open(file_info) as src, open(tmp_path, "wb") as dst:
+                shutil.copyfileobj(src, dst)
+            os.replace(tmp_path, target_path)
     eval_logger.info(f"Extracted {zip_path} to {cache_dir}")
 
 
@@ -80,13 +109,19 @@ def _resolve_fdb_root(dataset_kwargs: dict) -> str:
     return cache_dir
 
 
-def _read_words(json_path: str):
+def _read_transcript(json_path: str) -> str:
+    """Return the official ``{"text", "chunks"}`` ASR transcript as a JSON string.
+
+    The official judge receives these files unchanged; storing them as strings
+    keeps the dataset schema flat.
+    """
     if not os.path.exists(json_path):
-        return None
+        return json.dumps({"text": "", "chunks": []})
     with open(json_path, "r", encoding="utf-8") as handle:
         payload = json.load(handle)
-    chunks = payload.get("chunks", []) if isinstance(payload, dict) else payload
-    return chunks or None
+    if not isinstance(payload, dict):
+        payload = {"text": " ".join(str(chunk.get("text", "")) for chunk in payload), "chunks": payload}
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def _sort_numeric(samples):
@@ -121,13 +156,14 @@ def _build_rows(root: str, fdb_task: str) -> list:
                 "sample_id": f"{fdb_task}/{sample}",
                 "fdb_task": fdb_task,
                 "correct_label": CORRECT_LABEL[fdb_task],
+                "accepted_labels": ACCEPTED_LABELS[fdb_task],
                 "context_text": metadata.get("context_text", ""),
                 "overlap_text": overlap_text,
                 "timestamps": metadata.get("timestamps", []),
                 "clean_input_wav": os.path.join(sample_dir, "clean_input.wav"),
                 "noisy_input_wav": os.path.join(sample_dir, "input.wav"),
-                "input_clean_words": _read_words(os.path.join(sample_dir, "clean_input.json")) or [],
-                "input_noisy_words": _read_words(os.path.join(sample_dir, "input.json")) or [],
+                "input_clean": _read_transcript(os.path.join(sample_dir, "clean_input.json")),
+                "input_noisy": _read_transcript(os.path.join(sample_dir, "input.json")),
             }
         )
     if not rows:
