@@ -35,7 +35,7 @@ def ok_vqa_process_results(doc, result):
     return {
         "exact_match": accuracy,
         "submission": {
-            "image": f"{doc['question_id']}.jpg",
+            "question_id": int(doc["question_id"]),
             "answer": resAns,
         },
     }
