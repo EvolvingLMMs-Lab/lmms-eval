@@ -18,10 +18,13 @@ from lmms_eval.tasks.charxiv.reasoning_utils import (
     get_reasoning_result_gpt,
 )
 
-# get environment else return dummy values, in a single line
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_OPENAI_API_KEY")
-OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "YOUR_OPENAI_BASE_URL")
-MODEL_VERSION = os.getenv("MODEL_VERSION", "YOUR_MODEL_VERSION")
+# Judge settings. As in CharXiv's evaluate.py, the default is the OpenAI endpoint and the
+# grader's default model; set OPENAI_BASE_URL and MODEL_VERSION for another endpoint.
+OFFICIAL_JUDGE_MODEL = "gpt-4o-2024-05-13"
+OPENAI_DEFAULT_BASE_URL = "https://api.openai.com/v1"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL") or OPENAI_DEFAULT_BASE_URL
+MODEL_VERSION = os.getenv("MODEL_VERSION") or OFFICIAL_JUDGE_MODEL
 
 # Lazy-initialize the OpenAI client to avoid creating an SSLContext at import time.
 # An SSLContext cannot be pickled, which breaks dataset.map() multiprocessing even
@@ -32,7 +35,11 @@ _client = None
 def _get_client():
     global _client
     if _client is None:
-        _client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL)
+        if not OPENAI_API_KEY and OPENAI_BASE_URL == OPENAI_DEFAULT_BASE_URL:
+            # Without a judge every grading fails and the accuracy would read as a real 0.
+            raise RuntimeError("CharXiv grading needs an LLM judge: set OPENAI_API_KEY, or OPENAI_BASE_URL (and MODEL_VERSION) for another endpoint.")
+        # Local OpenAI-compatible servers (e.g. vLLM) accept any key.
+        _client = OpenAI(api_key=OPENAI_API_KEY or "EMPTY", base_url=OPENAI_BASE_URL)
     return _client
 
 
