@@ -1,6 +1,7 @@
 import os
 
 from datasets import Dataset
+from loguru import logger as eval_logger
 from openai import OpenAI
 from tqdm import tqdm
 
@@ -33,6 +34,14 @@ def _get_client():
     if _client is None:
         _client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL)
     return _client
+
+
+def _average_valid_scores(scores, question_type):
+    # As in CharXiv's get_stats.py: a failed grading (-1) or any score other than 0/1 counts as 0.
+    invalid = sum(1 for score in scores if score not in (0, 1))
+    if invalid:
+        eval_logger.warning(f"CharXiv {question_type}: {invalid} of {len(scores)} gradings failed or were invalid, counted as 0")
+    return sum(score if score in (0, 1) else 0 for score in scores) / len(scores)
 
 
 def charxiv_reasoning_doc_to_text_cot(doc, lmms_eval_specific_kwargs=None):
@@ -117,9 +126,7 @@ def charxiv_descriptive_aggregate_results(results):
     queries = combined_queries
     # flatten the queries and only keep the necessary fields
     queries = postprocess_descriptive_grading_queries(queries)
-    # Return the average score
-    scores = [query["score"] for query in queries.values()]
-    return sum(scores) / len(scores)
+    return _average_valid_scores([query["score"] for query in queries.values()], "descriptive")
 
 
 def charxiv_reasoning_process_results(doc, results):
@@ -147,6 +154,4 @@ def charxiv_reasoning_aggregate_results(results):
         queries[figure_id]["extracted_answer"] = ext
         queries[figure_id]["score"] = scr
         queries[figure_id].pop("grading_query")
-    # Return the average score
-    scores = [query["score"] for query in queries.values()]
-    return sum(scores) / len(scores)
+    return _average_valid_scores([query["score"] for query in queries.values()], "reasoning")
