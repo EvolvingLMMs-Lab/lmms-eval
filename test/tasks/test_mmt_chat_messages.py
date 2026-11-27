@@ -89,10 +89,13 @@ def test_source_markers_are_preserved_only_the_task_added_prefix_is_expanded():
 
 
 def test_task_yaml_configs_wire_the_chat_hook():
+    from pathlib import Path
+
     from lmms_eval.utils import load_yaml_config
 
+    task_dir = Path(utils.__file__).parent
     for name in ("mmt_val", "mmt_test", "mmt_mi_val", "mmt_mi_test"):
-        config = load_yaml_config(f"lmms_eval/tasks/mmt/{name}.yaml")
+        config = load_yaml_config(str(task_dir / f"{name}.yaml"))
         assert config["doc_to_messages"].__name__ == "mmt_doc_to_messages", name
 
 
