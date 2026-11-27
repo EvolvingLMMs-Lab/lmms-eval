@@ -66,6 +66,14 @@ class TestAVASRUtils(unittest.TestCase):
         score = av_asr_utils.av_asr_wer([processed["wer"]])
         self.assertEqual(score, 0.0)
 
+    def test_av_asr_wer_counts_reference_words_across_utterances(self) -> None:
+        items = [{"gt": "yes", "pred": "no"}, {"gt": "see you later", "pred": "see you later"}]
+        self.assertEqual(av_asr_utils.av_asr_wer(items), 25.0)
+
+    def test_av_asr_wer_counts_insertions_on_an_empty_reference(self) -> None:
+        items = [{"gt": "", "pred": "two insertions"}, {"gt": "all correct", "pred": "all correct"}]
+        self.assertEqual(av_asr_utils.av_asr_wer(items), 100.0)
+
 
 class TestNewBenchmarkTaskConfigSources(unittest.TestCase):
     class _FunctionTag:
