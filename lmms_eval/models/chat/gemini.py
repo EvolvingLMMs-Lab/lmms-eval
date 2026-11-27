@@ -23,6 +23,7 @@ from lmms_eval.models.simple.gemini import (
     _audio_mime_type,
     _extract_safety_tag,
     _image_to_bytes,
+    gemini_video_part,
 )
 from lmms_eval.protocol import ChatMessages
 
@@ -62,11 +63,17 @@ def _chat_messages_to_gemini_contents(chat_messages: ChatMessages, upload_fn, sy
                         parts.append(types.Part.from_bytes(data=_image_to_bytes(Image.open(img["path"]).convert("RGB")), mime_type="image/png"))
             elif content.type == "video":
                 video_url = content.url
+                start_time = content.start_time
+                end_time = content.end_time
                 if isinstance(video_url, dict):
-                    video_url = video_url.get("path") or video_url.get("url")
+                    if start_time is None:
+                        start_time = video_url.get("video_start", video_url.get("start_time"))
+                    if end_time is None:
+                        end_time = video_url.get("video_end", video_url.get("end_time"))
+                    video_url = video_url.get("path") or video_url.get("url") or video_url.get("video")
                 if isinstance(video_url, str):
                     file_ref = upload_fn(video_url)
-                    parts.append(types.Part.from_uri(file_uri=file_ref.uri, mime_type=file_ref.mime_type))
+                    parts.append(gemini_video_part(file_ref.uri, file_ref.mime_type, start_time, end_time))
             elif content.type == "audio":
                 audio_url = content.url
                 if isinstance(audio_url, str):

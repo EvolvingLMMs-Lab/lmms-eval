@@ -9,6 +9,7 @@ import requests
 from PIL import Image
 
 from lmms_eval.api.chat_response import require_chat_message_text
+from lmms_eval.llm_judge.openai_endpoint import resolve_openai_chat_completions_url
 
 
 class OpenAIVLMJudger(abc.ABC):
@@ -60,7 +61,7 @@ class OpenAIVLMJudger(abc.ABC):
     @property
     def url(self) -> str:
         """The server URL. We use OpenAI API by default."""
-        return self._url if hasattr(self, "_url") else "https://api.openai.com/v1/chat/completions"
+        return self._url if hasattr(self, "_url") else resolve_openai_chat_completions_url()
 
     @url.setter
     def url(self, value: str) -> None:

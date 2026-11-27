@@ -1,0 +1,32 @@
+dataset_path: llamaindex/ExtractBench
+dataset_name: extract-bench
+dataset_kwargs:
+  revision: f9b910906cd7e73cc9eb5379a8d5d935c67b92c4
+output_type: generate_until
+reasoning_tags: false
+process_docs: !function utils.extractbench_process_docs
+doc_to_visual: !function utils.extractbench_doc_to_visual
+doc_to_text: !function utils.extractbench_doc_to_text
+doc_to_messages: !function utils.extractbench_doc_to_messages
+doc_to_target: !function utils.extractbench_doc_to_target
+generation_kwargs:
+  max_new_tokens: 32768
+  temperature: 0.0
+  do_sample: false
+  until: []
+process_results: !function utils.extractbench_process_results
+metric_list:
+  - metric: extractbench_value_f1
+    aggregation: mean
+    higher_is_better: true
+  - metric: extractbench_perfect
+    aggregation: mean
+    higher_is_better: true
+  - metric: extractbench_parse_success
+    aggregation: mean
+    higher_is_better: true
+  - metric: extractbench_salvaged
+    aggregation: mean
+    higher_is_better: false
+metadata:
+  version: 0.0

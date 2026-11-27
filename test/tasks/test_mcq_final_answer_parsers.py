@@ -75,6 +75,7 @@ PARSERS = [
     ("muchomusic.utils", "parse_multi_choice_response", "choices", "ABCD"),
     ("sitebench.utils", "parse_multi_choice_response", "choices", "ABCDEF"),
     ("super_gpqa.utils", "parse_multi_choice_response", "choices", "ABCDEF"),
+    ("medqa.utils", "_parse_multi_choice_response", "choices", "ABCDE"),
     ("egoplan.utils", "extract_characters_regex", "response", "ABCD"),
     ("egoplan2.utils", "extract_characters_regex", "response", "ABCD"),
     ("longtimescope.utils", "extract_characters_regex", "response", "ABCDEF"),

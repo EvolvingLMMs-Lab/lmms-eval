@@ -1,5 +1,7 @@
 import re
 
+import editdistance
+
 from lmms_eval.tasks._task_utils.media_resolver import resolve_media_reference
 
 
@@ -8,33 +10,6 @@ def _normalize(text):
     lowered = re.sub(r"[^a-z0-9\s']", " ", lowered)
     lowered = re.sub(r"\s+", " ", lowered)
     return lowered.strip()
-
-
-def _word_error_rate(reference, hypothesis):
-    ref_words = _normalize(reference).split()
-    hyp_words = _normalize(hypothesis).split()
-    if not ref_words:
-        return 0.0 if not hyp_words else 1.0
-
-    rows = len(ref_words) + 1
-    cols = len(hyp_words) + 1
-    dp = [[0] * cols for _ in range(rows)]
-
-    for i in range(rows):
-        dp[i][0] = i
-    for j in range(cols):
-        dp[0][j] = j
-
-    for i in range(1, rows):
-        for j in range(1, cols):
-            cost = 0 if ref_words[i - 1] == hyp_words[j - 1] else 1
-            dp[i][j] = min(
-                dp[i - 1][j] + 1,
-                dp[i][j - 1] + 1,
-                dp[i - 1][j - 1] + cost,
-            )
-
-    return dp[-1][-1] / len(ref_words)
 
 
 def av_asr_doc_to_visual(doc):
@@ -85,10 +60,13 @@ def av_asr_process_results(doc, results):
     return {"wer": {"gt": target, "pred": prediction}}
 
 
-def av_asr_wer(items):
-    if not items:
-        return 0.0
-    total = 0.0
+def av_asr_wer(items: list[dict[str, str]]) -> float:
+    """Return corpus WER as a percentage, aligning each utterance separately."""
+    errors = reference_words = 0
     for item in items:
-        total += _word_error_rate(item.get("gt", ""), item.get("pred", ""))
-    return 100.0 * total / len(items)
+        reference = _normalize(item.get("gt", "")).split()
+        hypothesis = _normalize(item.get("pred", "")).split()
+        errors += editdistance.eval(reference, hypothesis)
+        reference_words += len(reference)
+    # With no reference words, each insertion counts as one error.
+    return 100.0 * errors / (reference_words or 1)

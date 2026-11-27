@@ -86,7 +86,7 @@ def _extract_answer_letter(response: str, choices: list[str]) -> str:
         r"[Aa]nswer\s*[:=]\s*\(?([A-Da-d])\)?",
         r"\b([A-Da-d])\s*[.)\]]",  # A. or A) or A]
         r"^\s*\(?([A-Da-d])\)?$",  # Just the letter
-        r"\b([A-Da-d])\b",  # Any standalone letter
+        r"\b([A-D])\b",  # Any standalone capital letter; a lowercase one is usually the word "a"
     ]
 
     for pattern in patterns:

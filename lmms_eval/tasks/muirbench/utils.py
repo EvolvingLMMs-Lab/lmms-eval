@@ -18,6 +18,31 @@ def muir_doc_to_visual(doc):
     return image_list
 
 
+def muir_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    """Place each image at its ``<image>`` marker in the question or options.
+
+    Many MuirBench options are a bare ``<image>``. Putting all images before
+    the text would detach option images from their letters, so images are
+    interleaved in marker order and the chat template renders them in place.
+    """
+    text = muir_doc_to_text(doc, lmms_eval_specific_kwargs)
+    visuals = muir_doc_to_visual(doc)
+    segments = text.split("<image>")
+    if len(segments) - 1 != len(visuals):
+        # Marker/image count mismatch: keep the visuals-first layout.
+        content = [{"type": "image", "url": visual} for visual in visuals]
+        content.append({"type": "text", "text": text})
+        return [{"role": "user", "content": content}]
+
+    content = []
+    for i, segment in enumerate(segments):
+        if segment:
+            content.append({"type": "text", "text": segment})
+        if i < len(visuals):
+            content.append({"type": "image", "url": visuals[i]})
+    return [{"role": "user", "content": content}]
+
+
 def muir_doc_to_target(doc):
     return doc["answer"]
 

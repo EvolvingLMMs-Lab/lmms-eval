@@ -1,0 +1,14 @@
+group: extractbench
+task:
+  - extractbench_short
+  - extractbench_medium
+  - extractbench_long
+aggregate_metric_list:
+  - metric: extractbench_value_f1
+    weight_by_size: true
+  - metric: extractbench_perfect
+    weight_by_size: true
+  - metric: extractbench_parse_success
+    weight_by_size: true
+  - metric: extractbench_salvaged
+    weight_by_size: true

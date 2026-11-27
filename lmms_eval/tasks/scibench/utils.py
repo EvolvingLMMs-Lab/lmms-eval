@@ -160,7 +160,8 @@ def scibench_process_results(doc: Dict, result: List[str]) -> Dict[str, float]:
     if unit_prob != unit:
         pred = cal_not(parse_not(pred))
         ans = cal_not((ans, unit))
-        if len(ans) > 1:
+        # cal_not returns the converted value as a string, or its (number, unit) input if the conversion failed.
+        if isinstance(ans, tuple):
             ans = ans[0]
     try:
         res_equiv = equiv_with_unit(pred, ans, unit)

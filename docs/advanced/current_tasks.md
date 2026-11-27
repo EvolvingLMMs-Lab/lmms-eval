@@ -484,16 +484,27 @@ python -m lmms_eval --tasks list_with_num
 - [VoiceBench](https://voicebench.github.io/) (voicebench)
 - [WavCaps](https://github.com/XinhaoMei/WavCaps) (wavcaps)
 
+### Full-Duplex / Streaming Interaction
+- [Full-Duplex-Bench v1.5](https://github.com/DanielLin94144/Full-Duplex-Bench) (full_duplex_bench)
+  - fdb_user_interruption, fdb_user_backchannel, fdb_talking_to_other, fdb_background_speech
+- [Omni-DuplexEval](https://github.com/OpenBMB/Omni-DuplexEval) (omni_duplexeval)
+  - omni_duplexeval_rtd (6 real-time-description configs)
+  - omni_duplexeval_pr (event reminder, post-event reminder, correction)
+
 ---
 
 ## 5. Document Understanding Tasks
 
+- [CC-OCR V2](https://github.com/Eioss/CC-OCR-V2) (cc_ocr_v2)
 - [DocAtlas-Bench](https://github.com/ahmedheakl/DocAtlas) (docatlas_bench)
 - [DOCVQA](https://github.com/anisha2102/docvqa) (docvqa)
   - DOCVQA Validation (docvqa_val)
   - DOCVQA Test (docvqa_test)
 - [DocVQA 2026](https://github.com/VLR-CVC/DocVQA2026) (docvqa_2026)
 - [DUDE](https://arxiv.org/abs/2305.08455) (dude)
+- [FERMAT-PINK](https://github.com/9115jin/PINK) (fermat_pink) - Over-correction-aware OCR of handwritten multi-line math solutions
+- [ExtractBench](https://github.com/run-llama/ExtractBench) (extractbench): schema-guided extraction; full-document single-turn adaptation with official Value F1.
+  - Short (extractbench_short), medium (extractbench_medium), long (extractbench_long)
 - [MMLongBench-Doc](https://mayubo2333.github.io/MMLongBench-Doc/) (mmlongbench_doc)
 - [GEdit-Bench](https://github.com/GEdit-Bench/GEdit-Bench) (gedit_bench)
 - [Infographic VQA](https://www.docvqa.org/datasets/infographicvqa) (infovqa)
@@ -690,6 +701,8 @@ python -m lmms_eval --tasks list_with_num
 | `llava_vid` | LlavaVid | Video |
 | `longva` | LongVA | Long Video |
 | `mantis` | Mantis | Multi-image |
+| `minicpm_o_45` | MiniCPM_O_45 | Omni (image/audio/video, half-duplex) |
+| `minicpm_o_45_duplex` | MiniCPM_O_45Duplex | Omni (full-duplex streaming) |
 | `minicpm_v` | MiniCPM_V | Image |
 | `minimonkey` | MiniMonkey | Image |
 | `moviechat` | MovieChat | Long Video |

@@ -23,6 +23,7 @@ warnings.filterwarnings("ignore")
 from loguru import logger as eval_logger  # noqa: E402
 
 from lmms_eval.models.model_utils.load_video import import_decord  # noqa: E402
+from lmms_eval.models.model_utils.video_interval import uniform_indices  # noqa: E402
 
 
 @register_model("phi4_multimodal")
@@ -68,7 +69,8 @@ class Phi4(lmms):
             self.device_map = f"cuda:{accelerator.local_process_index}"
         else:
             self._device = torch.device(device)
-            self.device_map = device_map
+            # An empty device_map is the multi-process default; on a single process load onto `device`
+            self.device_map = device_map or device
         if isinstance(dtype, str) and dtype != "auto":
             dtype = getattr(torch, dtype)
 
@@ -180,7 +182,7 @@ class Phi4(lmms):
                 new_list.append(j)
         return new_list
 
-    def load_video(self, video_path, max_frames_num):
+    def load_video(self, video_path, max_frames_num, start_time=None, end_time=None):
         decord = import_decord()
 
         if type(video_path) is str:
@@ -188,8 +190,7 @@ class Phi4(lmms):
         else:
             vr = decord.VideoReader(video_path[0], ctx=decord.cpu(0))
         total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
-        frame_idx = uniform_sampled_frames.tolist()
+        frame_idx = uniform_indices(total_frame_num, float(vr.get_avg_fps()), max_frames_num, start_time, end_time).tolist()
         spare_frames = vr.get_batch(frame_idx).asnumpy()
         return spare_frames  # (frames, height, width, channels)
 

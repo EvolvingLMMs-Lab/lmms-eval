@@ -1,0 +1,29 @@
+dataset_path: ai4bharat/FERMAT
+dataset_kwargs:
+  token: True
+task: "fermat_pink"
+test_split: train
+output_type: generate_until
+doc_to_visual: !function utils.fermat_doc_to_visual
+doc_to_text: !function utils.fermat_doc_to_text
+doc_to_messages: !function utils.fermat_doc_to_messages
+doc_to_target: !function utils.fermat_doc_to_target
+generation_kwargs:
+  max_new_tokens: 4096
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.fermat_process_results
+metric_list:
+  - metric: pink
+    aggregation: !function utils.fermat_pink_aggregate
+    higher_is_better: true
+  - metric: over_correction_rate
+    aggregation: !function utils.fermat_over_correction_aggregate
+    higher_is_better: false
+  - metric: raw_score_ratio
+    aggregation: !function utils.fermat_raw_ratio_aggregate
+    higher_is_better: true
+metadata:
+  version: 1.0

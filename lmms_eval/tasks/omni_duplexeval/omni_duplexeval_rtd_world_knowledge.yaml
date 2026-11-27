@@ -1,0 +1,13 @@
+include: _default_template_yaml
+dataset_kwargs:
+  data_files:
+    test: hf://datasets/Hothan/Omni-DuplexEval/data/RTD_world_knowledge-*.parquet
+task: omni_duplexeval_rtd_world_knowledge
+process_results: !function utils.omni_duplexeval_rtd_process_results
+metric_list:
+  - metric: omni_duplexeval_rtd_temporal
+    aggregation: !function utils.omni_duplexeval_rtd_temporal_aggregate
+    higher_is_better: true
+  - metric: omni_duplexeval_rtd_content
+    aggregation: !function utils.omni_duplexeval_rtd_content_aggregate
+    higher_is_better: true

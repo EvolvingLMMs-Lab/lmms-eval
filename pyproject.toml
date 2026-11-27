@@ -151,6 +151,17 @@ prismmbench = [
     "pdf2image>=1.17.0",
     "pdfplumber>=0.11.9"
 ]
+extractbench = [
+    "llama-extract-bench==1.0.0; python_version >= '3.12'",
+    "parse-bench==2.0.0; python_version >= '3.12'",
+    "pdf2image>=1.17.0",
+    "pypdf>=6.4.0",
+    "openai>=1.0.0",
+]
+cc_ocr_v2 = [
+    "lxml>=4.9.0",
+    "scipy",
+]
 parsebench2 = [
     "parse-bench[llamaparse]==2.0.1; python_version >= '3.12'",
     "pypdfium2==4.30.0; python_version >= '3.12'",
@@ -240,6 +251,12 @@ dev = [
     "pytest>=8.0",
     "textual>=7.2.0",
     "textual-dev>=1.8.0",
+]
+
+[tool.uv]
+# ExtractBench and ParseBench-2 each check an exact parse-bench version at runtime.
+conflicts = [
+    [{ extra = "extractbench" }, { extra = "parsebench2" }],
 ]
 
 [tool.pytest.ini_options]

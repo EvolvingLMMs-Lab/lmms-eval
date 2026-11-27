@@ -6,6 +6,7 @@ import requests
 from loguru import logger as eval_logger
 
 from lmms_eval.api.chat_response import require_chat_message_text
+from lmms_eval.llm_judge.openai_endpoint import resolve_openai_chat_completions_url
 
 NUM_SECONDS_TO_SLEEP = 1
 
@@ -32,7 +33,7 @@ if API_TYPE == "openai":
         GPT_EVAL_MODEL_NAME = GPT_EVAL_MODEL_NAME.replace("Qwen/", "")
         API_URL = QWEN_HTTP_CHAT_URL
     else:
-        API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+        API_URL = resolve_openai_chat_completions_url()
 
     API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
     headers = {

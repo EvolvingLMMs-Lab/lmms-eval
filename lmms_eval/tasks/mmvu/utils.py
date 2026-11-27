@@ -223,6 +223,11 @@ def evaluate_with_rule_based(doc: Dict[str, Any], prediction: str) -> bool:
         pred_clean = " ".join(pred_normalized.split())
         answer_clean = " ".join(answer_normalized.split())
 
+        # An empty reply is never an answer. Left to the checks below, "" would count as a
+        # substring of every reference and "all words match" would hold vacuously.
+        if not pred_clean:
+            return False
+
         # Method 1: Exact match (after normalization)
         if pred_clean == answer_clean:
             return True
@@ -232,11 +237,10 @@ def evaluate_with_rule_based(doc: Dict[str, Any], prediction: str) -> bool:
         if answer_clean in pred_clean:
             return True
 
-        # Method 3: Check if prediction appears as a substring in answer (for shorter predictions)
-        if pred_clean in answer_clean:
-            return True
+        # A prediction that is only a fragment of the answer ("a", "of", "high" for "High-pass filter") is
+        # not accepted here. It falls through to the GPT judge, which decides whether it is equivalent.
 
-        # Method 4: For numerical answers, try to extract and compare numbers
+        # Method 3: For numerical answers, try to extract and compare numbers
         # Extract numbers from both strings
         pred_numbers = re.findall(r"\d+\.?\d*", pred_normalized)
         answer_numbers = re.findall(r"\d+\.?\d*", answer_normalized)
@@ -252,16 +256,18 @@ def evaluate_with_rule_based(doc: Dict[str, Any], prediction: str) -> bool:
             except ValueError:
                 pass
 
-        # Method 5: Word-level matching for short answers (2-5 words)
+        # Method 4: Word-level matching for short answers (2-5 words)
         answer_words = [w.strip(string.punctuation) for w in answer_clean.split() if w.strip(string.punctuation)]
         pred_words = [w.strip(string.punctuation) for w in pred_clean.split() if w.strip(string.punctuation)]
 
         if 2 <= len(answer_words) <= 5:
-            # Check if all answer words appear in prediction (order-independent)
-            if all(word in pred_words for word in answer_words if len(word) > 2):
+            # Check if all answer words appear in prediction (order-independent).
+            # Words of 1-2 characters are ignored; an answer made only of them has nothing left to check.
+            significant_words = [word for word in answer_words if len(word) > 2]
+            if significant_words and all(word in pred_words for word in significant_words):
                 return True
 
-        # Method 6: Special handling for mathematical complexity notation (O(n²) vs O(n^2))
+        # Method 5: Special handling for mathematical complexity notation (O(n²) vs O(n^2))
         # Extract O() notation patterns
         pred_o_match = re.search(r"O\s*\([^)]+\)", pred_clean, re.IGNORECASE)
         answer_o_match = re.search(r"O\s*\([^)]+\)", answer_clean, re.IGNORECASE)

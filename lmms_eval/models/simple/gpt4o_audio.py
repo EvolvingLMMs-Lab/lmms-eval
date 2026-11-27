@@ -16,6 +16,7 @@ from lmms_eval.api.chat_response import require_chat_message_text
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.llm_judge.openai_endpoint import resolve_openai_model_base
 
 try:
     from scipy import signal
@@ -31,10 +32,7 @@ from loguru import logger as eval_logger
 API_TYPE = os.getenv("API_TYPE", "openai")
 NUM_SECONDS_TO_SLEEP = 10
 if API_TYPE == "openai":
-    API_URL = os.getenv(
-        "OPENAI_API_URL",
-        "https://api.openai.com/v1/chat/completions",
-    )
+    API_URL = resolve_openai_model_base()
     API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
 elif API_TYPE == "azure":
     API_URL = os.getenv(
@@ -71,7 +69,7 @@ class GPT4OAudio(lmms):
         self.audio_format = audio_format
 
         if API_TYPE == "openai":
-            self.client = OpenAI(api_key=API_KEY)
+            self.client = OpenAI(api_key=API_KEY, base_url=API_URL)
         elif API_TYPE == "azure":
             self.client = AzureOpenAI(api_key=API_KEY, azure_endpoint=API_URL, api_version=API_VERSION)
 

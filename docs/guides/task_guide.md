@@ -39,7 +39,8 @@ Prompting / in-context formatting options:
 
 Runtime configuration options:
 - **num_fewshot** (`int`, *optional*, defaults to 0) — Number of few-shot examples before the input. **This function is not well tested so far**
-- **batch_size** (`int`, *optional*, defaults to 1) — Batch size. 
+
+Batch size is not a `TaskConfig` field. Set it per run with the `--batch_size` CLI flag; a `batch_size` key in a task YAML raises `TypeError: TaskConfig.__init__() got an unexpected keyword argument 'batch_size'`.
 
 **So far some models (such as qwen) may not support batch size > 1. Some models (such as llava) will generate different scores for different batch sizes. We recommend setting batch size to 1 for final benchmarking runs.** 
 

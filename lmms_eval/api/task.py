@@ -1773,9 +1773,16 @@ class ConfigurableMessagesTask(ConfigurableTask):
             return {"type": "image", "url": visual}
         if isinstance(visual, dict):
             media_type = visual.get("type", "video")
-            has_metadata = any(k in visual for k in ("video_start", "video_end"))
-            media_url = visual if has_metadata else (visual.get("url") or visual.get("path") or visual)
-            return {"type": media_type, "url": media_url}
+            media_url = visual.get("url") or visual.get("path") or visual.get("video") or visual
+            content = {"type": media_type, "url": media_url}
+            if media_type == "video" and isinstance(media_url, str):
+                start = visual.get("video_start", visual.get("start_time"))
+                end = visual.get("video_end", visual.get("end_time"))
+                if start is not None:
+                    content["start_time"] = float(start)
+                if end is not None:
+                    content["end_time"] = float(end)
+            return content
         if isinstance(visual, str):
             ext = os.path.splitext(visual)[1].lower()
             if ext in cls._IMAGE_EXTS:
@@ -1788,6 +1795,20 @@ class ConfigurableMessagesTask(ConfigurableTask):
     @classmethod
     def _build_user_turn(cls, visuals, text: str) -> list:
         content = [cls._visual_to_content(v) for v in (visuals or [])]
+        images = [item for item in content if item["type"] == "image"]
+        if images and isinstance(text, str) and text.count("<image>") == len(images):
+            # doc_to_text marks where each image goes with <image> (the simple-model convention). Chat processors add
+            # their own image token for every image in the content, so keeping the literal markers made them count
+            # each image twice. Put each image at its marker instead, as the MMMU-style doc_to_messages do.
+            content = [item for item in content if item["type"] != "image"]
+            *segments, last = text.split("<image>")
+            for segment, image in zip(segments, images):
+                if segment.strip():
+                    content.append({"type": "text", "text": segment.strip()})
+                content.append(image)
+            if last.strip():
+                content.append({"type": "text", "text": last.strip()})
+            return [{"role": "user", "content": content}]
         content.append({"type": "text", "text": text})
         return [{"role": "user", "content": content}]
 
