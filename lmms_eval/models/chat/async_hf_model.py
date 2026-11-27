@@ -21,7 +21,7 @@ from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
-from lmms_eval.models.model_utils.processor_kwargs import audio_processor_kwargs
+from lmms_eval.models.model_utils.processor_kwargs import audio_processor_kwargs, media_processor_kwargs
 from lmms_eval.protocol import ChatMessages
 
 
@@ -175,8 +175,7 @@ class AsyncHFModel(lmms):
         images, videos, audios = chat_messages.extract_media()
         inputs = worker.processor(
             text=[text],
-            images=images,
-            videos=videos,
+            **media_processor_kwargs(images, videos),
             **audio_processor_kwargs(worker.processor, audios),
             padding=True,
             return_tensors="pt",
