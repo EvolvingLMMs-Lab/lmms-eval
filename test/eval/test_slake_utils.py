@@ -1,3 +1,4 @@
+import pytest
 from datasets import Dataset
 from PIL import Image
 
@@ -70,6 +71,24 @@ def test_slake_normalize_answer_handles_case_punctuation_and_yes_no():
     assert utils.normalize_answer("CT (computed tomography)") == "ct"
     assert utils.normalize_answer("X-Ray") == utils.normalize_answer("xray")
     assert utils.normalize_answer("胸腔（肺部）") == "胸腔"
+
+
+@pytest.mark.parametrize(
+    "question, answer, reply, expected",
+    [
+        ("肺是异常的吗?", "是的", "异常", True),
+        ("肺是异常的吗?", "是的", "正常", False),
+        ("肺看起来不正常吗?", "是的", "不正常", True),
+        ("脾脏是否存在异常?", "否", "正常", True),
+        ("脾脏是否存在异常?", "否", "异常", False),
+        ("这张图片看起来正常吗?", "不正常", "不是", True),
+        ("这张图片看起来正常吗?", "不正常", "正常", False),
+    ],
+)
+def test_slake_normal_and_abnormal_follow_the_question(question, answer, reply, expected):
+    doc = {"qid": 1, "q_lang": "zh", "question": question, "answer": answer, "answer_type": "CLOSED"}
+
+    assert utils.slake_process_results(doc, [reply])["slake_accuracy"]["is_correct"] is expected
 
 
 def test_slake_process_results_exact_match_with_metadata():
