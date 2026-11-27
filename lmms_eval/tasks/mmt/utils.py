@@ -96,7 +96,9 @@ def mmt_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     """
     visuals = mmt_doc_to_visual(doc)
     text = mmt_doc_to_text(doc, lmms_eval_specific_kwargs)
-    prefix, rest = text.split("<image>", 1)
+    # Split at the marker mmt_doc_to_text adds, not at an "<image>" a configured pre_prompt may contain.
+    head, _, rest = text.partition("Question: <image>\n")
+    prefix = f"{head}Question:"
     content = []
     if prefix.strip():
         content.append({"type": "text", "text": prefix.strip()})

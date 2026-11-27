@@ -88,6 +88,15 @@ def test_source_markers_are_preserved_only_the_task_added_prefix_is_expanded():
     assert any("<image>" in text for text in text_items(m))
 
 
+def test_pre_prompt_marker_does_not_move_the_frames():
+    options = {**PROMPT_OPTIONS, "pre_prompt": "Look at <image> carefully.\n"}
+    m = utils.mmt_doc_to_messages(doc(n_images=4), options)
+    content = content_of(m)
+    assert [item["type"] for item in content] == ["text", "image", "image", "image", "image", "text"]
+    assert content[0]["text"] == "Look at <image> carefully.\nQuestion:"
+    assert "<image>" not in content[-1]["text"]
+
+
 def test_task_yaml_configs_wire_the_chat_hook():
     from pathlib import Path
 
