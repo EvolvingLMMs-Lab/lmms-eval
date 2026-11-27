@@ -3,6 +3,7 @@
 import copy
 import json
 import math
+import re
 from functools import lru_cache
 from importlib.metadata import version
 from itertools import zip_longest
@@ -187,6 +188,25 @@ def _native_result(doc: dict[str, Any], payload: dict[str, Any]) -> Any:
     )
 
 
+_MARKDOWN_FIELD = re.compile(r'"markdown"\s*:\s*"((?:[^"\\]|\\.)*)', re.S)
+
+
+def _salvage_markdown(text: str) -> str:
+    """The "markdown" string of a reply whose JSON is broken or cut off, or "" when it has none."""
+    match = _MARKDOWN_FIELD.search(text)
+    if not match:
+        return ""
+    # Models often leave LaTeX backslashes unescaped (\alpha); keep them as text instead of failing.
+    body = re.sub(r"\\(.)", lambda esc: esc.group(0) if esc.group(1) in '"\\/bfnrtu' else "\\" + esc.group(0), match.group(1), flags=re.S)
+    # A string cut off inside a \uXXXX escape decodes once the partial escape is dropped.
+    for candidate in (body, re.sub(r"\\u[0-9a-fA-F]{0,3}$", "", body)):
+        try:
+            return json.loads(f'"{candidate}"', strict=False)
+        except json.JSONDecodeError:
+            continue
+    return ""
+
+
 def decode_response(doc: dict[str, Any], response: str | None) -> tuple[Any, bool, str]:
     """Accept native JSON, plain Markdown, or a full official saved inference record.
 
@@ -200,8 +220,9 @@ def decode_response(doc: dict[str, Any], response: str | None) -> tuple[Any, boo
     if not response or not response.strip():
         return _native_result(doc, {"markdown": ""}), False, "missing"
     stripped = response.strip()
-    if stripped.startswith("```json") and stripped.endswith("```"):
-        stripped = stripped[7:-3].strip()
+    if stripped.startswith("```"):
+        # A fenced reply, also one cut off before its closing fence.
+        stripped = re.sub(r"\s*```$", "", re.sub(r"^```(?:json)?\s*", "", stripped)).strip()
     if not stripped.startswith("{"):
         return _native_result(doc, {"markdown": response}), False, "markdown_only"
     try:
@@ -218,55 +239,73 @@ def decode_response(doc: dict[str, Any], response: str | None) -> tuple[Any, boo
         try:
             record = _native_result(doc, payload)
         except (ValueError, TypeError, AttributeError):
-            return _native_result(doc, {"markdown": ""}), False, "invalid"
+            # Keep the transcription; its pages then score as pages without layout.
+            return _native_result(doc, {"markdown": payload["markdown"]}), False, "invalid_layout"
         return record, "layout_pages" in payload, "structured"
-    except (json.JSONDecodeError, ValidationError):
+    except json.JSONDecodeError:
+        # Still a format failure, but the model's transcription is scored instead of discarded.
+        return _native_result(doc, {"markdown": _salvage_markdown(stripped)}), False, "invalid"
+    except ValidationError:
         return _native_result(doc, {"markdown": ""}), False, "invalid"
 
 
-def _require_official_metrics(example_id: str, metrics: list[Any]) -> None:
-    if not metrics:
-        raise RuntimeError(
-            f"ParseBench-2 {example_id}: no official extended metrics from parse-bench=={SCORER_VERSION} "
-            f"at dataset revision {DATA_REVISION}; reference/scorer eligibility needs review. "
-            "Refusing to omit this example or emit an incomplete aggregate."
-        )
+@lru_cache(maxsize=1)
+def _parse_evaluator() -> Any:
+    from parse_bench.evaluation.evaluators.parse import ParseEvaluator
+
+    return ParseEvaluator()
+
+
+def official_result(record: Any, case: Any) -> Any | None:
+    """Score one document as ``parse_bench evaluation run --next_only`` does, or None when it skips it.
+
+    The official runner cross-evaluates a layout reference and scores it. It skips any other reference the
+    official parse evaluator cannot evaluate (no rules, no reference Markdown, no metadata metric). A
+    document no extended metric applies to fails, and the official aggregation counts it as 0.
+    """
+    from parse_bench.evaluation.runner import _next_only_result
+    from parse_bench.test_cases.schema import LayoutDetectionTestCase
+
+    cross_eval = isinstance(case, LayoutDetectionTestCase)
+    if not cross_eval and not _parse_evaluator().can_evaluate(record, case):
+        return None
+    return _next_only_result(record, case, cross_eval)
 
 
 def process_results(doc: dict[str, Any], results: list[str]) -> dict[str, Any]:
     """Compute official document metrics once; emit JSON-safe records for rank 0."""
-    require_scorer()
-    from parse_bench.evaluation.metrics.parse.next_metrics import compute_next_metrics
-    from parse_bench.schemas.evaluation import EvaluationResult
+    from loguru import logger
 
+    require_scorer()
     if len(results) > 1:
         raise ValueError("ParseBench-2 requires one filtered response per document")
     record, layout_supported, status = decode_response(doc, results[0] if results else None)
     case = load_case(doc["document"])
     if case.test_id != doc["example_id"]:
         raise ValueError(f"Reference identity mismatch: {case.test_id}, {doc['example_id']}")
-    # Call the underlying API directly: evaluator errors must stop the run,
-    # rather than disappearing from the official survivor denominator.
-    metrics = compute_next_metrics(record, case)
-    _require_official_metrics(doc["example_id"], metrics)
-    evaluation = EvaluationResult(
-        test_id=case.test_id,
-        example_id=doc["example_id"],
-        pipeline_name=record.pipeline_name,
-        product_type="layout_detection" if doc["subset"] == "layout" else "parse",
-        success=True,
-        metrics=metrics,
-    )
-    item = {"subset": doc["subset"], "evaluation": evaluation.model_dump(mode="json"), "layout_supported": layout_supported, "response_status": status}
+    evaluation = official_result(record, case)
+    if evaluation is None:
+        logger.warning("ParseBench-2 {}: the official evaluator skips this reference; it is not scored", doc["example_id"])
+    elif not evaluation.success:
+        # A scorer error is a harness problem, not the model's failure; make it stand out.
+        log = logger.error if (evaluation.error or "").startswith("Evaluation error") else logger.warning
+        log("ParseBench-2 {}: official scoring failed ({}); scored as the official runner does", doc["example_id"], evaluation.error)
+    item = {
+        "subset": doc["subset"],
+        "example_id": doc["example_id"],
+        "evaluation": None if evaluation is None else evaluation.model_dump(mode="json"),
+        "layout_supported": layout_supported,
+        "response_status": status,
+    }
     return {
         **{f"parsebench2_{name}": item for name in ("overall", *DIMENSIONS)},
-        "parsebench2_response_failure_rate": float(status in {"missing", "invalid"}),
+        "parsebench2_response_failure_rate": float(status in {"missing", "invalid", "invalid_layout"}),
         "parsebench2_layout_coverage": float(layout_supported) if doc["subset"] == "layout" else None,
     }
 
 
 def combined_report(items: list[dict[str, Any]]) -> dict[str, Any]:
-    """Use official subset macro aggregation and six-dimension weighting."""
+    """Official subset aggregation (failures count as 0) and six-dimension weighting."""
     require_scorer()
     from parse_bench.evaluation.next_score import combine_next_score
     from parse_bench.evaluation.runner import EvaluationRunner
@@ -275,21 +314,13 @@ def combined_report(items: list[dict[str, Any]]) -> dict[str, Any]:
     grouped: dict[str, list[Any]] = {}
     seen = set()
     for item in items:
-        result = EvaluationResult.model_validate(item["evaluation"])
-        _require_official_metrics(result.example_id, result.metrics)
-        if result.example_id in seen:
-            raise ValueError(f"Duplicate scored example: {result.example_id}")
-        seen.add(result.example_id)
-        grouped.setdefault(item["subset"], []).append(result)
+        if item["example_id"] in seen:
+            raise ValueError(f"Duplicate scored example: {item['example_id']}")
+        seen.add(item["example_id"])
+        if item["evaluation"] is not None:
+            grouped.setdefault(item["subset"], []).append(EvaluationResult.model_validate(item["evaluation"]))
     runner = EvaluationRunner(output_dir=Path("."), next_only=True)
     subset_metrics = {subset: runner.aggregate_metrics(rows) for subset, rows in grouped.items()}
-    # Capability is declared for the run by any valid response carrying the
-    # explicit layout channel (including an empty list), on any subset. Once
-    # declared, missing/invalid/Markdown-only individual pages keep their
-    # official zero predictions in the layout denominator. With no declaration,
-    # a Markdown-only run must not look like a complete six-dimension evaluation.
-    if not any(item["layout_supported"] for item in items):
-        subset_metrics.pop("layout", None)
     return combine_next_score(subset_metrics, {subset: len(rows) for subset, rows in grouped.items()})
 
 
@@ -325,7 +356,7 @@ def aggregate_charts(items: list[dict[str, Any]]) -> float:
 
 
 def aggregate_layout(items: list[dict[str, Any]]) -> float:
-    """Official layout dimension, only for explicitly structured predictions."""
+    """Official layout dimension."""
     return _aggregate(items, "layout")
 
 

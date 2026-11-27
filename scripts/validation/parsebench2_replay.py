@@ -114,9 +114,11 @@ def main() -> None:
     compare(direct, actual)
     for subset in utils.SUBSETS:
         summary = json.loads((root / "direct" / subset / pipeline / "_evaluation_report.json").read_text())
-        expected = sum(doc["subset"] == subset for doc in selected)
-        if (summary["total_examples"], summary["successful"], summary["failed"], summary["skipped"]) != (expected, expected, 0, 0):
-            raise AssertionError(f"Official scorer did not evaluate every {subset} document")
+        rows = [item for item in items if item["subset"] == subset]
+        scored = [item["evaluation"] for item in rows if item["evaluation"] is not None]
+        expected = (len(scored), sum(e["success"] for e in scored), sum(not e["success"] for e in scored), len(rows) - len(scored))
+        if (summary["total_examples"], summary["successful"], summary["failed"], summary["skipped"]) != expected:
+            raise AssertionError(f"Official {subset} counts {summary['total_examples'], summary['successful'], summary['failed'], summary['skipped']} differ from the task's {expected}")
     replay = root / "from-log"
     replay.mkdir()
     (replay / "published.json").write_text(json.dumps({"args": {"model": pipeline, "model_args": "published", "limit": None}, "model_configs": {"task": "parsebench2"}, "logs": logs}))
@@ -130,7 +132,7 @@ def main() -> None:
         "manifest_documents": len(inputs),
         "official_cli_report_parity": True,
         "absolute_score_tolerance": 1e-12,
-        "scope": "Deterministic first documents per subset; published-output scoring and rendering only. No fresh inference or full benchmark parity.",
+        "scope": ("All manifest documents" if len(selected) == len(inputs) else "Deterministic first documents per subset") + "; published-output scoring and rendering only, no fresh inference.",
         "report": actual,
     }
     (root / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")

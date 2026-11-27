@@ -97,15 +97,14 @@ def test_rendering_all_pages(document: dict) -> None:
     assert all(image.mode == "RGB" and image.size == (200, 160) for image in pages)
 
 
-@pytest.mark.parametrize("response", [None, "", "{broken", '{"markdown":null}', '{"markdown":"x","layout_pages":"bad"}'])
+@pytest.mark.parametrize("response", [None, "", "{broken", '{"markdown":null}', '```json\n{"layout_pages": ['])
 def test_missing_and_malformed_responses_stay_in_denominator(scorer: None, document: dict, response: str | None) -> None:
     good = utils.process_results(document, ["# Heading\n\nA **bold** example."])["parsebench2_text"]
     bad = utils.process_results(document, [response])
     assert bad["parsebench2_response_failure_rate"] == 1
     assert utils.aggregate_text([bad["parsebench2_text"]]) == 0
     other = json.loads(json.dumps(bad["parsebench2_text"]))
-    other["evaluation"]["example_id"] = "text/other"
-    other["evaluation"]["test_id"] = "text/other"
+    other["example_id"] = other["evaluation"]["example_id"] = other["evaluation"]["test_id"] = "text/other"
     assert utils.aggregate_text([good, other]) == pytest.approx(utils.aggregate_text([good]) / 2)
 
 
@@ -140,10 +139,11 @@ def test_layout_normalization_and_missing_dimension(scorer: None, layout_documen
     assert utils.aggregate_layout([item]) == pytest.approx(1)
     empty = utils.process_results(doc, ['{"markdown":"","layout_pages":[]}'])["parsebench2_layout"]
     assert utils.aggregate_layout([empty]) == 0
+    # As in the official runner, a page without layout scores 0 instead of being dropped.
     plain = utils.process_results(doc, ["Hello"])["parsebench2_layout"]
-    assert math.isnan(utils.aggregate_layout([plain]))
+    assert utils.aggregate_layout([plain]) == 0
     assert math.isnan(utils.aggregate_overall([item]))  # absent other subsets
-    assert utils.aggregate_layout([item, {**plain, "evaluation": {**plain["evaluation"], "example_id": "layout/other"}}]) == pytest.approx(0.5)
+    assert utils.aggregate_layout([item, {**plain, "example_id": "layout/other", "evaluation": {**plain["evaluation"], "example_id": "layout/other"}}]) == pytest.approx(0.5)
 
 
 @pytest.mark.parametrize("response", [None, "", "{broken", '{"markdown":null}', '{"markdown":"x","layout_pages":"bad"}', "Hello"])
@@ -152,16 +152,30 @@ def test_mixed_layout_failures_remain_in_denominator(scorer: None, layout_docume
     good = utils.process_results(doc, [json.dumps(prediction)])["parsebench2_layout"]
     empty = utils.process_results(doc, ['{"markdown":"","layout_pages":[]}'])["parsebench2_layout"]
     failed = utils.process_results(doc, [response])["parsebench2_layout"]
-    failed["evaluation"]["example_id"] = "layout/failed"
-    failed["evaluation"]["test_id"] = "layout/failed"
+    failed["example_id"] = failed["evaluation"]["example_id"] = failed["evaluation"]["test_id"] = "layout/failed"
     assert utils.aggregate_layout([good, failed]) == pytest.approx(0.5)
     assert utils.aggregate_layout([empty, failed]) == 0
-    assert math.isnan(utils.aggregate_layout([failed]))  # no capability declaration
-    # A valid structured response elsewhere in this run also declares capability.
-    structured_text = utils.process_results(document, ['{"markdown":"x","layout_pages":[]}'])["parsebench2_layout"]
-    assert utils.aggregate_layout([structured_text, failed]) == 0
-    plain = utils.process_results(doc, ["Hello"])["parsebench2_layout"]
-    assert math.isnan(utils.aggregate_layout([plain, failed]))
+    assert utils.aggregate_layout([failed]) == 0
+
+
+@pytest.mark.parametrize(
+    ("response", "markdown"),
+    [
+        ('```json\n{"markdown": "# Heading\\n\\nA **bold** ex', "# Heading\n\nA **bold** ex"),
+        ('{"markdown": "# Heading\n\nA **bold** example.", "layout_pages": [}', "# Heading\n\nA **bold** example."),
+        ('{"markdown": "caf\\u00', "caf"),
+        ('{"markdown": "$x = \\alpha$ and a \\\\ b", "lay', "$x = \\alpha$ and a \\ b"),
+    ],
+    ids=["cut-off", "raw-newline-and-bad-layout", "cut-off-escape", "unescaped-latex"],
+)
+def test_broken_json_keeps_its_markdown_but_counts_as_failure(scorer: None, document: dict, response: str, markdown: str) -> None:
+    record, supported, status = utils.decode_response(document, response)
+    assert status == "invalid" and not supported
+    assert record.output.markdown == markdown
+    result = utils.process_results(document, [response])
+    assert result["parsebench2_response_failure_rate"] == 1
+    if markdown.startswith("# Heading"):
+        assert utils.aggregate_text([result["parsebench2_text"]]) > 0
 
 
 def test_duplicate_and_repeat_rejection(scorer: None, document: dict) -> None:
@@ -172,15 +186,21 @@ def test_duplicate_and_repeat_rejection(scorer: None, document: dict) -> None:
         utils.process_results(document, ["x", "x"])
 
 
-def test_scorer_error_is_fatal(scorer: None, document: dict, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_scorer_error_is_excluded_like_the_official_runner(scorer: None, document: dict, monkeypatch: pytest.MonkeyPatch) -> None:
     from parse_bench.evaluation.metrics.parse import next_metrics
+
+    good = utils.process_results(document, ["# Heading\n\nA **bold** example."])["parsebench2_text"]
 
     def broken(*args: object) -> None:
         raise RuntimeError("scorer environment broken")
 
     monkeypatch.setattr(next_metrics, "compute_next_metrics", broken)
-    with pytest.raises(RuntimeError, match="environment broken"):
-        utils.process_results(document, ["x"])
+    errored = json.loads(json.dumps(utils.process_results(document, ["x"])["parsebench2_text"]))
+    errored["example_id"] = errored["evaluation"]["example_id"] = errored["evaluation"]["test_id"] = "text/other"
+    assert errored["evaluation"]["success"] is False
+    assert "scorer environment broken" in errored["evaluation"]["error"]
+    # A harness error is not the model's failure: the official aggregation leaves it out instead of adding a 0.
+    assert utils.aggregate_text([good, errored]) == pytest.approx(utils.aggregate_text([good]))
 
 
 def test_hub_symlink_identity(scorer: None, document: dict, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -206,9 +226,29 @@ def test_hub_symlink_identity(scorer: None, document: dict, tmp_path: Path, monk
         {"markdown": "x", "layout_pages": [{"page_number": 1, "width": 1, "height": 1, "items": [{"bbox": {"x": 0.9, "y": 0, "w": 0.5, "h": 1}}]}]},
     ],
 )
-def test_native_coordinates_are_explicit(scorer: None, document: dict, payload: dict) -> None:
-    _, supported, status = utils.decode_response(document, json.dumps(payload))
-    assert not supported and status == "invalid"
+def test_invalid_layout_keeps_the_transcription(scorer: None, document: dict, payload: dict) -> None:
+    record, supported, status = utils.decode_response(document, json.dumps(payload))
+    assert not supported and status == "invalid_layout"
+    assert record.output.markdown == "x" and not record.output.layout_pages
+    assert utils.process_results(document, [json.dumps(payload)])["parsebench2_response_failure_rate"] == 1
+
+
+@pytest.mark.parametrize(
+    ("response", "status"),
+    [
+        ('```json\n{"markdown": "# Heading", "layout_pages": []}\n```', "structured"),
+        ('```\n{"markdown": "# Heading", "layout_pages": []}\n```', "structured"),
+        ('```json\n{"layout_pages": [', "invalid"),
+        ("```python\nprint(1)\n```", "markdown_only"),
+    ],
+)
+def test_code_fences_are_read_like_bare_json(scorer: None, document: dict, response: str, status: str) -> None:
+    record, _, observed = utils.decode_response(document, response)
+    assert observed == status
+    if status == "structured":
+        assert record.output.markdown == "# Heading"
+    if status == "markdown_only":
+        assert record.output.markdown == response
 
 
 @pytest.mark.parametrize("failure", [None, "{broken"])
@@ -225,4 +265,4 @@ def test_public_mixed_layout_regression(scorer: None, failure: str | None) -> No
     assert next(m["value"] for m in failed["evaluation"]["metrics"] if m["metric_name"] == "layout_grounding_pass_rate") == 0
     assert utils.aggregate_layout([good, failed]) == 0
     assert utils.combined_report([good, failed])["dimensions"]["layout"]["slots"][0]["documents"] == 2
-    assert math.isnan(utils.aggregate_layout([failed]))
+    assert utils.aggregate_layout([failed]) == 0
