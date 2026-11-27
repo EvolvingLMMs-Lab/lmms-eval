@@ -162,6 +162,10 @@ cc_ocr_v2 = [
     "lxml>=4.9.0",
     "scipy",
 ]
+parsebench2 = [
+    "parse-bench[llamaparse]==2.0.1; python_version >= '3.12'",
+    "pypdfium2==4.30.0; python_version >= '3.12'",
+]
 olmocr_bench = [
     "beautifulsoup4",
     "lxml",
@@ -247,6 +251,12 @@ dev = [
     "pytest>=8.0",
     "textual>=7.2.0",
     "textual-dev>=1.8.0",
+]
+
+[tool.uv]
+# ExtractBench and ParseBench-2 each check an exact parse-bench version at runtime.
+conflicts = [
+    [{ extra = "extractbench" }, { extra = "parsebench2" }],
 ]
 
 [tool.pytest.ini_options]
