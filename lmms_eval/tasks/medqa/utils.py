@@ -3,6 +3,8 @@ from typing import Any, Dict, List
 
 import numpy as np
 
+from lmms_eval.tasks._task_utils.mcq_extract import extract_final_mcq_answer
+
 medqa_prompt = """Answer the following multiple choice question. There is only one correct answer. The last line of your response should be in the format 'Answer: $LETTER' (without quotes), where LETTER is one of A, B, C, D, or E."""
 
 
@@ -81,6 +83,10 @@ def medqa_process_results(doc: Dict[str, Any], result: List[str]):
 
 
 def _parse_multi_choice_response(response: str, all_choices: List[str]) -> str:
+    final_answer = extract_final_mcq_answer(response, all_choices)
+    if final_answer:
+        return final_answer
+
     # Clean punctuation around the response
     for ch in [",", ".", "!", "?", ";", ":", "'"]:
         response = response.strip(ch)
