@@ -34,6 +34,7 @@ EN_YES = {"yes", "yeah", "yep", "true"}
 EN_NO = {"no", "nope", "false"}
 ZH_YES = {"是", "是的", "有", "包含", "可以", "能", "会", "正常"}
 ZH_NO = {"否", "不是", "没有", "无", "不包含", "不能", "不会", "不可以", "不正常", "异常"}
+ZH_ABNORMAL = ("不正常", "异常")
 ZH_PUNCTUATION = "！？｡。＂＃＄％＆＇（）＊＋，－／：；＜＝＞＠［＼］＾＿｀｛｜｝～、，。；：《》？【】（）"
 
 
@@ -98,8 +99,9 @@ def slake_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, 
     """Normalize a generated answer and return per-sample SLAKE metric records."""
     prediction = results[0] if results else ""
     target = doc["answer"]
-    pred_norm = normalize_answer(prediction)
-    target_norm = normalize_answer(target)
+    question = str(doc.get("question") or "")
+    pred_norm = normalize_answer(prediction, question)
+    target_norm = normalize_answer(target, question)
     if target_norm in ("yes", "no"):
         pred_norm = extract_yes_no_answer(prediction) or pred_norm
     is_correct = pred_norm == target_norm
@@ -118,8 +120,11 @@ def slake_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, 
     return {metric: record for metric in SLAKE_METRICS}
 
 
-def normalize_answer(answer: Any) -> str:
-    """Normalize English and Chinese short answers for exact-match scoring."""
+def normalize_answer(answer: Any, question: str = "") -> str:
+    """Normalize English and Chinese short answers for exact-match scoring.
+
+    When the question asks about abnormality ("肺是异常的吗?"), "异常"/"不正常" answer yes and "正常" answers no.
+    """
     text = "" if answer is None else str(answer)
     text = text.strip().lower()
     text = re.sub(r"\([^)]*\)", " ", text)
@@ -128,7 +133,7 @@ def normalize_answer(answer: Any) -> str:
     text = text.translate(punctuation_table)
     text = re.sub(r"\s+", " ", text).strip()
     text = _normalize_medical_aliases(text)
-    text = _normalize_yes_no(text)
+    text = _normalize_yes_no(text, question)
     return text
 
 
@@ -233,7 +238,9 @@ def _accuracy_for(results: List[Dict[str, Any]], key: str, value: str) -> float:
     return _accuracy(filtered)
 
 
-def _normalize_yes_no(text: str) -> str:
+def _normalize_yes_no(text: str, question: str = "") -> str:
+    if text in ("正常", *ZH_ABNORMAL) and any(word in question for word in ZH_ABNORMAL):
+        return "no" if text == "正常" else "yes"
     if text in EN_YES or text in ZH_YES:
         return "yes"
     if text in EN_NO or text in ZH_NO:
