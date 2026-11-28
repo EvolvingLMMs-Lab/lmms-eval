@@ -1,3 +1,5 @@
+import sys
+
 import filelock
 from datasets.utils import _filelock as datasets_filelock
 
@@ -31,6 +33,25 @@ def test_cross_class_singleton_no_deadlock(tmp_path):
     # Cross-class cache must return the exact same object
     assert fl_instance is ds_instance
 
+    with fl_instance:
+        with ds_instance:
+            assert fl_instance.is_locked
+
+
+def test_enable_reentrant_filelocks_needs_no_private_filelock_module(tmp_path, monkeypatch):
+    """filelock 4.3 removed ``filelock._api``; the patch must work from filelock's public names."""
+    lock_meta = type(filelock.BaseFileLock)
+    monkeypatch.setattr(lock_meta, "__call__", lock_meta.__call__)  # restore the installed hook afterwards
+    monkeypatch.setattr(_enable_reentrant_filelocks, "_patched", False, raising=False)
+    monkeypatch.setitem(sys.modules, "filelock._api", None)  # ``import filelock._api`` now raises ImportError
+
+    _enable_reentrant_filelocks()
+
+    lock_path = tmp_path / "public_names.lock"
+    fl_instance = filelock.FileLock(str(lock_path))
+    ds_instance = datasets_filelock.FileLock(str(lock_path))
+
+    assert fl_instance is ds_instance
     with fl_instance:
         with ds_instance:
             assert fl_instance.is_locked
