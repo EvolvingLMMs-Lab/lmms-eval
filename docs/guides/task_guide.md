@@ -296,7 +296,7 @@ dataset_kwargs:
 task: "air_bench_chat"
 test_split: test
 output_type: generate_until
-doc_to_audio: !function utils.air_bench_doc_to_audio  # Process audio input
+doc_to_visual: !function utils.air_bench_doc_to_audio  # Process audio input
 doc_to_text: !function utils.air_bench_doc_to_text
 doc_to_messages: !function utils.air_bench_doc_to_messages
 generation_kwargs:
@@ -314,7 +314,7 @@ metadata:
 ```
 
 Key differences for audio tasks:
-- Use `doc_to_audio` to process audio files from the dataset
+- Audio is loaded through `doc_to_visual`, the same hook images and videos use; by convention the function is named `*_doc_to_audio`
 - Often use GPT-4 evaluation for open-ended audio understanding tasks
 - Audio-specific preprocessing may be needed in the utility functions
 
