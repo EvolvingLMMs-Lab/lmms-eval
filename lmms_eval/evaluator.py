@@ -146,8 +146,15 @@ def _enable_reentrant_filelocks() -> None:
         return
 
     import filelock as _fl
-    import filelock._api as _fl_api
     from datasets.utils import _filelock as _datasets_filelock
+
+    # Reach the lock metaclass through the public base class: filelock keeps it in a private
+    # module that moved in 4.3 (``filelock._api`` no longer exists there).
+    lock_meta = type(_fl.BaseFileLock)
+    if "__call__" not in vars(lock_meta):
+        # filelock < 3.13 has no singleton metaclass to patch.
+        _enable_reentrant_filelocks._patched = True
+        return
 
     target_lock_classes = tuple(
         cls
@@ -158,8 +165,8 @@ def _enable_reentrant_filelocks() -> None:
         if cls is not None
     )
 
-    original_call = _fl_api.FileLockMeta.__call__
-    _cross_class_cache: dict[str, _fl_api.BaseFileLock] = {}
+    original_call = lock_meta.__call__
+    _cross_class_cache: dict[str, _fl.BaseFileLock] = {}
 
     def _patched_call(cls, lock_file, *args, **kwargs):
         if cls in target_lock_classes:
@@ -168,18 +175,18 @@ def _enable_reentrant_filelocks() -> None:
             if cached is not None:
                 return cached
             kwargs.setdefault("is_singleton", True)
-            if cls is getattr(_datasets_filelock, "FileLock", None):
-                unset_mode = getattr(_fl_api, "_UNSET_FILE_MODE", None)
-                if kwargs.get("mode", unset_mode) == unset_mode:
-                    umask = os.umask(0o666)
-                    os.umask(umask)
-                    kwargs["mode"] = 0o666 & ~umask
+            # datasets fills in ``mode`` from the umask inside ``__init__``; do the same here so the
+            # singleton check, which runs before ``__init__``, sees the arguments the instance was built with.
+            if cls is getattr(_datasets_filelock, "FileLock", None) and "mode" not in kwargs:
+                umask = os.umask(0o666)
+                os.umask(umask)
+                kwargs["mode"] = 0o666 & ~umask
             instance = original_call(cls, lock_file, *args, **kwargs)
             _cross_class_cache[canonical] = instance
             return instance
         return original_call(cls, lock_file, *args, **kwargs)
 
-    _fl_api.FileLockMeta.__call__ = _patched_call
+    lock_meta.__call__ = _patched_call
     _enable_reentrant_filelocks._patched = True
 
 
