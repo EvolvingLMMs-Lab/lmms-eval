@@ -118,14 +118,15 @@ def _write_video(path: Path) -> None:
 RATE = 8000
 
 
-def _write_av_video(path: Path, channels: int = 1, rate: int = RATE, codec: str = "pcm_s16le", ext: str = "mkv", audio_from_second: int = 0) -> None:
+def _write_av_video(path: Path, channels: int = 1, rate: int = RATE, codec: str = "pcm_s16le", ext: str = "mkv", audio_from_second: int = 0, audio_gap_second: int | None = None) -> None:
     """Six-color 1 fps video muxed with one non-silent PCM tone per second and channel.
 
     Second ``i`` of channel ``c`` carries a ``(200 + i * 50 + c * 100)`` Hz sine at
     amplitude 10000, so audio timing and channel placement can be verified
     sample-exactly against the source, not just by presence. ``audio_from_second``
     mutes the track's early seconds (the stream exists from there) to model a late
-    audio track whose real A/V offset must survive the window.
+    audio track whose real A/V offset must survive the window. ``audio_gap_second``
+    leaves that one second out of the track, so its timestamps jump over a gap.
     """
     container = av.open(str(path), mode="w")
     stream = container.add_stream("libx264", rate=1)
@@ -140,7 +141,7 @@ def _write_av_video(path: Path, channels: int = 1, rate: int = RATE, codec: str 
         frame = av.VideoFrame.from_ndarray(array, format="rgb24")
         for packet in stream.encode(frame):
             container.mux(packet)
-        if index < audio_from_second:
+        if index < audio_from_second or index == audio_gap_second:
             continue
         waves = [np.round(10000 * np.sin(np.arange(rate) * 2 * np.pi * (200 + index * 50 + channel * 100) / rate)).astype(np.int16) for channel in range(channels)]
         samples = np.stack(waves, axis=1).reshape(1, -1)  # packed s16 interleaves per time step: L0, R0, L1, R1...
@@ -562,6 +563,25 @@ def test_sync_huggingface_late_audio_track_keeps_its_real_offset(tmp_path: Path)
     with pytest.raises(Captured):
         model.generate_until([req])
     assert path.exists()
+
+
+def test_sync_huggingface_audio_gap_stays_silent_at_its_own_position(tmp_path: Path) -> None:
+    """A gap in the audio timestamps must not abort the run or pull later audio forward."""
+    from contextlib import ExitStack
+
+    from lmms_eval.models.chat.huggingface import _processor_video
+
+    path = tmp_path / "gap.mkv"
+    _write_av_video(path, audio_gap_second=2)
+    source, rate = _audio(path)  # decoded back to back: seconds 0, 1, 3, 4, 5
+    with ExitStack() as stack:
+        clip = _processor_video({"video": str(path), "video_start": 1, "video_end": 4}, stack)
+        audio, clip_rate = _audio(Path(clip))
+    assert clip_rate == rate
+    assert audio.shape[1] == 3 * rate
+    assert np.array_equal(audio[:, :rate], source[:, rate : 2 * rate])
+    assert not audio[:, rate : 2 * rate].any()
+    assert np.array_equal(audio[:, 2 * rate :], source[:, 2 * rate : 3 * rate])
 
 
 def test_sync_huggingface_fractional_window_cuts_samples_not_seconds(tmp_path: Path) -> None:

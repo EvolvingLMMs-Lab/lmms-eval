@@ -55,19 +55,44 @@ def _processor_video(part: dict[str, Any], files: ExitStack) -> Any:
         stream = source.streams.video[0]
         fps = stream.average_rate or stream.guessed_rate
         origin = stream.start_time
-        if origin is not None and start is not None and start > 0:
+        if origin is None:
+            # No declared start: the first frame defines the origin of the media axis.
+            with av.open(path) as probe:
+                first = next(probe.decode(video=0), None)
+            if first is None or first.pts is None:
+                raise ValueError(f"Missing video timestamp in {path}")
+            origin = first.pts
+        elif start is not None and start > 0:
             source.seek(origin + int(start / stream.time_base), stream=stream)
+        # Audio is cut to the requested [start, end) on the same media axis the video
+        # selection uses (its zero is the video origin), never past the declared end:
+        # reading the last frame's display duration would pull audio from outside the
+        # window into the evaluation, and re-anchoring each stream to its own first
+        # sample would drop the file's real A/V offset (e.g. late audio tracks).
+        zero_seconds = float(origin * stream.time_base)
+        cuts = []
+        for index in range(len(source.streams.audio)):
+            cut = _clip_audio(path, index, start, end, zero_seconds)
+            if cut is not None:
+                cuts.append(cut)
         output = dest.add_stream("ffv1", rate=fps)
         output.width, output.height = stream.width, stream.height
         output.pix_fmt = "bgr0"
         output.codec_context.time_base = stream.time_base
+        # Every output stream must exist before the first packet is muxed: the
+        # container header is written on that packet, and a stream added later
+        # corrupts the trailer (a native matroska assertion in practice). The audio
+        # is therefore cut first, so video packets go to disk as they are encoded
+        # instead of being held in memory for the whole window.
+        outputs = []
+        for rate, layout, clip_pts_start, buf in cuts:
+            out = dest.add_stream("pcm_s16le", rate=rate)
+            out.layout = layout
+            outputs.append((out, rate, layout, clip_pts_start, buf))
         first_pts = None
-        video_packets = []
         for frame in source.decode(stream):
             if frame.pts is None:
                 raise ValueError(f"Missing video timestamp in {path}")
-            if origin is None:
-                origin = frame.pts
             seconds = float((frame.pts - origin) * stream.time_base)
             if end is not None and seconds > end:
                 break
@@ -78,31 +103,10 @@ def _processor_video(part: dict[str, Any], files: ExitStack) -> Any:
             # Use the requested clip origin for both streams. The first retained
             # frame can legitimately occur after the first retained audio sample.
             frame.pts -= origin + round((start or 0.0) / stream.time_base)
-            video_packets.extend(output.encode(frame))
+            dest.mux(output.encode(frame))
         if first_pts is None:
             raise ValueError(f"No video frames in interval [{start}, {end}] for {path}")
-        video_packets.extend(output.encode())
-        # Audio is cut to the requested [start, end) on the same media axis the video
-        # selection uses (its zero is the video origin), never past the declared end:
-        # reading the last frame's display duration would pull audio from outside the
-        # window into the evaluation, and re-anchoring each stream to its own first
-        # sample would drop the file's real A/V offset (e.g. late audio tracks).
-        zero_seconds = 0.0 if origin is None else float(origin * stream.time_base)
-        cuts = []
-        for index in range(len(source.streams.audio)):
-            cut = _clip_audio(path, index, start, end, zero_seconds)
-            if cut is not None:
-                cuts.append(cut)
-        # Every output stream must exist before the first packet is muxed: the
-        # container header is written on that packet, and a stream added later
-        # corrupts the trailer (a native matroska assertion in practice).
-        outputs = []
-        for rate, layout, clip_pts_start, buf in cuts:
-            out = dest.add_stream("pcm_s16le", rate=rate)
-            out.layout = layout
-            outputs.append((out, rate, layout, clip_pts_start, buf))
-        for packet in video_packets:
-            dest.mux(packet)
+        dest.mux(output.encode())
         for out, rate, layout, clip_pts_start, buf in outputs:
             channels = len(layout.channels)
             total = buf.shape[1] // channels
@@ -139,6 +143,8 @@ def _clip_audio(path: str, index: int, start: Optional[float], end: Optional[flo
         # timestamp, which stays correct even where a seek would land mid-packet.
         first_sample = None if start is None else math.ceil(start * rate - 1e-9)
         last_sample = None if end is None else math.ceil(end * rate - 1e-9)
+        # Container timestamps can be coarser than a sample.
+        tolerance = max(1, math.ceil(astream.time_base * rate))
         kept: List[Any] = []
         cursor = None
         for frame in source.decode(astream):
@@ -149,14 +155,16 @@ def _clip_audio(path: str, index: int, start: Optional[float], end: Optional[flo
                 continue
             if last_sample is not None and media_sample >= last_sample:
                 break
-            # Container timestamps can be coarser than a sample. Do not silently
-            # concatenate a genuine gap or overlap into a continuous audio track.
-            if cursor is not None and abs(media_sample - cursor) > max(1, math.ceil(astream.time_base * rate)):
-                raise ValueError(f"Discontinuous audio timestamps in {path}")
+            # Frames within the timestamp rounding stay contiguous. A frame after a genuine
+            # gap keeps its own position (the gap stays silent below) instead of being
+            # pulled forward; an overlap has no faithful place on the timeline.
+            jump = 0 if cursor is None else media_sample - cursor
+            if jump < -tolerance:
+                raise ValueError(f"Overlapping audio timestamps in {path}")
+            if cursor is None or jump > tolerance:
+                cursor = media_sample
             for piece in resampler.resample(frame):
                 arr = piece.to_ndarray()
-                if cursor is None:
-                    cursor = media_sample
                 kept.append((cursor, arr))
                 cursor += arr.shape[1] // channels
         for piece in resampler.resample(None):
@@ -168,7 +176,9 @@ def _clip_audio(path: str, index: int, start: Optional[float], end: Optional[flo
         if not kept:
             return None
         base = kept[0][0]
-        buf = np.concatenate([arr for _, arr in kept], axis=1)
+        buf = np.zeros((1, (kept[-1][0] - base) * channels + kept[-1][1].shape[1]), dtype=kept[0][1].dtype)
+        for position, arr in kept:
+            buf[:, (position - base) * channels : (position - base) * channels + arr.shape[1]] = arr
         lo = max(0, (0 if first_sample is None else first_sample - base) * channels)
         hi = buf.shape[1] if last_sample is None else min(buf.shape[1], max(0, (last_sample - base) * channels))
         if hi <= lo:
